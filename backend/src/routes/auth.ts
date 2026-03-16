@@ -3,27 +3,20 @@ import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { OAuth2Client } from 'google-auth-library';
 import { db } from '../db';
+import { config } from '../config';
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Initialize Google OAuth client
   const googleClient = new OAuth2Client(
-    fastify.config.googleClientId,
-    fastify.config.googleClientSecret,
-    fastify.config.googleRedirectUri
+    config.googleClientId,
+    config.googleClientSecret,
+    config.googleRedirectUri
   );
 
   // Login schema
   const loginSchema = z.object({
     email: z.string(),
     password: z.string().min(1)
-  });
-
-  // Register schema
-  const registerSchema = z.object({
-    name: z.string().min(2),
-    email: z.string().email(),
-    password: z.string().min(6),
-    role: z.enum(['admin', 'seller', 'viewer']).default('viewer')
   });
 
   // Google token schema
@@ -108,7 +101,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       // Verify Google token
       const ticket = await googleClient.verifyIdToken({
         idToken: body.credential,
-        audience: fastify.config.googleClientId,
+        audience: config.googleClientId,
       });
 
       const payload = ticket.getPayload();
@@ -117,15 +110,15 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const googleId = payload.sub;
-      const email = payload.email;
+      const email = payload.email || '';
       const name = payload.name;
       const picture = payload.picture;
 
       // Check if user exists by Google ID
-      let user = await db
+      let user: any = await db
         .selectFrom('users')
         .selectAll()
-        .where('google_id', '=', googleId)
+        .where('google_id' as any, '=', googleId)
         .executeTakeFirst();
 
       // If not found by Google ID, check by email
@@ -143,17 +136,18 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         user = await db
           .insertInto('users')
           .values({
-            business_id: fastify.config.defaultBusinessId,
+            id: crypto.randomUUID(),
+            business_id: config.defaultBusinessId,
             name: name || email.split('@')[0],
             email: email,
             google_id: googleId,
-            role: 'viewer', // Default role for Google users
-            is_active: true
-          })
-          .returning(['id', 'name', 'email', 'role', 'business_id', 'google_id'])
+            role: 'viewer',
+            is_active: true,
+            created_at: new Date(),
+            updated_at: new Date()
+          } as any)
+          .returningAll()
           .executeTakeFirst();
-
-        fastify.log.info({ userId: user.id, email }, 'New user created via Google OAuth');
       }
 
       // Update last login
@@ -190,18 +184,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(400).send({ error: 'Validation error', details: error.errors });
       }
 
-      if (error.message.includes('Token used too early') ||
-        error.message.includes('Token used too late') ||
-        error.message.includes('Invalid token')) {
-        return reply.status(401).send({ error: 'Invalid Google token' });
-      }
-
       return reply.status(500).send({ error: 'Google authentication failed' });
     }
   });
 
   // ============================================
-  // GOOGLE OAuth CALLBACK (for redirect flow)
+  // GOOGLE OAuth CALLBACK
   // ============================================
   fastify.get('/google/callback', async (request, reply) => {
     try {
@@ -211,17 +199,15 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.redirect('/login?error=No%20authorization%20code');
       }
 
-      // Exchange code for tokens
       const { tokens } = await googleClient.getToken(code);
 
       if (!tokens.id_token) {
         return reply.redirect('/login?error=Invalid%20token');
       }
 
-      // Verify token
       const ticket = await googleClient.verifyIdToken({
         idToken: tokens.id_token,
-        audience: fastify.config.googleClientId,
+        audience: config.googleClientId,
       });
 
       const payload = ticket.getPayload();
@@ -230,14 +216,13 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const googleId = payload.sub;
-      const email = payload.email;
+      const email = payload.email || '';
       const name = payload.name;
 
-      // Find or create user
-      let user = await db
+      let user: any = await db
         .selectFrom('users')
         .selectAll()
-        .where('google_id', '=', googleId)
+        .where('google_id' as any, '=', googleId)
         .executeTakeFirst();
 
       if (!user) {
@@ -250,22 +235,23 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       if (!user) {
-        const result = await db
+        user = await db
           .insertInto('users')
           .values({
-            business_id: fastify.config.defaultBusinessId,
+            id: crypto.randomUUID(),
+            business_id: config.defaultBusinessId,
             name: name || email.split('@')[0],
             email: email,
             google_id: googleId,
             role: 'viewer',
-            is_active: true
-          })
-          .returning(['id', 'name', 'email', 'role', 'business_id'])
+            is_active: true,
+            created_at: new Date(),
+            updated_at: new Date()
+          } as any)
+          .returningAll()
           .executeTakeFirst();
-        user = result;
       }
 
-      // Generate JWT token
       const token = fastify.jwt.sign({
         sub: user.id,
         business_id: user.business_id,
@@ -273,55 +259,11 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         email: user.email
       });
 
-      // Redirect to frontend with token
-      const frontendUrl = fastify.config.frontendUrl || 'http://localhost:5173';
+      const frontendUrl = config.frontendUrl;
       return reply.redirect(`${frontendUrl}/login?token=${token}`);
     } catch (error: any) {
       fastify.log.error({ error }, 'Google callback error');
       return reply.redirect('/login?error=Authentication%20failed');
-    }
-  });
-
-  // ============================================
-  // REGISTER (Admin only in production)
-  // ============================================
-  fastify.post('/register', async (request, reply) => {
-    try {
-      const body = registerSchema.parse(request.body);
-
-      // Check if user exists
-      const existing = await db
-        .selectFrom('users')
-        .select('id')
-        .where('email', '=', body.email)
-        .executeTakeFirst();
-
-      if (existing) {
-        return reply.status(409).send({ error: 'Email already registered' });
-      }
-
-      // Hash password
-      const passwordHash = await bcrypt.hash(body.password, 10);
-
-      // Create user
-      const result = await db
-        .insertInto('users')
-        .values({
-          business_id: fastify.config.defaultBusinessId,
-          name: body.name,
-          email: body.email,
-          password_hash: passwordHash,
-          role: body.role
-        })
-        .returning(['id', 'name', 'email', 'role', 'business_id'])
-        .executeTakeFirst();
-
-      return reply.status(201).send(result);
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        return reply.status(400).send({ error: 'Validation error', details: error.errors });
-      }
-      throw error;
     }
   });
 
@@ -339,9 +281,9 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    const result = await db
+    const result: any = await db
       .selectFrom('users')
-      .select(['id', 'name', 'email', 'role', 'business_id', 'phone', 'google_id'])
+      .select(['id', 'name', 'email', 'role', 'business_id', 'phone', 'google_id' as any])
       .where('id', '=', user.sub)
       .executeTakeFirst();
 

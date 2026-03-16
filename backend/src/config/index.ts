@@ -4,10 +4,10 @@ dotenv.config();
 
 export const config = {
   // Database
-  databaseUrl: process.env.DATABASE_URL,
+  databaseUrl: process.env.DATABASE_URL as string,
 
   // JWT
-  jwtSecret: process.env.JWT_SECRET,
+  jwtSecret: process.env.JWT_SECRET as string,
 
   // Server
   port: parseInt(process.env.PORT || '3000', 10),

@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect, sql } from 'kysely';
 import { Pool } from 'pg';
 import { config } from '../config';
 
@@ -56,13 +56,15 @@ interface UsersTable {
   business_id: string;
   name: string;
   email: string;
-  password_hash: string;
+  password_hash: string | null;
+  google_id: string | null;
   role: 'admin' | 'seller' | 'driver' | 'viewer';
   phone: string | null;
   is_active: boolean;
   last_login: Date | null;
   created_at: Date;
   updated_at: Date;
+  deleted_at: Date | null;
 }
 
 interface CategoriesTable {
@@ -124,6 +126,7 @@ interface StockMovementsTable {
   notes: string | null;
   metadata: Record<string, any>;
   created_at: Date;
+  deleted_at: Date | null;
 }
 
 interface StockReservationsTable {
@@ -210,6 +213,7 @@ interface OrderItemsTable {
   total: number;
   product_snapshot: Record<string, any> | null;
   created_at: Date;
+  deleted_at: Date | null;
 }
 
 interface PackagesTable {
@@ -276,6 +280,7 @@ interface SupplierPurchasesTable {
   invoice_document_url: string | null;
   created_by: string | null;
   created_at: Date;
+  deleted_at: Date | null;
 }
 
 interface PurchasesTable {
@@ -340,6 +345,7 @@ interface AuditLogsTable {
   ip_address: string | null;
   user_agent: string | null;
   created_at: Date;
+  deleted_at: Date | null;
 }
 
 interface AppSettingsTable {
@@ -354,7 +360,6 @@ interface AppSettingsTable {
 // DATABASE CONNECTION
 // ============================================
 
-// Create connection pool
 const pool = new Pool({
   connectionString: config.databaseUrl,
   ssl: config.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
@@ -363,7 +368,6 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000
 });
 
-// Create Kysely instance
 export const db = new Kysely<Database>({
   dialect: new PostgresDialect({ pool })
 });
@@ -372,15 +376,13 @@ export const db = new Kysely<Database>({
 // HELPER FUNCTIONS
 // ============================================
 
-// Function to set business_id for RLS
 export async function setBusinessId(businessId: string): Promise<void> {
-  await db.executeQuery(`SET LOCAL app.current_business_id = '${businessId}'`);
+  await sql`SET LOCAL app.current_business_id = ${businessId}`.execute(db);
 }
 
-// Health check
 export async function checkDatabaseConnection(): Promise<boolean> {
   try {
-    await db.executeQuery('SELECT 1');
+    await sql`SELECT 1`.execute(db);
     return true;
   } catch (error) {
     console.error('Database connection failed:', error);

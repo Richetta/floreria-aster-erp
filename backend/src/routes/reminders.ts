@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { sql } from 'kysely';
 import { db } from '../db';
 
 export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
@@ -19,14 +20,12 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { days_ahead = '30' } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const today = new Date();
     const ahead = parseInt(days_ahead);
-    const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + ahead);
 
-    // Get customers with birthdays/anniversaries in range
+    // Get customers with birthdays/anniversaries
     const customers = await db
       .selectFrom('customers')
       .select([
@@ -43,7 +42,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
       .where('is_active', '=', true)
       .execute();
 
-    const reminders = [];
+    const reminders: any[] = [];
 
     customers.forEach(c => {
       // Check birthday
@@ -155,7 +154,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { min_amount = '0' } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const customers = await db
       .selectFrom('customers')
@@ -224,15 +223,13 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
-
-      // In production, this would integrate with WhatsApp Business API
-      // For now, we'll create a reminder log and return the WhatsApp URL
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       // Log the reminder
       const reminder = await db
-        .insertInto('system_logs')
+        .insertInto('audit_logs')
         .values({
+          id: crypto.randomUUID(),
           business_id: user.business_id,
           user_id: user.sub,
           action: 'whatsapp_reminder_sent',
@@ -241,7 +238,8 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
             phone: body.phone,
             message: body.message,
             type: body.type
-          }
+          },
+          created_at: new Date()
         })
         .returningAll()
         .executeTakeFirst();
@@ -253,7 +251,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
         success: true,
         reminder_id: reminder?.id,
         whatsapp_url: whatsappUrl,
-        message: 'WhatsApp URL generated. In production, this would send automatically via WhatsApp Business API.'
+        message: 'WhatsApp URL generated.'
       });
     } catch (error: any) {
       console.error('Error sending WhatsApp:', error);
@@ -289,14 +287,12 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
-
-      // In production, this would integrate with an email service (SendGrid, etc.)
-      // For now, we'll create a reminder log
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       const reminder = await db
-        .insertInto('system_logs')
+        .insertInto('audit_logs')
         .values({
+          id: crypto.randomUUID(),
           business_id: user.business_id,
           user_id: user.sub,
           action: 'email_reminder_sent',
@@ -306,7 +302,8 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
             subject: body.subject,
             message: body.message,
             type: body.type
-          }
+          },
+          created_at: new Date()
         })
         .returningAll()
         .executeTakeFirst();
@@ -314,7 +311,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.send({
         success: true,
         reminder_id: reminder?.id,
-        message: 'Email logged. In production, this would send automatically via email service.'
+        message: 'Email logged.'
       });
     } catch (error: any) {
       console.error('Error sending email:', error);
@@ -353,7 +350,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       // Get customer details
       const customers = await db
@@ -376,8 +373,9 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
 
           // Log reminder
           await db
-            .insertInto('system_logs')
+            .insertInto('audit_logs')
             .values({
+              id: crypto.randomUUID(),
               business_id: user.business_id,
               user_id: user.sub,
               action: `${body.method}_bulk_reminder_sent`,
@@ -386,7 +384,8 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
                 customer_id: customer.id,
                 customer_name: customer.name,
                 message
-              }
+              },
+              created_at: new Date()
             })
             .execute();
 
@@ -435,10 +434,10 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { limit = '50' } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const logs = await db
-      .selectFrom('system_logs')
+      .selectFrom('audit_logs')
       .selectAll()
       .where('business_id', '=', user.business_id)
       .where('action', 'like', '%reminder%')
@@ -449,9 +448,9 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(logs.map(log => ({
       id: log.id,
       action: log.action,
-      customer_name: log.details?.customer_name || log.details?.name || 'N/A',
+      customer_name: (log.details as any)?.customer_name || (log.details as any)?.name || 'N/A',
       method: log.action.includes('whatsapp') ? 'WhatsApp' : log.action.includes('email') ? 'Email' : 'Unknown',
-      message: log.details?.message || 'N/A',
+      message: (log.details as any)?.message || 'N/A',
       created_at: log.created_at
     })));
   });

@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { sql } from 'kysely';
 import { db } from '../db';
 
 export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
@@ -23,7 +24,8 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       product_id: z.string().uuid().optional(),
       package_id: z.string().uuid().optional(),
       quantity: z.number().int().positive(),
-      unit_price: z.number().positive()
+      unit_price: z.number().positive(),
+      product_name: z.string().optional()
     })).min(1, 'El pedido debe tener al menos 1 item'),
     advance_payment: z.number().default(0)
   });
@@ -57,7 +59,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const { 
       status, 
@@ -83,11 +85,11 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     if (from_date) {
-      query = query.where('delivery_date', '>=', from_date);
+      query = query.where('delivery_date', '>=', new Date(from_date));
     }
 
     if (to_date) {
-      query = query.where('delivery_date', '<=', to_date);
+      query = query.where('delivery_date', '<=', new Date(to_date));
     }
 
     if (delivery_method) {
@@ -115,7 +117,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const order = await db
       .selectFrom('orders')
@@ -153,7 +155,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createOrderSchema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       const result = await db.transaction().execute(async (trx) => {
         // Calculate total
@@ -162,24 +164,37 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
           0
         );
 
+        // Get customer name for denormalization
+        const customerData = await trx
+            .selectFrom('customers')
+            .select(['name'])
+            .where('id', '=', body.customer_id)
+            .executeTakeFirst();
+
         // Create order
+        const orderId = crypto.randomUUID();
         const order = await trx
           .insertInto('orders')
           .values({
+            id: orderId,
             business_id: user.business_id,
             customer_id: body.customer_id,
+            customer_name: customerData?.name || 'Unknown',
             status: 'pending',
-            delivery_date: body.delivery_date,
-            delivery_address: body.delivery_address ? JSON.stringify(body.delivery_address) : null,
+            delivery_date: new Date(body.delivery_date),
+            delivery_address: body.delivery_address || null, // Kysely handles Record<string, any>
             delivery_time_slot: body.delivery_time_slot,
             delivery_method: body.delivery_method,
-            contact_phone: body.contact_phone,
-            card_message: body.card_message,
-            notes: body.notes,
+            contact_phone: body.contact_phone || null,
+            card_message: body.card_message || null,
             total_amount: totalAmount,
+            subtotal: totalAmount,
+            discount: 0,
             advance_payment: body.advance_payment,
-            created_by: user.sub
-          })
+            created_by: user.sub,
+            created_at: new Date(),
+            updated_at: new Date()
+          } as any)
           .returningAll()
           .executeTakeFirst();
 
@@ -188,13 +203,18 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
           await trx
             .insertInto('order_items')
             .values({
+              id: crypto.randomUUID(),
               business_id: user.business_id,
-              order_id: order!.id,
-              product_id: item.product_id,
-              package_id: item.package_id,
+              order_id: orderId,
+              product_id: item.product_id || null,
+              package_id: item.package_id || null,
+              product_name: item.product_name || 'Producto',
               quantity: item.quantity,
-              unit_price: item.unit_price
-            })
+              unit_price: item.unit_price,
+              discount: 0,
+              total: item.unit_price * item.quantity,
+              created_at: new Date()
+            } as any)
             .execute();
         }
 
@@ -203,37 +223,40 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
           await trx
             .insertInto('transactions')
             .values({
+              id: crypto.randomUUID(),
               business_id: user.business_id,
               type: 'payment_received',
+              category: 'Seña',
               amount: body.advance_payment,
-              payment_method: 'cash', // Default, could be parameterized
-              reference_id: order!.id,
+              payment_method: 'cash',
+              reference_id: orderId,
               reference_type: 'order_advance',
-              user_id: user.sub,
-              notes: `Seña para pedido #${order!.id}`,
-              created_by: user.sub
-            })
+              description: `Seña para pedido #${orderId.substring(0,8)}`,
+              created_by: user.sub,
+              created_at: new Date()
+            } as any)
             .execute();
         }
 
-        // Update customer debt if there's remaining balance
-        const remainingBalance = totalAmount - body.advance_payment;
-        if (remainingBalance > 0) {
-          await trx
-            .updateTable('customers')
-            .set({ 
-              debt_balance: trx
-                .selectFrom('customers')
-                .select('debt_balance')
-                .where('id', '=', body.customer_id)
-                .$narrowType<{ debt_balance: number }>()
-                .executeTakeFirst()
-                .then(c => (c?.debt_balance || 0) + remainingBalance),
-              updated_at: new Date()
-            })
+        // Update customer statistics
+        const customer = await trx
+            .selectFrom('customers')
+            .select(['total_orders', 'debt_balance'])
             .where('id', '=', body.customer_id)
-            .execute();
-        }
+            .executeTakeFirst();
+
+        const remainingBalance = totalAmount - body.advance_payment;
+        
+        await trx
+          .updateTable('customers')
+          .set({ 
+            total_orders: (customer?.total_orders || 0) + 1,
+            debt_balance: Number(customer?.debt_balance || 0) + remainingBalance,
+            last_order_date: new Date(),
+            updated_at: new Date()
+          })
+          .where('id', '=', body.customer_id)
+          .execute();
 
         return order;
       });
@@ -263,37 +286,22 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = updateOrderSchema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
-
-      // Check if status changed to delivered
-      const currentOrder = await db
-        .selectFrom('orders')
-        .select(['status', 'customer_id', 'total_amount', 'advance_payment'])
-        .where('id', '=', id)
-        .executeTakeFirst();
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       const result = await db
         .updateTable('orders')
         .set({
           ...body,
-          delivery_address: body.delivery_address ? JSON.stringify(body.delivery_address) : undefined,
+          delivery_date: body.delivery_date ? new Date(body.delivery_date) : undefined,
+          delivery_address: body.delivery_address || undefined,
           updated_at: new Date()
-        })
+        } as any)
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst();
 
       if (!result) {
         return reply.status(404).send({ error: 'Order not found' });
-      }
-
-      // If status changed to delivered and there was pending debt, record it
-      if (body.status === 'delivered' && currentOrder?.status !== 'delivered') {
-        const remainingBalance = Number(currentOrder.total_amount) - Number(currentOrder.advance_payment);
-        if (remainingBalance > 0 && currentOrder.customer_id) {
-          // Debt was already recorded when order was created
-          // Just mark that the order is complete
-        }
       }
 
       return reply.send(result);
@@ -323,14 +331,14 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: 'Status is required' });
     }
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const result = await db
       .updateTable('orders')
       .set({ 
         status,
         updated_at: new Date()
-      })
+      } as any)
       .where('id', '=', id)
       .returningAll()
       .executeTakeFirst();
@@ -355,7 +363,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     await db
       .updateTable('orders')
@@ -381,7 +389,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { date } = request.query as { date?: string };
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     let query = db
       .selectFrom('orders')

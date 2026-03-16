@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { sql } from 'kysely';
 import { db } from '../db';
 
 export const stockRoutes: FastifyPluginAsync = async (fastify) => {
@@ -19,9 +20,9 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { product_id, from_date, to_date, type, limit = '100' } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
-    let query = db
+    let query: any = db
       .selectFrom('stock_movements')
       .innerJoin('products', 'products.id', 'stock_movements.product_id')
       .select([
@@ -37,7 +38,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
         'products.name as product_name',
         'products.code as product_code'
       ])
-      .where('stock_movements.deleted_at', 'is', null)
+      .where('stock_movements.deleted_at' as any, 'is', null)
       .orderBy('stock_movements.created_at', 'desc');
 
     if (product_id) {
@@ -45,11 +46,11 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     if (from_date) {
-      query = query.where('stock_movements.created_at', '>=', from_date);
+      query = query.where('stock_movements.created_at', '>=', new Date(from_date));
     }
 
     if (to_date) {
-      query = query.where('stock_movements.created_at', '<=', to_date);
+      query = query.where('stock_movements.created_at', '<=', new Date(to_date));
     }
 
     if (type) {
@@ -58,7 +59,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
 
     const movements = await query.limit(parseInt(limit)).execute();
 
-    return reply.send(movements.map(m => ({
+    return reply.send(movements.map((m: any) => ({
       id: m.id,
       product_id: m.product_id,
       product_name: m.product_name,
@@ -90,9 +91,8 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
     const { limit = '50' } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
-    // Get current product info
     const product = await db
       .selectFrom('products')
       .select(['id', 'name', 'code', 'stock_quantity', 'min_stock'])
@@ -104,7 +104,6 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({ error: 'Product not found' });
     }
 
-    // Get movement history
     const movements = await db
       .selectFrom('stock_movements')
       .select([
@@ -122,7 +121,6 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
       .limit(parseInt(limit))
       .execute();
 
-    // Calculate summary
     const summary = {
       current_stock: Number(product.stock_quantity),
       min_stock: Number(product.min_stock),
@@ -171,7 +169,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const products = await db
       .selectFrom('products')
@@ -185,7 +183,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
         'price'
       ])
       .where('deleted_at', 'is', null)
-      .whereRef('stock_quantity', '<=', 'min_stock')
+      .whereRef('stock_quantity' as any, '<=', 'min_stock' as any)
       .orderBy('stock_quantity', 'asc')
       .execute();
 
@@ -230,9 +228,8 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
-      // Get current product
       const product = await db
         .selectFrom('products')
         .select(['stock_quantity', 'name'])
@@ -250,9 +247,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(400).send({ error: 'Invalid adjustment: would result in negative stock' });
       }
 
-      // Use transaction
       const result = await db.transaction().execute(async (trx) => {
-        // Update stock
         await trx
           .updateTable('products')
           .set({
@@ -262,10 +257,10 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
           .where('id', '=', body.product_id)
           .execute();
 
-        // Record movement
         const movement = await trx
           .insertInto('stock_movements')
           .values({
+            id: crypto.randomUUID(),
             business_id: user.business_id,
             product_id: body.product_id,
             movement_type: 'adjustment',
@@ -274,8 +269,10 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
             reference_type: 'manual',
             reference_id: '00000000-0000-0000-0000-000000000000',
             user_id: user.sub,
-            notes: body.reason + (body.notes ? ` - ${body.notes}` : '')
-          })
+            notes: body.reason + (body.notes ? ` - ${body.notes}` : ''),
+            created_at: new Date(),
+            metadata: {}
+          } as any)
           .returningAll()
           .executeTakeFirst();
 
@@ -311,29 +308,26 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
-    // Get totals
     const totals = await db
       .selectFrom('products')
       .select([
         db.fn.count('id').as('total_products'),
         db.fn.sum('stock_quantity').as('total_stock'),
-        db.fn.sum(db`stock_quantity * cost`).as('total_value_cost'),
-        db.fn.sum(db`stock_quantity * price`).as('total_value_price')
+        db.fn.sum(sql`stock_quantity * cost`).as('total_value_cost'),
+        db.fn.sum(sql`stock_quantity * price`).as('total_value_price')
       ])
       .where('deleted_at', 'is', null)
       .executeTakeFirst();
 
-    // Get low stock count
     const lowStockCount = await db
       .selectFrom('products')
       .select(db.fn.count('id').as('count'))
       .where('deleted_at', 'is', null)
-      .whereRef('stock_quantity', '<=', 'min_stock')
+      .whereRef('stock_quantity' as any, '<=', 'min_stock' as any)
       .executeTakeFirst();
 
-    // Get out of stock count
     const outOfStockCount = await db
       .selectFrom('products')
       .select(db.fn.count('id').as('count'))
@@ -341,7 +335,6 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
       .where('stock_quantity', '=', 0)
       .executeTakeFirst();
 
-    // Get movements today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

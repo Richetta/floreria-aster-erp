@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { sql } from 'kysely';
 import { db } from '../db';
 
 export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
@@ -27,7 +28,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const { 
       type, 
@@ -53,11 +54,11 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     if (from_date) {
-      query = query.where('created_at', '>=', from_date);
+      query = query.where('created_at', '>=', new Date(from_date));
     }
 
     if (to_date) {
-      query = query.where('created_at', '<=', to_date);
+      query = query.where('created_at', '<=', new Date(to_date));
     }
 
     if (payment_method) {
@@ -85,7 +86,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const transaction = await db
       .selectFrom('transactions')
@@ -114,7 +115,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = request.query as { from_date?: string, to_date?: string };
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     let query = db
       .selectFrom('transactions')
@@ -123,11 +124,11 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       .where('deleted_at', 'is', null);
 
     if (from_date) {
-      query = query.where('created_at', '>=', from_date);
+      query = query.where('created_at', '>=', new Date(from_date));
     }
 
     if (to_date) {
-      query = query.where('created_at', '<=', to_date);
+      query = query.where('created_at', '<=', new Date(to_date));
     }
 
     const result = await query
@@ -186,21 +187,23 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createTransactionSchema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       const result = await db
         .insertInto('transactions')
         .values({
+          id: crypto.randomUUID(),
           business_id: user.business_id,
           type: body.type,
           amount: body.amount,
-          payment_method: body.payment_method,
+          payment_method: body.payment_method || null,
           category: body.category,
-          description: body.description,
-          reference_id: body.reference_id,
-          reference_type: body.reference_type,
-          notes: body.notes,
-          created_by: user.sub
+          description: body.description || null,
+          reference_id: body.reference_id || null,
+          reference_type: body.reference_type || null,
+          notes: body.notes || null,
+          created_by: user.sub,
+          created_at: new Date()
         })
         .returningAll()
         .executeTakeFirst();
@@ -238,7 +241,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       notes: z.string().optional()
     }).parse(request.body);
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const result = await db.transaction().execute(async (trx) => {
       // 1. Verify and deduct stock
@@ -272,6 +275,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
         await trx
           .insertInto('stock_movements')
           .values({
+            id: crypto.randomUUID(),
             business_id: user.business_id,
             product_id: item.product_id,
             movement_type: 'sale',
@@ -280,7 +284,9 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
             reference_type: 'sale',
             reference_id: '00000000-0000-0000-0000-000000000000', // Will update with sale ID
             user_id: user.sub,
-            notes: `Venta POS - ${product.name}`
+            notes: `Venta POS - ${product.name}`,
+            created_at: new Date(),
+            metadata: {}
           })
           .execute();
       }
@@ -289,30 +295,32 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       const transaction = await trx
         .insertInto('transactions')
         .values({
+          id: crypto.randomUUID(),
           business_id: user.business_id,
           type: 'sale',
           amount: body.total,
           payment_method: body.payment_method,
           category: 'Venta POS',
           description: `Venta de mostrador - ${body.items.length} productos`,
-          notes: body.notes,
-          created_by: user.sub
+          notes: body.notes || null,
+          created_by: user.sub,
+          created_at: new Date()
         })
         .returningAll()
         .executeTakeFirst();
 
       // 3. If customer provided, update their stats
       if (body.customer_id) {
+        const customer = await trx
+          .selectFrom('customers')
+          .select('total_orders')
+          .where('id', '=', body.customer_id)
+          .executeTakeFirst();
+
         await trx
           .updateTable('customers')
           .set({
-            total_orders: trx
-              .selectFrom('customers')
-              .select('total_orders')
-              .where('id', '=', body.customer_id)
-              .$narrowType<{ total_orders: number }>()
-              .executeTakeFirst()
-              .then(c => (c?.total_orders || 0) + 1),
+            total_orders: (customer?.total_orders || 0) + 1,
             last_order_date: new Date(),
             updated_at: new Date()
           })
@@ -346,19 +354,21 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       notes: z.string().optional()
     }).parse(request.body);
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const result = await db
       .insertInto('transactions')
       .values({
+        id: crypto.randomUUID(),
         business_id: user.business_id,
         type: 'expense',
         amount: body.amount,
         payment_method: body.payment_method,
         category: body.category,
         description: body.description,
-        notes: body.notes,
-        created_by: user.sub
+        notes: body.notes || null,
+        created_by: user.sub,
+        created_at: new Date()
       })
       .returningAll()
       .executeTakeFirst();
@@ -379,7 +389,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     await db
       .updateTable('transactions')

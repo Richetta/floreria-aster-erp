@@ -1,17 +1,16 @@
 import { FastifyPluginAsync } from 'fastify';
-import multer from '@fastify/multipart';
+import multipart from '@fastify/multipart';
 import { z } from 'zod';
 import { db } from '../db';
 import ExcelJS from 'exceljs';
 import mammoth from 'mammoth';
-import { PDFParse } from 'pdf-parse';
+import PDFParse from 'pdf-parse';
 import { parse as csvParse } from 'csv-parse/sync';
-import { randomUUID } from 'crypto';
 import { sql } from 'kysely';
 
 export const importRoutes: FastifyPluginAsync = async (fastify) => {
-  // Register multer for file uploads
-  await fastify.register(multer, {
+  // Register multipart for file uploads
+  await fastify.register(multipart, {
     limits: {
       fileSize: 10 * 1024 * 1024 // 10MB limit
     }
@@ -43,12 +42,8 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     const results: any[] = [];
     
     for (const line of lines) {
-      // Avoid headers
       if (line.toLowerCase().includes('total') || line.toLowerCase().includes('fecha')) continue;
 
-      // Pattern 1: CODE NAME PRICE (e.g. "P-001 Ramo Rosas 1000")
-      // Pattern 2: NAME $PRICE (e.g. "Oso Peluche $500")
-      
       const priceMatch = line.match(/(\$?\s?(\d+[.,]\d{2})|\$?\s?(\d{2,}))/);
       if (!priceMatch) continue;
 
@@ -93,17 +88,15 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
       let parsedData: any[] = [];
       let method = '';
 
-      // 1. EXCEL (.xlsx)
       if (filename.endsWith('.xlsx')) {
         method = 'Excel (XLSX)';
         const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(buffer);
+        await workbook.xlsx.load(buffer as any);
         const worksheet = workbook.getWorksheet(1);
         if (worksheet) {
           worksheet.eachRow((row, rowNumber) => {
-            if (rowNumber === 1) return; // Skip header
+            if (rowNumber === 1) return;
             const values: any = Array.isArray(row.values) ? row.values : [];
-            // values[0] is empty, indices start at 1
             if (values[1]) {
               parsedData.push({
                 code: String(values[1]).trim(),
@@ -116,25 +109,21 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
       } 
-      // 2. PDF (.pdf)
       else if (filename.endsWith('.pdf')) {
         method = 'PDF (OCR/Text)';
-        // @ts-ignore
-        const data = await PDFParse(buffer);
+        // Handle PDFParse as any to avoid callable signature issues
+        const data = await (PDFParse as any)(buffer);
         parsedData = smartParseText(data.text);
       }
-      // 3. WORD (.docx)
       else if (filename.endsWith('.docx')) {
         method = 'Word (DOCX)';
-        const data = await mammoth.extractRawText({ buffer });
+        const data = await mammoth.extractRawText({ buffer: buffer as any });
         parsedData = smartParseText(data.value);
       }
-      // 4. CSV / TXT
       else {
         method = 'CSV / Text';
         const content = buffer.toString('utf-8');
         try {
-          // Try standard CSV first
           const records = csvParse(content, {
             columns: true,
             skip_empty_lines: true,
@@ -150,7 +139,6 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
             stock: r.stock || r.cantidad ? parseInt(String(r.stock || r.cantidad)) : undefined
           }));
         } catch (e) {
-          // If CSV fails, try smart text parsing
           parsedData = smartParseText(content);
         }
       }
@@ -159,7 +147,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
         method,
         filename,
         total_rows: parsedData.length,
-        data: parsedData.slice(0, 100), // Preview 100
+        data: parsedData.slice(0, 100),
         raw_rows: parsedData
       });
     } catch (error: any) {
@@ -196,15 +184,6 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // Keep old endpoint for compatibility but route to new logic if needed
-  fastify.post('/parse-csv', async (request, reply) => {
-    return reply.status(308).header('Location', '/api/import/parse-file').send();
-  });
-
-  // ============================================
-  // IMPORT PRICES
-  // ============================================
-
   fastify.post('/import-prices', {
     preHandler: [async (request, reply) => {
       try {
@@ -239,10 +218,8 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
           errors: [] as any[]
         };
 
-        // Process each row
         for (const row of body.data) {
           try {
-            // Find product by code
             const product = await trx
               .selectFrom('products')
               .select(['id', 'cost', 'price', 'stock_quantity'])
@@ -251,7 +228,6 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
               .executeTakeFirst();
 
             if (product) {
-              // Update existing product
               const updateData: any = { updated_at: new Date() };
 
               if (body.update_costs && row.cost !== undefined) {
@@ -261,7 +237,6 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
               if (body.update_prices && row.price !== undefined) {
                 updateData.price = row.price;
               } else if (body.auto_margin && row.cost !== undefined) {
-                // Auto-calculate price based on margin
                 updateData.price = row.cost * (1 + body.margin_percent / 100);
               }
 
@@ -275,20 +250,19 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
                 .where('id', '=', product.id)
                 .execute();
 
-              // Record price history if cost or price changed
               if ((body.update_costs && row.cost !== undefined) || (body.update_prices && row.price !== undefined)) {
                 await trx
                   .insertInto('price_history')
                   .values({
-                    id: randomUUID(),
+                    id: crypto.randomUUID(),
                     business_id: user.business_id,
                     product_id: product.id,
                     old_cost: product.cost,
                     old_price: product.price,
-                    new_cost: body.update_costs && row.cost !== undefined ? row.cost : product.cost,
+                    new_cost: body.update_costs && row.cost !== undefined ? row.cost : typeof product.cost === 'string' ? parseFloat(product.cost) : product.cost,
                     new_price: body.update_prices && row.price !== undefined ? row.price : 
-                              body.auto_margin && row.cost !== undefined ? row.cost * (1 + body.margin_percent / 100) : product.price,
-                    changed_by: user.id || user.sub,
+                              body.auto_margin && row.cost !== undefined ? row.cost * (1 + body.margin_percent / 100) : typeof product.price === 'string' ? parseFloat(product.price) : product.price,
+                    changed_by: user.sub,
                     reason: 'Smart Import',
                     created_at: new Date(),
                     metadata: {}
@@ -297,33 +271,29 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
               }
 
               stats.updated++;
+            } else if (row.name) {
+                await trx
+                    .insertInto('products')
+                    .values({
+                        id: crypto.randomUUID(),
+                        business_id: user.business_id,
+                        code: row.code,
+                        name: row.name,
+                        cost: row.cost || 0,
+                        price: row.price || (body.auto_margin && row.cost ? row.cost * (1 + body.margin_percent / 100) : 0),
+                        stock_quantity: row.stock || 0,
+                        min_stock: 5,
+                        is_active: true,
+                        is_barcode: false,
+                        tags: [],
+                        images: [],
+                        created_at: new Date(),
+                        updated_at: new Date()
+                    } as any)
+                    .execute();
+                stats.created++;
             } else {
-              // Create new product if name provided
-              if (row.name) {
-                  await trx
-                      .insertInto('products')
-                      .values({
-                          id: randomUUID(),
-                          business_id: user.business_id,
-                          code: row.code,
-                          name: row.name,
-                          cost: row.cost || 0,
-                          price: row.price || (body.auto_margin && row.cost ? row.cost * (1 + body.margin_percent / 100) : 0),
-                          stock_quantity: row.stock || 0,
-                          min_stock: 5,
-                          is_active: true,
-                          is_barcode: false,
-                          tags: [],
-                          images: [],
-                          created_at: new Date(),
-                          updated_at: new Date(),
-                          deleted_at: null
-                      } as any)
-                      .execute();
-                  stats.created++;
-              } else {
-                stats.errors.push({ code: row.code, error: 'Product not found and no name provided' });
-              }
+              stats.errors.push({ code: row.code, error: 'Product not found and no name provided' });
             }
           } catch (error: any) {
             stats.errors.push({ code: row.code, error: error.message });
@@ -342,10 +312,6 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // ============================================
-  // EXPORT PRODUCT TEMPLATE
-  // ============================================
-
   fastify.get('/export-template', {
     preHandler: [async (request, reply) => {
       try {
@@ -360,7 +326,6 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     const csv = await db.transaction().execute(async (trx) => {
       await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(trx);
 
-      // Get all products
       const products = await trx
         .selectFrom('products')
         .select(['code', 'name', 'cost', 'price', 'stock_quantity'])
@@ -368,7 +333,6 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
         .orderBy('name', 'asc')
         .execute();
 
-      // Create CSV
       return [
         ['codigo', 'nombre', 'costo', 'precio', 'stock'].join(','),
         ...products.map(p => [

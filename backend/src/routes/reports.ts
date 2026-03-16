@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { sql } from 'kysely';
 import { db } from '../db';
 
 export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
@@ -26,7 +27,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = dateRangeSchema.parse(request.query);
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     // Build query with date filters
     let query = db
@@ -39,10 +40,10 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
       .where('deleted_at', 'is', null);
 
     if (from_date) {
-      query = query.where('created_at', '>=', from_date);
+      query = query.where('created_at', '>=', new Date(from_date));
     }
     if (to_date) {
-      query = query.where('created_at', '<=', to_date);
+      query = query.where('created_at', '<=', new Date(to_date));
     }
 
     const result = await query.executeTakeFirst();
@@ -58,10 +59,10 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
       .groupBy('payment_method');
 
     if (from_date) {
-      methodQuery = methodQuery.where('created_at', '>=', from_date);
+      methodQuery = methodQuery.where('created_at', '>=', new Date(from_date));
     }
     if (to_date) {
-      methodQuery = methodQuery.where('created_at', '<=', to_date);
+      methodQuery = methodQuery.where('created_at', '<=', new Date(to_date));
     }
 
     const byMethod = await methodQuery.execute();
@@ -90,29 +91,27 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date, group_by = 'day' } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     // Group by day or month
     const dateFormat = group_by === 'month' 
       ? 'YYYY-MM' 
       : 'YYYY-MM-DD';
 
-    const query = `
+    const result = await sql<{ period: string, total_amount: number, total_transactions: number }>`
       SELECT 
-        TO_CHAR(created_at, '${dateFormat}') as period,
+        TO_CHAR(created_at, ${dateFormat}) as period,
         SUM(amount) as total_amount,
         COUNT(*) as total_transactions
       FROM transactions
-      WHERE business_id = '${user.business_id}'
+      WHERE business_id = ${user.business_id}
         AND type = 'sale'
         AND deleted_at IS NULL
-        ${from_date ? `AND created_at >= '${from_date}'` : ''}
-        ${to_date ? `AND created_at <= '${to_date}'` : ''}
+        ${from_date ? sql`AND created_at >= ${new Date(from_date)}` : sql``}
+        ${to_date ? sql`AND created_at <= ${new Date(to_date)}` : sql``}
       GROUP BY period
       ORDER BY period ASC
-    `;
-
-    const result = await db.executeQuery(query);
+    `.execute(db);
 
     return reply.send(result.rows);
   });
@@ -133,10 +132,10 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date, limit = '10' } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     // Get top selling products from order_items
-    let query = db
+    let query: any = db
       .selectFrom('order_items')
       .innerJoin('products', 'products.id', 'order_items.product_id')
       .select([
@@ -147,7 +146,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
         db.fn.sum('order_items.total').as('total_revenue'),
         db.fn.avg('order_items.unit_price').as('avg_price')
       ])
-      .where('order_items.deleted_at', 'is', null)
+      .where('order_items.deleted_at' as any, 'is', null)
       .groupBy(['product_id', 'products.name', 'products.code'])
       .orderBy('total_quantity', 'desc')
       .limit(parseInt(limit));
@@ -155,16 +154,16 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     if (from_date) {
       query = query
         .innerJoin('orders', 'orders.id', 'order_items.order_id')
-        .where('orders.created_at', '>=', from_date);
+        .where('orders.created_at' as any, '>=', new Date(from_date));
       
       if (to_date) {
-        query = query.where('orders.created_at', '<=', to_date);
+        query = query.where('orders.created_at' as any, '<=', new Date(to_date));
       }
     }
 
     const result = await query.execute();
 
-    return reply.send(result.map(r => ({
+    return reply.send(result.map((r: any) => ({
       product_id: r.product_id,
       product_name: r.product_name,
       product_code: r.product_code,
@@ -190,35 +189,35 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date, limit = '10' } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
-    let query = db
+    let query: any = db
       .selectFrom('customers')
       .select([
-        'id',
-        'name',
-        'phone',
-        'email',
-        'debt_balance',
+        'customers.id',
+        'customers.name',
+        'customers.phone',
+        'customers.email',
+        'customers.debt_balance',
         db.fn.count('orders.id').as('total_orders'),
         db.fn.sum('orders.total_amount').as('total_spent')
       ])
       .leftJoin('orders', 'orders.customer_id', 'customers.id')
-      .where('customers.deleted_at', 'is', null)
+      .where('customers.deleted_at' as any, 'is', null)
       .groupBy(['customers.id', 'customers.name', 'customers.phone', 'customers.email', 'customers.debt_balance'])
       .orderBy('total_spent', 'desc')
       .limit(parseInt(limit));
 
     if (from_date) {
-      query = query.where('orders.created_at', '>=', from_date);
+      query = query.where('orders.created_at' as any, '>=', new Date(from_date));
     }
     if (to_date) {
-      query = query.where('orders.created_at', '<=', to_date);
+      query = query.where('orders.created_at' as any, '<=', new Date(to_date));
     }
 
     const result = await query.execute();
 
-    return reply.send(result.map(r => ({
+    return reply.send(result.map((r: any) => ({
       id: r.id,
       name: r.name,
       phone: r.phone,
@@ -245,7 +244,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     // Get total revenue from sales
     let revenueQuery = db
@@ -255,10 +254,10 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
       .where('deleted_at', 'is', null);
 
     if (from_date) {
-      revenueQuery = revenueQuery.where('created_at', '>=', from_date);
+      revenueQuery = revenueQuery.where('created_at', '>=', new Date(from_date));
     }
     if (to_date) {
-      revenueQuery = revenueQuery.where('created_at', '<=', to_date);
+      revenueQuery = revenueQuery.where('created_at', '<=', new Date(to_date));
     }
 
     const revenue = await revenueQuery.executeTakeFirst();
@@ -271,16 +270,16 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
       .where('deleted_at', 'is', null);
 
     if (from_date) {
-      expenseQuery = expenseQuery.where('created_at', '>=', from_date);
+      expenseQuery = expenseQuery.where('created_at', '>=', new Date(from_date));
     }
     if (to_date) {
-      expenseQuery = expenseQuery.where('created_at', '<=', to_date);
+      expenseQuery = expenseQuery.where('created_at', '<=', new Date(to_date));
     }
 
     const expenses = await expenseQuery.executeTakeFirst();
 
     // Get product profits (revenue - cost)
-    let productsQuery = db
+    let productsQuery: any = db
       .selectFrom('order_items')
       .innerJoin('products', 'products.id', 'order_items.product_id')
       .select([
@@ -288,31 +287,31 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
         'products.name as product_name',
         db.fn.sum('order_items.quantity').as('quantity_sold'),
         db.fn.sum('order_items.total').as('total_revenue'),
-        db.fn.sum(db`order_items.quantity * products.cost`).as('total_cost')
+        db.fn.sum(sql`order_items.quantity * products.cost`).as('total_cost')
       ])
-      .where('order_items.deleted_at', 'is', null)
+      .where('order_items.deleted_at' as any, 'is', null)
       .groupBy(['product_id', 'products.name']);
 
     if (from_date) {
       productsQuery = productsQuery
         .innerJoin('orders', 'orders.id', 'order_items.order_id')
-        .where('orders.created_at', '>=', from_date);
+        .where('orders.created_at' as any, '>=', new Date(from_date));
       
       if (to_date) {
-        productsQuery = productsQuery.where('orders.created_at', '<=', to_date);
+        productsQuery = productsQuery.where('orders.created_at' as any, '<=', new Date(to_date));
       }
     }
 
-    const products = await productsQuery.execute();
+    const productsResult = await productsQuery.execute();
 
-    const productProfits = products.map(p => ({
+    const productProfits = productsResult.map((p: any) => ({
       product_id: p.product_id,
       product_name: p.product_name,
       quantity_sold: Number(p.quantity_sold),
       total_revenue: Number(p.total_revenue),
       total_cost: Number(p.total_cost),
       profit: Number(p.total_revenue) - Number(p.total_cost)
-    })).sort((a, b) => b.profit - a.profit);
+    })).sort((a: any, b: any) => b.profit - a.profit);
 
     const totalRevenue = Number(revenue?.total_revenue) || 0;
     const totalExpenses = Number(expenses?.total_expenses) || 0;
@@ -349,7 +348,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     let query = db
       .selectFrom('transactions')
@@ -367,10 +366,10 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
       .orderBy('created_at', 'desc');
 
     if (from_date) {
-      query = query.where('created_at', '>=', from_date);
+      query = query.where('created_at', '>=', new Date(from_date));
     }
     if (to_date) {
-      query = query.where('created_at', '<=', to_date);
+      query = query.where('created_at', '<=', new Date(to_date));
     }
 
     const sales = await query.limit(1000).execute();

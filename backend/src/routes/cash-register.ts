@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { sql } from 'kysely';
 import { db } from '../db';
 
 export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
@@ -27,14 +28,9 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       // Check if already opened today
-      const today = new Date(body.date);
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
       const existingOpening = await db
         .selectFrom('app_settings')
         .select('key')
@@ -59,11 +55,12 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
       await db
         .insertInto('app_settings')
         .values({
+          id: crypto.randomUUID(),
           business_id: user.business_id,
           key: `opening_${body.date}`,
-          value: opening as any,
+          value: JSON.stringify(opening),
           updated_at: new Date()
-        })
+        } as any)
         .execute();
 
       return reply.send({
@@ -95,7 +92,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { date = new Date().toISOString().split('T')[0] } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     // Check if opened
     const opening = await db
@@ -113,12 +110,17 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
       .where('key', '=', `closing_${date}`)
       .executeTakeFirst();
 
+    const parseValue = (val: any) => {
+        if (typeof val === 'string') return JSON.parse(val);
+        return val;
+    };
+
     return reply.send({
       date,
       is_open: !!opening,
       is_closed: !!closing,
-      opening: opening ? (opening.value as any) : null,
-      closing: closing ? (closing.value as any) : null
+      opening: opening ? parseValue(opening.value) : null,
+      closing: closing ? parseValue(closing.value) : null
     });
   });
 
@@ -138,7 +140,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { date = new Date().toISOString().split('T')[0] } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const startDate = new Date(date);
     startDate.setHours(0, 0, 0, 0);
@@ -185,7 +187,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
         count: 0
       },
       balance: 0,
-      opening_balance: 0, // Can be set manually
+      opening_balance: 0,
       closing_balance: 0
     };
 
@@ -269,7 +271,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       const startDate = new Date(body.date);
       startDate.setHours(0, 0, 0, 0);
@@ -303,7 +305,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
       const observed_cash = body.observed_cash ?? expected_cash;
       const discrepancy = observed_cash - expected_cash;
 
-      // Create closing record (stored in app_settings or could be a separate table)
+      // Create closing record
       const closing = {
         date: body.date,
         opening_balance: body.opening_balance,
@@ -315,15 +317,16 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
         created_at: new Date()
       };
 
-      // Store in app_settings (could be a separate table in production)
+      // Store in app_settings
       await db
         .insertInto('app_settings')
         .values({
+          id: crypto.randomUUID(),
           business_id: user.business_id,
           key: `closing_${body.date}`,
-          value: closing as any,
+          value: JSON.stringify(closing),
           updated_at: new Date()
-        })
+        } as any)
         .onConflict(oc => oc
           .column('key')
           .doUpdateSet({
@@ -338,15 +341,17 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
         await db
           .insertInto('transactions')
           .values({
+            id: crypto.randomUUID(),
             business_id: user.business_id,
             type: discrepancy > 0 ? 'income' : 'expense',
             category: 'Ajuste de Caja',
             amount: Math.abs(discrepancy),
             payment_method: 'cash',
             description: `Ajuste por cierre del ${body.date}: ${discrepancy > 0 ? 'Sobrante' : 'Faltante'}`,
-            notes: body.notes,
-            created_by: user.sub
-          })
+            notes: body.notes || null,
+            created_by: user.sub,
+            created_at: new Date()
+          } as any)
           .execute();
       }
 
@@ -382,24 +387,24 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date, limit = '30' } = request.query as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
-    // Get closings from app_settings
     const settings = await db
       .selectFrom('app_settings')
       .select(['key', 'value', 'updated_at'])
       .where('business_id', '=', user.business_id)
       .where('key', 'like', 'closing_%')
-      .orderBy('updated_at', 'desc')
+      .orderBy('key', 'desc')
       .limit(parseInt(limit))
       .execute();
 
     const closings = settings
       .map(s => {
         const date = s.key.replace('closing_', '');
+        const val = typeof s.value === 'string' ? JSON.parse(s.value) : s.value;
         return {
           date,
-          ...s.value as any,
+          ...val,
           updated_at: s.updated_at
         };
       })
@@ -427,37 +432,33 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
-    // Get today's date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayDay = new Date().toISOString().split('T')[0];
 
-    // Get last closing
-    const settings = await db
+    // Get today's opening
+    const openingSetting = await db
       .selectFrom('app_settings')
-      .select(['key', 'value'])
+      .select('value')
       .where('business_id', '=', user.business_id)
-      .where('key', 'like', 'closing_%')
-      .orderBy('key', 'desc')
-      .limit(1)
-      .execute();
+      .where('key', '=', `opening_${todayDay}`)
+      .executeTakeFirst();
 
     let opening_balance = 0;
-    if (settings.length > 0) {
-      const lastClosing = settings[0].value as any;
-      const lastClosingDate = new Date(settings[0].key.replace('closing_', ''));
-      if (lastClosingDate >= today) {
-        opening_balance = lastClosing.observed_cash || 0;
-      }
+    if (openingSetting) {
+        const val = typeof openingSetting.value === 'string' ? JSON.parse(openingSetting.value) : openingSetting.value;
+        opening_balance = val.opening_balance || 0;
     }
 
     // Get today's cash transactions
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+
     const transactions = await db
       .selectFrom('transactions')
       .select(['type', 'amount', 'payment_method'])
       .where('deleted_at', 'is', null)
-      .where('created_at', '>=', today)
+      .where('created_at', '>=', startDate)
       .execute();
 
     let cash_in_drawer = opening_balance;
@@ -465,9 +466,9 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
     transactions.forEach(t => {
       if (t.payment_method === 'cash') {
         const amount = Number(t.amount);
-        if (t.type === 'sale' || t.type === 'payment_received') {
+        if (t.type === 'sale' || t.type === 'payment_received' || t.type === 'income') {
           cash_in_drawer += amount;
-        } else if (t.type === 'expense') {
+        } else if (t.type === 'expense' || t.type === 'supplier_payment') {
           cash_in_drawer -= amount;
         }
       }

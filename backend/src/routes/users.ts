@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
+import { sql } from 'kysely';
 import { db } from '../db';
 
 export const usersRoutes: FastifyPluginAsync = async (fastify) => {
@@ -14,7 +15,9 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Update user schema (partial)
-  const updateUserSchema = createUserSchema.partial();
+  const updateUserSchema = createUserSchema.partial().extend({
+    is_active: z.boolean().optional()
+  });
 
   // LIST USERS (Admin only)
   fastify.get('/', {
@@ -32,7 +35,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const currentUser = request.user as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${currentUser.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${currentUser.business_id}`.execute(db);
 
     const users = await db
       .selectFrom('users')
@@ -57,7 +60,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const targetUser = await db
       .selectFrom('users')
@@ -92,7 +95,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createUserSchema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${currentUser.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${currentUser.business_id}`.execute(db);
 
       // Check if email already exists
       const existing = await db
@@ -113,12 +116,17 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       const result = await db
         .insertInto('users')
         .values({
+          id: crypto.randomUUID(),
           business_id: currentUser.business_id,
           name: body.name,
           email: body.email,
           password_hash: passwordHash,
           role: body.role,
-          phone: body.phone || null
+          phone: body.phone || null,
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+          deleted_at: null
         })
         .returning(['id', 'name', 'email', 'role', 'phone', 'is_active', 'created_at'])
         .executeTakeFirst();
@@ -152,7 +160,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = updateUserSchema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${currentUser.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${currentUser.business_id}`.execute(db);
 
       // Admins can't demote themselves
       if (id === currentUser.sub && body.role && body.role !== 'admin') {
@@ -217,7 +225,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: 'Cannot delete your own account' });
     }
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${currentUser.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${currentUser.business_id}`.execute(db);
 
     await db
       .updateTable('users')
@@ -251,7 +259,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       // Get current user
       const currentUserData = await db
@@ -265,6 +273,9 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       // Verify current password
+      if (!currentUserData.password_hash) {
+        return reply.status(400).send({ error: 'This user does not have a local password set' });
+      }
       const validPassword = await bcrypt.compare(body.current_password, currentUserData.password_hash);
       if (!validPassword) {
         return reply.status(401).send({ error: 'Current password is incorrect' });
@@ -304,7 +315,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const profile = await db
       .selectFrom('users')

@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { sql } from 'kysely';
 import { db } from '../db';
 
 export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
@@ -30,7 +31,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const { category, search, limit = '100' } = request.query as any;
 
@@ -73,7 +74,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const supplier = await db
       .selectFrom('suppliers')
@@ -113,21 +114,25 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createSupplierSchema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       const result = await db
         .insertInto('suppliers')
         .values({
+          id: crypto.randomUUID(),
           business_id: user.business_id,
           name: body.name,
-          contact_name: body.contact_name,
+          contact_name: body.contact_name || null,
           phone: body.phone,
-          email: body.email,
-          address: body.address,
-          category: body.category,
-          notes: body.notes,
-          next_visit_date: body.next_visit_date || null,
-          created_by: user.sub
+          email: body.email || null,
+          address: body.address || null,
+          category: body.category || null,
+          notes: body.notes || null,
+          next_visit_date: body.next_visit_date ? new Date(body.next_visit_date) : null,
+          is_active: true,
+          created_by: user.sub,
+          created_at: new Date(),
+          updated_at: new Date()
         })
         .returningAll()
         .executeTakeFirst();
@@ -157,12 +162,13 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = updateSupplierSchema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       const result = await db
         .updateTable('suppliers')
         .set({
           ...body,
+          next_visit_date: body.next_visit_date ? new Date(body.next_visit_date) : undefined,
           updated_at: new Date()
         })
         .where('id', '=', id)
@@ -195,7 +201,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     await db
       .updateTable('suppliers')
@@ -232,7 +238,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
       invoice_document_url: z.string().optional()
     }).parse(request.body);
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const result = await db.transaction().execute(async (trx) => {
       // Calculate total
@@ -245,11 +251,13 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
       const purchase = await trx
         .insertInto('supplier_purchases')
         .values({
+          id: crypto.randomUUID(),
           business_id: user.business_id,
           supplier_id: supplierId,
           total_amount: totalAmount,
-          invoice_document_url: body.invoice_document_url,
-          created_by: user.sub
+          invoice_document_url: body.invoice_document_url || null,
+          created_by: user.sub,
+          created_at: new Date()
         })
         .returningAll()
         .executeTakeFirst();
@@ -259,7 +267,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
         // Get current product
         const product = await trx
           .selectFrom('products')
-          .select(['stock_quantity', 'cost', 'price'])
+          .select(['stock_quantity', 'cost', 'price', 'margin_percent'])
           .where('id', '=', item.product_id)
           .forUpdate()
           .executeTakeFirst();
@@ -294,6 +302,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
         await trx
           .insertInto('stock_movements')
           .values({
+            id: crypto.randomUUID(),
             business_id: user.business_id,
             product_id: item.product_id,
             movement_type: 'purchase',
@@ -302,7 +311,9 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
             reference_type: 'supplier_purchase',
             reference_id: purchase!.id,
             user_id: user.sub,
-            notes: `Compra a proveedor - ${item.quantity} unid. a $${item.unit_cost}`
+            notes: `Compra a proveedor - ${item.quantity} unid. a $${item.unit_cost}`,
+            created_at: new Date(),
+            metadata: {}
           })
           .execute();
       }
@@ -311,6 +322,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
       await trx
         .insertInto('transactions')
         .values({
+          id: crypto.randomUUID(),
           business_id: user.business_id,
           type: 'supplier_payment',
           amount: totalAmount,
@@ -319,7 +331,8 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
           description: `Compra a proveedor ID: ${supplierId}`,
           reference_id: purchase!.id,
           reference_type: 'supplier_purchase',
-          created_by: user.sub
+          created_by: user.sub,
+          created_at: new Date()
         })
         .execute();
 
@@ -341,7 +354,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const categories = await db
       .selectFrom('suppliers')

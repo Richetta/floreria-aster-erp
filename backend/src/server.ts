@@ -30,7 +30,7 @@ await fastify.register(rateLimit, {
   allowList: ['127.0.0.1', 'localhost'], // Whitelist localhost for development
   errorResponseBuilder: (req, context) => ({
     error: 'Too Many Requests',
-    message: `Rate limit exceeded. Try again in ${Math.ceil(context.afterMs / 1000)} seconds.`,
+    message: `Rate limit exceeded. Try again in ${Math.ceil((context as any).afterMs / 1000)} seconds.`,
     statusCode: 429
   }),
   addHeaders: {

@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { sql } from 'kysely';
 import { db } from '../db';
 
 export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
@@ -30,7 +31,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     const { 
       from_date, 
@@ -47,11 +48,11 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Filters
     if (from_date) {
-      query = query.where('created_at', '>=', from_date);
+      query = query.where('created_at', '>=', new Date(from_date));
     }
 
     if (to_date) {
-      query = query.where('created_at', '<=', to_date);
+      query = query.where('created_at', '<=', new Date(to_date));
     }
 
     if (reason) {
@@ -83,7 +84,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = request.query as { from_date?: string, to_date?: string };
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     // Get waste logs with product info
     let query = db
@@ -102,11 +103,11 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
       .where('waste_logs.deleted_at', 'is', null);
 
     if (from_date) {
-      query = query.where('waste_logs.created_at', '>=', from_date);
+      query = query.where('waste_logs.created_at', '>=', new Date(from_date));
     }
 
     if (to_date) {
-      query = query.where('waste_logs.created_at', '<=', to_date);
+      query = query.where('waste_logs.created_at', '<=', new Date(to_date));
     }
 
     const wasteLogs = await query
@@ -179,7 +180,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createWasteSchema.parse(request.body);
 
-      await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
       const result = await db.transaction().execute(async (trx) => {
         // Get current product
@@ -216,12 +217,14 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
         const wasteLog = await trx
           .insertInto('waste_logs')
           .values({
+            id: crypto.randomUUID(),
             business_id: user.business_id,
             product_id: body.product_id,
             quantity: body.quantity,
             reason: body.reason,
             reported_by: user.sub,
-            notes: body.notes
+            notes: body.notes || null,
+            created_at: new Date()
           })
           .returningAll()
           .executeTakeFirst();
@@ -230,6 +233,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
         await trx
           .insertInto('stock_movements')
           .values({
+            id: crypto.randomUUID(),
             business_id: user.business_id,
             product_id: body.product_id,
             movement_type: 'waste',
@@ -238,7 +242,9 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
             reference_type: 'waste',
             reference_id: wasteLog!.id,
             user_id: user.sub,
-            notes: `Merma: ${body.reason} - ${body.quantity} unid.`
+            notes: `Merma: ${body.reason} - ${body.quantity} unid.`,
+            created_at: new Date(),
+            metadata: {}
           })
           .execute();
 
@@ -246,6 +252,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
         await trx
           .insertInto('transactions')
           .values({
+            id: crypto.randomUUID(),
             business_id: user.business_id,
             type: 'expense',
             amount: lossValue,
@@ -254,8 +261,9 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
             description: `Merma: ${body.quantity}x ${product.name} (${body.reason})`,
             reference_id: wasteLog!.id,
             reference_type: 'waste',
-            notes: body.notes,
-            created_by: user.sub
+            notes: body.notes || null,
+            created_by: user.sub,
+            created_at: new Date()
           })
           .execute();
 
@@ -284,7 +292,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await db.executeQuery(`SET LOCAL app.current_business_id = '${user.business_id}'`);
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
 
     // Get the waste log to restore stock
     const wasteLog = await db
@@ -299,16 +307,17 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
 
     await db.transaction().execute(async (trx) => {
       // Restore stock
+      const product = await trx
+        .selectFrom('products')
+        .select('stock_quantity')
+        .where('id', '=', wasteLog.product_id)
+        .forUpdate()
+        .executeTakeFirst();
+
       await trx
         .updateTable('products')
         .set({
-          stock_quantity: trx
-            .selectFrom('products')
-            .select('stock_quantity')
-            .where('id', '=', wasteLog.product_id)
-            .$narrowType<{ stock_quantity: number }>()
-            .executeTakeFirst()
-            .then(p => (p?.stock_quantity || 0) + wasteLog.quantity),
+          stock_quantity: (Number(product?.stock_quantity) || 0) + wasteLog.quantity,
           updated_at: new Date()
         })
         .where('id', '=', wasteLog.product_id)
