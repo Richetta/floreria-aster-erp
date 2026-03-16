@@ -1,4 +1,0 @@
-Client ID: 806329509349-r910mo70k002j62jrohh3mlr5uottjlo.apps.googleusercontent.com
-Client Secret: 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
-Fecha de creación: 15 de marzo de 2026, 6:42:51 p.m. GMT-3
-
