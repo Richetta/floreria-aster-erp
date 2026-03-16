@@ -1,0 +1,11 @@
+.barcode-container {
+    display: inline-block;
+    padding: 1rem;
+    background: white;
+    border-radius: var(--radius-md);
+}
+
+.barcode-container canvas {
+    max-width: 100%;
+    height: auto;
+}

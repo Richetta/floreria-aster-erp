@@ -1,0 +1,418 @@
+Florería Aster – Problemas operativos y necesidades del sistema
+Información general del negocio
+
+Nombre del negocio: Florería Aster
+Rubro: Florería y regalería
+Cantidad de empleados: 2
+Persona entrevistada: Alejandra
+Encuesta realizada por: Juan Richetta
+Fecha: 10 de marzo de 2026
+
+El negocio vende principalmente:
+
+flores
+
+ramos armados
+
+plantas de interior
+
+plantas de exterior
+
+macetas
+
+tierra
+
+productos de regalería
+
+artículos decorativos
+
+flores artificiales
+
+Es un negocio con gran variedad de productos, muchos de ellos con precios variables y reposición frecuente.
+
+Funcionamiento actual del negocio
+
+Actualmente el negocio funciona casi completamente en papel.
+
+La información del negocio se maneja con:
+
+planillas físicas
+
+hojas sueltas
+
+anotaciones manuales
+
+listas de pedidos escritas
+
+Esto genera varios problemas de organización y control.
+
+Gestión actual de productos y stock
+
+El stock se maneja con varias planillas de papel separadas por categorías.
+
+Ejemplos de planillas actuales:
+
+plantas de interior
+
+plantas de exterior
+
+florería artificial
+
+regalería
+
+macetas
+
+tierra
+
+artículos de pileta
+
+productos varios
+
+Cada producto en las planillas contiene:
+
+código de producto
+
+nombre del producto
+
+descripción
+
+precio
+
+anotaciones adicionales
+
+Problemas detectados:
+
+La información está distribuida en muchas hojas.
+
+No hay un control centralizado del stock.
+
+Es difícil actualizar precios.
+
+No hay alertas de reposición.
+
+No hay control automático de cantidades.
+
+La búsqueda de productos es lenta.
+
+No existe un historial de cambios de precio.
+
+Problema crítico: actualización constante de precios
+
+Uno de los mayores problemas del negocio es que los proveedores cambian los precios con mucha frecuencia.
+
+En algunos casos:
+
+los precios cambian cada semana
+
+algunos cambian dos veces por semana
+
+Esto genera:
+
+mucho tiempo invertido en actualizar precios
+
+errores en los valores
+
+precios desactualizados al momento de vender
+
+Actualmente el proceso es manual.
+
+Gestión de pedidos
+
+Cuando un cliente hace un pedido:
+
+el pedido se anota en papel
+
+se escribe en una hoja de pedidos
+
+los pedidos más nuevos se agregan al final
+
+cuando el pedido se completa se tacha
+
+Problemas de este sistema:
+
+no hay seguimiento claro del estado del pedido
+
+los pedidos pueden perderse
+
+no hay historial digital
+
+no se pueden buscar pedidos antiguos
+
+no hay recordatorios de entrega
+
+no hay control automático de pagos pendientes
+
+Problema de pagos pendientes
+
+Uno de los problemas mencionados es:
+
+Muchos clientes retiran el pedido pero no cancelan el pago.
+
+Actualmente no hay:
+
+sistema de deudas
+
+registro de pagos pendientes
+
+recordatorio de cobros
+
+Esto provoca pérdidas económicas o confusión.
+
+Gestión de proveedores
+
+Existe la necesidad de tener un sistema para:
+
+recordar cuándo vienen proveedores
+
+registrar reposiciones de mercadería
+
+anotar nuevos productos
+
+Actualmente esto también se maneja en papel.
+
+Registro de mercadería nueva
+
+Cuando llega nueva mercadería:
+
+se anota manualmente
+
+se agrega a las planillas
+
+se actualiza el precio
+
+Este proceso consume mucho tiempo.
+
+Problema de digitalización de información
+
+Existe la necesidad de poder:
+
+sacar fotos a hojas o PDFs
+
+subir esos documentos al sistema
+
+que el sistema extraiga la información automáticamente
+
+Ejemplo:
+
+Si se tiene una hoja con productos o precios, poder subirla y que el sistema detecte:
+
+nombre del producto
+
+precio
+
+código
+
+descripción
+
+Esto permitiría digitalizar información antigua.
+
+Necesidad de código de barras
+
+El negocio quiere implementar un sistema donde:
+
+Cada producto tenga un código de barras.
+
+Flujo deseado:
+
+el cliente trae el producto
+
+se escanea el código
+
+aparece automáticamente:
+
+el producto
+
+el precio
+
+la información del artículo
+
+Esto permitiría vender más rápido y evitar errores.
+
+Creación de ramos
+
+Uno de los procesos más importantes del negocio es armar ramos florales.
+
+Un ramo se compone de varias flores.
+
+Necesidad del sistema:
+
+Debe existir:
+
+una base de datos de flores
+y una base de datos de ramos.
+
+El sistema debe validar que:
+
+Si un ramo necesita una flor que no está en stock,
+el ramo no pueda ofrecerse ni venderse.
+
+Esto evitaría vender productos imposibles de armar.
+
+Recordatorios de fechas importantes de clientes
+
+El negocio quiere poder guardar:
+
+cumpleaños
+
+aniversarios
+
+fechas especiales
+
+De esta forma se podrían generar recordatorios para contactar clientes y ofrecer productos.
+
+Esto podría usarse también como estrategia de venta.
+
+Gestión de empleados
+
+Actualmente hay dos empleados.
+
+Uno de los problemas mencionados es:
+
+Si el negocio creciera y tuviera el doble de clientes,
+el primer problema que colapsaría sería:
+
+coordinación del equipo y revisión de stock.
+
+Esto indica que el sistema debe ayudar a organizar el trabajo.
+
+Principales cuellos de botella detectados
+
+Los problemas más importantes del negocio son:
+
+gestión de stock
+
+actualización constante de precios
+
+organización de productos
+
+registro de pedidos
+
+control de pagos pendientes
+
+reposición de mercadería
+
+coordinación entre empleados
+
+Funcionalidades que el sistema debe resolver
+
+El sistema debería incluir:
+
+Gestión de productos
+
+catálogo completo
+
+código de producto
+
+precio
+
+descripción
+
+categoría
+
+stock disponible
+
+Gestión de precios
+
+actualización rápida
+
+historial de precios
+
+registro de fecha de aumento
+
+Gestión de stock
+
+cantidad disponible
+
+alertas de reposición
+
+Gestión de pedidos
+
+registrar pedidos
+
+estado del pedido
+
+fecha de entrega
+
+cliente asociado
+
+Gestión de pagos
+
+pagos realizados
+
+pagos pendientes
+
+control de deudas
+
+Gestión de clientes
+
+nombre
+
+teléfono
+
+historial de compras
+
+fechas importantes
+
+Gestión de ramos
+
+recetas de ramos
+
+relación entre flores y ramos
+
+validación automática de stock
+
+Gestión de proveedores
+
+registro de proveedores
+
+recordatorio de visitas
+
+registro de compras
+
+Escaneo de productos
+
+sistema de código de barras
+
+búsqueda rápida
+
+Digitalización de documentos
+
+subir PDF o fotos
+
+extraer información automáticamente
+
+Requisito de experiencia de usuario
+
+El sistema debe ser:
+
+extremadamente simple.
+
+Debe poder usarlo una persona mayor sin experiencia tecnológica.
+
+Por lo tanto:
+
+botones grandes
+
+pocas opciones por pantalla
+
+navegación simple
+
+evitar lenguaje técnico
+
+diseño mobile first
+
+Objetivo final del sistema
+
+Crear una aplicación web simple que permita gestionar una florería completa desde el celular.
+
+El sistema debe:
+
+reducir el uso de papel
+
+ordenar la información
+
+acelerar el trabajo diario
+
+evitar errores
+
+facilitar la gestión del negocio

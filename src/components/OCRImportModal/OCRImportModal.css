@@ -1,0 +1,252 @@
+.ocr-import-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 1rem;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.ocr-import-modal {
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    overflow: hidden;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 100%;
+    max-width: 800px;
+}
+
+.ocr-import-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ocr-import-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Upload Area */
+.ocr-upload-area {
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--color-background);
+}
+
+.ocr-upload-area:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+}
+
+.ocr-preview {
+    max-width: 100%;
+    margin: 1.5rem 0;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+}
+
+.ocr-preview img {
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+}
+
+/* Error */
+.ocr-error {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: var(--radius-md);
+    color: #dc2626;
+    margin-top: 1rem;
+}
+
+/* Info & Tips */
+.ocr-info {
+    background: var(--color-background);
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+}
+
+.ocr-tips {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ocr-tips li {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+/* Processing */
+.ocr-processing {
+    text-align: center;
+    padding: 3rem 2rem;
+}
+
+.ocr-progress-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ocr-spinner {
+    animation: spin 2s linear infinite;
+    color: var(--color-primary);
+}
+
+.ocr-progress-bar {
+    width: 100%;
+    max-width: 400px;
+    height: 8px;
+    background: var(--color-surface-hover);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin: 1.5rem 0;
+}
+
+.ocr-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease-out;
+}
+
+/* Review */
+.ocr-review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.ocr-products-table {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 1.5rem 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.ocr-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ocr-table th,
+.ocr-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ocr-table th {
+    background: var(--color-surface-hover);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.ocr-table tbody tr:hover {
+    background: var(--color-surface-hover);
+}
+
+/* No Results */
+.ocr-no-results {
+    text-align: center;
+    padding: 3rem 2rem;
+}
+
+/* Result */
+.ocr-result {
+    text-align: center;
+    padding: 3rem 2rem;
+}
+
+.ocr-result-icon {
+    margin-bottom: 1.5rem;
+}
+
+/* Actions */
+.ocr-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    padding: 1.5rem 0;
+    border-top: 1px solid var(--color-border);
+    margin-top: 1.5rem;
+}
+
+/* Badge */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-primary {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

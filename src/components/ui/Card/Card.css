@@ -1,0 +1,155 @@
+/* ============================================
+   CARD - Componente consistente
+   Florería Aster ERP
+   ============================================ */
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--card-radius);
+  transition: var(--transition-base);
+}
+
+/* ============================================
+   PADDING
+   ============================================ */
+
+.card-padding-none {
+  padding: 0;
+}
+
+.card-padding-sm {
+  padding: var(--card-padding-sm);  /* 16px */
+}
+
+.card-padding-md {
+  padding: var(--card-padding-md);  /* 20px */
+}
+
+.card-padding-lg {
+  padding: var(--card-padding-lg);  /* 24px */
+}
+
+/* ============================================
+   BORDES Y SOMBRAS
+   ============================================ */
+
+.card-bordered {
+  border: var(--card-border);
+}
+
+.card-shadow {
+  box-shadow: var(--card-shadow);
+}
+
+.card-hover:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.card-clickable {
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.card-clickable:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   VARIANTES ESPECIALES
+   ============================================ */
+
+/* Card con header */
+.card-header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: var(--border);
+  background: var(--color-surface-hover);
+  border-radius: var(--card-radius) var(--card-radius) 0 0;
+}
+
+.card-header-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-main);
+  margin: 0;
+}
+
+/* Card con footer */
+.card-footer {
+  padding: var(--space-4) var(--space-5);
+  border-top: var(--border);
+  background: var(--color-surface-hover);
+  border-radius: 0 0 var(--card-radius) var(--card-radius);
+}
+
+/* Card interactiva */
+.card-interactive {
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.card-interactive:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Card destacada */
+.card-highlighted {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+/* Card con estado */
+.card-success {
+  border-color: var(--color-success);
+  background: #d1fae5;
+}
+
+.card-warning {
+  border-color: var(--color-warning);
+  background: #fef3c7;
+}
+
+.card-danger {
+  border-color: var(--color-danger);
+  background: #fee2e2;
+}
+
+/* ============================================
+   GRID DE CARDS
+   ============================================ */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--grid-gap-md);
+}
+
+.card-grid-sm {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--grid-gap-sm);
+}
+
+.card-grid-lg {
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: var(--grid-gap-lg);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .card-padding-md {
+    padding: var(--space-4);
+  }
+  
+  .card-padding-lg {
+    padding: var(--space-5);
+  }
+  
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}

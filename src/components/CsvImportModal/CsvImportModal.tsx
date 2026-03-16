@@ -1,0 +1,407 @@
+import React, { useState, useRef } from 'react';
+import { Upload, X, FileText, CheckCircle2, Download, Settings } from 'lucide-react';
+import { api } from '../../services/api';
+import './CsvImportModal.css';
+
+interface CsvImportModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+export const CsvImportModal: React.FC<CsvImportModalProps> = ({
+    isOpen,
+    onClose
+}) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [parsedData, setParsedData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [importResult, setImportResult] = useState<any>(null);
+    const [step, setStep] = useState<'upload' | 'preview' | 'options' | 'result'>('upload');
+    const [importMode, setImportMode] = useState<'file' | 'text'>('file');
+    const [pastedText, setPastedText] = useState('');
+
+    // Import options
+    const [updateCosts, setUpdateCosts] = useState(true);
+    const [updatePrices, setUpdatePrices] = useState(true);
+    const [updateStock, setUpdateStock] = useState(false);
+    const [autoMargin, setAutoMargin] = useState(false);
+    const [marginPercent, setMarginPercent] = useState(50);
+
+    if (!isOpen) return null;
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const validExtensions = ['.csv', '.xlsx', '.txt', '.pdf', '.docx'];
+        const hasValidExt = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+
+        if (!hasValidExt) {
+            alert('Por favor seleccioná un archivo válido (CSV, XLSX, TXT, PDF o DOCX)');
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const result = await api.parseFile(file);
+            setParsedData(result);
+            setStep('preview');
+        } catch (error: any) {
+            alert('Error al leer el archivo: ' + error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleTextSubmit = async () => {
+        if (!pastedText.trim()) return;
+
+        setIsLoading(true);
+        try {
+            const result = await (api as any).parseText(pastedText);
+            setParsedData(result);
+            setStep('preview');
+        } catch (error: any) {
+            alert('Error al procesar el texto: ' + error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleImport = async () => {
+        if (!parsedData) return;
+
+        setIsLoading(true);
+        try {
+            // Use raw_rows for full import instead of just the preview data
+            const result = await api.importPrices(parsedData.raw_rows || parsedData.data, {
+                update_costs: updateCosts,
+                update_prices: updatePrices,
+                update_stock: updateStock,
+                auto_margin: autoMargin,
+                margin_percent: marginPercent
+            });
+            setImportResult(result);
+            setStep('result');
+        } catch (error: any) {
+            alert('Error al importar: ' + error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDownloadTemplate = async () => {
+        try {
+            const csv = await api.exportProductsTemplate();
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'productos_aster.csv';
+            a.click();
+        } catch (error) {
+            alert('Error al descargar plantilla');
+        }
+    };
+
+    const handleClose = () => {
+        setParsedData(null);
+        setImportResult(null);
+        setStep('upload');
+        setImportMode('file');
+        setPastedText('');
+        onClose();
+    };
+
+    return (
+        <div className="csv-import-overlay">
+            <div className="csv-import-modal">
+                <div className="csv-import-header">
+                    <h2 className="text-h2 flex items-center gap-2">
+                        <Upload size={24} className="text-primary" />
+                        Importador Inteligente de Productos
+                    </h2>
+                    <button className="btn-icon" onClick={handleClose}>
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="csv-import-body">
+                    {/* STEP 1: UPLOAD / PASTE */}
+                    {step === 'upload' && (
+                        <div className="import-step">
+                            <div className="flex border-b mb-6 border-slate-700">
+                                <button
+                                    className={`px-6 py-2 font-medium transition-all ${importMode === 'file' ? 'border-b-2 border-primary text-primary' : 'text-muted'}`}
+                                    onClick={() => setImportMode('file')}
+                                >
+                                    Archivo
+                                </button>
+                                <button
+                                    className={`px-6 py-2 font-medium transition-all ${importMode === 'text' ? 'border-b-2 border-primary text-primary' : 'text-muted'}`}
+                                    onClick={() => setImportMode('text')}
+                                >
+                                    Pegar Texto
+                                </button>
+                            </div>
+
+                            {importMode === 'file' ? (
+                                <div className="upload-area" onClick={() => fileInputRef.current?.click()}>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept=".csv,.xlsx,.txt,.pdf,.docx"
+                                        onChange={handleFileSelect}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <Upload size={48} className="text-muted mb-4" />
+                                    <h3 className="text-h3 mb-2">Arrastrá cualquier archivo aquí</h3>
+                                    <p className="text-body text-muted mb-4">CSV, Excel, PDF, Word o Texto</p>
+                                    <button className="btn btn-secondary" disabled={isLoading}>
+                                        {isLoading ? 'Procesando...' : 'Seleccionar Archivo'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="paste-area">
+                                    <textarea
+                                        className="form-input w-full min-h-[200px] mb-4 p-4 font-mono text-small"
+                                        placeholder="Pegá aquí tu lista de productos... Ejemplo:&#10;P-001 Ramo de Rosas $1500&#10;P-002 Margaritas $800"
+                                        value={pastedText}
+                                        onChange={(e) => setPastedText(e.target.value)}
+                                    />
+                                    <button 
+                                        className="btn btn-primary w-full" 
+                                        onClick={handleTextSubmit}
+                                        disabled={isLoading || !pastedText.trim()}
+                                    >
+                                        {isLoading ? 'Procesando...' : 'Procesar Texto'}
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="import-info mt-6">
+                                <h4 className="text-h4 mb-3 flex items-center gap-2">
+                                    <FileText size={18} />
+                                    Multi-formato Inteligente
+                                </h4>
+                                <p className="text-small text-muted mb-3">
+                                    Ahora podés subir listas de precios en casi cualquier formato. El sistema detectará 
+                                    automáticamente los códigos, nombres y precios de tus productos.
+                                </p>
+                                <div className="csv-example">
+                                    <p className="text-micro font-bold mb-2">Formatos Soportados:</p>
+                                    <ul className="text-micro list-none p-0">
+                                        <li>📊 <strong>Excel (.xlsx):</strong> Recomendado para grandes listas.</li>
+                                        <li>📄 <strong>PDF / Word:</strong> Ideal para listas de proveedores.</li>
+                                        <li>📝 <strong>CSV / TXT:</strong> Formatos estándar.</li>
+                                    </ul>
+                                </div>
+                                <button 
+                                    className="btn btn-outline mt-4 flex items-center gap-2"
+                                    onClick={handleDownloadTemplate}
+                                >
+                                    <Download size={16} />
+                                    Descargar plantilla con mis productos
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 2: PREVIEW */}
+                    {step === 'preview' && parsedData && (
+                        <div className="import-step">
+                            <div className="preview-summary">
+                                <div className="summary-card">
+                                    <CheckCircle2 size={24} className="text-success" />
+                                    <div>
+                                        <p className="text-h3">{parsedData.total_rows}</p>
+                                        <p className="text-small text-muted">Productos detectados</p>
+                                    </div>
+                                </div>
+                                <div className="summary-card">
+                                    <FileText size={24} className="text-primary" />
+                                    <div>
+                                        <p className="text-small font-bold truncate max-w-[120px]">{parsedData.filename}</p>
+                                        <p className="text-micro text-muted">Método: {parsedData.method}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="preview-table-container">
+                                <h4 className="text-h4 mb-2">Vista previa (primeras 10 filas):</h4>
+                                <table className="preview-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Nombre</th>
+                                            <th>Costo</th>
+                                            <th>Precio</th>
+                                            <th>Stock</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {parsedData.data.slice(0, 10).map((row: any, i: number) => (
+                                            <tr key={i}>
+                                                <td>{row.code || '-'}</td>
+                                                <td>{row.name || '-'}</td>
+                                                <td>{row.cost !== undefined ? `$${row.cost}` : '-'}</td>
+                                                <td>{row.price !== undefined ? `$${row.price}` : '-'}</td>
+                                                <td>{row.stock !== undefined ? row.stock : '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="import-actions">
+                                <button className="btn btn-secondary" onClick={() => setStep('upload')}>
+                                    Volver
+                                </button>
+                                <button 
+                                    className="btn btn-primary" 
+                                    onClick={() => setStep('options')}
+                                >
+                                    Continuar
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 3: OPTIONS */}
+                    {step === 'options' && (
+                        <div className="import-step">
+                            <h3 className="text-h3 mb-4">Opciones de Importación</h3>
+
+                            <div className="import-options">
+                                <div className="option-group">
+                                    <h4 className="text-h4 mb-3">¿Qué datos querés actualizar?</h4>
+                                    
+                                    <label className="option-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={updateCosts}
+                                            onChange={(e) => setUpdateCosts(e.target.checked)}
+                                        />
+                                        <span>Actualizar Costos</span>
+                                    </label>
+
+                                    <label className="option-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={updatePrices}
+                                            onChange={(e) => setUpdatePrices(e.target.checked)}
+                                        />
+                                        <span>Actualizar Precios</span>
+                                    </label>
+
+                                    <label className="option-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={updateStock}
+                                            onChange={(e) => setUpdateStock(e.target.checked)}
+                                        />
+                                        <span>Actualizar Stock</span>
+                                    </label>
+                                </div>
+
+                                <div className="option-group">
+                                    <h4 className="text-h4 mb-3 flex items-center gap-2">
+                                        <Settings size={18} />
+                                        Configuración de Precios
+                                    </h4>
+                                    
+                                    <label className="option-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={autoMargin}
+                                            onChange={(e) => setAutoMargin(e.target.checked)}
+                                        />
+                                        <span>Calcular precio automáticamente con margen</span>
+                                    </label>
+
+                                    {autoMargin && (
+                                        <div className="margin-input ml-6 mt-2">
+                                            <label className="form-label">Margen (%):</label>
+                                            <input
+                                                type="number"
+                                                className="form-input"
+                                                value={marginPercent}
+                                                onChange={(e) => setMarginPercent(Number(e.target.value))}
+                                                min="0"
+                                                max="200"
+                                                style={{ width: '100px' }}
+                                            />
+                                            <p className="text-micro text-muted mt-1">
+                                                Precio = Costo × (1 + {marginPercent}%)
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="import-actions">
+                                <button className="btn btn-secondary" onClick={() => setStep('preview')}>
+                                    Volver
+                                </button>
+                                <button 
+                                    className="btn btn-primary" 
+                                    onClick={handleImport}
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'Importando...' : 'Importar Datos'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 4: RESULT */}
+                    {step === 'result' && importResult && (
+                        <div className="import-step">
+                            <div className="import-result">
+                                <div className="result-icon">
+                                    <CheckCircle2 size={64} className="text-success" />
+                                </div>
+                                <h3 className="text-h2 mb-4">¡Importación Completada!</h3>
+                                
+                                <div className="result-summary">
+                                    <div className="result-item">
+                                        <span className="result-label">Actualizados:</span>
+                                        <span className="result-value text-success">{importResult.updated}</span>
+                                    </div>
+                                    <div className="result-item">
+                                        <span className="result-label">Creados:</span>
+                                        <span className="result-value text-primary">{importResult.created}</span>
+                                    </div>
+                                    {importResult.errors.length > 0 && (
+                                        <div className="result-item">
+                                            <span className="result-label">Errores:</span>
+                                            <span className="result-value text-danger">{importResult.errors.length}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {importResult.errors.length > 0 && (
+                                    <div className="errors-detail mt-4">
+                                        <h4 className="text-h4 mb-2">Errores:</h4>
+                                        {importResult.errors.slice(0, 10).map((error: any, i: number) => (
+                                            <div key={i} className="error-item text-small">
+                                                {error.code}: {error.error}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="import-actions">
+                                <button className="btn btn-primary" onClick={handleClose}>
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};

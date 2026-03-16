@@ -1,0 +1,207 @@
+.notifications-panel {
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.notifications-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--color-surface-hover) 0%, var(--color-surface) 100%);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.notifications-header h2 {
+    margin: 0;
+}
+
+.notification-count {
+    background: var(--color-primary);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 800;
+    padding: 0.35rem 0.75rem;
+    border-radius: 9999px;
+    min-width: 32px;
+    text-align: center;
+}
+
+.notifications-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--color-surface-hover);
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.notification-item:hover {
+    background: var(--color-surface-hover);
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+/* Priority Styles */
+.notification-item.high {
+    border-left-color: var(--color-danger);
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%);
+}
+
+.notification-item.medium {
+    border-left-color: var(--color-warning);
+}
+
+.notification-item.low {
+    border-left-color: var(--color-success);
+}
+
+/* Type Styles */
+.notification-item.birthday {
+    background: linear-gradient(90deg, rgba(155, 81, 224, 0.05) 0%, transparent 100%);
+}
+
+.notification-item.debt {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%);
+}
+
+.notification-item.stock {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.05) 0%, transparent 100%);
+}
+
+.notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-surface-hover);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.notification-item.high .notification-icon {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-danger);
+}
+
+.notification-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin: 0 0 0.35rem;
+}
+
+.notification-message {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin: 0 0 0.35rem;
+}
+
+.notification-date {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    opacity: 0.7;
+}
+
+.notification-priority {
+    display: flex;
+    align-items: center;
+}
+
+.priority-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-danger);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+/* Empty State */
+.empty-notifications {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.empty-notifications svg {
+    margin-bottom: 1.5rem;
+}
+
+.empty-notifications h3 {
+    margin-bottom: 0.5rem;
+}
+
+.empty-notifications p {
+    color: var(--color-text-muted);
+}
+
+/* Notifications Summary */
+.notifications-summary {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1rem 1.5rem;
+    background: var(--color-surface-hover);
+    border-top: 1px solid var(--color-border);
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.summary-item svg {
+    color: var(--color-primary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .notifications-panel {
+        border-radius: var(--radius-lg);
+    }
+
+    .notification-item {
+        padding: 0.875rem 1rem;
+    }
+
+    .notifications-summary {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+}

@@ -1,0 +1,128 @@
+.package-availability {
+    padding: 1.25rem;
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    margin-top: 1rem;
+}
+
+.package-availability.available {
+    border-color: var(--color-success);
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.package-availability.unavailable {
+    border-color: var(--color-danger);
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+.availability-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.availability-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.missing-components {
+    margin-top: 1rem;
+}
+
+.missing-components h5 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin-bottom: 0.75rem;
+}
+
+.missing-components ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.missing-components li {
+    padding: 0.75rem;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.5rem;
+    border-left: 3px solid var(--color-danger);
+}
+
+.component-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.component-name {
+    font-weight: 600;
+    color: var(--color-text-main);
+    flex: 1;
+    min-width: 150px;
+}
+
+.component-stock {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.component-stock .required {
+    color: var(--color-danger);
+}
+
+.component-stock .available {
+    color: var(--color-success);
+}
+
+.component-stock .shortage {
+    color: var(--color-warning);
+    font-weight: 700;
+}
+
+.availability-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--color-success);
+    color: white;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.availability-message svg {
+    flex-shrink: 0;
+}
+
+/* Compact version for product cards */
+.package-availability-compact {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.625rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-top: 0.5rem;
+}
+
+.package-availability-compact.available {
+    background: var(--color-success);
+    color: white;
+}
+
+.package-availability-compact.unavailable {
+    background: var(--color-danger);
+    color: white;
+}

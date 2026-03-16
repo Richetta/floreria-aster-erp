@@ -1,0 +1,176 @@
+/* ============================================
+   TYPOGRAPHY - Jerarquía consistente
+   Florería Aster ERP
+   ============================================ */
+
+/* ============================================
+   TÍTULOS DE PÁGINA
+   ============================================ */
+.text-page-title {
+  font-size: 32px;        /* 2rem */
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: var(--space-2);
+  color: var(--color-text-main);
+  font-family: var(--font-display);
+}
+
+/* ============================================
+   TÍTULOS DE SECCIÓN
+   ============================================ */
+.text-section-title {
+  font-size: 24px;        /* 1.5rem */
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: var(--space-4);
+  color: var(--color-text-main);
+  font-family: var(--font-display);
+}
+
+/* ============================================
+   TÍTULOS DE CARD
+   ============================================ */
+.text-card-title {
+  font-size: 20px;        /* 1.25rem */
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: var(--space-3);
+  color: var(--color-text-main);
+  font-family: var(--font-display);
+}
+
+/* ============================================
+   SUBTÍTULOS
+   ============================================ */
+.text-subtitle {
+  font-size: 18px;        /* var(--font-size-base) */
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+/* ============================================
+   CUERPO DE TEXTO
+   ============================================ */
+.text-body {
+  font-size: var(--font-size-base);  /* 18px */
+  line-height: 1.6;
+  color: var(--color-text-main);
+}
+
+.text-body-muted {
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+/* ============================================
+   TEXTO PEQUEÑO
+   ============================================ */
+.text-small {
+  font-size: var(--font-size-small);  /* 16px */
+  line-height: 1.5;
+  color: var(--color-text-main);
+}
+
+.text-small-muted {
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+/* ============================================
+   TEXTO MICRO (metadata, labels)
+   ============================================ */
+.text-micro {
+  font-size: 14px;        /* 0.875rem - MÍNIMO para accesibilidad */
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.text-micro-bold {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--color-text-main);
+  font-weight: 600;
+}
+
+/* ============================================
+   KPIs y NÚMEROS GRANDES
+   ============================================ */
+.text-display {
+  font-size: 36px;        /* 2.25rem */
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--color-text-main);
+  font-family: var(--font-display);
+}
+
+.text-display-sm {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text-main);
+  font-family: var(--font-display);
+}
+
+/* ============================================
+   LABELS y CAPTIONS
+   ============================================ */
+.text-label {
+  font-size: 13px;        /* 0.8125rem */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.text-caption {
+  font-size: 12px;        /* 0.75rem - Solo para ayuda contextual */
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ============================================
+   UTILIDADES DE PESO
+   ============================================ */
+.font-light { font-weight: 300; }
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.font-extrabold { font-weight: 800; }
+
+/* ============================================
+   UTILIDADES DE ALINEACIÓN
+   ============================================ */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-justify { text-align: justify; }
+
+/* ============================================
+   UTILIDADES DE TRUNCADO
+   ============================================ */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

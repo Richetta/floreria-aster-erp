@@ -1,0 +1,120 @@
+.logistics-page {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.logistics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+    .logistics-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.delivery-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.delivery-card {
+    border-left: 6px solid var(--color-border);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.delivery-card.ready {
+    border-left-color: var(--color-warning);
+}
+
+.delivery-card.shipping {
+    border-left-color: var(--color-primary);
+    background: linear-gradient(135deg, var(--color-surface) 0%, rgba(168, 85, 247, 0.03) 100%);
+}
+
+.pulse {
+    animation: pulse-animation 2s infinite;
+}
+
+@keyframes pulse-animation {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.logistics-map-panel {
+    padding: 2rem;
+}
+
+.map-placeholder {
+    height: 300px;
+    background-color: var(--color-background);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.map-overlay {
+    width: 200px;
+    height: 100px;
+    position: relative;
+}
+
+.route-marker {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: var(--color-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    position: absolute;
+    z-index: 2;
+}
+
+.marker-start {
+    top: 0;
+    left: 0;
+}
+
+.marker-end {
+    bottom: 0;
+    right: 0;
+    background-color: var(--color-success);
+}
+
+.route-line {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    width: calc(100% - 30px);
+    height: calc(100% - 30px);
+    border-top: 2px dashed var(--color-primary);
+    border-right: 2px dashed var(--color-primary);
+    border-radius: 0 20px 0 0;
+    z-index: 1;
+}
+
+.active-shipping {
+    box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.1), 0 8px 10px -6px rgba(168, 85, 247, 0.1);
+}

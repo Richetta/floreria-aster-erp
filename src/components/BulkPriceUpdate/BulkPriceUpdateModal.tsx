@@ -1,0 +1,456 @@
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { Upload, Download, X, Check, AlertCircle } from 'lucide-react';
+import { useStore } from '../../store/useStore';
+import { generateIdWithPrefix } from '../../utils/idGenerator';
+import './BulkPriceUpdateModal.css';
+
+interface BulkPriceUpdateModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+interface PriceChange {
+    productId: string;
+    productName: string;
+    oldPrice: number;
+    newPrice: number;
+    change: number;
+    changePercent: number;
+}
+
+export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalProps) => {
+    const products = useStore(state => state.products);
+    const updateProduct = useStore(state => state.updateProduct);
+    const addTransaction = useStore(state => state.addTransaction);
+
+    const [step, setStep] = useState<1 | 2 | 3>(1);
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [percentageIncrease, setPercentageIncrease] = useState<number>(0);
+    const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
+    const [previewChanges, setPreviewChanges] = useState<PriceChange[]>([]);
+    const [csvData, setCsvData] = useState<any[]>([]);
+    const [importMode, setImportMode] = useState<'percentage' | 'csv' | 'manual'>('percentage');
+
+    // Categorías disponibles
+    const categories = useMemo(() => ['all', ...Array.from(new Set(products.map(p => p.category)))], [products]);
+
+    // Productos filtrados por categoría
+    const filteredProducts = useMemo(() => products.filter(p => 
+        selectedCategory === 'all' || p.category === selectedCategory
+    ), [products, selectedCategory]);
+
+    // Calcular cambios cuando cambian los inputs
+    const calculateChanges = useCallback(() => {
+        const changes: PriceChange[] = [];
+
+        if (importMode === 'percentage') {
+            filteredProducts.forEach(product => {
+                const oldPrice = product.price;
+                const newPrice = oldPrice * (1 + percentageIncrease / 100);
+                changes.push({
+                    productId: product.id,
+                    productName: product.name,
+                    oldPrice,
+                    newPrice: Math.round(newPrice),
+                    change: Math.round(newPrice - oldPrice),
+                    changePercent: percentageIncrease
+                });
+            });
+        } else if (importMode === 'manual') {
+            filteredProducts.forEach(product => {
+                if (customPrices[product.id]) {
+                    const oldPrice = product.price;
+                    const newPrice = customPrices[product.id];
+                    changes.push({
+                        productId: product.id,
+                        productName: product.name,
+                        oldPrice,
+                        newPrice,
+                        change: newPrice - oldPrice,
+                        changePercent: Math.round(((newPrice - oldPrice) / oldPrice) * 100)
+                    });
+                }
+            });
+        } else if (importMode === 'csv' && csvData.length > 0) {
+            csvData.forEach((row: any) => {
+                const product = products.find(p => 
+                    p.code === row.codigo || p.name.toLowerCase() === row.nombre?.toLowerCase()
+                );
+                if (product && row.precio) {
+                    const oldPrice = product.price;
+                    const newPrice = parseFloat(row.precio);
+                    changes.push({
+                        productId: product.id,
+                        productName: product.name,
+                        oldPrice,
+                        newPrice,
+                        change: newPrice - oldPrice,
+                        changePercent: Math.round(((newPrice - oldPrice) / oldPrice) * 100)
+                    });
+                }
+            });
+        }
+
+        setPreviewChanges(changes);
+    }, [filteredProducts, percentageIncrease, customPrices, csvData, importMode, products]);
+
+    // Calcular cambios automáticamente
+    useEffect(() => {
+        calculateChanges();
+    }, [calculateChanges]);
+
+    // Manejar CSV file
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const text = event.target?.result as string;
+            const lines = text.split('\n').filter(line => line.trim());
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            
+            const data = lines.slice(1).map(line => {
+                const values = line.split(',').map(v => v.trim());
+                const row: any = {};
+                headers.forEach((header, index) => {
+                    if (header.includes('codigo') || header.includes('código') || header === 'code') {
+                        row.codigo = values[index];
+                    } else if (header.includes('nombre') || header === 'name') {
+                        row.nombre = values[index];
+                    } else if (header.includes('precio') || header === 'price') {
+                        row.precio = values[index];
+                    }
+                });
+                return row;
+            });
+
+            setCsvData(data);
+        };
+        reader.readAsText(file);
+    };
+
+    // Descargar plantilla CSV
+    const downloadTemplate = () => {
+        const headers = 'codigo,nombre,precio\n';
+        const rows = products.slice(0, 5).map(p => 
+            `${p.code},${p.name},${p.price}`
+        ).join('\n');
+        
+        const csv = headers + rows;
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'plantilla_precios.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // Aplicar cambios
+    const applyChanges = () => {
+        previewChanges.forEach(change => {
+            updateProduct(change.productId, { 
+                price: change.newPrice
+            });
+
+            // Registrar transacción de actualización de precio
+            addTransaction({
+                id: generateIdWithPrefix('t'),
+                type: 'expense',
+                category: 'Actualización de Precio',
+                amount: 0,
+                date: new Date().toISOString(),
+                method: 'cash',
+                description: `Precio de ${change.productName}: $${change.oldPrice} → $${change.newPrice}`,
+                relatedId: change.productId
+            });
+        });
+
+        alert(`✅ Se actualizaron ${previewChanges.length} productos exitosamente`);
+        setStep(1);
+        setPercentageIncrease(0);
+        setCustomPrices({});
+        setCsvData([]);
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="bulk-price-modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2 className="text-h2">📊 Actualización Masiva de Precios</h2>
+                    <button className="modal-close-btn" onClick={onClose}>
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Progress Steps */}
+                <div className="progress-steps">
+                    <div className={`step ${step >= 1 ? 'active' : ''}`}>
+                        <div className="step-number">1</div>
+                        <span>Configurar</span>
+                    </div>
+                    <div className={`step ${step >= 2 ? 'active' : ''}`}>
+                        <div className="step-number">2</div>
+                        <span>Revisar</span>
+                    </div>
+                    <div className={`step ${step >= 3 ? 'active' : ''}`}>
+                        <div className="step-number">3</div>
+                        <span>Aplicar</span>
+                    </div>
+                </div>
+
+                <div className="modal-body">
+                    {/* STEP 1: Configurar */}
+                    {step === 1 && (
+                        <div className="step-content">
+                            <h3 className="section-title">Método de Actualización</h3>
+                            
+                            <div className="method-selector">
+                                <button
+                                    className={`method-card ${importMode === 'percentage' ? 'active' : ''}`}
+                                    onClick={() => setImportMode('percentage')}
+                                >
+                                    <div className="method-icon">%</div>
+                                    <h4>Por Porcentaje</h4>
+                                    <p>Aumentar/disminuir % en toda una categoría</p>
+                                </button>
+                                
+                                <button
+                                    className={`method-card ${importMode === 'csv' ? 'active' : ''}`}
+                                    onClick={() => setImportMode('csv')}
+                                >
+                                    <div className="method-icon">📄</div>
+                                    <h4>Desde CSV/Excel</h4>
+                                    <p>Importar lista de precios del proveedor</p>
+                                </button>
+                                
+                                <button
+                                    className={`method-card ${importMode === 'manual' ? 'active' : ''}`}
+                                    onClick={() => setImportMode('manual')}
+                                >
+                                    <div className="method-icon">✏️</div>
+                                    <h4>Manual</h4>
+                                    <p>Editar precios uno por uno</p>
+                                </button>
+                            </div>
+
+                            {/* Porcentaje Mode */}
+                            {importMode === 'percentage' && (
+                                <div className="config-section">
+                                    <div className="form-group">
+                                        <label className="form-label">Categoría</label>
+                                        <select
+                                            className="form-input"
+                                            value={selectedCategory}
+                                            onChange={(e) => setSelectedCategory(e.target.value)}
+                                        >
+                                            {categories.map(cat => (
+                                                <option key={cat} value={cat}>
+                                                    {cat === 'all' ? 'Todas las categorías' : cat}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">
+                                            Porcentaje de {percentageIncrease > 0 ? 'Aumento' : 'Descuento'}
+                                        </label>
+                                        <div className="percentage-input">
+                                            <input
+                                                type="number"
+                                                className="form-input"
+                                                value={percentageIncrease}
+                                                onChange={(e) => setPercentageIncrease(parseFloat(e.target.value) || 0)}
+                                                min="-100"
+                                                max="1000"
+                                                step="0.1"
+                                            />
+                                            <span className="percentage-symbol">%</span>
+                                        </div>
+                                        {percentageIncrease !== 0 && (
+                                            <p className={`helper-text ${percentageIncrease > 0 ? 'text-success' : 'text-danger'}`}>
+                                                {percentageIncrease > 0 ? '+' : ''}{percentageIncrease}% en {filteredProducts.length} productos
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* CSV Mode */}
+                            {importMode === 'csv' && (
+                                <div className="config-section">
+                                    <div className="csv-upload">
+                                        <button 
+                                            className="btn btn-secondary"
+                                            onClick={downloadTemplate}
+                                        >
+                                            <Download size={18} />
+                                            Descargar Plantilla
+                                        </button>
+                                        
+                                        <div className="upload-area">
+                                            <input
+                                                type="file"
+                                                accept=".csv,.xlsx,.xls"
+                                                onChange={handleFileUpload}
+                                                id="csv-upload"
+                                            />
+                                            <label htmlFor="csv-upload" className="upload-label">
+                                                <Upload size={32} />
+                                                <p>Arrastrá tu archivo CSV o Excel</p>
+                                                <p className="text-muted text-small">o hacé click para seleccionar</p>
+                                            </label>
+                                        </div>
+                                        
+                                        {csvData.length > 0 && (
+                                            <div className="upload-success">
+                                                <Check size={20} className="text-success" />
+                                                <span>{csvData.length} filas cargadas</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Manual Mode */}
+                            {importMode === 'manual' && (
+                                <div className="config-section">
+                                    <div className="form-group">
+                                        <label className="form-label">Categoría a editar</label>
+                                        <select
+                                            className="form-input"
+                                            value={selectedCategory}
+                                            onChange={(e) => setSelectedCategory(e.target.value)}
+                                        >
+                                            {categories.map(cat => (
+                                                <option key={cat} value={cat}>
+                                                    {cat === 'all' ? 'Todas las categorías' : cat}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="step-actions">
+                                <button className="btn btn-secondary" onClick={onClose}>
+                                    Cancelar
+                                </button>
+                                <button 
+                                    className="btn btn-primary"
+                                    onClick={() => setStep(2)}
+                                    disabled={
+                                        (importMode === 'percentage' && percentageIncrease === 0) ||
+                                        (importMode === 'csv' && csvData.length === 0)
+                                    }
+                                >
+                                    Continuar
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 2: Revisar */}
+                    {step === 2 && (
+                        <div className="step-content">
+                            <h3 className="section-title">
+                                Vista Previa de Cambios ({previewChanges.length} productos)
+                            </h3>
+
+                            <div className="changes-preview">
+                                <div className="preview-header">
+                                    <span>Producto</span>
+                                    <span>Precio Anterior</span>
+                                    <span>Precio Nuevo</span>
+                                    <span>Cambio</span>
+                                </div>
+                                
+                                <div className="preview-list">
+                                    {previewChanges.slice(0, 10).map((change, idx) => (
+                                        <div key={idx} className="preview-item">
+                                            <span className="product-name">{change.productName}</span>
+                                            <span className="old-price">${change.oldPrice.toLocaleString()}</span>
+                                            <span className="new-price">${change.newPrice.toLocaleString()}</span>
+                                            <span className={`change ${change.change > 0 ? 'positive' : 'negative'}`}>
+                                                {change.change > 0 ? '+' : ''}${change.change.toLocaleString()} ({change.changePercent > 0 ? '+' : ''}{change.changePercent}%)
+                                            </span>
+                                        </div>
+                                    ))}
+                                    
+                                    {previewChanges.length > 10 && (
+                                        <p className="text-muted text-center mt-4">
+                                            ... y {previewChanges.length - 10} productos más
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {previewChanges.length === 0 && (
+                                <div className="empty-state">
+                                    <AlertCircle size={48} className="text-muted opacity-20" />
+                                    <p>No hay cambios para mostrar</p>
+                                </div>
+                            )}
+
+                            <div className="step-actions">
+                                <button className="btn btn-secondary" onClick={() => setStep(1)}>
+                                    Volver
+                                </button>
+                                <button 
+                                    className="btn btn-success"
+                                    onClick={() => setStep(3)}
+                                    disabled={previewChanges.length === 0}
+                                >
+                                    Confirmar Cambios
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 3: Aplicar */}
+                    {step === 3 && (
+                        <div className="step-content text-center">
+                            <div className="confirmation-icon">
+                                <Check size={64} />
+                            </div>
+                            
+                            <h3 className="text-h3 mb-4">¿Estás seguro de aplicar estos cambios?</h3>
+                            
+                            <div className="summary-box">
+                                <div className="summary-row">
+                                    <span>Productos a actualizar:</span>
+                                    <strong>{previewChanges.length}</strong>
+                                </div>
+                                <div className="summary-row">
+                                    <span>Categoría:</span>
+                                    <strong>{selectedCategory === 'all' ? 'Todas' : selectedCategory}</strong>
+                                </div>
+                                {importMode === 'percentage' && (
+                                    <div className="summary-row">
+                                        <span>Porcentaje:</span>
+                                        <strong>{percentageIncrease > 0 ? '+' : ''}{percentageIncrease}%</strong>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="step-actions">
+                                <button className="btn btn-secondary" onClick={() => setStep(2)}>
+                                    Volver
+                                </button>
+                                <button className="btn btn-success" onClick={applyChanges}>
+                                    <Check size={18} />
+                                    Sí, Aplicar Cambios
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};

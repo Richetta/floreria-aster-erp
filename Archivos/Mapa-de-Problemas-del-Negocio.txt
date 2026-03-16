@@ -1,0 +1,359 @@
+Florería Aster
+1. Caos en la gestión de productos
+Cómo funciona hoy
+
+Los productos se manejan con varias planillas de papel separadas por categoría:
+
+plantas interior
+
+plantas exterior
+
+florería artificial
+
+regalería
+
+macetas
+
+tierra
+
+artículos varios
+
+Cada producto tiene:
+
+código
+
+nombre
+
+descripción
+
+precio
+
+anotaciones
+
+Pero todo está distribuido en hojas distintas. 
+
+Documento-de-análisis-del-negoc…
+
+Problemas que genera
+
+1️⃣ No existe un catálogo central de productos
+
+2️⃣ Para encontrar un producto hay que buscar en varias hojas
+
+3️⃣ No se puede saber rápido:
+
+qué productos existen
+
+cuánto stock hay
+
+cuánto valen
+
+4️⃣ Cuando llega mercadería nueva hay que:
+
+buscar la hoja
+
+agregar el producto
+
+escribir el precio
+
+Todo manual.
+
+Consecuencia
+
+Tiempo perdido + errores de información.
+
+2. Actualización constante de precios
+
+Este es uno de los problemas más graves del negocio.
+
+Muchos proveedores cambian precios:
+
+una vez por semana
+
+incluso dos veces por semana. 
+
+Formulario Floreria
+
+Cómo se hace hoy
+
+1 Se revisa el nuevo precio del proveedor
+2 Se busca el producto en la planilla
+3 Se tacha el precio anterior
+4 Se escribe el nuevo
+
+Problemas
+
+1️⃣ Consume mucho tiempo todos los días
+
+2️⃣ Es fácil cometer errores
+
+3️⃣ No hay historial de precios
+
+4️⃣ Puede venderse algo con precio viejo
+
+Consecuencia
+
+Pérdida de dinero o precios incorrectos.
+
+3. Control de stock inexistente
+
+Hoy el negocio no sabe realmente cuánto stock tiene.
+
+Las planillas no controlan cantidades automáticamente.
+
+Por lo tanto:
+
+no se sabe qué se está terminando
+
+no hay alertas de reposición
+
+Ejemplo real
+
+Un producto puede:
+
+venderse
+
+venderse otra vez
+
+y recién después darse cuenta que no quedaba stock.
+
+Consecuencia
+
+Ventas imposibles de cumplir.
+
+4. Pedidos anotados en papel
+
+Cuando un cliente hace un pedido:
+
+1 se anota en una hoja
+2 los nuevos pedidos van abajo
+3 cuando se completa se tacha. 
+
+Formulario Floreria
+
+Problemas
+
+1️⃣ No existe estado del pedido
+
+Ejemplo:
+
+pendiente
+
+armado
+
+listo
+
+entregado
+
+Todo es una lista.
+
+2️⃣ Los pedidos viejos quedan perdidos.
+
+3️⃣ No se puede buscar pedidos de clientes.
+
+4️⃣ No hay historial de pedidos.
+
+Consecuencia
+
+Desorganización y pérdida de información.
+
+5. Problema de pagos pendientes
+
+Esto es un problema financiero real.
+
+Muchos clientes:
+
+retiran el pedido
+
+pero no pagan en el momento. 
+
+Formulario Floreria
+
+Problemas
+
+1️⃣ No hay registro de deuda.
+
+2️⃣ No hay sistema para recordar quién debe.
+
+3️⃣ No hay recordatorio de cobro.
+
+Consecuencia
+
+Clientes con deuda que se olvidan.
+
+6. Registro de mercadería nueva
+
+Cuando llega mercadería:
+
+1 se anota a mano
+2 se agrega a planillas
+3 se actualizan precios
+
+Problemas
+
+1️⃣ Proceso lento
+
+2️⃣ Fácil cometer errores
+
+3️⃣ No queda historial de ingreso
+
+Consecuencia
+
+Mucho trabajo administrativo manual.
+
+7. Falta de sistema para proveedores
+
+Hoy no existe un lugar donde registrar:
+
+proveedores
+
+cuándo vienen
+
+qué traen
+
+Problemas
+
+1️⃣ Se olvidan reposiciones.
+
+2️⃣ No hay registro de compras.
+
+3️⃣ No hay recordatorios.
+
+8. Armado de ramos sin control de stock
+
+Esto es interesante porque es un problema estructural.
+
+Un ramo se compone de varias flores.
+
+Pero hoy no existe relación entre flores y ramos. 
+
+Formulario Floreria
+
+Problema
+
+Puede venderse un ramo que necesita:
+
+rosa
+
+lilium
+
+margarita
+
+pero quizás no hay rosas en stock.
+
+Consecuencia
+
+Se venden cosas que no se pueden armar.
+
+9. No hay sistema de clientes
+
+Hoy no existe base de datos de clientes.
+
+No se guarda:
+
+teléfono
+
+historial
+
+fechas importantes
+
+Problema
+
+Se pierden oportunidades de venta.
+
+Por ejemplo:
+
+cumpleaños.
+
+La florería podría recordar eso y vender flores.
+
+10. No existe digitalización del negocio
+
+Todo está en:
+
+papel
+
+hojas
+
+anotaciones.
+
+Incluso Alejandra pidió algo interesante:
+
+Poder subir PDF o fotos y que el sistema extraiga la información. 
+
+Formulario Floreria
+
+Problema
+
+Digitalizar el negocio hoy es difícil.
+
+11. Escalabilidad imposible
+
+Alejandra respondió algo muy clave:
+
+Si tuvieran el doble de clientes colapsaría:
+
+coordinación del equipo
+
+revisión de stock. 
+
+Formulario Floreria
+
+Esto significa
+
+El negocio no puede crecer con el sistema actual.
+
+Conclusión real del análisis
+
+Los 3 dolores centrales del negocio son:
+
+1️⃣ Gestión de productos y stock
+2️⃣ Actualización de precios
+3️⃣ Organización de pedidos
+
+Todo lo demás deriva de esos tres problemas.
+
+Algo interesante que descubrí
+
+Tu tía en realidad ya describió el SaaS sin saberlo.
+
+Cuando dijo que quiere:
+
+código de barras
+
+control de stock
+
+gestión de pagos
+
+base de datos de flores
+
+sistema de ramos
+
+recordatorio de fechas
+
+Está describiendo un ERP simple para florerías.
+
+Juan, ahora viene la parte más interesante de todo esto.
+
+En el próximo paso puedo mostrarte:
+
+Cómo convertir estos problemas en módulos de software.
+
+Te voy a mostrar algo tipo:
+
+Arquitectura del sistema
+
+Core del sistema
+│
+├ Productos
+├ Stock
+├ Ramos
+├ Pedidos
+├ Clientes
+├ Pagos
+├ Proveedores
+├ Recordatorios
+
+Y después te voy a mostrar cómo se ve la app completa.
+
+Porque acá hay potencial de hacer un SaaS vertical muy interesante para florerías. 🌸🚀

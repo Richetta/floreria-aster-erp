@@ -1,0 +1,103 @@
+/* ============================================
+   DESIGN TOKENS - Florería Aster ERP
+   Sistema de diseño consistente
+   ============================================ */
+
+:root {
+  /* ============================================
+     ESPACIADO - Sistema de 4px
+     ============================================ */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+
+  /* ============================================
+     BOTONES - 3 tamaños estándar
+     ============================================ */
+  --btn-sm-height: 36px;
+  --btn-sm-padding-x: var(--space-3);
+  --btn-sm-font-size: var(--font-size-small);
+  
+  --btn-md-height: 44px;
+  --btn-md-padding-x: var(--space-5);
+  --btn-md-font-size: var(--font-size-base);
+  
+  --btn-lg-height: 52px;
+  --btn-lg-padding-x: var(--space-6);
+  --btn-lg-font-size: var(--font-size-large);
+
+  /* ============================================
+     INPUTS - Tamaños consistentes
+     ============================================ */
+  --input-sm-height: 36px;
+  --input-md-height: 44px;
+  --input-lg-height: 52px;
+  --input-padding-x: var(--space-4);
+  --input-border-radius: var(--radius-md);
+
+  /* ============================================
+     BORDES - Consistentes
+     ============================================ */
+  --border-width: 1px;
+  --border-color: var(--color-border);
+  --border: var(--border-width) solid var(--border-color);
+  --border-width-thick: 2px;
+
+  /* ============================================
+     CARDS - Estándar
+     ============================================ */
+  --card-padding-sm: var(--space-4);
+  --card-padding-md: var(--space-5);
+  --card-padding-lg: var(--space-6);
+  --card-radius: var(--radius-lg);
+  --card-border: var(--border);
+  --card-shadow: var(--shadow-sm);
+  --card-shadow-hover: var(--shadow-md);
+
+  /* ============================================
+     GRID - Layouts
+     ============================================ */
+  --grid-gap-sm: var(--space-4);
+  --grid-gap-md: var(--space-6);
+  --grid-gap-lg: var(--space-8);
+
+  /* ============================================
+     HEADER - Navegación
+     ============================================ */
+  --header-height: 80px;
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 80px;
+
+  /* ============================================
+     Z-INDEX - Capas
+     ============================================ */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal-backdrop: 1000;
+  --z-modal: 1001;
+  --z-toast: 1002;
+  --z-tooltip: 1003;
+
+  /* ============================================
+     TRANSICIONES
+     ============================================ */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
+
+  /* ============================================
+     BREAKPOINTS (para referencia)
+     ============================================ */
+  /* Mobile: < 768px */
+  /* Tablet: 768px - 1023px */
+  /* Desktop: >= 1024px */
+  /* Large: >= 1200px */
+}
