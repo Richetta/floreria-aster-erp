@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { OAuth2Client } from 'google-auth-library';
 import { db } from '../db';
+import { randomUUID } from 'crypto';
 import { config } from '../config';
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {

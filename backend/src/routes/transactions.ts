@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
 import { db } from '../db';
+import { randomUUID } from 'crypto';
 
 export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
   // Create transaction schema

@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { sql } from 'kysely';
 import { db } from '../db';
+import { randomUUID } from 'crypto';
 
 export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   // Create user schema
