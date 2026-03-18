@@ -60,12 +60,18 @@
    - Ir a **Table Editor** (menú lateral)
    - Deberías ver 20+ tablas: users, products, customers, orders, etc.
 
-4. **Obtener Connection String:**
+**Obtener Connection String:**
    - Ir a **Settings** (engranaje abajo a la izquierda)
    - Click en **"Database"**
    - Copiar **"Connection string"** (URI mode)
    - Se ve así: `postgresql://postgres.lddrseslgkdaetsidyrv:[PASSWORD]@aws-0-sa-east-1.pooler.supabase.co:6543/postgres`
    - **Reemplaza `[PASSWORD]` con tu contraseña: `floreria-aster123`**
+
+5. **Obtener API Keys:**
+   - Ir a **Settings** → **"API"**
+   - Copiar **"Project API keys"** → **"anon public"**
+   - Copiar **"Project API keys"** → **"service_role"** (GUARDAR SEGURO!)
+
 
 5. **Obtener API Keys:**
    - Ir a **Settings** → **"API"**
