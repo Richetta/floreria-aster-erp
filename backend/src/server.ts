@@ -97,6 +97,20 @@ await fastify.register(import('./routes/reminders.js'), { prefix: '/api/reminder
 console.log('Loading activity.js...');
 await fastify.register(import('./routes/activity.js'), { prefix: '/api/activity' });
 
+// Diagnostic Route
+fastify.get('/api/diag/auth', async (request, reply) => {
+  return {
+    nodeEnv: config.nodeEnv,
+    hasClientId: !!config.googleClientId,
+    clientIdStart: config.googleClientId?.substring(0, 10),
+    hasClientSecret: !!config.googleClientSecret,
+    redirectUri: config.googleRedirectUri,
+    frontendUrl: config.frontendUrl,
+    defaultBusinessId: config.defaultBusinessId,
+    timestamp: new Date().toISOString()
+  };
+});
+
 // Global Error Handler
 fastify.setErrorHandler((error: any, request, reply) => {
   fastify.log.error(error);
