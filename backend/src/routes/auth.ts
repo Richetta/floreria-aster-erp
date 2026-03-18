@@ -32,11 +32,14 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = loginSchema.parse(request.body);
 
-      // Find user by email
+      // Find user by email OR name
       const result = await db
         .selectFrom('users')
         .selectAll()
-        .where('email', '=', body.email)
+        .where((eb) => eb.or([
+          eb('email', '=', body.email),
+          eb('name', '=', body.email)
+        ]))
         .where('is_active', '=', true)
         .executeTakeFirst();
 
@@ -137,7 +140,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         user = await db
           .insertInto('users')
           .values({
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             business_id: config.defaultBusinessId,
             name: name || email.split('@')[0],
             email: email,
@@ -239,7 +242,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         user = await db
           .insertInto('users')
           .values({
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             business_id: config.defaultBusinessId,
             name: name || email.split('@')[0],
             email: email,

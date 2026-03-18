@@ -15,13 +15,9 @@ async function verifyConnection() {
     await client.connect();
     console.log('Connected successfully!');
     
-    const res = await client.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
-    console.log('Tables found:', res.rows.length);
-    if (res.rows.length > 0) {
-        console.log('Tables:', res.rows.map(r => r.table_name).join(', '));
-    } else {
-        console.log('No tables found in public schema.');
-    }
+    const res = await client.query('SELECT id, name, email, google_id FROM users');
+    console.log('Users found:', res.rows.length);
+    console.log(JSON.stringify(res.rows, null, 2));
     
     await client.end();
   } catch (err: any) {

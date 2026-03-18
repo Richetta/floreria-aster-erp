@@ -80,6 +80,30 @@ await fastify.register(import('./routes/stock.js'), { prefix: '/api/stock' });
 console.log('Loading reminders.js...');
 await fastify.register(import('./routes/reminders.js'), { prefix: '/api/reminders' });
 
+// Global Error Handler
+fastify.setErrorHandler((error: any, request, reply) => {
+  fastify.log.error(error);
+  
+  if (error.validation) {
+    return reply.status(400).send({
+      error: 'Validation Error',
+      message: error.message,
+      details: error.validation
+    });
+  }
+
+  // In production, keep it simple, in development show more
+  const isDev = config.nodeEnv === 'development';
+  return reply.status(500).send({
+    error: 'Internal Server Error',
+    message: isDev ? error.message : 'Something went wrong',
+    ...(isDev && { 
+        message: error.message,
+        stack: error.stack 
+    })
+  });
+});
+
 // Start server
 const start = async () => {
   try {
