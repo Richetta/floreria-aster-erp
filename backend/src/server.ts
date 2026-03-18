@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import { config } from './config/index.js';
+import { checkDatabaseConnection } from './db/index.js';
 
 console.log('--- SERVER INITIALIZING ---');
 const fastify = Fastify({
@@ -46,7 +47,21 @@ await fastify.register(rateLimit, {
 
 // Health check
 fastify.get('/health', async (request, reply) => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
+  try {
+    const dbStatus = await checkDatabaseConnection();
+    return { 
+      status: dbStatus ? 'ok' : 'error', 
+      database: dbStatus ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString(),
+      env: config.nodeEnv
+    };
+  } catch (error: any) {
+    return { 
+      status: 'error', 
+      error: error.message,
+      timestamp: new Date().toISOString() 
+    };
+  }
 });
 
 // API Routes
