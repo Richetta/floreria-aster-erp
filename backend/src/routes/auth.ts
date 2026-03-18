@@ -2,9 +2,9 @@ import { FastifyPluginAsync } from 'fastify';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { OAuth2Client } from 'google-auth-library';
-import { db } from '../db';
+import { db } from '../db/index.js';
 import { randomUUID } from 'crypto';
-import { config } from '../config';
+import { config } from '../config/index.js';
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Initialize Google OAuth client
@@ -297,3 +297,4 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 };
 
 export default authRoutes;
+

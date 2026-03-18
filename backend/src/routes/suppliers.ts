@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
-import { db } from '../db';
+import { db } from '../db/index.js';
 
 export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
   // Create supplier schema
@@ -370,3 +370,4 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
 };
 
 export default suppliersRoutes;
+

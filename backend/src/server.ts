@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
-import { config } from './config';
+import { config } from './config/index.js';
 
 const fastify = Fastify({
   logger: {
@@ -46,20 +46,20 @@ fastify.get('/health', async (request, reply) => {
 });
 
 // API Routes
-await fastify.register(import('./routes/auth'), { prefix: '/api/auth' });
-await fastify.register(import('./routes/users'), { prefix: '/api/users' });
-await fastify.register(import('./routes/products'), { prefix: '/api/products' });
-await fastify.register(import('./routes/customers'), { prefix: '/api/customers' });
-await fastify.register(import('./routes/orders'), { prefix: '/api/orders' });
-await fastify.register(import('./routes/transactions'), { prefix: '/api/transactions' });
-await fastify.register(import('./routes/packages'), { prefix: '/api/packages' });
-await fastify.register(import('./routes/suppliers'), { prefix: '/api/suppliers' });
-await fastify.register(import('./routes/waste'), { prefix: '/api/waste' });
-await fastify.register(import('./routes/reports'), { prefix: '/api/reports' });
-await fastify.register(import('./routes/import'), { prefix: '/api/import' });
-await fastify.register(import('./routes/cash-register'), { prefix: '/api/cash-register' });
-await fastify.register(import('./routes/stock'), { prefix: '/api/stock' });
-await fastify.register(import('./routes/reminders'), { prefix: '/api/reminders' });
+await fastify.register(import('./routes/auth.js'), { prefix: '/api/auth' });
+await fastify.register(import('./routes/users.js'), { prefix: '/api/users' });
+await fastify.register(import('./routes/products.js'), { prefix: '/api/products' });
+await fastify.register(import('./routes/customers.js'), { prefix: '/api/customers' });
+await fastify.register(import('./routes/orders.js'), { prefix: '/api/orders' });
+await fastify.register(import('./routes/transactions.js'), { prefix: '/api/transactions' });
+await fastify.register(import('./routes/packages.js'), { prefix: '/api/packages' });
+await fastify.register(import('./routes/suppliers.js'), { prefix: '/api/suppliers' });
+await fastify.register(import('./routes/waste.js'), { prefix: '/api/waste' });
+await fastify.register(import('./routes/reports.js'), { prefix: '/api/reports' });
+await fastify.register(import('./routes/import.js'), { prefix: '/api/import' });
+await fastify.register(import('./routes/cash-register.js'), { prefix: '/api/cash-register' });
+await fastify.register(import('./routes/stock.js'), { prefix: '/api/stock' });
+await fastify.register(import('./routes/reminders.js'), { prefix: '/api/reminders' });
 
 // Start server
 const start = async () => {

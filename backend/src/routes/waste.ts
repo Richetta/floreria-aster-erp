@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
-import { db } from '../db';
+import { db } from '../db/index.js';
 
 export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
   // Create waste report schema
@@ -336,3 +336,4 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
 };
 
 export default wasteRoutes;
+

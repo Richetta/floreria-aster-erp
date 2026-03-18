@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
-import { db } from '../db';
+import { db } from '../db/index.js';
 
 export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================
@@ -484,3 +484,4 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
 };
 
 export default cashRegisterRoutes;
+

@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import multipart from '@fastify/multipart';
 import { z } from 'zod';
-import { db } from '../db';
+import { db } from '../db/index.js';
 import ExcelJS from 'exceljs';
 import mammoth from 'mammoth';
 import PDFParse from 'pdf-parse';
@@ -353,3 +353,4 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
 };
 
 export default importRoutes;
+

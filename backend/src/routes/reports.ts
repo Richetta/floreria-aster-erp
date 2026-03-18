@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
-import { db } from '../db';
+import { db } from '../db/index.js';
 
 export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
   // Date range schema
@@ -396,3 +396,4 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
 };
 
 export default reportsRoutes;
+

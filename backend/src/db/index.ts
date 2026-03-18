@@ -1,6 +1,6 @@
 import { Kysely, PostgresDialect, sql } from 'kysely';
 import { Pool } from 'pg';
-import { config } from '../config';
+import { config } from '../config/index.js';
 
 // ============================================
 // DATABASE TYPE DEFINITIONS

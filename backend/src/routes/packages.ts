@@ -2,7 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
 import { randomUUID } from 'crypto';
-import { db } from '../db';
+import { db } from '../db/index.js';
 
 export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
   // Create package schema
@@ -331,3 +331,4 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
 };
 
 export default packagesRoutes;
+

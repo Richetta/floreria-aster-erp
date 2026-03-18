@@ -2,7 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
 import { randomUUID } from 'crypto';
-import { db } from '../db';
+import { db } from '../db/index.js';
 
 export const customersRoutes: FastifyPluginAsync = async (fastify) => {
   // Create customer schema
@@ -400,3 +400,4 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
 };
 
 export default customersRoutes;
+

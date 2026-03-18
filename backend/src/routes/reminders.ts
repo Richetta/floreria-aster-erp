@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
-import { db } from '../db';
+import { db } from '../db/index.js';
 import { randomUUID } from 'crypto';
 
 export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
@@ -458,3 +458,4 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
 };
 
 export default remindersRoutes;
+
