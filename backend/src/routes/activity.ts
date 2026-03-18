@@ -148,7 +148,7 @@ export const activityRoutes: FastifyPluginAsync = async (fastify) => {
           'user_activity.created_at',
           'users.name as user_name',
           'users.email as user_email'
-        ])
+        ] as any)
         .leftJoin('users', 'users.id', 'user_activity.user_id')
         .where('user_activity.business_id', '=', user.business_id)
         .orderBy('user_activity.created_at desc')
