@@ -49,9 +49,13 @@ await fastify.register(rateLimit, {
 fastify.get('/health', async (request, reply) => {
   try {
     const dbStatus = await checkDatabaseConnection();
+    const dbUrl = config.databaseUrl || '';
+    const maskedDbUrl = dbUrl.replace(/:[^:@]+@/, ':***@').replace(/\/[^/]+$/, '/***');
+    
     return { 
       status: dbStatus ? 'ok' : 'error', 
       database: dbStatus ? 'connected' : 'disconnected',
+      dbHost: dbUrl.split('@')[1]?.split(':')[0],
       timestamp: new Date().toISOString(),
       env: config.nodeEnv
     };
