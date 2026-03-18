@@ -49,6 +49,55 @@ export const POS = () => {
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
 
+    // Global Persistent State from useStore
+    const cart = useStore((state) => state.cart);
+    const addToCart = useStore((state) => state.addToCart);
+    const removeFromCart = useStore((state) => state.removeFromCart);
+    const updateCartQty = useStore((state) => state.updateCartQty);
+    const clearCart = useStore((state) => state.clearCart);
+    
+    const posOrderForm = useStore((state) => state.posOrderForm);
+    const updatePosOrderForm = useStore((state) => state.updatePosOrderForm);
+    const clearPosOrderForm = useStore((state) => state.clearPosOrderForm);
+
+    const {
+        selectedCustomer,
+        deliveryDate,
+        deliveryTimeSlot,
+        orderNotes,
+        deliveryMethod,
+        advancePayment,
+        deliveryAddress,
+        contactPhone
+    } = posOrderForm;
+
+    // Local-only state
+    const [customerSearch, setCustomerSearch] = useState('');
+    const [expandedSection, setExpandedSection] = useState<number | null>(1);
+    const [isAddingCustomer, setIsAddingCustomer] = useState(false);
+    const [newCustomerName, setNewCustomerName] = useState('');
+    const [newCustomerPhone, setNewCustomerPhone] = useState('');
+    const [paymentWithAmount, setPaymentWithAmount] = useState<number | ''>('');
+    
+    // UI states
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeCategory, setActiveCategory] = useState<string>('Todos');
+    const [activeTag, setActiveTag] = useState<string | null>(null);
+    const [productView, setProductView] = useState<ProductView>('recent');
+    const [barcodeInput, setBarcodeInput] = useState('');
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
+
+    // Success Modals
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [lastSaleData, setLastSaleData] = useState<{ total: number, method: string } | null>(null);
+    const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
+    const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+
+    // Ticket Printer State
+    const [showTicketPrinter, setShowTicketPrinter] = useState(false);
+    const [ticketData, setTicketData] = useState<TicketData | null>(null);
+
     // Load data from backend on mount
     useEffect(() => {
         const loadData = async () => {
@@ -59,68 +108,8 @@ export const POS = () => {
         loadData();
     }, []);
 
-    const [searchTerm, setSearchTerm] = useState('');
-    const [activeCategory, setActiveCategory] = useState<string>('Todos');
-    const [activeTag, setActiveTag] = useState<string | null>(null);
-    const [productView, setProductView] = useState<ProductView>('recent');
-    const [cart, setCart] = useState<any[]>([]);
-    const [barcodeInput, setBarcodeInput] = useState('');
-    const searchInputRef = useRef<HTMLInputElement>(null);
-
-    // Checkout Tabs
-    const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
-
-    // Order Form State - Enhanced
-    const [selectedCustomer, setSelectedCustomer] = useState<string>('');
-    const [customerSearch, setCustomerSearch] = useState('');
-    const [expandedSection, setExpandedSection] = useState<number | null>(1);
-    const [deliveryDate, setDeliveryDate] = useState<string>('');
-    const [deliveryTimeSlot, setDeliveryTimeSlot] = useState<'morning' | 'afternoon' | 'evening' | 'allday'>('allday');
-    const [orderNotes, setOrderNotes] = useState<string>('');
-    const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'delivery'>('pickup');
-    const [advancePayment, setAdvancePayment] = useState<number>(0);
-
-    // Delivery Address State
-    const [deliveryAddress, setDeliveryAddress] = useState({
-        street: '',
-        number: '',
-        floor: '',
-        city: '',
-        reference: ''
-    });
-    const [contactPhone, setContactPhone] = useState('');
-
-    // Express Customer State
-    const [isAddingCustomer, setIsAddingCustomer] = useState(false);
-    const [newCustomerName, setNewCustomerName] = useState('');
-    const [newCustomerPhone, setNewCustomerPhone] = useState('');
-
-    // Payment & Change State
-    const [paymentWithAmount, setPaymentWithAmount] = useState<number | ''>('');
-    // Success Modal
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [lastSaleData, setLastSaleData] = useState<{ total: number, method: string } | null>(null);
-    const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
-
-    // Ticket Printer State
-    const [showTicketPrinter, setShowTicketPrinter] = useState(false);
-    const [ticketData, setTicketData] = useState<TicketData | null>(null);
-
-    // Order Templates State
-    const [showTemplatesModal, setShowTemplatesModal] = useState(false);
-
     // Helpers
-    const addToCart = (product: any) => {
-        setCart(current => {
-            const existing = current.find(item => item.id === product.id);
-            if (existing) {
-                return current.map(item =>
-                    item.id === product.id ? { ...item, qty: item.qty + 1 } : item
-                );
-            }
-            return [...current, { ...product, qty: 1 }];
-        });
-    };
+    // Helpers are now in useStore actions
 
     // Add package to cart with stock validation
     const addPackageToCart = (pkg: any) => {
@@ -205,7 +194,7 @@ export const POS = () => {
             // Escape: Limpiar carrito
             if (e.key === 'Escape' && cart.length > 0) {
                 if (confirm('¿Vaciar carrito?')) {
-                    setCart([]);
+                    clearCart();
                 }
             }
             // Enter en búsqueda: agregar primer producto
@@ -225,20 +214,9 @@ export const POS = () => {
     }, [searchTerm, cart]);
 
     const updateQty = (id: string, delta: number) => {
-        setCart(current =>
-            current.map(item => {
-                if (item.id === id) {
-                    const newQty = Math.max(1, item.qty + delta);
-                    return { ...item, qty: newQty };
-                }
-                return item;
-            })
-        );
+        updateCartQty(id, delta);
     };
 
-    const removeFromCart = (id: string) => {
-        setCart(current => current.filter(item => item.id !== id));
-    };
 
     const handleAddCustomer = () => {
         if (!newCustomerName.trim()) return;
@@ -256,7 +234,7 @@ export const POS = () => {
             lastOrderDate: undefined,
             address: ''
         });
-        setSelectedCustomer(newId);
+        updatePosOrderForm({ selectedCustomer: newId });
         setIsAddingCustomer(false);
         setNewCustomerName('');
         setNewCustomerPhone('');
@@ -425,12 +403,9 @@ export const POS = () => {
         }
 
         // Reset everything
-        setCart([]);
+        clearCart();
         setCheckoutMode('sale');
-        setAdvancePayment(0);
-        setSelectedCustomer('');
-        setDeliveryDate('');
-        setOrderNotes('');
+        clearPosOrderForm();
         setPaymentWithAmount(''); // Reset payment amount
     };
 
@@ -924,7 +899,7 @@ export const POS = () => {
                                                 <button
                                                     key={customer.id}
                                                     className={`customer-list-item-compact ${selectedCustomer === customer.id ? 'selected' : ''}`}
-                                                    onClick={() => setSelectedCustomer(customer.id)}
+                                                    onClick={() => updatePosOrderForm({ selectedCustomer: customer.id })}
                                                 >
                                                     <div className="customer-list-info">
                                                         <span className="customer-list-name">{customer.name}</span>
@@ -1001,14 +976,14 @@ export const POS = () => {
                                         <div className="delivery-method-toggle">
                                             <button
                                                 className={`toggle-btn ${deliveryMethod === 'pickup' ? 'active' : ''}`}
-                                                onClick={() => setDeliveryMethod('pickup')}
+                                                onClick={() => updatePosOrderForm({ deliveryMethod: 'pickup' })}
                                             >
                                                 <Store size={14} />
                                                 <span>Local</span>
                                             </button>
                                             <button
                                                 className={`toggle-btn ${deliveryMethod === 'delivery' ? 'active' : ''}`}
-                                                onClick={() => setDeliveryMethod('delivery')}
+                                                onClick={() => updatePosOrderForm({ deliveryMethod: 'delivery' })}
                                             >
                                                 <Truck size={14} />
                                                 <span>Domicilio</span>
@@ -1025,7 +1000,7 @@ export const POS = () => {
                                                             className="form-input"
                                                             placeholder="Calle"
                                                             value={deliveryAddress.street}
-                                                            onChange={(e) => setDeliveryAddress({ ...deliveryAddress, street: e.target.value })}
+                                                            onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, street: e.target.value } })}
                                                         />
                                                     </div>
                                                     <div className="form-group-compact" style={{ width: '70px' }}>
@@ -1035,7 +1010,7 @@ export const POS = () => {
                                                             className="form-input"
                                                             placeholder="N°"
                                                             value={deliveryAddress.number}
-                                                            onChange={(e) => setDeliveryAddress({ ...deliveryAddress, number: e.target.value })}
+                                                            onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, number: e.target.value } })}
                                                         />
                                                     </div>
                                                 </div>
@@ -1047,7 +1022,7 @@ export const POS = () => {
                                                             className="form-input"
                                                             placeholder="Piso"
                                                             value={deliveryAddress.floor}
-                                                            onChange={(e) => setDeliveryAddress({ ...deliveryAddress, floor: e.target.value })}
+                                                            onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, floor: e.target.value } })}
                                                         />
                                                     </div>
                                                     <div className="form-group-compact flex-1">
@@ -1057,7 +1032,7 @@ export const POS = () => {
                                                             className="form-input"
                                                             placeholder="Localidad"
                                                             value={deliveryAddress.city}
-                                                            onChange={(e) => setDeliveryAddress({ ...deliveryAddress, city: e.target.value })}
+                                                            onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, city: e.target.value } })}
                                                         />
                                                     </div>
                                                 </div>
@@ -1068,7 +1043,7 @@ export const POS = () => {
                                                         className="form-input"
                                                         placeholder="11-2345-6789"
                                                         value={contactPhone}
-                                                        onChange={(e) => setContactPhone(e.target.value)}
+                                                        onChange={(e) => updatePosOrderForm({ contactPhone: e.target.value })}
                                                     />
                                                 </div>
                                             </>
@@ -1106,7 +1081,7 @@ export const POS = () => {
                                                     type="date"
                                                     className="form-input"
                                                     value={deliveryDate}
-                                                    onChange={(e) => setDeliveryDate(e.target.value)}
+                                                    onChange={(e) => updatePosOrderForm({ deliveryDate: e.target.value })}
                                                     min={new Date().toISOString().split('T')[0]}
                                                 />
                                             </div>
@@ -1115,7 +1090,7 @@ export const POS = () => {
                                                 <select
                                                     className="form-input"
                                                     value={deliveryTimeSlot}
-                                                    onChange={(e) => setDeliveryTimeSlot(e.target.value as any)}
+                                                    onChange={(e) => updatePosOrderForm({ deliveryTimeSlot: e.target.value as any })}
                                                 >
                                                     <option value="allday">Todo el día</option>
                                                     <option value="morning">Mañana (9-13hs)</option>
@@ -1132,7 +1107,7 @@ export const POS = () => {
                                                 rows={2}
                                                 placeholder="Ej: Tarjeta, moño..."
                                                 value={orderNotes}
-                                                onChange={(e) => setOrderNotes(e.target.value)}
+                                                onChange={(e) => updatePosOrderForm({ orderNotes: e.target.value })}
                                             />
                                         </div>
                                     </div>
@@ -1166,7 +1141,7 @@ export const POS = () => {
                                     <input
                                         type="checkbox"
                                         checked={advancePayment > 0}
-                                        onChange={(e) => setAdvancePayment(e.target.checked ? Math.min(1000, total) : 0)}
+                                        onChange={(e) => updatePosOrderForm({ advancePayment: e.target.checked ? Math.min(1000, total) : 0 })}
                                     />
                                     <span className="checkbox-text-mini">Seña:</span>
                                 </label>
@@ -1176,7 +1151,7 @@ export const POS = () => {
                                             type="number"
                                             className="form-input"
                                             value={advancePayment}
-                                            onChange={(e) => setAdvancePayment(Number(e.target.value))}
+                                            onChange={(e) => updatePosOrderForm({ advancePayment: Number(e.target.value) })}
                                             min="0"
                                             max={total}
                                         />
@@ -1390,12 +1365,12 @@ export const POS = () => {
 
                     // Si la plantilla tiene cliente, seleccionarlo
                     if (template.customer_id) {
-                        setSelectedCustomer(template.customer_id);
+                        updatePosOrderForm({ selectedCustomer: template.customer_id });
                     }
 
                     // Si la plantilla tiene método de entrega, usarlo
                     if (template.delivery_method) {
-                        setDeliveryMethod(template.delivery_method);
+                        updatePosOrderForm({ deliveryMethod: template.delivery_method as any });
                     }
                 }}
             />

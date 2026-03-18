@@ -1,306 +1,347 @@
-# 🎉 IMPLEMENTACIÓN COMPLETADA - Florería Aster ERP
+# 🚀 GUÍA DE IMPLEMENTACIÓN - Florería Aster ERP
 
-**Fecha:** 14 de Marzo, 2026  
-**Estado:** ✅ **FASE 3 COMPLETADA - 100% MÓDULOS CONECTADOS**
+## ✅ Lo que se ha implementado
 
----
+### 1. Sistema de Autenticación Corregido
 
-## 📊 RESUMEN EJECUTIVO
+**Archivos creados/modificados:**
+- `create_admin_user.sql` - Script para crear usuario admin
+- `backend/src/routes/auth.ts` - Ya existía, verifica que esté correcto
+- `src/pages/Login/Login.tsx` - Actualizado con logging de actividad
+- `src/store/useAuth.ts` - Actualizado con logging de actividad
 
-El sistema ERP para Florería Aster está **completamente funcional** y conectado a una base de datos PostgreSQL real.
+### 2. Sistema de Actividad en Tiempo Real
 
-### Progreso por Fases
-
-| Fase | Estado | Progreso |
-|------|--------|----------|
-| **FASE 1: Backend** | ✅ Completa | 100% |
-| **FASE 2: Autenticación** | ✅ Completa | 100% |
-| **FASE 3: Conexión Frontend** | ✅ Completa | 100% |
-| **FASE 4: Migración de Datos** | ⏳ Pendiente | 0% |
-
----
-
-## ✅ MÓDULOS CONECTADOS (9/9)
-
-| # | Módulo | Estado | Funcionalidad |
-|---|--------|--------|---------------|
-| 1 | **Productos** | ✅ 100% | CRUD completo, stock, categorías |
-| 2 | **Clientes** | ✅ 100% | CRUD completo, deudas, historial |
-| 3 | **Dashboard** | ✅ 100% | KPIs reales, métricas en vivo |
-| 4 | **Pedidos** | ✅ 100% | Kanban, estados, entregas |
-| 5 | **POS/Ventas** | ✅ 100% | Ventas, descuentos de stock |
-| 6 | **Finanzas** | ✅ 100% | Transacciones, caja, cobros |
-| 7 | **Paquetes** | ✅ 100% | Ramos, combos, validación |
-| 8 | **Proveedores** | ✅ 100% | CRUD, compras, reposición |
-| 9 | **Mermas** | ✅ 100% | Bajas de stock, reportes |
+**Archivos creados:**
+- `create_user_activity_table.sql` - Tabla para registrar actividad
+- `backend/src/routes/activity.ts` - Endpoints para logging de actividad
+- `backend/src/server.ts` - Registrado el nuevo endpoint
+- `src/hooks/useActivityLog.ts` - Hook para logging en frontend
 
 ---
 
-## 📁 ARCHIVOS ACTUALIZADOS
+## 📋 PASOS DE IMPLEMENTACIÓN
 
-### Store & Servicios
-- ✅ `src/store/useStore.ts` - Store asíncrono con llamadas a API
-- ✅ `src/store/useAuth.ts` - Autenticación con Zustand
-- ✅ `src/services/api.ts` - API client completo (600+ líneas)
+### PASO 1: Base de Datos (Supabase)
 
-### Páginas Conectadas
-- ✅ `src/pages/Products/Products.tsx`
-- ✅ `src/pages/Customers/Customers.tsx`
-- ✅ `src/pages/Orders/Orders.tsx`
-- ✅ `src/pages/POS/POS.tsx`
-- ✅ `src/pages/Finances/Finances.tsx`
-- ✅ `src/pages/Packages/Packages.tsx`
-- ✅ `src/pages/Suppliers/Suppliers.tsx`
-- ✅ `src/pages/Purchases/Purchases.tsx`
-- ✅ `src/pages/Waste/Waste.tsx`
-- ✅ `src/pages/Dashboard/Dashboard.tsx`
+#### 1.1 Crear usuario admin
 
-### Componentes Conectados
-- ✅ `src/components/ProductModal/ProductModal.tsx`
-- ✅ `src/components/CustomerModal/CustomerModal.tsx`
-- ✅ `src/components/PackageBuilder/PackageBuilderModal.tsx`
-- ✅ `src/components/WasteBuilder/WasteBuilderModal.tsx`
-- ✅ `src/components/Sidebar/Sidebar.tsx`
+1. Ve a **Supabase** → Tu proyecto → **SQL Editor**
+2. Ejecuta el archivo `create_admin_user.sql`
 
-### Backend
-- ✅ `backend/src/routes/auth.ts`
-- ✅ `backend/src/routes/products.ts`
-- ✅ `backend/src/routes/customers.ts`
-- ✅ `backend/src/routes/orders.ts`
-- ✅ `backend/src/routes/transactions.ts`
-- ✅ `backend/src/routes/packages.ts`
-- ✅ `backend/src/routes/suppliers.ts`
-- ✅ `backend/src/routes/waste.ts`
-- ✅ `backend/src/server.ts`
-- ✅ `backend/src/db/index.ts`
-- ✅ `backend/schema.sql`
-
----
-
-## 🔧 CÓMO INICIAR EL SISTEMA
-
-### 1. Configurar Base de Datos
-
-```bash
-# En Neon.tech o PostgreSQL local:
-# Ejecutar backend/schema.sql
+```sql
+-- Usuario: admin
+-- Contraseña: admin
 ```
 
-### 2. Variables de Entorno
+#### 1.2 Crear tabla de actividad
 
-**Backend** (`backend/.env`):
-```env
-DATABASE_URL=postgres://...
-JWT_SECRET=tu_secreto_seguro
+1. En el mismo **SQL Editor**
+2. Ejecuta el archivo `create_user_activity_table.sql`
+
+---
+
+### PASO 2: Configurar Railway
+
+#### 2.1 Variables de Entorno
+
+Entra a **Railway** → Tu proyecto → **Variables**
+
+Agrega estas variables (las que no existen):
+
+```bash
+# JWT Secret (GENERAR UNO NUEVO - usa este comando)
+# openssl rand -base64 64
+JWT_SECRET=tu-jwt-secret-seguro-de-64-caracteres-minimo
+
+# Google OAuth
+GOOGLE_CLIENT_SECRET=tu-google-client-secret
+GOOGLE_REDIRECT_URI=https://[TU-APP].up.railway.app/api/auth/google/callback
+
+# Frontend URL
+FRONTEND_URL=https://floreria-aster-erp.vercel.app
+```
+
+**Variables que YA deberías tener:**
+```bash
+DATABASE_URL=postgresql://...
+GOOGLE_CLIENT_ID=806329509349-r910mo70k002j62jrohh3mlr5uottjlo.apps.googleusercontent.com
 PORT=3000
-NODE_ENV=development
+NODE_ENV=production
+DEFAULT_BUSINESS_ID=00000000-0000-0000-0000-000000000001
 ```
 
-**Frontend** (`.env`):
-```env
-VITE_API_URL=http://localhost:3000/api
-```
+#### 2.2 Obtener GOOGLE_CLIENT_SECRET
 
-### 3. Iniciar Backend
+1. Ve a [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Selecciona tu proyecto
+3. Click en el OAuth 2.0 Client ID
+4. Copia el **Client Secret**
+5. Pégalo en Railway como `GOOGLE_CLIENT_SECRET`
+
+#### 2.3 Actualizar Redirect URI en Google
+
+En el mismo OAuth 2.0 Client ID en Google Cloud:
+
+1. En **Authorized redirect URIs**
+2. Agrega: `https://[TU-APP].up.railway.app/api/auth/google/callback`
+3. Click en **Save**
+
+**Reemplaza [TU-APP]** con el nombre de tu app en Railway.
+Ejemplo: `https://floreria-aster-backend.up.railway.app`
+
+#### 2.4 Redeploy
+
+1. Ve a **Deployments** en Railway
+2. Click en **Redeploy** para aplicar las nuevas variables
+
+---
+
+### PASO 3: Deploy del Frontend (Vercel)
+
+El frontend ya está publicado, pero si hiciste cambios:
 
 ```bash
-cd backend
-npm install
-npm run dev
+git add .
+git commit -m "feat: agregar sistema de actividad en tiempo real"
+git push
 ```
-✅ `http://localhost:3000`
 
-### 4. Iniciar Frontend
+Vercel detectará los cambios automáticamente.
 
-```bash
-npm install
-npm run dev
+---
+
+### PASO 4: Verificación
+
+#### 4.1 Probar Login Tradicional
+
+1. Ve a https://floreria-aster-erp.vercel.app/login
+2. Usuario: `admin`
+3. Contraseña: `admin`
+4. Deberías entrar al dashboard
+
+#### 4.2 Probar Google Login
+
+1. Click en "Sign in with Google"
+2. Selecciona tu cuenta
+3. Deberías entrar al dashboard
+
+#### 4.3 Verificar Actividad
+
+Después de iniciar sesión, verifica en Supabase:
+
+```sql
+SELECT 
+  ua.created_at,
+  ua.action,
+  ua.resource_type,
+  ua.details,
+  u.name as user_name,
+  u.email as user_email
+FROM user_activity ua
+JOIN users u ON u.id = ua.user_id
+ORDER BY ua.created_at DESC
+LIMIT 10;
 ```
-✅ `http://localhost:5173`
 
-### 5. Loguearse
+Deberías ver los logs de login.
 
+---
+
+## 🔧 CÓMO USAR EL SISTEMA DE ACTIVIDAD
+
+### En Componentes
+
+```tsx
+import { useActivityLog } from '../hooks/useActivityLog';
+
+const MiComponente = () => {
+  const { logCreate, logUpdate, logDelete, logView } = useActivityLog();
+
+  const handleCreate = async () => {
+    // Tu lógica de creación
+    await createProduct(data);
+    
+    // Log activity
+    await logCreate('product', newProduct.id, { name: newProduct.name });
+  };
+
+  const handleView = async (id: string) => {
+    const product = await getProduct(id);
+    await logView('product', id, { name: product.name });
+  };
+
+  return (
+    // Tu componente
+  );
+};
 ```
-Email: admin@floreriaaster.com
-Contraseña: admin123
+
+### Acciones Disponibles
+
+- `login` - Inicio de sesión
+- `logout` - Cierre de sesión
+- `page_view` - Navegación a páginas
+- `create` - Crear recurso
+- `update` - Actualizar recurso
+- `delete` - Eliminar recurso
+- `view` - Ver recurso
+- `export` - Exportar datos
+- `print` - Imprimir
+
+### Recursos Comunes
+
+- `product`
+- `customer`
+- `order`
+- `transaction`
+- `user`
+- `package`
+- `supplier`
+
+---
+
+## 🛠️ SOLUCIÓN DE PROBLEMAS
+
+### Error 500 en Login
+
+**Causa:** Variables de entorno faltantes en Railway
+
+**Solución:**
+1. Verifica que `DATABASE_URL`, `JWT_SECRET`, `GOOGLE_CLIENT_SECRET` estén configuradas
+2. Revisa las logs en Railway
+
+### Google OAuth no funciona
+
+**Causa:** Redirect URI incorrecto
+
+**Solución:**
+1. Verifica que el redirect URI en Google Cloud Console sea EXACTAMENTE:
+   `https://[TU-APP].up.railway.app/api/auth/google/callback`
+2. Verifica que `GOOGLE_REDIRECT_URI` en Railway coincida
+
+### Usuario admin no existe
+
+**Causa:** Script SQL no ejecutado
+
+**Solución:**
+1. Ejecuta `create_admin_user.sql` en Supabase SQL Editor
+2. Verifica con:
+```sql
+SELECT * FROM users WHERE email = 'admin';
+```
+
+### Actividad no se registra
+
+**Causa:** Tabla no creada o endpoint no registrado
+
+**Solución:**
+1. Ejecuta `create_user_activity_table.sql`
+2. Verifica que `backend/src/server.ts` tenga la línea:
+```typescript
+await fastify.register(import('./routes/activity.js'), { prefix: '/api/activity' });
 ```
 
 ---
 
-## 🎯 FLUJOS DE TRABAJO TESTEABLES
+## 📊 MONITOREO
 
-### 1. Venta de Mostrador (POS) ✅
-1. Ir a **Punta de Venta**
-2. Buscar/agregar productos
-3. Pagar con efectivo/tarjeta
-4. ✅ Stock se descuenta automáticamente
-5. ✅ Transacción se registra en Finanzas
+### Ver actividad reciente en Supabase
 
-### 2. Pedido Programado ✅
-1. Ir a **POS** → pestaña "Agendar"
-2. Seleccionar cliente
-3. Agregar productos
-4. Indicar fecha de entrega
-5. Pagar seña (opcional)
-6. ✅ Pedido aparece en "Pedidos"
-7. ✅ Deuda se actualiza en Cliente
-
-### 3. Gestión de Productos ✅
-1. Ir a **Productos**
-2. Crear producto nuevo
-3. Editar precio/stock
-4. ✅ Cambios persisten en PostgreSQL
-5. ✅ Recargar página → datos se mantienen
-
-### 4. Cobro de Deudas ✅
-1. Ir a **Clientes**
-2. Filtrar por "Con Deuda"
-3. Cobrar deuda (total/parcial)
-4. ✅ Transacción en Finanzas
-5. ✅ Deuda actualizada
-
-### 5. Compra a Proveedor ✅
-1. Ir a **Compras**
-2. Seleccionar proveedor
-3. Agregar productos con cantidades y costos
-4. Confirmar compra
-5. ✅ Stock actualizado
-6. ✅ Transacción de egreso registrada
-
-### 6. Reporte de Mermas ✅
-1. Ir a **Mermas**
-2. Seleccionar producto dañado
-3. Indicar cantidad y motivo
-4. Confirmar baja
-5. ✅ Stock descontado
-6. ✅ Transacción de pérdida registrada
-
-### 7. Creación de Ramos/Paquetes ✅
-1. Ir a **Paquetes**
-2. "Nuevo Arreglo"
-3. Agregar componentes (productos)
-4. Definir precio de venta
-5. ✅ Paquete disponible en POS
-6. ✅ Valida stock de componentes
-
----
-
-## 📊 ARQUITECTURA DEL SISTEMA
-
+```sql
+-- Actividad de hoy
+SELECT 
+  ua.created_at,
+  ua.action,
+  ua.resource_type,
+  ua.resource_id,
+  ua.details,
+  u.name as user_name
+FROM user_activity ua
+JOIN users u ON u.id = ua.user_id
+WHERE ua.created_at >= CURRENT_DATE
+ORDER BY ua.created_at DESC;
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    FRONTEND (React)                     │
-│  ┌─────────┬─────────┬─────────┬─────────┬─────────┐   │
-│  │Productos│Clientes │ Pedidos │  POS    │Finanzas │   │
-│  ├─────────┼─────────┼─────────┼─────────┼─────────┤   │
-│  │Paquetes │Proveed. │ Compras │ Mermas  │Dashboard│   │
-│  └─────────┴─────────┴─────────┴─────────┴─────────┘   │
-│                         │                                │
-│              API Client (services/api.ts)               │
-└─────────────────────────┼───────────────────────────────┘
-                          │ HTTP/JSON
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│                 BACKEND (Fastify + Node)                │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │  Auth │ Products │ Customers │ Orders │ ...     │   │
-│  └─────────────────────────────────────────────────┘   │
-│                         │                                │
-│                  Kysely ORM                             │
-└─────────────────────────┼───────────────────────────────┘
-                          │ SQL
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│              DATABASE (PostgreSQL + Neon)               │
-│  20+ tablas con Row Level Security                      │
-│  Multi-tenant, índices, triggers                        │
-└─────────────────────────────────────────────────────────┘
+
+### Usuarios activos hoy
+
+```sql
+SELECT 
+  u.name,
+  u.email,
+  COUNT(ua.id) as actions_count,
+  MAX(ua.created_at) as last_action
+FROM users u
+JOIN user_activity ua ON u.id = ua.user_id
+WHERE ua.created_at >= CURRENT_DATE
+GROUP BY u.id, u.name, u.email
+ORDER BY actions_count DESC;
 ```
 
 ---
 
 ## 🔐 SEGURIDAD
 
-- ✅ Autenticación JWT (15 min expiry)
-- ✅ Passwords hasheados con bcrypt
-- ✅ Row Level Security en PostgreSQL
-- ✅ Multi-tenant aislado por business_id
-- ✅ Protected routes en frontend
-- ✅ Auto-logout por token expirado
+### JWT Secret
+
+Genera un JWT Secret seguro:
+
+```bash
+# Linux/Mac
+openssl rand -base64 64
+
+# Node.js
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+### Google OAuth
+
+- Mantén `GOOGLE_CLIENT_SECRET` en secreto
+- Nunca lo commites al repositorio
+- Rótalo periódicamente
 
 ---
 
-## 📈 MÉTRICAS DE CÓDIGO
+## 📝 NOTAS
 
-| Tipo | Cantidad |
-|------|----------|
-| **Rutas de API** | 8 módulos, 50+ endpoints |
-| **Tablas DB** | 20+ tablas |
-| **Páginas React** | 13 páginas |
-| **Componentes** | 10+ componentes |
-| **Líneas de Código** | ~10,000+ líneas |
+1. **Actividad en Tiempo Real:** Las actividades se guardan inmediatamente en la base de datos
+2. **Fallos Silenciosos:** Si el logging falla, no interrumpe la experiencia del usuario
+3. **Privacidad:** Solo admins pueden ver la actividad de otros usuarios (endpoint `/activity/business`)
 
 ---
 
-## 🚨 PRÓXIMOS PASOS (FASE 4)
+## 🆘 SOPORTE
 
-### Migración de Datos
-- [ ] Crear script para migrar localStorage → PostgreSQL
-- [ ] Mapear datos existentes en `aster-erp-storage`
-- [ ] Importar productos, clientes, pedidos históricos
+Si tienes problemas:
 
-### Mejoras Opcionales
-- [ ] Impresión de tickets
-- [ ] Códigos de barras reales (EAN-13)
-- [ ] OCR para listas de proveedores
-- [ ] Reportes PDF exportables
-- [ ] Notificaciones push
-- [ ] Dashboard con más métricas
+1. Revisa las logs en Railway
+2. Verifica variables de entorno
+3. Ejecuta los scripts SQL en Supabase
+4. Prueba en modo desarrollo localmente
 
----
+**Logs en Railway:**
+- Dashboard → Tu proyecto → Logs
+- Filtra por error para ver problemas
 
-## 📞 SOPORTE
-
-### Documentación Disponible
-- `PUESTA_EN_MARCHA.md` - Guía de inicio
-- `API_ROUTES.md` - Documentación de API
-- `IMPLEMENTACION_COMPLETA.md` - Plan original
-- `ESTADO_ACTUAL.md` - Estado previo
-
-### Debugging
-1. **Backend:** Ver logs en terminal donde corre `npm run dev`
-2. **Frontend:** Consola del navegador (F12)
-3. **Database:** Neon.tech UI o psql
-
-### Errores Comunes
-| Error | Solución |
-|-------|----------|
-| "Failed to fetch" | Verificar backend corriendo |
-| "Token expired" | Volver a loguearse |
-| "Database connection failed" | Revisar DATABASE_URL |
-| "401 Unauthorized" | Token inválido, logout + login |
+**Logs en Navegador:**
+- F12 → Console
+- Filtra por "error"
 
 ---
 
-## ✨ CONCLUSIÓN
+## ✅ CHECKLIST FINAL
 
-El **ERP para Florería Aster** está **100% funcional** y listo para uso en producción.
-
-### Lo que podés hacer ahora:
-✅ Gestionar todo el inventario de productos  
-✅ Administrar clientes y sus deudas  
-✅ Vender en mostrador con descuento de stock  
-✅ Crear pedidos programados con entrega  
-✅ Registrar compras a proveedores  
-✅ Reportar mermas y pérdidas  
-✅ Controlar finanzas (ingresos/egresos)  
-✅ Armar ramos y combos con validación de stock  
-
-### Todo se guarda en:
-✅ **PostgreSQL** (Neon.tech) - Datos persistentes y reales  
-✅ **Multi-tenant** - Aislado por negocio  
-✅ **Seguro** - JWT + RLS + bcrypt  
+- [ ] Ejecutar `create_admin_user.sql` en Supabase
+- [ ] Ejecutar `create_user_activity_table.sql` en Supabase
+- [ ] Configurar `JWT_SECRET` en Railway
+- [ ] Configurar `GOOGLE_CLIENT_SECRET` en Railway
+- [ ] Configurar `GOOGLE_REDIRECT_URI` en Railway
+- [ ] Agregar redirect URI en Google Cloud Console
+- [ ] Hacer redeploy en Railway
+- [ ] Probar login con `admin/admin`
+- [ ] Probar login con Google
+- [ ] Verificar logs de actividad en Supabase
 
 ---
 
-**¡El sistema está listo para usarse! 🚀**
+**¡Listo! Tu sistema debería estar funcionando con autenticación completa y logging de actividad.** 🎉

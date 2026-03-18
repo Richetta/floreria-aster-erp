@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { api } from '../services/api';
 import { logger } from '../utils/logger';
 import { generateIdWithPrefix } from '../utils/idGenerator';
@@ -189,6 +190,25 @@ interface AppState {
     shopInfo: ShopInfo;
     tags: string[];
     categories: string[];
+    
+    // POS State (Persistent)
+    cart: any[];
+    posOrderForm: {
+        selectedCustomer: string;
+        deliveryDate: string;
+        deliveryTimeSlot: 'morning' | 'afternoon' | 'evening' | 'allday';
+        orderNotes: string;
+        deliveryMethod: 'pickup' | 'delivery';
+        advancePayment: number;
+        deliveryAddress: {
+            street: string;
+            number: string;
+            floor: string;
+            city: string;
+            reference: string;
+        };
+        contactPhone: string;
+    };
 
     // Loading states
     isLoading: boolean;
@@ -254,7 +274,14 @@ interface AppState {
     getPriceHistory: (id: string) => Promise<any[]>;
     trackSale: (productId: string, quantity: number) => void;
     addTag: (tag: string) => void;
-    removeTag: (tag: string) => void;
+    // POS actions
+    setCart: (cart: any[]) => void;
+    addToCart: (product: any) => void;
+    removeFromCart: (id: string) => void;
+    updateCartQty: (id: string, delta: number) => void;
+    clearCart: () => void;
+    updatePosOrderForm: (updates: any) => void;
+    clearPosOrderForm: () => void;
 }
 
 // ============================================
@@ -276,11 +303,30 @@ const initialShopInfo: ShopInfo = {
     currency: 'ARS'
 };
 
+const initialPosOrderForm = {
+    selectedCustomer: '',
+    deliveryDate: '',
+    deliveryTimeSlot: 'allday' as const,
+    orderNotes: '',
+    deliveryMethod: 'pickup' as const,
+    advancePayment: 0,
+    deliveryAddress: {
+        street: '',
+        number: '',
+        floor: '',
+        city: '',
+        reference: ''
+    },
+    contactPhone: ''
+};
+
 // ============================================
 // STORE CREATION
 // ============================================
 
-export const useStore = create<AppState>()((set, get) => ({
+export const useStore = create<AppState>()(
+    persist(
+        (set, get) => ({
     // Initial state
     products: initialProducts,
     packages: initialPackages,
@@ -296,6 +342,63 @@ export const useStore = create<AppState>()((set, get) => ({
     isLoading: false,
     error: null,
     notifications: [],
+
+    // POS Initial State
+    cart: [],
+    posOrderForm: initialPosOrderForm,
+
+    // ============================================
+    // POS ACTIONS
+    // ============================================
+
+    setCart: (cart) => set({ cart }),
+    
+    addToCart: (product) => {
+        set(state => {
+            const existing = state.cart.find(item => item.id === product.id);
+            if (existing) {
+                return {
+                    cart: state.cart.map(item =>
+                        item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+                    )
+                };
+            }
+            return { cart: [...state.cart, { ...product, qty: 1 }] };
+        });
+    },
+
+    removeFromCart: (id) => {
+        set(state => ({
+            cart: state.cart.filter(item => item.id !== id)
+        }));
+    },
+
+    updateCartQty: (id, delta) => {
+        set(state => ({
+            cart: state.cart.map(item => {
+                if (item.id === id) {
+                    return { ...item, qty: Math.max(1, item.qty + delta) };
+                }
+                return item;
+            })
+        }));
+    },
+
+    clearCart: () => set({ cart: [] }),
+
+    updatePosOrderForm: (updates) => {
+        set(state => ({
+            posOrderForm: {
+                ...state.posOrderForm,
+                ...updates,
+                deliveryAddress: updates.deliveryAddress 
+                    ? { ...state.posOrderForm.deliveryAddress, ...updates.deliveryAddress }
+                    : state.posOrderForm.deliveryAddress
+            }
+        }));
+    },
+
+    clearPosOrderForm: () => set({ posOrderForm: initialPosOrderForm }),
 
     // ============================================
     // NOTIFICATION ACTIONS
@@ -1022,4 +1125,14 @@ export const useStore = create<AppState>()((set, get) => ({
             return { teamNotes: newNotes };
         });
     }
+}), {
+    name: 'aster-erp-store',
+    partialize: (state) => ({
+        cart: state.cart,
+        posOrderForm: state.posOrderForm,
+        shopInfo: state.shopInfo,
+        tags: state.tags,
+        categories: state.categories,
+        teamNotes: state.teamNotes
+    })
 }));

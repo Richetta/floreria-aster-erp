@@ -71,8 +71,32 @@ const LoginForm = () => {
                 localStorage.setItem('auth_token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
 
-                // Update auth store
-                await login(data.user.email, '');
+                // Update auth store directly
+                useAuth.setState({
+                    user: data.user,
+                    isAuthenticated: true,
+                    isLoading: false,
+                    error: null
+                });
+
+                // Log Google login activity
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/activity/log`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${data.token}`,
+                        },
+                        body: JSON.stringify({
+                            action: 'login',
+                            resource_type: 'session',
+                            details: { method: 'google', email: data.user.email },
+                        }),
+                    });
+                } catch (logError) {
+                    console.warn('Failed to log Google login activity:', logError);
+                }
+
                 navigate('/');
             }
         } catch (err: any) {
@@ -108,20 +132,17 @@ const LoginForm = () => {
 
             {/* Google Sign-In Button */}
             <div className="google-login-container mb-6">
-                <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-                    <div className="google-login-wrapper">
-                        <GoogleLogin
-                            onSuccess={handleGoogleSuccess}
-                            onError={handleGoogleError}
-                            useOneTap
-                            text="signin_with"
-                            shape="rectangular"
-                            size="large"
-                            width="100%"
-                            theme="outline"
-                        />
-                    </div>
-                </GoogleOAuthProvider>
+                <div className="google-login-wrapper">
+                    <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={handleGoogleError}
+                        useOneTap
+                        text="signin_with"
+                        shape="rectangular"
+                        size="large"
+                        theme="outline"
+                    />
+                </div>
             </div>
 
             {/* Divider */}

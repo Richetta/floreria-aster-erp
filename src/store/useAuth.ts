@@ -18,7 +18,7 @@ interface AuthState {
 
 export const useAuth = create<AuthState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             user: null,
             isAuthenticated: false,
             isLoading: true,
@@ -33,6 +33,20 @@ export const useAuth = create<AuthState>()(
                         isAuthenticated: true,
                         isLoading: false,
                     });
+
+                    // Log login activity
+                    try {
+                        await api.request('/activity/log', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                action: 'login',
+                                resource_type: 'session',
+                                details: { method: 'traditional' },
+                            }),
+                        });
+                    } catch (logError) {
+                        console.warn('Failed to log login activity:', logError);
+                    }
                 } catch (error: any) {
                     set({
                         error: error.message || 'Error al iniciar sesión',
@@ -43,6 +57,19 @@ export const useAuth = create<AuthState>()(
             },
 
             logout: () => {
+                // Log logout activity before clearing token
+                const { user, isAuthenticated } = get();
+                if (isAuthenticated && user) {
+                    api.request('/activity/log', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'logout',
+                            resource_type: 'session',
+                            details: { method: 'manual' },
+                        }),
+                    }).catch(() => {}); // Ignore errors
+                }
+
                 api.logout();
                 set({
                     user: null,
