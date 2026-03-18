@@ -22,15 +22,19 @@ export const Products = () => {
     const addProduct = useStore((state) => state.addProduct);
     const deleteProduct = useStore((state) => state.deleteProduct);
     const loadProducts = useStore((state) => state.loadProducts);
+    const loadCategories = useStore((state) => state.loadCategories);
 
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
 
-    // Load products from backend on mount
+    // Load products and categories from backend on mount
     useEffect(() => {
         const loadData = async () => {
             setIsLoading(true);
-            await loadProducts();
+            await Promise.all([
+                loadProducts(),
+                loadCategories()
+            ]);
             setIsLoading(false);
         };
         loadData();
@@ -39,10 +43,7 @@ export const Products = () => {
     // State
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300); // 300ms debounce
-    const [activeCategory, setActiveCategory] = useState<string>(() => {
-        if (categories && categories.length > 0) return categories[0];
-        return 'General';
-    });
+    const [activeCategory, setActiveCategory] = useState<string>('Todos');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [productToEdit, setProductToEdit] = useState<Product | null>(null);
     const [isEditingCategory, setIsEditingCategory] = useState(false);
@@ -61,8 +62,8 @@ export const Products = () => {
 
     // Ensure activeCategory stays valid if categories changes
     useEffect(() => {
-        if (categories && categories.length > 0 && !categories.includes(activeCategory)) {
-            setActiveCategory(categories[0]);
+        if (activeCategory !== 'Todos' && categories && categories.length > 0 && !categories.includes(activeCategory)) {
+            setActiveCategory('Todos');
         }
     }, [categories, activeCategory]);
 
@@ -70,7 +71,7 @@ export const Products = () => {
     const filteredProducts = useMemo(() => {
         if (!products) return [];
         let result = products.filter(p => {
-            const matchesCategory = p.category === activeCategory;
+            const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;
             const matchesSearch = p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
                 p.code.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
             return matchesCategory && matchesSearch;
@@ -181,6 +182,18 @@ export const Products = () => {
             {/* Folder Tabs (Physical Metaphor) */}
             <div className="folder-tabs-wrapper">
                 <div className="folder-tabs">
+                    <button
+                        className={`folder-tab ${activeCategory === 'Todos' ? 'active' : ''}`}
+                        onClick={() => {
+                            setActiveCategory('Todos');
+                            setIsEditingCategory(false);
+                        }}
+                    >
+                        <span className="tab-label">Todos</span>
+                        {activeCategory === 'Todos' && (
+                            <span className="tab-indicator" />
+                        )}
+                    </button>
                     {(categories || []).map((cat) => (
                         <button
                             key={cat}
@@ -225,26 +238,30 @@ export const Products = () => {
                         ) : (
                             <div className="flex items-center gap-3">
                                 <h1 className="text-h1 sheet-title">{activeCategory}</h1>
-                                <button
-                                    className="btn-icon text-muted"
-                                    onClick={() => {
-                                        setCategoryNameInput(activeCategory);
-                                        setIsEditingCategory(true);
-                                    }}
-                                >
-                                    <Edit2 size={18} />
-                                </button>
-                                <button
-                                    className="btn-icon text-danger"
-                                    onClick={() => {
-                                        if (confirm(`¿Eliminar la carpeta "${activeCategory}"? Los productos se moverán a "Sin Categoría".`)) {
-                                            deleteCategory(activeCategory);
-                                            setActiveCategory(categories[0] || 'General');
-                                        }
-                                    }}
-                                >
-                                    <Trash2 size={18} />
-                                </button>
+                                {activeCategory !== 'Todos' && activeCategory !== 'Sin Categoría' && (
+                                    <>
+                                        <button
+                                            className="btn-icon text-muted"
+                                            onClick={() => {
+                                                setCategoryNameInput(activeCategory);
+                                                setIsEditingCategory(true);
+                                            }}
+                                        >
+                                            <Edit2 size={18} />
+                                        </button>
+                                        <button
+                                            className="btn-icon text-danger"
+                                            onClick={() => {
+                                                if (confirm(`¿Eliminar la carpeta "${activeCategory}"? Los productos se moverán a "Sin Categoría".`)) {
+                                                    deleteCategory(activeCategory);
+                                                    setActiveCategory('Todos');
+                                                }
+                                            }}
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         )}
                         <p className="text-body text-muted mt-1">

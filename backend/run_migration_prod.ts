@@ -19,8 +19,15 @@ const pool = new Pool({
 });
 
 async function runMigration() {
-  const sqlPath = path.join(__dirname, './migration_fix_users.sql');
-  const sql = fs.readFileSync(sqlPath, 'utf8');
+  const argFile = process.argv[2];
+  const sqlFile = argFile ? path.join(process.cwd(), argFile) : path.join(__dirname, './migration_fix_users.sql');
+  
+  if (!fs.existsSync(sqlFile)) {
+    console.error(`Migration file not found: ${sqlFile}`);
+    process.exit(1);
+  }
+
+  const sql = fs.readFileSync(sqlFile, 'utf8');
 
   console.log('Running migration on Supabase...');
   

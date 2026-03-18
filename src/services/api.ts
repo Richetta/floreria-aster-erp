@@ -154,6 +154,16 @@ export type WasteLog = {
   created_at: string;
 };
 
+export type Category = {
+  id: string;
+  business_id: string;
+  name: string;
+  parent_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 // ============================================
 // HTTP CLIENT
 // ============================================
@@ -174,7 +184,7 @@ class ApiClient {
     return this.token;
   }
 
-  private async request<T>(
+  public async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
@@ -789,6 +799,27 @@ class ApiClient {
     return this.request(`/products/${id}/stock`, {
       method: 'POST',
       body: JSON.stringify({ quantity, type, reason }),
+    });
+  }
+
+  // ============================================
+  // CATEGORIES ENDPOINTS
+  // ============================================
+
+  async getCategories(): Promise<Category[]> {
+    return this.request<Category[]>('/categories');
+  }
+
+  async createCategory(category: { name: string; parent_id?: string }): Promise<Category> {
+    return this.request<Category>('/categories', {
+      method: 'POST',
+      body: JSON.stringify(category),
+    });
+  }
+
+  async deleteCategory(id: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/categories/${id}`, {
+      method: 'DELETE',
     });
   }
 

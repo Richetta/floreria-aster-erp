@@ -16,6 +16,7 @@ export type Product = {
     code: string;
     name: string;
     category: string;
+    category_id?: string;
     price: number;
     cost?: number;
     stock: number;
@@ -24,6 +25,12 @@ export type Product = {
     salesCount?: number;
     lastSaleDate?: string;
     weeklySales?: number;
+};
+
+export type Category = {
+    id: string;
+    name: string;
+    parent_id?: string;
 };
 
 export type Customer = {
@@ -147,11 +154,14 @@ export type ShopInfo = {
 // ============================================
 
 // Map API Product to Frontend Product
-const mapApiProductToFrontend = (apiProduct: ApiProduct, categories: string[]): Product => ({
+const mapApiProductToFrontend = (apiProduct: ApiProduct, categoriesData: Category[]): Product => ({
     id: apiProduct.id,
     code: apiProduct.code,
     name: apiProduct.name,
-    category: categories.find(c => c.toLowerCase() === apiProduct.category_id?.toLowerCase()) || 'General',
+    category: apiProduct.category_id 
+        ? (categoriesData.find(c => c.id === apiProduct.category_id)?.name || 'Sin Categoría')
+        : 'Sin Categoría',
+    category_id: apiProduct.category_id,
     price: apiProduct.price,
     cost: apiProduct.cost,
     stock: apiProduct.stock_quantity,
@@ -160,18 +170,26 @@ const mapApiProductToFrontend = (apiProduct: ApiProduct, categories: string[]): 
 });
 
 // Map Frontend Product to API Product
-const mapFrontendToApiProduct = (product: Partial<Product>, categoryId?: string) => ({
-    code: product.code,
-    name: product.name,
-    cost: product.cost || 0,
-    price: product.price || 0,
-    min_stock: product.min || 5,
-    stock_quantity: product.stock || 0,
-    tags: product.tags || [],
-    is_barcode: false,
-    is_active: true,
-    category_id: categoryId,
-});
+const mapFrontendToApiProduct = (product: Partial<Product>, categoriesData: Category[]) => {
+    let categoryId = product.category_id;
+    if (!categoryId && product.category) {
+        const catName = product.category.toLowerCase();
+        categoryId = categoriesData.find(c => c.name.toLowerCase() === catName)?.id;
+    }
+
+    return {
+        code: product.code,
+        name: product.name,
+        cost: product.cost || 0,
+        price: product.price || 0,
+        min_stock: product.min || 5,
+        stock_quantity: product.stock || 0,
+        tags: product.tags || [],
+        is_barcode: false,
+        is_active: true,
+        category_id: categoryId,
+    };
+};
 
 // ============================================
 // STORE STATE
@@ -190,6 +208,7 @@ interface AppState {
     shopInfo: ShopInfo;
     tags: string[];
     categories: string[];
+    categoriesData: Category[];
     
     // POS State (Persistent)
     cart: any[];
@@ -225,10 +244,11 @@ interface AppState {
     updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
     deleteProduct: (id: string) => Promise<void>;
 
-    // Category actions (local only for now)
-    addCategory: (category: string) => void;
-    renameCategory: (oldName: string, newName: string) => void;
-    deleteCategory: (category: string) => void;
+    // Category actions
+    loadCategories: () => Promise<void>;
+    addCategory: (category: string) => Promise<void>;
+    renameCategory: (oldName: string, newName: string) => Promise<void>;
+    deleteCategory: (category: string) => Promise<void>;
 
     // Package actions
     loadPackages: () => Promise<void>;
@@ -290,7 +310,6 @@ interface AppState {
 
 const initialProducts: Product[] = [];
 const initialTags: string[] = ['Primavera', 'Regalo', 'Flores de Corte', 'San Valentín', 'Deco', 'Oferta'];
-const initialCategories: string[] = ['Ramos', 'Flores', 'Macetas', 'Regalería', 'Plantas Interior', 'Plantas Exterior', 'Tierra', 'Insumos'];
 const initialPackages: Package[] = [];
 const initialOrders: Order[] = [];
 const initialCustomers: Customer[] = [];
@@ -338,7 +357,8 @@ export const useStore = create<AppState>()(
     teamNotes: JSON.parse(localStorage.getItem('team_notes') || '[]'),
     shopInfo: initialShopInfo,
     tags: initialTags,
-    categories: initialCategories,
+    categories: [],
+    categoriesData: [],
     isLoading: false,
     error: null,
     notifications: [],
@@ -426,10 +446,15 @@ export const useStore = create<AppState>()(
     loadProducts: async () => {
         set({ isLoading: true, error: null });
         try {
+            // Load categories first to ensure mapping works
+            if (get().categoriesData.length === 0) {
+                await get().loadCategories();
+            }
+
             const apiProducts = await api.getProducts({ limit: 1000 });
             // Map API products to frontend format
-            const categories = get().categories;
-            const products = apiProducts.map(p => mapApiProductToFrontend(p, categories));
+            const categoriesData = get().categoriesData;
+            const products = apiProducts.map(p => mapApiProductToFrontend(p, categoriesData));
             set({ products, isLoading: false });
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
@@ -438,11 +463,10 @@ export const useStore = create<AppState>()(
 
     addProduct: async (product: Product) => {
         try {
-
-            const apiProduct = await api.createProduct({
-                ...mapFrontendToApiProduct(product),
-                category_id: undefined, // For now, no category mapping
-            });
+            const categoriesData = get().categoriesData;
+            const apiProduct = await api.createProduct(
+                mapFrontendToApiProduct(product, categoriesData)
+            );
 
             set(state => ({
                 products: [...state.products, { ...product, id: apiProduct.id }]
@@ -458,13 +482,17 @@ export const useStore = create<AppState>()(
 
     updateProduct: async (id: string, updates: Partial<Product>) => {
         try {
+            const categoriesData = get().categoriesData;
+            const apiUpdate = mapFrontendToApiProduct(updates, categoriesData);
+            
             await api.updateProduct(id, {
-                name: updates.name,
-                price: updates.price,
-                cost: updates.cost,
-                min_stock: updates.min,
-                stock_quantity: updates.stock,
-                tags: updates.tags,
+                name: apiUpdate.name,
+                price: apiUpdate.price,
+                cost: apiUpdate.cost,
+                min_stock: apiUpdate.min_stock,
+                stock_quantity: apiUpdate.stock_quantity,
+                tags: apiUpdate.tags,
+                category_id: apiUpdate.category_id,
             });
             
             set(state => ({
@@ -495,29 +523,60 @@ export const useStore = create<AppState>()(
     },
 
     // ============================================
-    // CATEGORY ACTIONS (Local)
+    // CATEGORY ACTIONS
     // ============================================
 
-    addCategory: (category: string) => {
-        set(state => ({
-            categories: state.categories.includes(category) 
-                ? state.categories 
-                : [...state.categories, category]
-        }));
+    loadCategories: async () => {
+        try {
+            const categoriesData = await api.getCategories();
+            set({ 
+                categoriesData,
+                categories: categoriesData.map(c => c.name)
+            });
+        } catch (error) {
+            console.error('Error loading categories:', error);
+        }
     },
 
-    renameCategory: (oldName: string, newName: string) => {
+    addCategory: async (name: string) => {
+        try {
+            const newCat = await api.createCategory({ name });
+            set(state => ({
+                categoriesData: [...state.categoriesData, newCat],
+                categories: [...state.categories, newCat.name]
+            }));
+            get().addNotification('Categoría creada', 'success');
+        } catch (error) {
+            get().addNotification('Error al crear categoría', 'error');
+        }
+    },
+
+    renameCategory: async (oldName: string, newName: string) => {
+        // For now, API might not support rename, so we just update local
+        // and ideally update all products in that category.
+        // If the backend had a rename endpoint, we'd call it here.
         set(state => ({
             categories: state.categories.map(c => c === oldName ? newName : c),
+            categoriesData: state.categoriesData.map(c => c.name === oldName ? { ...c, name: newName } : c),
             products: state.products.map(p => p.category === oldName ? { ...p, category: newName } : p)
         }));
     },
 
-    deleteCategory: (category: string) => {
-        set(state => ({
-            categories: state.categories.filter(c => c !== category),
-            products: state.products.map(p => p.category === category ? { ...p, category: 'Sin Categoría' } : p)
-        }));
+    deleteCategory: async (name: string) => {
+        try {
+            const cat = get().categoriesData.find(c => c.name === name);
+            if (cat) {
+                await api.deleteCategory(cat.id);
+            }
+            set(state => ({
+                categories: state.categories.filter(c => c !== name),
+                categoriesData: state.categoriesData.filter(c => c.name !== name),
+                products: state.products.map(p => p.category === name ? { ...p, category: 'Sin Categoría', category_id: undefined } : p)
+            }));
+            get().addNotification('Categoría eliminada', 'success');
+        } catch (error) {
+            get().addNotification('Error al eliminar categoría', 'error');
+        }
     },
 
     // ============================================

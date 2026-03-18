@@ -100,6 +100,8 @@ console.log('Loading reminders.js...');
 await fastify.register(import('./routes/reminders.js'), { prefix: '/api/reminders' });
 console.log('Loading activity.js...');
 await fastify.register(import('./routes/activity.js'), { prefix: '/api/activity' });
+console.log('Loading categories.js...');
+await fastify.register(import('./routes/categories.js'), { prefix: '/api/categories' });
 
 // Diagnostic Route
 fastify.get('/api/diag/auth', async (request, reply) => {
