@@ -15,8 +15,25 @@ BEGIN
     END IF;
 END $$;
 
--- 3. (Opcional) Limpiar cualquier admin duplicado si fuera necesario
--- UPDATE users SET email = 'admin@floreriaaster.com' WHERE email = 'admin';
+-- 3. Crear tabla de actividad si no existe
+CREATE TABLE IF NOT EXISTS user_activity (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  business_id UUID NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  resource_type VARCHAR(50),
+  resource_id UUID,
+  details JSONB,
+  ip_address INET,
+  user_agent TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Índices para actividad
+CREATE INDEX IF NOT EXISTS idx_user_activity_user_id ON user_activity(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_activity_business_id ON user_activity(business_id);
+CREATE INDEX IF NOT EXISTS idx_user_activity_created_at ON user_activity(created_at DESC);
 
 -- Verificar cambios
 SELECT id, name, email, password_hash, google_id FROM users LIMIT 10;
+SELECT count(*) as activity_count FROM user_activity;

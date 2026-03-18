@@ -27,6 +27,7 @@ export interface Database {
   transactions: TransactionsTable;
   refresh_tokens: RefreshTokensTable;
   audit_logs: AuditLogsTable;
+  user_activity: UserActivityTable;
   app_settings: AppSettingsTable;
 }
 
@@ -354,6 +355,19 @@ interface AppSettingsTable {
   key: string;
   value: Record<string, any>;
   updated_at: Date;
+}
+
+interface UserActivityTable {
+  id: string;
+  user_id: string;
+  business_id: string;
+  action: string;
+  resource_type: string | null;
+  resource_id: string | null;
+  details: string | Record<string, any> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: Date;
 }
 
 // ============================================
