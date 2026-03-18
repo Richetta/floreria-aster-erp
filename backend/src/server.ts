@@ -79,6 +79,8 @@ console.log('Loading stock.js...');
 await fastify.register(import('./routes/stock.js'), { prefix: '/api/stock' });
 console.log('Loading reminders.js...');
 await fastify.register(import('./routes/reminders.js'), { prefix: '/api/reminders' });
+console.log('Loading activity.js...');
+await fastify.register(import('./routes/activity.js'), { prefix: '/api/activity' });
 
 // Global Error Handler
 fastify.setErrorHandler((error: any, request, reply) => {

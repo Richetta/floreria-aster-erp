@@ -188,7 +188,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(400).send({ error: 'Validation error', details: error.errors });
       }
 
-      return reply.status(500).send({ error: 'Google authentication failed' });
+      const isDev = config.nodeEnv === 'development';
+      return reply.status(500).send({ 
+        error: 'Google authentication failed',
+        message: isDev ? error.message : undefined,
+        stack: isDev ? error.stack : undefined
+      });
     }
   });
 
@@ -267,7 +272,9 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.redirect(`${frontendUrl}/login?token=${token}`);
     } catch (error: any) {
       fastify.log.error({ error }, 'Google callback error');
-      return reply.redirect('/login?error=Authentication%20failed');
+      const isDev = config.nodeEnv === 'development';
+      const errorMessage = isDev ? encodeURIComponent(error.message) : 'Authentication%20failed';
+      return reply.redirect(`/login?error=${errorMessage}`);
     }
   });
 

@@ -15,9 +15,13 @@ async function verifyConnection() {
     await client.connect();
     console.log('Connected successfully!');
     
-    const res = await client.query('SELECT id, name, email, google_id FROM users');
+    const res = await client.query('SELECT id, name, email FROM users');
     console.log('Users found:', res.rows.length);
     console.log(JSON.stringify(res.rows, null, 2));
+
+    const resBus = await client.query('SELECT id, name FROM businesses');
+    console.log('Businesses found:', resBus.rows.length);
+    console.log(JSON.stringify(resBus.rows, null, 2));
     
     await client.end();
   } catch (err: any) {

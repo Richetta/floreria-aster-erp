@@ -49,7 +49,8 @@ CREATE TABLE users (
     business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255), -- Nullable for Google-only users
+    google_id VARCHAR(255) UNIQUE, -- Added for Google Sign-In
     role user_role NOT NULL DEFAULT 'viewer',
     phone VARCHAR(50),
     is_active BOOLEAN DEFAULT TRUE,
