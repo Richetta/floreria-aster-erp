@@ -4,6 +4,7 @@ import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import { config } from './config/index.js';
 
+console.log('--- SERVER INITIALIZING ---');
 const fastify = Fastify({
   logger: {
     level: config.nodeEnv === 'development' ? 'debug' : 'info'
@@ -11,11 +12,13 @@ const fastify = Fastify({
 });
 
 // Register plugins
+console.log('Registering CORS...');
 await fastify.register(cors, {
   origin: config.nodeEnv === 'development' ? true : config.frontendUrl,
   credentials: true
 });
 
+console.log('Registering JWT...');
 await fastify.register(jwt, {
   secret: config.jwtSecret,
   sign: {
@@ -24,6 +27,7 @@ await fastify.register(jwt, {
 });
 
 // Rate Limiting - Protection against brute force and DDoS
+console.log('Registering Rate Limit...');
 await fastify.register(rateLimit, {
   max: 100, // 100 requests
   timeWindow: '1 minute', // per minute
@@ -46,27 +50,44 @@ fastify.get('/health', async (request, reply) => {
 });
 
 // API Routes
+console.log('Registering Routes...');
+console.log('Loading auth.js...');
 await fastify.register(import('./routes/auth.js'), { prefix: '/api/auth' });
+console.log('Loading users.js...');
 await fastify.register(import('./routes/users.js'), { prefix: '/api/users' });
+console.log('Loading products.js...');
 await fastify.register(import('./routes/products.js'), { prefix: '/api/products' });
+console.log('Loading customers.js...');
 await fastify.register(import('./routes/customers.js'), { prefix: '/api/customers' });
+console.log('Loading orders.js...');
 await fastify.register(import('./routes/orders.js'), { prefix: '/api/orders' });
+console.log('Loading transactions.js...');
 await fastify.register(import('./routes/transactions.js'), { prefix: '/api/transactions' });
+console.log('Loading packages.js...');
 await fastify.register(import('./routes/packages.js'), { prefix: '/api/packages' });
+console.log('Loading suppliers.js...');
 await fastify.register(import('./routes/suppliers.js'), { prefix: '/api/suppliers' });
+console.log('Loading waste.js...');
 await fastify.register(import('./routes/waste.js'), { prefix: '/api/waste' });
+console.log('Loading reports.js...');
 await fastify.register(import('./routes/reports.js'), { prefix: '/api/reports' });
+console.log('Loading import.js...');
 await fastify.register(import('./routes/import.js'), { prefix: '/api/import' });
+console.log('Loading cash-register.js...');
 await fastify.register(import('./routes/cash-register.js'), { prefix: '/api/cash-register' });
+console.log('Loading stock.js...');
 await fastify.register(import('./routes/stock.js'), { prefix: '/api/stock' });
+console.log('Loading reminders.js...');
 await fastify.register(import('./routes/reminders.js'), { prefix: '/api/reminders' });
 
 // Start server
 const start = async () => {
   try {
+    console.log(`Starting Fastify on port ${config.port}...`);
     await fastify.listen({ port: config.port, host: '0.0.0.0' });
     console.log(`🚀 Server running at http://localhost:${config.port}`);
   } catch (err) {
+    console.error('FAILED TO START SERVER:', err);
     fastify.log.error(err);
     process.exit(1);
   }
