@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { db } from '../db/index.js';
 import ExcelJS from 'exceljs';
 import mammoth from 'mammoth';
-import PDFParse from 'pdf-parse';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const PDFParse = require('pdf-parse');
 import { parse as csvParse } from 'csv-parse/sync';
 import { sql } from 'kysely';
 
