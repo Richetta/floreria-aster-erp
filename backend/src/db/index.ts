@@ -379,7 +379,7 @@ const pool = new Pool({
   ssl: config.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000
+  connectionTimeoutMillis: 10000
 });
 
 export const db = new Kysely<Database>({
@@ -391,7 +391,7 @@ export const db = new Kysely<Database>({
 // ============================================
 
 export async function setBusinessId(businessId: string): Promise<void> {
-  await sql`SET LOCAL app.current_business_id = ${businessId}`.execute(db);
+  await sql`SELECT set_config('app.current_business_id', ${businessId}, true)`.execute(db);
 }
 
 export async function checkDatabaseConnection(): Promise<boolean> {
