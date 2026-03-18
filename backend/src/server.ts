@@ -72,7 +72,6 @@ fastify.get('/health', async (request, reply) => {
 console.log('Registering Routes...');
 console.log('Loading auth.js...');
 await fastify.register(import('./routes/auth.js'), { prefix: '/api/auth' });
-// await fastify.register(import('./routes/audit.js'), { prefix: '/api/audit' });
 console.log('Loading users.js...');
 await fastify.register(import('./routes/users.js'), { prefix: '/api/users' });
 console.log('Loading products.js...');
@@ -100,7 +99,7 @@ await fastify.register(import('./routes/stock.js'), { prefix: '/api/stock' });
 console.log('Loading reminders.js...');
 await fastify.register(import('./routes/reminders.js'), { prefix: '/api/reminders' });
 console.log('Loading activity.js...');
-// await fastify.register(import('./routes/activity.js'), { prefix: '/api/activity' });
+await fastify.register(import('./routes/activity.js'), { prefix: '/api/activity' });
 
 // Diagnostic Route
 fastify.get('/api/diag/auth', async (request, reply) => {
