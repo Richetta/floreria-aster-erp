@@ -31,7 +31,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const { 
       from_date, 
@@ -84,7 +84,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = request.query as { from_date?: string, to_date?: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     // Get waste logs with product info
     let query = db
@@ -180,7 +180,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createWasteSchema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const result = await db.transaction().execute(async (trx) => {
         // Get current product
@@ -292,7 +292,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     // Get the waste log to restore stock
     const wasteLog = await db

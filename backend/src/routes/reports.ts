@@ -27,7 +27,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = dateRangeSchema.parse(request.query);
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     // Build query with date filters
     let query = db
@@ -91,7 +91,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date, group_by = 'day' } = request.query as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     // Group by day or month
     const dateFormat = group_by === 'month' 
@@ -132,7 +132,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date, limit = '10' } = request.query as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     // Get top selling products from order_items
     let query: any = db
@@ -189,7 +189,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date, limit = '10' } = request.query as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     let query: any = db
       .selectFrom('customers')
@@ -244,7 +244,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = request.query as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     // Get total revenue from sales
     let revenueQuery = db
@@ -348,7 +348,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = request.query as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     let query = db
       .selectFrom('transactions')

@@ -21,7 +21,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { days_ahead = '30' } = request.query as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const today = new Date();
     const ahead = parseInt(days_ahead);
@@ -155,7 +155,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { min_amount = '0' } = request.query as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const customers = await db
       .selectFrom('customers')
@@ -224,7 +224,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       // Log the reminder
       const reminder = await db
@@ -288,7 +288,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const reminder = await db
         .insertInto('audit_logs')
@@ -351,7 +351,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       // Get customer details
       const customers = await db
@@ -435,7 +435,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { limit = '50' } = request.query as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const logs = await db
       .selectFrom('audit_logs')

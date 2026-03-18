@@ -212,7 +212,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
       }).parse(request.body);
 
       const results = await db.transaction().execute(async (trx) => {
-        await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const stats = {
           updated: 0,
@@ -326,7 +326,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
 
     const csv = await db.transaction().execute(async (trx) => {
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
       const products = await trx
         .selectFrom('products')

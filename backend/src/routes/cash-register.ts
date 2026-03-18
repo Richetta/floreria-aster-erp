@@ -28,7 +28,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       // Check if already opened today
       const existingOpening = await db
@@ -92,7 +92,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { date = new Date().toISOString().split('T')[0] } = request.query as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     // Check if opened
     const opening = await db
@@ -140,7 +140,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { date = new Date().toISOString().split('T')[0] } = request.query as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const startDate = new Date(date);
     startDate.setHours(0, 0, 0, 0);
@@ -271,7 +271,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const startDate = new Date(body.date);
       startDate.setHours(0, 0, 0, 0);
@@ -387,7 +387,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date, limit = '30' } = request.query as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const settings = await db
       .selectFrom('app_settings')
@@ -432,7 +432,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const todayDay = new Date().toISOString().split('T')[0];
 

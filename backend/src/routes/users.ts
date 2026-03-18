@@ -61,7 +61,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const targetUser = await db
       .selectFrom('users')
@@ -260,7 +260,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       // Get current user
       const currentUserData = await db
@@ -316,7 +316,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const profile = await db
       .selectFrom('users')

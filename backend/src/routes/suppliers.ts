@@ -31,7 +31,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const { category, search, limit = '100' } = request.query as any;
 
@@ -74,7 +74,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const supplier = await db
       .selectFrom('suppliers')
@@ -114,7 +114,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createSupplierSchema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const result = await db
         .insertInto('suppliers')
@@ -162,7 +162,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = updateSupplierSchema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const result = await db
         .updateTable('suppliers')
@@ -201,7 +201,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     await db
       .updateTable('suppliers')
@@ -238,7 +238,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
       invoice_document_url: z.string().optional()
     }).parse(request.body);
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const result = await db.transaction().execute(async (trx) => {
       // Calculate total
@@ -354,7 +354,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const categories = await db
       .selectFrom('suppliers')

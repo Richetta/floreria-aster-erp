@@ -29,7 +29,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const { 
       type, 
@@ -87,7 +87,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const transaction = await db
       .selectFrom('transactions')
@@ -116,7 +116,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = request.query as { from_date?: string, to_date?: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     let query = db
       .selectFrom('transactions')
@@ -188,7 +188,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createTransactionSchema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const result = await db
         .insertInto('transactions')
@@ -242,7 +242,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       notes: z.string().optional()
     }).parse(request.body);
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const result = await db.transaction().execute(async (trx) => {
       // 1. Verify and deduct stock
@@ -355,7 +355,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       notes: z.string().optional()
     }).parse(request.body);
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const result = await db
       .insertInto('transactions')
@@ -390,7 +390,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     await db
       .updateTable('transactions')

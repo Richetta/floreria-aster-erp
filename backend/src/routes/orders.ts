@@ -60,7 +60,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const { 
       status, 
@@ -118,7 +118,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const order = await db
       .selectFrom('orders')
@@ -156,7 +156,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createOrderSchema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const result = await db.transaction().execute(async (trx) => {
         // Calculate total
@@ -287,7 +287,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = updateOrderSchema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const result = await db
         .updateTable('orders')
@@ -332,7 +332,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: 'Status is required' });
     }
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const result = await db
       .updateTable('orders')
@@ -364,7 +364,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     await db
       .updateTable('orders')
@@ -390,7 +390,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { date } = request.query as { date?: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     let query = db
       .selectFrom('orders')

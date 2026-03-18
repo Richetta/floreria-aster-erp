@@ -35,7 +35,7 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
     const { section, is_active, search, limit = '100' } = request.query as any;
 
     const packagesWithComponents = await db.transaction().execute(async (trx) => {
-        await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         let query = trx
             .selectFrom('packages')
@@ -96,7 +96,7 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const result = await db.transaction().execute(async (trx) => {
-        await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const pkg = await trx
             .selectFrom('packages')
@@ -137,7 +137,7 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const result = await db.transaction().execute(async (trx) => {
-        await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const components = await trx
             .selectFrom('package_components')
@@ -187,7 +187,7 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
       const body = createPackageSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const pkg = await trx
           .insertInto('packages')
@@ -252,7 +252,7 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
       const body = updatePackageSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const pkg = await trx
           .updateTable('packages')
@@ -315,7 +315,7 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     await db.transaction().execute(async (trx) => {
-        await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
         await trx
             .updateTable('packages')
             .set({
