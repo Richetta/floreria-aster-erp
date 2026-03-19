@@ -13,6 +13,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     category_id: z.string().uuid().optional(),
     cost: z.number().nonnegative(),
     price: z.number().nonnegative(),
+    stock_quantity: z.number().int().default(0), // Added this
     min_stock: z.number().int().positive().default(5),
     max_stock: z.number().int().positive().optional(),
     is_barcode: z.boolean().default(false),
@@ -117,7 +118,6 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
 
     return reply.send(product);
   });
-
   // CREATE PRODUCT
   fastify.post('/', {
     preHandler: [async (request, reply) => {
@@ -140,10 +140,13 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
           ? ((body.price - body.cost) / body.cost * 100) 
           : null;
 
-        return await trx
+        const productId = randomUUID();
+        const initialStock = body.stock_quantity || 0;
+
+        const product = await trx
           .insertInto('products')
           .values({
-            id: randomUUID(),
+            id: productId,
             business_id: user.business_id,
             code: body.code,
             name: body.name,
@@ -152,7 +155,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
             cost: body.cost,
             price: body.price,
             margin_percent: margin,
-            stock_quantity: 0,
+            stock_quantity: initialStock, // Now using body value
             min_stock: body.min_stock,
             max_stock: body.max_stock || null,
             is_active: true,
@@ -165,6 +168,29 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
           } as any)
           .returningAll()
           .executeTakeFirst();
+
+        // Create initial stock movement if stock > 0
+        if (initialStock > 0) {
+          await trx
+            .insertInto('stock_movements')
+            .values({
+              id: randomUUID(),
+              business_id: user.business_id,
+              product_id: productId,
+              movement_type: 'adjustment',
+              quantity: initialStock,
+              balance_after: initialStock,
+              reference_type: 'manual_adjustment',
+              reference_id: 'initial_stock',
+              user_id: user.sub,
+              notes: 'Stock inicial en creación de producto',
+              metadata: {},
+              created_at: new Date()
+            } as any)
+            .execute();
+        }
+
+        return product;
       });
 
       return reply.status(201).send(result);
@@ -202,12 +228,13 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
 
         const currentProduct = await trx
           .selectFrom('products')
-          .select(['cost', 'price'])
+          .select(['cost', 'price', 'stock_quantity'])
           .where('id', '=', id)
           .executeTakeFirst();
 
         if (!currentProduct) throw new Error('Product not found');
 
+        // Handle Price/Cost history...
         if (body.cost !== undefined || body.price !== undefined) {
           const newCost = body.cost ?? currentProduct.cost;
           const newPrice = body.price ?? currentProduct.price;
@@ -230,6 +257,31 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
               } as any)
               .execute();
           }
+        }
+
+        // Handle Stock movement on manual update
+        if (body.stock_quantity !== undefined && body.stock_quantity !== Number(currentProduct.stock_quantity)) {
+          const diff = body.stock_quantity - Number(currentProduct.stock_quantity);
+          await trx
+            .insertInto('stock_movements')
+            .values({
+              id: randomUUID(),
+              business_id: user.business_id,
+              product_id: id,
+              movement_type: 'adjustment',
+              quantity: diff,
+              balance_after: body.stock_quantity,
+              reference_type: 'manual_adjustment',
+              reference_id: 'manual_edit',
+              user_id: user.sub,
+              notes: 'Actualización manual desde edición de producto',
+              metadata: {
+                old_stock: currentProduct.stock_quantity,
+                new_stock: body.stock_quantity
+              },
+              created_at: new Date()
+            } as any)
+            .execute();
         }
 
         const margin = body.cost 
