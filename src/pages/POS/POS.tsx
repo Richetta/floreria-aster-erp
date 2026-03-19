@@ -606,6 +606,15 @@ export const POS = () => {
                                     {cat}
                                 </button>
                             ))}
+                            {products.some(p => p.category === 'Sin Categoría') && (
+                                <button
+                                    className={`category-chip ${activeCategory === 'Sin Categoría' ? 'active' : ''}`}
+                                    onClick={() => setActiveCategory('Sin Categoría')}
+                                    title="Ver productos sin categoría asignada"
+                                >
+                                    Sin Categoría
+                                </button>
+                            )}
                         </div>
 
                         {/* Custom Tag Filters */}
@@ -721,9 +730,9 @@ export const POS = () => {
                                 // Product View
                                 <div
                                     key={item.id}
-                                    className={`product-list-item ${item.stock === 0 ? 'out-of-stock' : ''}`}
-                                    onClick={() => item.stock > 0 && addToCart(item)}
-                                    style={item.stock === 0 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                                    className={`product-list-item ${item.stock === 0 ? 'out-of-stock-pos' : ''}`}
+                                    onClick={() => addToCart(item)}
+                                    style={item.stock === 0 ? { borderLeft: '4px solid var(--color-warning)' } : {}}
                                 >
                                     <div className="product-list-main">
                                         <div className="product-list-info">
@@ -748,14 +757,12 @@ export const POS = () => {
                                         <span className={`stock-badge ${item.stock === 0 ? 'out' : item.stock < item.min ? 'low' : 'in'}`}>
                                             {item.stock} disp.
                                         </span>
-                                        {item.stock > 0 && (
-                                            <button className="add-to-cart-btn" onClick={(e) => {
+                                        <button className="add-to-cart-btn" onClick={(e) => {
                                                 e.stopPropagation();
                                                 addToCart(item);
                                             }}>
                                                 <Plus size={18} />
                                             </button>
-                                        )}
                                     </div>
                                 </div>
                             ))

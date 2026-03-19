@@ -29,6 +29,7 @@ export type Product = {
   name: string;
   description?: string;
   category_id?: string;
+  category_name?: string;
   cost: number;
   price: number;
   margin_percent?: number;

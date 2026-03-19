@@ -40,18 +40,33 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
 
         let query = trx
             .selectFrom('products')
-            .selectAll()
-            .where('deleted_at', 'is', null);
+            .leftJoin('categories', 'categories.id', 'products.category_id')
+            .select([
+                'products.id',
+                'products.code',
+                'products.name',
+                'products.description',
+                'products.cost',
+                'products.price',
+                'products.stock_quantity',
+                'products.min_stock',
+                'products.is_active',
+                'products.is_barcode',
+                'products.tags',
+                'products.category_id',
+                'categories.name as category_name'
+            ])
+            .where('products.deleted_at', 'is', null);
 
         if (search) {
             query = query.where((eb) => eb.or([
-                eb('name', 'ilike', `%${search}%`),
-                eb('code', 'ilike', `%${search}%`)
+                eb('products.name', 'ilike', `%${search}%`),
+                eb('products.code', 'ilike', `%${search}%`)
             ]));
         }
 
         if (category && category !== 'Todos') {
-            query = query.where('category_id', '=', category);
+            query = query.where('products.category_id', '=', category);
         }
 
         if (active !== undefined) {

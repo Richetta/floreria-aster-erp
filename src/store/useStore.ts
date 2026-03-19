@@ -159,8 +159,8 @@ const mapApiProductToFrontend = (apiProduct: ApiProduct, categoriesData: Categor
     code: apiProduct.code,
     name: apiProduct.name,
     category: apiProduct.category_id 
-        ? (categoriesData.find(c => c.id === apiProduct.category_id)?.name || 'Sin Categoría')
-        : 'Sin Categoría',
+        ? (categoriesData.find(c => c.id === apiProduct.category_id)?.name || apiProduct.category_name || 'Sin Categoría')
+        : (apiProduct.category_name || 'Sin Categoría'),
     category_id: apiProduct.category_id,
     price: apiProduct.price,
     cost: apiProduct.cost,

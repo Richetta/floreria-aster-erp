@@ -209,6 +209,20 @@ export const Products = () => {
                             )}
                         </button>
                     ))}
+                    {(products || []).some(p => p.category === 'Sin Categoría') && (
+                        <button
+                            className={`folder-tab ${activeCategory === 'Sin Categoría' ? 'active' : ''}`}
+                            onClick={() => {
+                                setActiveCategory('Sin Categoría');
+                                setIsEditingCategory(false);
+                            }}
+                        >
+                            <span className="tab-label">Sin Categoría</span>
+                            {activeCategory === 'Sin Categoría' && (
+                                <span className="tab-indicator" />
+                            )}
+                        </button>
+                    )}
                     <button className="folder-tab add-tab" onClick={handleAddCategory}>
                         <Plus size={18} />
                     </button>
