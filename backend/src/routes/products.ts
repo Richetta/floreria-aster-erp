@@ -181,7 +181,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
               quantity: initialStock,
               balance_after: initialStock,
               reference_type: 'manual_adjustment',
-              reference_id: 'initial_stock',
+              reference_id: '00000000-0000-0000-0000-000000000000',
               user_id: user.sub,
               notes: 'Stock inicial en creación de producto',
               metadata: {},
@@ -272,7 +272,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
               quantity: diff,
               balance_after: body.stock_quantity,
               reference_type: 'manual_adjustment',
-              reference_id: 'manual_edit',
+              reference_id: '00000000-0000-0000-0000-000000000000',
               user_id: user.sub,
               notes: 'Actualización manual desde edición de producto',
               metadata: {
