@@ -104,6 +104,22 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       .limit(parseInt(limit))
       .execute();
 
+    // Fetch items for all these orders to avoid "No hay productos registrados" in Kanban/Modal
+    const orderIds = orders.map(o => o.id);
+    if (orderIds.length > 0) {
+      const allItems = await db
+        .selectFrom('order_items')
+        .selectAll()
+        .where('order_id', 'in', orderIds)
+        .execute();
+      
+      const ordersWithItems = orders.map(o => ({
+        ...o,
+        items: allItems.filter(item => item.order_id === o.id)
+      }));
+      return reply.send(ordersWithItems);
+    }
+
     return reply.send(orders);
   });
 

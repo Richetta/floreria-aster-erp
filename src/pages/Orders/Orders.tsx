@@ -3,17 +3,18 @@ import {
     Plus,
     Search,
     Clock,
-    CheckCircle2,
     Truck,
-    AlertCircle,
-    CalendarSearch,
     X,
     FileText,
     Banknote,
     UserCircle,
     MapPin,
     CalendarDays,
-    LayoutGrid
+    LayoutGrid,
+    Copy,
+    Package,
+    Clock9,
+    Check
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Order } from '../../store/useStore';
@@ -50,10 +51,10 @@ export const Orders = () => {
     // Flow columns for Kanban view
     const columns: { id: Order['status'], label: string, icon: any, color: string }[] = useMemo(() => [
         { id: 'pending', label: 'Pendiente', icon: Clock, color: '#ef4444' },
-        { id: 'assembling', label: 'En Armado', icon: CalendarSearch, color: '#a855f7' },
-        { id: 'ready', label: 'Listo', icon: CheckCircle2, color: '#3b82f6' },
+        { id: 'assembling', label: 'En Armado', icon: Search, color: '#a855f7' },
+        { id: 'ready', label: 'Listo', icon: Check, color: '#3b82f6' },
         { id: 'shipping', label: 'En Camino', icon: Truck, color: '#eab308' },
-        { id: 'delivered', label: 'Entregado', icon: CheckCircle2, color: '#22c55e' }
+        { id: 'delivered', label: 'Entregado', icon: Check, color: '#22c55e' }
     ], []);
 
     const filteredOrders = useMemo(() => {
@@ -243,7 +244,7 @@ export const Orders = () => {
 
                         {/* Month Selector */}
                         <label className="month-filter flex items-center gap-2.5 cursor-pointer">
-                            <CalendarSearch className="text-muted flex-shrink-0" size={16} />
+                            <Search className="text-muted flex-shrink-0" size={16} />
                             <select
                                 className="month-select text-small font-medium cursor-pointer"
                                 value={timeFilter === 'mes-especifico' ? selectedMonth : ''}
@@ -371,167 +372,217 @@ export const Orders = () => {
             {/* Order Details Modal */}
             {selectedOrder && (
                 <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
-                    <div className="modal-content max-w-ui" onClick={e => e.stopPropagation()}>
-
-                        {/* Header */}
-                        <header className={`modal-header status-${selectedOrder.status}`}>
-                            {/* Close Button - Top Right Corner */}
-                            <button className="modal-close-btn" onClick={() => setSelectedOrder(null)}>
-                                <X size={24} className="text-white" />
-                            </button>
-
-                            {/* Centered Content */}
-                            <div className="modal-header-content">
-                                <div className="modal-header-center">
-                                    <div className="modal-icon-wrapper">
-                                        <FileText size={28} className="text-white"/>
+                    <div className="modal-content redesigned-modal" onClick={e => e.stopPropagation()}>
+                        
+                        {/* Header Section */}
+                        <header className="modal-header-elegant">
+                            <div className="header-left">
+                                <div className={`status-indicator status-${selectedOrder.status}`}></div>
+                                <div className="order-identity">
+                                    <div className="id-container">
+                                        <span className="id-label">PEDIDO</span>
+                                        <h2 className="id-value">#{selectedOrder.id.slice(0, 8)}</h2>
+                                        <button 
+                                            className="copy-btn" 
+                                            title="Copiar ID completo"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(selectedOrder.id);
+                                                // Ideally add a small toast here
+                                            }}
+                                        >
+                                            <Copy size={14} />
+                                        </button>
                                     </div>
-                                    <div className="modal-header-text">
-                                        <h2 className="modal-title">Pedido #{selectedOrder.id.replace('o', '')}</h2>
-                                        <span className={`status-badge status-${selectedOrder.status}`}>
+                                    <div className="status-tag-wrapper">
+                                        <span className={`status-tag status-${selectedOrder.status}`}>
                                             {columns.find(c => c.id === selectedOrder.status)?.label}
                                         </span>
                                     </div>
-                                    <p className="modal-subtitle">
-                                        {new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(selectedOrder.date))}
-                                    </p>
                                 </div>
                             </div>
+
+                            <button className="modal-close-elegant" onClick={() => setSelectedOrder(null)}>
+                                <X size={20} />
+                            </button>
                         </header>
 
-                        {/* Body */}
-                        <div className="modal-body">
-                            {/* Top section: Customer + Delivery side by side */}
-                            <div className="modal-grid">
-                                {/* Customer Card */}
-                                <section className="info-card customer-card">
-                                    <div className="card-header">
-                                        <UserCircle size={18} className="text-primary"/>
-                                        <span className="card-title">Cliente</span>
-                                    </div>
-                                    <div className="card-content">
-                                        <div className="customer-avatar">
-                                            {selectedOrder.customerName.charAt(0)}
+                        <div className="modal-scroll-area">
+                            <div className="modal-grid-v2">
+                                
+                                {/* Section: Logistics & Customer */}
+                                <div className="grid-column">
+                                    <section className="detail-card">
+                                        <div className="detail-card-header">
+                                            <UserCircle size={18} />
+                                            <h3>Información del Cliente</h3>
                                         </div>
-                                        <div className="customer-info">
-                                            <span className="info-label">Nombre</span>
-                                            <p className="info-value">{selectedOrder.customerName}</p>
+                                        <div className="detail-card-body customer-compact">
+                                            <div className="avatar-circle">
+                                                {selectedOrder.customerName.charAt(0)}
+                                            </div>
+                                            <div className="customer-details">
+                                                <p className="main-name">{selectedOrder.customerName}</p>
+                                                {selectedOrder.customerPhone && (
+                                                    <p className="sub-phone">{selectedOrder.customerPhone}</p>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                </section>
+                                    </section>
 
-                                {/* Delivery Card */}
-                                <section className="info-card delivery-card">
-                                    <div className="card-header">
-                                        <CalendarSearch size={18} className="text-primary"/>
-                                        <span className="card-title">Entrega</span>
-                                    </div>
-                                    <div className="card-content delivery-content">
-                                        <div className="delivery-info-row">
-                                            <div className="delivery-info-item">
-                                                <CalendarDays size={18} className="text-primary"/>
-                                                <div>
-                                                    <span className="info-label">Día</span>
-                                                    <p className="info-value">{new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(new Date(selectedOrder.date))}</p>
-                                                </div>
-                                            </div>
-                                            <div className="delivery-info-item">
-                                                <Clock size={18} className="text-primary"/>
-                                                <div>
-                                                    <span className="info-label">Hora</span>
-                                                    <p className="info-value">{new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' }).format(new Date(selectedOrder.date))} hs</p>
-                                                </div>
-                                            </div>
+                                    <section className="detail-card mt-4">
+                                        <div className="detail-card-header">
+                                            <Truck size={18} />
+                                            <h3>Detalles de Entrega</h3>
                                         </div>
-                                        <div className={`delivery-method ${selectedOrder.deliveryMethod === 'delivery' ? 'delivery' : 'pickup'}`}>
-                                            {selectedOrder.deliveryMethod === 'delivery' ? (
-                                                <>
-                                                    <Truck size={20} className="text-primary"/>
-                                                    <span>Envío a Domicilio</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <MapPin size={20} className="text-success"/>
-                                                    <span>Retira por Local</span>
-                                                </>
+                                        <div className="detail-card-body">
+                                            <div className="logistics-info">
+                                                <div className="info-pair">
+                                                    <CalendarDays size={16} className="text-primary" />
+                                                    <div className="info-text">
+                                                        <span className="label">Fecha Entrega</span>
+                                                        <p className="value">{new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long' }).format(new Date(selectedOrder.date))}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="info-pair">
+                                                    <Clock9 size={16} className="text-primary" />
+                                                    <div className="info-text">
+                                                        <span className="label">Horario</span>
+                                                        <p className="value">
+                                                            {new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' }).format(new Date(selectedOrder.date))} hs
+                                                            <span className="time-slot-tag">
+                                                                {selectedOrder.deliveryTimeSlot === 'morning' ? 'Mañana' : 
+                                                                 selectedOrder.deliveryTimeSlot === 'afternoon' ? 'Tarde' :
+                                                                 selectedOrder.deliveryTimeSlot === 'evening' ? 'Noche' : 'Todo el día'}
+                                                            </span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className={`method-badge ${selectedOrder.deliveryMethod}`}>
+                                                {selectedOrder.deliveryMethod === 'delivery' ? 'Envío a domicilio' : 'Retiro por local'}
+                                            </div>
+                                            {selectedOrder.deliveryMethod === 'delivery' && selectedOrder.deliveryAddress && (
+                                                <div className="address-box mt-3">
+                                                    <MapPin size={16} />
+                                                    <div className="address-content">
+                                                        <p className="street">
+                                                            {selectedOrder.deliveryAddress.street} {selectedOrder.deliveryAddress.number}
+                                                            {selectedOrder.deliveryAddress.floor && ` (Piso: ${selectedOrder.deliveryAddress.floor})`}
+                                                        </p>
+                                                        <p className="city">{selectedOrder.deliveryAddress.city || 'Buenos Aires'}</p>
+                                                        {selectedOrder.deliveryAddress.reference && (
+                                                            <p className="reference">Ref: {selectedOrder.deliveryAddress.reference}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
-                                        {/* Delivery Address - Only for delivery */}
-                                        {selectedOrder.deliveryMethod === 'delivery' && selectedOrder.deliveryAddress && (
-                                            <div className="delivery-address">
-                                                <MapPin size={16} className="text-muted"/>
-                                                <div>
-                                                    <span className="address-label">Dirección de entrega</span>
-                                                    <p className="address-text">
-                                                        {selectedOrder.deliveryAddress.street} {selectedOrder.deliveryAddress.number}
-                                                        {selectedOrder.deliveryAddress.floor && ` (${selectedOrder.deliveryAddress.floor})`}
-                                                        {selectedOrder.deliveryAddress.city && ` - ${selectedOrder.deliveryAddress.city}`}
-                                                    </p>
-                                                    {selectedOrder.deliveryAddress.reference && (
-                                                        <p className="text-micro text-muted mt-1">Ref: {selectedOrder.deliveryAddress.reference}</p>
-                                                    )}
+                                    </section>
+                                </div>
+
+                                {/* Section: Order Content (Items) */}
+                                <div className="grid-column">
+                                    <section className="detail-card h-full">
+                                        <div className="detail-card-header">
+                                            <Package size={18} />
+                                            <h3>Contenido del Pedido</h3>
+                                        </div>
+                                        <div className="detail-card-body p-0">
+                                            <div className="items-list-modern">
+                                                {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                                                    selectedOrder.items.map((item: any, idx: number) => (
+                                                        <div key={idx} className="order-item-row">
+                                                            <div className="item-qty">{item.qty || item.quantity}x</div>
+                                                            <div className="item-main">
+                                                                <span className="item-name">{item.name || item.product_name}</span>
+                                                                {item.isPackage && <span className="package-label">Pack</span>}
+                                                            </div>
+                                                            <div className="item-price">${Number(item.price || item.unit_price).toLocaleString()}</div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="empty-items">No hay productos registrados</div>
+                                                )}
+                                            </div>
+                                            <div className="order-summary-row mt-auto pt-4 border-t border-dashed">
+                                                <span className="summary-label">SUBTOTAL</span>
+                                                <span className="summary-value">${selectedOrder.total.toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+
+                                {/* Section: Finances & Notes */}
+                                <div className="grid-column">
+                                    <section className="detail-card">
+                                        <div className="detail-card-header">
+                                            <Banknote size={18} />
+                                            <h3>Estado Financiero</h3>
+                                        </div>
+                                        <div className="detail-card-body">
+                                            <div className="finance-stats-v2">
+                                                <div className="stat-box">
+                                                    <span className="label">Total Pedido</span>
+                                                    <p className="value total">${selectedOrder.total.toLocaleString()}</p>
+                                                </div>
+                                                <div className="stat-box">
+                                                    <span className="label">Seña / Pago</span>
+                                                    <p className="value paid">${(selectedOrder.advancePayment || 0).toLocaleString()}</p>
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </section>
+                                            <div className="balance-result-box mt-4">
+                                                {selectedOrder.total - (selectedOrder.advancePayment || 0) > 0 ? (
+                                                    <div className="balance-card pending">
+                                                        <div className="balance-icon">!</div>
+                                                        <div className="balance-info">
+                                                            <span className="label">PENDIENTE</span>
+                                                            <p className="amount">${(selectedOrder.total - (selectedOrder.advancePayment || 0)).toLocaleString()}</p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="balance-card success">
+                                                        <div className="balance-icon"><Check size={16} /></div>
+                                                        <div className="balance-info">
+                                                            <span className="label">ESTADO</span>
+                                                            <p className="amount">TOTALMENTE PAGADO</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section className="detail-card mt-4">
+                                        <div className="detail-card-header">
+                                            <FileText size={18} />
+                                            <h3>Notas y Observaciones</h3>
+                                        </div>
+                                        <div className="detail-card-body">
+                                            {selectedOrder.notes ? (
+                                                <div className="notes-display">
+                                                    {selectedOrder.notes}
+                                                </div>
+                                            ) : (
+                                                <p className="text-muted text-xs italic">Sin observaciones para este pedido.</p>
+                                            )}
+                                        </div>
+                                    </section>
+                                </div>
+
                             </div>
-
-                            {/* Finance Card - Full width */}
-                            <section className="info-card finance-card">
-                                <div className="card-header">
-                                    <Banknote size={18} className="text-primary"/>
-                                    <span className="card-title">Finanzas</span>
-                                </div>
-                                <div className="card-content finance-content">
-                                    <div className="finance-main">
-                                        <div className="finance-item total">
-                                            <span className="info-label">Total del Pedido</span>
-                                            <p className="finance-value total">${selectedOrder.total.toLocaleString()}</p>
-                                        </div>
-                                        <div className="finance-item advance">
-                                            <span className="info-label">Seña / Anticipo</span>
-                                            <p className="finance-value">${(selectedOrder.advancePayment || 0).toLocaleString()}</p>
-                                        </div>
-                                    </div>
-                                    <div className="finance-divider"></div>
-                                    <div className="finance-balance">
-                                        {selectedOrder.total - (selectedOrder.advancePayment || 0) > 0 ? (
-                                            <div className="balance-pending">
-                                                <div className="balance-info">
-                                                    <span className="balance-label">Pendiente de Pago</span>
-                                                    <p className="balance-amount">${(selectedOrder.total - (selectedOrder.advancePayment || 0)).toLocaleString()}</p>
-                                                </div>
-                                                <div className="balance-indicator pending"></div>
-                                            </div>
-                                        ) : (
-                                            <div className="balance-paid">
-                                                <div className="balance-info">
-                                                    <span className="balance-label">Pedido Pagado</span>
-                                                    <p className="balance-amount paid">¡Todo abonado!</p>
-                                                </div>
-                                                <div className="balance-indicator paid"></div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </section>
-
-                            {/* Notes Card - Full width */}
-                            <section className="info-card notes-card">
-                                <div className="card-header">
-                                    <AlertCircle size={18} className="text-warning-dark"/>
-                                    <span className="card-title">Notas y Observaciones</span>
-                                </div>
-                                <div className="card-content notes-content">
-                                    {selectedOrder.notes ? (
-                                        <p className="notes-text">{selectedOrder.notes}</p>
-                                    ) : (
-                                        <p className="notes-empty">Sin observaciones adicionales</p>
-                                    )}
-                                </div>
-                            </section>
                         </div>
+
+                        {/* Footer / Actions */}
+                        <footer className="modal-footer-elegant">
+                            <p className="footer-creation-date">
+                                Pedido creado el: {new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date())}
+                                {/* Ideally use created_at here if available */}
+                            </p>
+                            <div className="footer-actions">
+                                <button className="btn-secondary-elegant" onClick={() => setSelectedOrder(null)}>Cerrar</button>
+                                <button className="btn-primary-elegant" onClick={() => window.print()}>Imprimir Ticket</button>
+                            </div>
+                        </footer>
                     </div>
                 </div>
             )}
