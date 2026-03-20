@@ -53,7 +53,7 @@ export const Orders = () => {
         { id: 'pending', label: 'Pendiente', icon: Clock, color: '#ef4444' },
         { id: 'assembling', label: 'En Armado', icon: Search, color: '#a855f7' },
         { id: 'ready', label: 'Listo', icon: Check, color: '#3b82f6' },
-        { id: 'shipping', label: 'En Camino', icon: Truck, color: '#eab308' },
+        { id: 'out_for_delivery', label: 'En Camino', icon: Truck, color: '#eab308' },
         { id: 'delivered', label: 'Entregado', icon: Check, color: '#22c55e' }
     ], []);
 

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import {
     Truck,
     MapPin,
@@ -14,6 +14,11 @@ import './Logistics.css';
 export const Logistics = () => {
     const orders = useStore(state => state.orders);
     const updateOrderStatus = useStore(state => state.updateOrderStatus);
+    const loadOrders = useStore(state => state.loadOrders);
+
+    useEffect(() => {
+        loadOrders();
+    }, [loadOrders]);
 
     const readyOrders = useMemo(() =>
         orders.filter(o => o.status === 'ready' || o.status === 'pending').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
@@ -21,12 +26,12 @@ export const Logistics = () => {
     );
 
     const shippingOrders = useMemo(() =>
-        orders.filter(o => o.status === 'shipping'),
+        orders.filter(o => o.status === 'out_for_delivery'),
         [orders]
     );
 
     const handleStartShipping = (id: string) => {
-        updateOrderStatus(id, 'shipping');
+        updateOrderStatus(id, 'out_for_delivery');
     };
 
     const handleCompleteDelivery = (id: string) => {
@@ -71,7 +76,7 @@ export const Logistics = () => {
                                             <h4 className="text-h4">{order.customerName}</h4>
                                             <span className="badge badge-warning">Listo</span>
                                         </div>
-                                        <p className="text-small text-muted">ID: #{order.id}</p>
+                                        <p className="text-small text-muted">ID: #{order.id.split('-')[0]}</p>
                                     </div>
 
                                     <div className="delivery-info space-y-3 mb-6">
@@ -161,7 +166,7 @@ export const Logistics = () => {
                                             <h4 className="text-h4">{order.customerName}</h4>
                                             <span className="badge badge-primary pulse">En Camino</span>
                                         </div>
-                                        <p className="text-small text-muted">ID: #{order.id}</p>
+                                        <p className="text-small text-muted">ID: #{order.id.split('-')[0]}</p>
                                     </div>
 
                                     <div className="delivery-info space-y-3 mb-6">
