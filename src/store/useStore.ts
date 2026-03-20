@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { api } from '../services/api';
 import { logger } from '../utils/logger';
 import { generateIdWithPrefix } from '../utils/idGenerator';
@@ -87,6 +86,7 @@ export type Sale = {
     items: any[];
     method: 'cash' | 'card' | 'transfer';
     notes?: string;
+    customerId?: string;
 };
 
 export type TransactionLocal = {
@@ -98,6 +98,8 @@ export type TransactionLocal = {
     method: 'cash' | 'card' | 'transfer';
     description: string;
     relatedId?: string;
+    metadata?: Record<string, any>;
+    notes?: string;
 };
 
 export type Package = {
@@ -270,7 +272,8 @@ interface AppState {
     updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
 
     // Financial actions
-    processSale: (sale: Sale) => Promise<void>;
+    processSale: (sale: Sale) => Promise<boolean>;
+    processPurchase: (purchase: { supplierId: string, items: any[], method: 'cash' | 'transfer', notes?: string }) => Promise<boolean>;
     addTransaction: (transaction: TransactionLocal) => Promise<void>;
     loadTransactions: () => Promise<void>;
 
@@ -344,8 +347,7 @@ const initialPosOrderForm = {
 // ============================================
 
 export const useStore = create<AppState>()(
-    persist(
-        (set, get) => ({
+    (set, get) => ({
     // Initial state
     products: initialProducts,
     packages: initialPackages,
@@ -376,14 +378,15 @@ export const useStore = create<AppState>()(
     addToCart: (product) => {
         set(state => {
             const existing = state.cart.find(item => item.id === product.id);
+            const qtyToAdd = (product as any).qty || 1;
             if (existing) {
                 return {
                     cart: state.cart.map(item =>
-                        item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+                        item.id === product.id ? { ...item, qty: item.qty + qtyToAdd } : item
                     )
                 };
             }
-            return { cart: [...state.cart, { ...product, qty: 1 }] };
+            return { cart: [...state.cart, { ...product, qty: qtyToAdd }] };
         });
     },
 
@@ -905,7 +908,9 @@ export const useStore = create<AppState>()(
                 method: t.payment_method as any || 'cash',
                 description: t.description || t.notes || '',
                 relatedId: t.reference_id,
-            } as any));
+                metadata: t.metadata,
+                notes: t.notes || '',
+            } as TransactionLocal));
             set({ transactions: transactions.reverse(), isLoading: false });
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
@@ -913,57 +918,146 @@ export const useStore = create<AppState>()(
     },
 
     processSale: async (sale: Sale) => {
+        set({ isLoading: true });
+        console.log('[POS] Iniciando proceso de venta:', sale);
         try {
+            // Mapear items correctamente para la API
+            const saleItems = sale.items.map((item: any) => {
+                console.log('[POS] Item:', item);
+
+                if (item.isPackage) {
+                    // Es un paquete: el id del item es el package_id
+                    return {
+                        product_id: undefined,
+                        package_id: item.id,
+                        quantity: Number(item.qty) || Number(item.quantity) || 1,
+                        unit_price: Number(item.price) || 0,
+                    };
+                } else {
+                    // Es un producto normal
+                    return {
+                        product_id: item.product_id || item.id,
+                        package_id: undefined,
+                        quantity: Number(item.qty) || Number(item.quantity) || 1,
+                        unit_price: Number(item.price) || 0,
+                    };
+                }
+            });
+
+            console.log('[POS] Items mapeados para API:', saleItems);
+
             // Create sale via API
             await api.createSale({
-                total: sale.total,
+                total: Number(sale.total),
                 payment_method: sale.method,
-                items: sale.items.map((item: any) => ({
-                    product_id: item.id,
-                    quantity: item.qty,
-                    unit_price: item.price,
-                })),
+                items: saleItems,
                 notes: sale.notes,
+                customer_id: sale.customerId || undefined,
             });
 
-            // Update local state
+            console.log('[POS] Venta creada exitosamente en el backend');
+            
+            // --- OPTIMISTIC UI UPDATE ---
+            // Update stock and customer stats locally for instant feel
             set(state => {
-                // Deduct stock
-                const newProducts = state.products.map(p => {
-                    const soldItem = sale.items.find((i: any) => i.id === p.id);
-                    if (soldItem) {
-                        return {
-                            ...p,
-                            stock: Math.max(0, p.stock - soldItem.qty),
-                            salesCount: (p.salesCount || 0) + soldItem.qty,
-                            lastSaleDate: new Date().toISOString(),
-                            weeklySales: (p.weeklySales || 0) + soldItem.qty
-                        };
+                const updatedProducts = [...state.products];
+                sale.items.forEach((item: any) => {
+                    if (item.id) {
+                        const pIdx = updatedProducts.findIndex(p => p.id === (item.product_id || item.id));
+                        if (pIdx !== -1) {
+                            updatedProducts[pIdx] = {
+                                ...updatedProducts[pIdx],
+                                stock: Math.max(0, updatedProducts[pIdx].stock - (Number(item.qty) || Number(item.quantity) || 1))
+                            };
+                        }
                     }
-                    return p;
                 });
 
-                // Add transaction
-                const newTransaction: TransactionLocal = {
-                    id: sale.id,
-                    type: 'income',
-                    category: 'Venta POS',
-                    amount: sale.total,
-                    date: sale.date,
-                    method: sale.method,
-                    description: `Venta Mostrador #${sale.id.slice(-4)}`,
-                };
-
-                return {
-                    sales: [...state.sales, sale],
-                    transactions: [...state.transactions, newTransaction],
-                    products: newProducts
+                return { 
+                    products: updatedProducts,
+                    isLoading: false 
                 };
             });
+
             get().addNotification('Venta procesada con éxito', 'success');
+
+            // Background Reload: Do not block the result on these
+            // We do them to ensure definitive sync with server (ids, timestamps, audited stock)
+            Promise.all([
+                get().loadProducts(),
+                get().loadTransactions(),
+                get().loadCustomers(),
+                get().loadOrders()
+            ]).then(() => {
+                console.log('[POS] Sincronización de fondo completada');
+            }).catch(err => {
+                console.warn('[POS] Error en la sincronización de fondo:', err);
+            });
+
+            return true;
         } catch (error: any) {
-            get().addNotification('Error al procesar la venta', 'error');
-            console.error('Error processing sale:', error);
+            console.error('[POS] ERROR en processSale:', error);
+            const errorMsg = error.response?.data?.details || error.message || 'Error desconocido';
+            set({ error: errorMsg, isLoading: false });
+            get().addNotification(`Error al procesar venta: ${errorMsg}`, 'error');
+            return false;
+        }
+    },
+
+    processPurchase: async (purchase) => {
+        set({ isLoading: true });
+        try {
+            await api.createPurchase({
+                supplier_id: purchase.supplierId,
+                payment_method: purchase.method,
+                items: purchase.items.map((item: any) => ({
+                    product_id: item.productId,
+                    quantity: item.quantity,
+                    cost: item.cost,
+                })),
+                notes: purchase.notes,
+            });
+
+            // --- OPTIMISTIC UI UPDATE ---
+            // Increase stock locally for instant feel
+            set(state => {
+                const updatedProducts = [...state.products];
+                purchase.items.forEach((item: any) => {
+                    const pIdx = updatedProducts.findIndex(p => p.id === item.productId);
+                    if (pIdx !== -1) {
+                        updatedProducts[pIdx] = {
+                            ...updatedProducts[pIdx],
+                            stock: Number(updatedProducts[pIdx].stock) + Number(item.quantity),
+                            cost: Number(item.cost) // Update cost snapshot
+                        };
+                    }
+                });
+
+                return { 
+                    products: updatedProducts,
+                    isLoading: false 
+                };
+            });
+
+            get().addNotification('Compra registrada con éxito', 'success');
+
+            // Background Reload
+            Promise.all([
+                get().loadProducts(),
+                get().loadTransactions(),
+                get().loadSuppliers()
+            ]).then(() => {
+                console.log('[PURCHASE] Sincronización de fondo completada');
+            }).catch(err => {
+                console.warn('[PURCHASE] Error en sincronización de fondo:', err);
+            });
+
+            return true;
+        } catch (error: any) {
+            set({ isLoading: false });
+            get().addNotification(`Error al registrar la compra: ${error.message}`, 'error');
+            console.error('Error processing purchase:', error);
+            throw error;
         }
     },
 
@@ -1184,14 +1278,5 @@ export const useStore = create<AppState>()(
             return { teamNotes: newNotes };
         });
     }
-}), {
-    name: 'aster-erp-store',
-    partialize: (state) => ({
-        cart: state.cart,
-        posOrderForm: state.posOrderForm,
-        shopInfo: state.shopInfo,
-        tags: state.tags,
-        categories: state.categories,
-        teamNotes: state.teamNotes
-    })
-}));
+})
+);

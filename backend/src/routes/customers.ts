@@ -40,7 +40,7 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     const { search, has_debt, limit = '100' } = request.query as any;
 
     const customers = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         let query = trx
             .selectFrom('customers')
@@ -82,7 +82,7 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const customer = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
         return await trx
             .selectFrom('customers')
             .selectAll()
@@ -112,7 +112,7 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const result = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const customer = await trx
             .selectFrom('customers')
@@ -164,7 +164,7 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
       const body = createCustomerSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         return await trx
           .insertInto('customers')
@@ -221,7 +221,7 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
       const body = updateCustomerSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         return await trx
           .updateTable('customers')
@@ -264,7 +264,7 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
         await trx
             .updateTable('customers')
             .set({
@@ -301,7 +301,7 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const result = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const customer = await trx
             .selectFrom('customers')
@@ -370,7 +370,7 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const result = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const customer = await trx
             .selectFrom('customers')

@@ -16,7 +16,8 @@ import {
   Trash2,
   Map,
   Bell,
-  Layers
+  Layers,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import './Sidebar.css';
@@ -30,6 +31,7 @@ const navGroups = [
       { path: '/', icon: LayoutDashboard, label: 'Inicio', desc: 'Resumen del día' },
       { path: '/pos', icon: ShoppingCart, label: 'Vender', desc: 'Nueva venta rápida' },
       { path: '/pedidos', icon: Truck, label: 'Pedidos', desc: 'Entregas y envíos' },
+      { path: '/ventas', icon: FileText, label: 'Historial Ventas', desc: 'Historial de ventas y tickets' },
       { path: '/clientes', icon: Users, label: 'Clientes', desc: 'Base de datos de clientes' },
     ]
   },

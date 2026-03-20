@@ -1,19 +1,22 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Plus, Search, Truck, Package, DollarSign, Check, X, Minus, Trash2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { generateIdWithPrefix } from '../../utils/idGenerator';
 import './Purchases.css';
 
 export const Purchases = () => {
     const suppliers = useStore(state => state.suppliers);
     const products = useStore(state => state.products);
-    const addTransaction = useStore(state => state.addTransaction);
-    const updateProduct = useStore(state => state.updateProduct);
+    const processPurchase = useStore(state => state.processPurchase);
     const loadSuppliers = useStore(state => state.loadSuppliers);
     const loadProducts = useStore(state => state.loadProducts);
 
-    // Loading state
+    // State
     const [isLoading, setIsLoading] = useState(true);
+    const [view, setView] = useState<'list' | 'new'>('list');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedSupplier, setSelectedSupplier] = useState('');
+    const [purchaseItems, setPurchaseItems] = useState<any[]>([]);
+    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('transfer');
 
     // Load data from backend on mount
     useEffect(() => {
@@ -24,14 +27,6 @@ export const Purchases = () => {
         };
         loadData();
     }, []);
-
-    const [view, setView] = useState<'list' | 'new'>('list');
-    const [searchTerm, setSearchTerm] = useState('');
-    
-    // Purchase form state
-    const [selectedSupplier, setSelectedSupplier] = useState('');
-    const [purchaseItems, setPurchaseItems] = useState<any[]>([]);
-    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('transfer');
 
     const filteredSuppliers = useMemo(() => {
         return suppliers.filter(s => 
@@ -97,38 +92,27 @@ export const Purchases = () => {
             return;
         }
 
-        const supplier = suppliers.find(s => s.id === selectedSupplier);
-
-        // Update stock and costs
-        for (const item of purchaseItems) {
-            const product = products.find(p => p.id === item.productId);
-            if (product) {
-                await updateProduct(product.id, {
-                    stock: product.stock + item.quantity,
+        try {
+            const success = await processPurchase({
+                supplierId: selectedSupplier,
+                items: purchaseItems.map(item => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
                     cost: item.cost
-                });
+                })),
+                method: paymentMethod,
+                notes: `Compra a proveedor registrada desde el panel de Compras.`
+            });
+
+            if (success) {
+                // Reset form
+                setView('list');
+                setSelectedSupplier('');
+                setPurchaseItems([]);
             }
+        } catch (err) {
+            console.error('Purchase failed:', err);
         }
-
-        // Register transaction
-        await addTransaction({
-            id: generateIdWithPrefix('t'),
-            type: 'expense',
-            category: 'Compra a Proveedor',
-            amount: totalCost,
-            date: new Date().toISOString(),
-            method: paymentMethod,
-            description: `Compra a ${supplier?.name} - ${purchaseItems.length} productos`,
-            relatedId: selectedSupplier
-        });
-
-        alert(`✅ Compra registrada exitosamente\n\nTotal: $${totalCost.toLocaleString()}\nStock actualizado para ${purchaseItems.length} productos`);
-
-        // Reset form
-        setView('list');
-        setSelectedSupplier('');
-        setPurchaseItems([]);
-        await loadProducts(); // Recargar productos con nuevo stock
     };
 
     return (

@@ -31,12 +31,16 @@ export const Dashboard = () => {
     // Load data from backend on mount
     useEffect(() => {
         const loadData = async () => {
-            await Promise.all([
-                loadProducts(),
-                loadOrders(),
-                loadCustomers(),
-                loadTransactions()
-            ]);
+            try {
+                await Promise.allSettled([
+                    loadProducts(),
+                    loadOrders(),
+                    loadCustomers(),
+                    loadTransactions()
+                ]);
+            } catch (err) {
+                console.error("Error loading dashboard data:", err);
+            }
         };
         loadData();
     }, []);

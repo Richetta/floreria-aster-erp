@@ -37,7 +37,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     const { search, category, low_stock, active } = request.query as any;
 
     const products = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         let query = trx
             .selectFrom('products')
@@ -103,7 +103,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const product = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
         return await trx
             .selectFrom('products')
             .selectAll()
@@ -134,7 +134,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
       const body = createProductSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const margin = body.cost > 0 
           ? ((body.price - body.cost) / body.cost * 100) 
@@ -224,7 +224,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
       const body = updateProductSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const currentProduct = await trx
           .selectFrom('products')
@@ -325,7 +325,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
         await trx
             .updateTable('products')
             .set({ 
@@ -358,7 +358,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     };
 
     const result = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const product = await trx
             .selectFrom('products')
@@ -415,7 +415,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const history = await db.transaction().execute(async (trx) => {
-        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
         return await trx
             .selectFrom('price_history')
             .selectAll()

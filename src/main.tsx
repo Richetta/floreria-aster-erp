@@ -37,6 +37,12 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
 }
 
 import App from './App.tsx'
+import { useStore } from './store/useStore'
+import { useAuth } from './store/useAuth'
+
+// Debugging
+(window as any).store = useStore;
+(window as any).auth = useAuth;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

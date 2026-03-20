@@ -302,9 +302,15 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({ error: 'User not found' });
     }
 
-    return reply.send(result);
+    reply.send({
+      id: result.id,
+      name: result.name,
+      email: result.email,
+      role: result.role,
+      business_id: result.business_id,
+      phone: result.phone
+    });
   });
 };
 
 export default authRoutes;
-

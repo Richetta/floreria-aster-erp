@@ -321,6 +321,7 @@ interface TransactionsTable {
   reference_id: string | null;
   description: string | null;
   notes: string | null;
+  metadata: Record<string, any> | null;
   created_by: string | null;
   created_at: Date;
   deleted_at: Date | null;

@@ -21,7 +21,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { product_id, from_date, to_date, type, limit = '100' } = request.query as any;
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     let query: any = db
       .selectFrom('stock_movements')
@@ -92,7 +92,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
     const { limit = '50' } = request.query as any;
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const product = await db
       .selectFrom('products')
@@ -170,7 +170,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const products = await db
       .selectFrom('products')
@@ -229,7 +229,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const product = await db
         .selectFrom('products')
@@ -309,7 +309,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const totals = await db
       .selectFrom('products')

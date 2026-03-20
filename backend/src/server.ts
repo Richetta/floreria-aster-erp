@@ -102,6 +102,8 @@ console.log('Loading activity.js...');
 await fastify.register(import('./routes/activity.js'), { prefix: '/api/activity' });
 console.log('Loading categories.js...');
 await fastify.register(import('./routes/categories.js'), { prefix: '/api/categories' });
+console.log('Loading diagnostic.js...');
+await fastify.register(import('./routes/diagnostic.js'), { prefix: '/api/admin' });
 
 // Diagnostic Route
 fastify.get('/api/diag/auth', async (request, reply) => {
@@ -119,6 +121,7 @@ fastify.get('/api/diag/auth', async (request, reply) => {
 
 // Global Error Handler
 fastify.setErrorHandler((error: any, request, reply) => {
+  console.error('[SERVER ERROR]:', error);
   fastify.log.error(error);
   
   if (error.validation) {
@@ -129,15 +132,12 @@ fastify.setErrorHandler((error: any, request, reply) => {
     });
   }
 
-  // In production, keep it simple, in development show more
-  const isDev = config.nodeEnv === 'development';
+  // FORCE DEV MODE FOR DEBUGGING
   return reply.status(500).send({
     error: 'Internal Server Error',
-    message: isDev ? error.message : 'Something went wrong',
-    ...(isDev && { 
-        message: error.message,
-        stack: error.stack 
-    })
+    message: error.message,
+    stack: error.stack,
+    hint: 'Check the backend terminal for [SERVER ERROR] logs'
   });
 });
 

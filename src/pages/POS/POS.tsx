@@ -19,7 +19,8 @@ import {
     Sparkles,
     ChevronDown,
     AlertCircle,
-    Copy
+    Copy,
+    Printer
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
@@ -83,14 +84,20 @@ export const POS = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string>('Todos');
     const [activeTag, setActiveTag] = useState<string | null>(null);
-    const [productView, setProductView] = useState<ProductView>('recent');
+    const [productView, setProductView] = useState<ProductView>('all');
     const [barcodeInput, setBarcodeInput] = useState('');
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
 
     // Success Modals
     const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [lastSaleData, setLastSaleData] = useState<{ total: number, method: string } | null>(null);
+    const [lastSaleData, setLastSaleData] = useState<{ 
+        id: string, 
+        total: number, 
+        method: string, 
+        items: any[], 
+        date: string 
+    } | null>(null);
     const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
     const [showTemplatesModal, setShowTemplatesModal] = useState(false);
 
@@ -102,8 +109,13 @@ export const POS = () => {
     useEffect(() => {
         const loadData = async () => {
             setIsLoading(true);
-            await Promise.all([loadProducts(), loadPackages(), loadCustomers()]);
-            setIsLoading(false);
+            try {
+                await Promise.allSettled([loadProducts(), loadPackages(), loadCustomers()]);
+            } catch (err) {
+                console.error("Error loading POS data:", err);
+            } finally {
+                setIsLoading(false);
+            }
         };
         loadData();
     }, []);
@@ -278,11 +290,8 @@ export const POS = () => {
                     return;
                 }
             } else {
-                const product = products.find(p => p.id === item.id);
-                if (product && product.stock < item.qty) {
-                    alert(`⚠️ Error de stock:\nEl producto "${item.name}" solo tiene ${product.stock} unidades disponibles.`);
-                    return;
-                }
+                // We no longer block the sale if stock is low, allowing "Negative Stock" behavior.
+                // The visual indicator in the product list is enough for the user.
             }
         }
 
@@ -367,46 +376,53 @@ export const POS = () => {
         } else {
             const saleId = generateIdWithPrefix('v');
 
-            await processSale({
-                id: saleId,
+            console.log('[POS] Iniciando checkout de venta:', {
+                saleId,
                 total,
-                date: new Date().toISOString(),
                 items: cart,
                 method,
-                notes: orderNotes
+                customerId: selectedCustomer
             });
 
-            // Show success modal
-            setLastSaleData({ total, method: method === 'cash' ? 'Efectivo' : 'Tarjeta/Transferencia' });
-            setShowSuccessModal(true);
+            try {
+                const success = await processSale({
+                    id: saleId,
+                    total,
+                    date: new Date().toISOString(),
+                    items: cart,
+                    method,
+                    notes: orderNotes,
+                    customerId: selectedCustomer || undefined
+                });
 
-            // Prepare and print ticket for sale
-            const saleTicket: TicketData = {
-                type: 'sale',
-                id: saleId.toUpperCase(),
-                date: new Date().toISOString(),
-                customerName: selectedCustomer ? customers.find(c => c.id === selectedCustomer)?.name : undefined,
-                customerPhone: selectedCustomer ? customers.find(c => c.id === selectedCustomer)?.phone : undefined,
-                items: cart.map(item => ({
-                    name: item.name,
-                    quantity: item.qty,
-                    unitPrice: item.price,
-                    total: item.price * item.qty
-                })),
-                subtotal: total,
-                total: total,
-                paymentMethod: method,
-                notes: orderNotes
-            };
-            setTicketData(saleTicket);
-            setShowTicketPrinter(true);
+                console.log('[POS] Resultado de processSale:', success);
+
+                if (success) {
+                    // Show success modal
+                    setLastSaleData({
+                        id: saleId,
+                        total,
+                        method: method === 'cash' ? 'Efectivo' : 'Tarjeta/Transferencia',
+                        items: [...cart],
+                        date: new Date().toISOString()
+                    });
+                    setShowSuccessModal(true);
+
+                    // Reset everything ONLY on success
+                    clearCart();
+                    setCheckoutMode('sale');
+                    clearPosOrderForm();
+                    setPaymentWithAmount(''); // Reset payment amount
+                } else {
+                    // processSale returned false - error notification already shown
+                    console.warn('[POS] Venta fallida, no se resetea el carrito');
+                }
+            } catch (err: any) {
+                // Error notification is already handled in processSale
+                console.error('[POS] Checkout failed:', err);
+                alert(`❌ Error al generar la venta: ${err.message || 'Error desconocido'}\n\nRevisí la consola para más detalles.`);
+            }
         }
-
-        // Reset everything
-        clearCart();
-        setCheckoutMode('sale');
-        clearPosOrderForm();
-        setPaymentWithAmount(''); // Reset payment amount
     };
 
     // Product filtering logic with views
@@ -1274,7 +1290,28 @@ export const POS = () => {
                             >
                                 Cerrar
                             </button>
-                            <button className="btn btn-primary">
+                            <button 
+                                className="btn btn-primary"
+                                onClick={() => {
+                                    setTicketData({
+                                        type: 'sale',
+                                        id: lastSaleData.id,
+                                        date: lastSaleData.date,
+                                        items: lastSaleData.items.map(item => ({
+                                            name: item.name,
+                                            quantity: item.qty,
+                                            unitPrice: item.price,
+                                            total: item.price * item.qty
+                                        })),
+                                        subtotal: lastSaleData.total,
+                                        total: lastSaleData.total,
+                                        paymentMethod: lastSaleData.method
+                                    });
+                                    setShowTicketPrinter(true);
+                                    setShowSuccessModal(false);
+                                }}
+                            >
+                                <Printer size={18} />
                                 Imprimir Ticket
                             </button>
                         </div>

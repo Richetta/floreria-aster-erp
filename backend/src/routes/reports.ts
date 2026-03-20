@@ -134,36 +134,54 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
-    // Get top selling products from order_items
-    let query: any = db
-      .selectFrom('order_items')
-      .innerJoin('products', 'products.id', 'order_items.product_id')
-      .select([
-        'product_id',
-        'products.name as product_name',
-        'products.code as product_code',
-        db.fn.sum('order_items.quantity').as('total_quantity'),
-        db.fn.sum('order_items.total').as('total_revenue'),
-        db.fn.avg('order_items.unit_price').as('avg_price')
-      ])
-      .where('order_items.deleted_at' as any, 'is', null)
-      .groupBy(['product_id', 'products.name', 'products.code'])
-      .orderBy('total_quantity', 'desc')
-      .limit(parseInt(limit));
+    // NEW: Combined query using CTEs for Order Items + POS Items
+    const result = await sql<any>`
+      WITH all_item_sales AS (
+        -- 1. Traditional order items
+        SELECT 
+          oi.product_id,
+          oi.quantity,
+          oi.total as revenue,
+          o.created_at
+        FROM order_items oi
+        JOIN orders o ON o.id = oi.order_id
+        WHERE oi.deleted_at IS NULL
+          AND o.business_id = ${user.business_id}
+          ${from_date ? sql`AND o.created_at >= ${new Date(from_date)}` : sql``}
+          ${to_date ? sql`AND o.created_at <= ${new Date(to_date)}` : sql``}
 
-    if (from_date) {
-      query = query
-        .innerJoin('orders', 'orders.id', 'order_items.order_id')
-        .where('orders.created_at' as any, '>=', new Date(from_date));
-      
-      if (to_date) {
-        query = query.where('orders.created_at' as any, '<=', new Date(to_date));
-      }
-    }
+        UNION ALL
 
-    const result = await query.execute();
+        -- 2. POS sales items (extracted from metadata)
+        SELECT 
+          (item->>'product_id')::uuid as product_id,
+          (item->>'quantity')::numeric as quantity,
+          ((item->>'quantity')::numeric * (item->>'unit_price')::numeric) as revenue,
+          t.created_at
+        FROM transactions t,
+             jsonb_array_elements(COALESCE(t.metadata->'items', '[]'::jsonb)) as item
+        WHERE t.type = 'sale'
+          AND t.deleted_at IS NULL
+          AND t.business_id = ${user.business_id}
+          AND item->>'product_id' IS NOT NULL
+          ${from_date ? sql`AND t.created_at >= ${new Date(from_date)}` : sql``}
+          ${to_date ? sql`AND t.created_at <= ${new Date(to_date)}` : sql``}
+      )
+      SELECT 
+        ais.product_id,
+        p.name as product_name,
+        p.code as product_code,
+        SUM(ais.quantity) as total_quantity,
+        SUM(ais.revenue) as total_revenue,
+        AVG(ais.revenue / ais.quantity) as avg_price
+      FROM all_item_sales ais
+      JOIN products p ON p.id = ais.product_id
+      GROUP BY ais.product_id, p.name, p.code
+      ORDER BY total_quantity DESC
+      LIMIT ${parseInt(limit)}
+    `.execute(db);
 
-    return reply.send(result.map((r: any) => ({
+    return reply.send(result.rows.map((r: any) => ({
       product_id: r.product_id,
       product_name: r.product_name,
       product_code: r.product_code,
@@ -191,33 +209,53 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
-    let query: any = db
-      .selectFrom('customers')
-      .select([
-        'customers.id',
-        'customers.name',
-        'customers.phone',
-        'customers.email',
-        'customers.debt_balance',
-        db.fn.count('orders.id').as('total_orders'),
-        db.fn.sum('orders.total_amount').as('total_spent')
-      ])
-      .leftJoin('orders', 'orders.customer_id', 'customers.id')
-      .where('customers.deleted_at' as any, 'is', null)
-      .groupBy(['customers.id', 'customers.name', 'customers.phone', 'customers.email', 'customers.debt_balance'])
-      .orderBy('total_spent', 'desc')
-      .limit(parseInt(limit));
+    // NEW: Combined customer volume from Orders + POS Transactions
+    const result = await sql<any>`
+      WITH all_customer_sales AS (
+        -- 1. Sales from Orders
+        SELECT 
+          customer_id,
+          id as sale_id,
+          total_amount
+        FROM orders
+        WHERE deleted_at IS NULL
+          AND business_id = ${user.business_id}
+          AND customer_id IS NOT NULL
+          ${from_date ? sql`AND created_at >= ${new Date(from_date)}` : sql``}
+          ${to_date ? sql`AND created_at <= ${new Date(to_date)}` : sql``}
 
-    if (from_date) {
-      query = query.where('orders.created_at' as any, '>=', new Date(from_date));
-    }
-    if (to_date) {
-      query = query.where('orders.created_at' as any, '<=', new Date(to_date));
-    }
+        UNION ALL
 
-    const result = await query.execute();
+        -- 2. Sales from POS Transactions
+        SELECT 
+          (metadata->>'customer_id')::uuid as customer_id,
+          id as sale_id,
+          amount as total_amount
+        FROM transactions
+        WHERE type = 'sale'
+          AND deleted_at IS NULL
+          AND business_id = ${user.business_id}
+          AND metadata->>'customer_id' IS NOT NULL
+          ${from_date ? sql`AND created_at >= ${new Date(from_date)}` : sql``}
+          ${to_date ? sql`AND created_at <= ${new Date(to_date)}` : sql``}
+      )
+      SELECT 
+        c.id,
+        c.name,
+        c.phone,
+        c.email,
+        c.debt_balance,
+        COUNT(acs.sale_id) as total_orders,
+        SUM(acs.total_amount) as total_spent
+      FROM customers c
+      JOIN all_customer_sales acs ON acs.customer_id = c.id
+      WHERE c.deleted_at IS NULL
+      GROUP BY c.id, c.name, c.phone, c.email, c.debt_balance
+      ORDER BY total_spent DESC
+      LIMIT ${parseInt(limit)}
+    `.execute(db);
 
-    return reply.send(result.map((r: any) => ({
+    return reply.send(result.rows.map((r: any) => ({
       id: r.id,
       name: r.name,
       phone: r.phone,
@@ -278,33 +316,54 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const expenses = await expenseQuery.executeTakeFirst();
 
-    // Get product profits (revenue - cost)
-    let productsQuery: any = db
-      .selectFrom('order_items')
-      .innerJoin('products', 'products.id', 'order_items.product_id')
-      .select([
-        'product_id',
-        'products.name as product_name',
-        db.fn.sum('order_items.quantity').as('quantity_sold'),
-        db.fn.sum('order_items.total').as('total_revenue'),
-        db.fn.sum(sql`order_items.quantity * products.cost`).as('total_cost')
-      ])
-      .where('order_items.deleted_at' as any, 'is', null)
-      .groupBy(['product_id', 'products.name']);
+    // NEW: Unified Profit calculation extracted from Order Items + POS Metadata
+    const productsResult = await sql<any>`
+      WITH all_item_details AS (
+        -- 1. Items from traditional orders
+        SELECT 
+          oi.product_id,
+          oi.quantity,
+          oi.total as revenue,
+          (oi.quantity * p.cost) as cost
+        FROM order_items oi
+        JOIN products p ON p.id = oi.product_id
+        JOIN orders o ON o.id = oi.order_id
+        WHERE oi.deleted_at IS NULL
+          AND o.business_id = ${user.business_id}
+          ${from_date ? sql`AND o.created_at >= ${new Date(from_date)}` : sql``}
+          ${to_date ? sql`AND o.created_at <= ${new Date(to_date)}` : sql``}
 
-    if (from_date) {
-      productsQuery = productsQuery
-        .innerJoin('orders', 'orders.id', 'order_items.order_id')
-        .where('orders.created_at' as any, '>=', new Date(from_date));
-      
-      if (to_date) {
-        productsQuery = productsQuery.where('orders.created_at' as any, '<=', new Date(to_date));
-      }
-    }
+        UNION ALL
 
-    const productsResult = await productsQuery.execute();
+        -- 2. Items from POS transactions
+        SELECT 
+          (item->>'product_id')::uuid as product_id,
+          (item->>'quantity')::numeric as quantity,
+          ((item->>'quantity')::numeric * (item->>'unit_price')::numeric) as revenue,
+          ((item->>'quantity')::numeric * p.cost) as cost
+        FROM transactions t,
+             jsonb_array_elements(COALESCE(t.metadata->'items', '[]'::jsonb)) as item
+        JOIN products p ON p.id = (item->>'product_id')::uuid
+        WHERE t.type = 'sale'
+          AND t.deleted_at IS NULL
+          AND t.business_id = ${user.business_id}
+          AND item->>'product_id' IS NOT NULL
+          ${from_date ? sql`AND t.created_at >= ${new Date(from_date)}` : sql``}
+          ${to_date ? sql`AND t.created_at <= ${new Date(to_date)}` : sql``}
+      )
+      SELECT 
+        aid.product_id,
+        p.name as product_name,
+        SUM(aid.quantity) as quantity_sold,
+        SUM(aid.revenue) as total_revenue,
+        SUM(aid.cost) as total_cost
+      FROM all_item_details aid
+      JOIN products p ON p.id = aid.product_id
+      GROUP BY aid.product_id, p.name
+      ORDER BY (SUM(aid.revenue) - SUM(aid.cost)) DESC
+    `.execute(db);
 
-    const productProfits = productsResult.map((p: any) => ({
+    const productProfits = productsResult.rows.map((p: any) => ({
       product_id: p.product_id,
       product_name: p.product_name,
       quantity_sold: Number(p.quantity_sold),

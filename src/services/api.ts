@@ -110,6 +110,7 @@ export type Transaction = {
   notes?: string;
   reference_id?: string;
   reference_type?: string;
+  metadata?: Record<string, any>;
   created_at: string;
 };
 
@@ -966,12 +967,33 @@ class ApiClient {
     total: number;
     payment_method: 'cash' | 'card' | 'transfer';
     customer_id?: string;
-    items: { product_id: string; quantity: number; unit_price: number }[];
+    items: {
+      product_id?: string;
+      package_id?: string;
+      quantity: number;
+      unit_price: number;
+    }[];
     notes?: string;
   }): Promise<Transaction> {
     return this.request<Transaction>('/transactions/sale', {
       method: 'POST',
       body: JSON.stringify(sale),
+    });
+  }
+
+  async createPurchase(purchase: {
+    supplier_id: string;
+    payment_method: 'cash' | 'transfer';
+    items: {
+      product_id: string;
+      quantity: number;
+      cost: number;
+    }[];
+    notes?: string;
+  }): Promise<Transaction> {
+    return this.request<Transaction>('/transactions/purchase', {
+      method: 'POST',
+      body: JSON.stringify(purchase),
     });
   }
 
@@ -1068,17 +1090,6 @@ class ApiClient {
   async deleteSupplier(id: string): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>(`/suppliers/${id}`, {
       method: 'DELETE',
-    });
-  }
-
-  async createPurchase(supplier_id: string, purchase: {
-    items: { product_id: string; quantity: number; unit_cost: number; update_price?: boolean }[];
-    notes?: string;
-    invoice_document_url?: string;
-  }): Promise<any> {
-    return this.request(`/suppliers/${supplier_id}/purchase`, {
-      method: 'POST',
-      body: JSON.stringify(purchase),
     });
   }
 

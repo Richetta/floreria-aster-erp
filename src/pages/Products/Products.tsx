@@ -31,11 +31,16 @@ export const Products = () => {
     useEffect(() => {
         const loadData = async () => {
             setIsLoading(true);
-            await Promise.all([
-                loadProducts(),
-                loadCategories()
-            ]);
-            setIsLoading(false);
+            try {
+                await Promise.allSettled([
+                    loadProducts(),
+                    loadCategories()
+                ]);
+            } catch (err) {
+                console.error("Error loading products/categories:", err);
+            } finally {
+                setIsLoading(false);
+            }
         };
         loadData();
     }, []);

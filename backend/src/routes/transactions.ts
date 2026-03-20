@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
 import { db } from '../db/index.js';
+import { config } from '../config/index.js';
 import { randomUUID } from 'crypto';
 
 export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
@@ -29,7 +30,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const { 
       type, 
@@ -87,7 +88,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const transaction = await db
       .selectFrom('transactions')
@@ -116,7 +117,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = request.query as { from_date?: string, to_date?: string };
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     let query = db
       .selectFrom('transactions')
@@ -188,12 +189,12 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createTransactionSchema.parse(request.body);
 
-      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const result = await db
         .insertInto('transactions')
         .values({
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           business_id: user.business_id,
           type: body.type,
           amount: body.amount,
@@ -235,21 +236,273 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       payment_method: z.enum(['cash', 'card', 'transfer']),
       customer_id: z.string().uuid().optional(),
       items: z.array(z.object({
+        product_id: z.string().uuid().optional(),
+        package_id: z.string().uuid().optional(),
+        quantity: z.coerce.number().int().positive(),
+        unit_price: z.coerce.number().positive()
+      })).min(1).refine(items => items.every(i => i.product_id || i.package_id), {
+        message: "Cada item debe tener product_id o package_id"
+      }),
+      notes: z.string().optional()
+    }).parse(request.body);
+
+    console.log('========================================');
+    console.log('[SALE] Starting sale process');
+    console.log('[SALE] Body:', JSON.stringify(body, null, 2));
+    console.log('[SALE] User ID:', user.sub);
+    console.log('[SALE] Business ID:', user.business_id);
+    console.log('========================================');
+
+    try {
+      const result = await db.transaction().execute(async (trx) => {
+        const saleTransactionId = randomUUID();
+        console.log('[SALE] Generated saleTransactionId:', saleTransactionId);
+
+        // 1. Verify and deduct stock
+        console.log('[SALE] Processing', body.items.length, 'items');
+        for (const item of body.items) {
+          if (item.product_id) {
+            console.log('[SALE] Processing product:', item.product_id, 'qty:', item.quantity);
+
+            const product = await trx
+              .selectFrom('products')
+              .select(['id', 'stock_quantity', 'name', 'cost'])
+              .where('id', '=', item.product_id)
+              .forUpdate()
+              .executeTakeFirst();
+
+            if (!product) {
+              console.error('[SALE] Product not found:', item.product_id);
+              throw new Error(`Producto no encontrado: ${item.product_id}`);
+            }
+
+            // const newStock = ... (moved below and reused)
+            console.log('[SALE] Product:', product.name, 'Old stock:', product.stock_quantity);
+
+            // Deduct stock using relative update for atomic integrity
+            await trx
+              .updateTable('products')
+              .set({
+                stock_quantity: sql`stock_quantity - ${item.quantity}`,
+                updated_at: new Date()
+              })
+              .where('id', '=', product.id)
+              .execute();
+
+            // Fetch new balance for movement record (optional, but good for reporting)
+            const updatedProduct = await trx
+              .selectFrom('products')
+              .select('stock_quantity')
+              .where('id', '=', product.id)
+              .executeTakeFirst();
+
+            const newStock = Number(updatedProduct?.stock_quantity || 0);
+
+            // Record stock movement
+            await trx
+              .insertInto('stock_movements')
+              .values({
+                id: randomUUID(),
+                business_id: user.business_id,
+                product_id: product.id,
+                movement_type: 'sale',
+                quantity: -item.quantity,
+                balance_after: newStock,
+                reference_type: 'sale',
+                reference_id: saleTransactionId,
+                user_id: user.sub,
+                notes: `Venta POS - ${product.name}`,
+                created_at: new Date(),
+                metadata: {
+                  client_ip: request.ip,
+                  unit_price: item.unit_price,
+                  unit_cost: product.cost
+                }
+              })
+              .execute();
+
+            console.log('[SALE] Stock deducted for product:', product.name);
+          } else if (item.package_id) {
+            console.log('[SALE] Processing package:', item.package_id, 'qty:', item.quantity);
+
+            // Handle Package: decompose into components
+            const components = await trx
+              .selectFrom('package_components')
+              .innerJoin('products', 'products.id', 'package_components.product_id')
+              .select(['products.id', 'products.stock_quantity', 'products.name', 'package_components.quantity as comp_quantity', 'products.cost'])
+              .where('package_id', '=', item.package_id)
+              .execute();
+
+            if (components.length === 0) {
+              console.error('[SALE] Package has no components:', item.package_id);
+              throw new Error(`Combo/Ramo no encontrado o sin componentes: ${item.package_id}`);
+            }
+
+            console.log('[SALE] Package has', components.length, 'components');
+
+            for (const comp of components) {
+              const totalDeduction = Number(comp.comp_quantity) * item.quantity;
+              console.log('[SALE] Component:', comp.name, 'Qty needed:', totalDeduction, 'Old stock:', comp.stock_quantity);
+
+              // Deduct stock using relative update
+              await trx
+                .updateTable('products')
+                .set({
+                  stock_quantity: sql`stock_quantity - ${totalDeduction}`,
+                  updated_at: new Date()
+                })
+                .where('id', '=', comp.id)
+                .execute();
+
+              // Fetch new balance
+              const updatedComp = await trx
+                .selectFrom('products')
+                .select('stock_quantity')
+                .where('id', '=', comp.id)
+                .executeTakeFirst();
+
+              const newStock = Number(updatedComp?.stock_quantity || 0);
+
+              // Record stock movement for component
+              await trx
+                .insertInto('stock_movements')
+                .values({
+                  id: randomUUID(),
+                  business_id: user.business_id,
+                  product_id: comp.id,
+                  movement_type: 'sale',
+                  quantity: -totalDeduction,
+                  balance_after: newStock,
+                  reference_type: 'sale_package',
+                  reference_id: saleTransactionId,
+                  user_id: user.sub,
+                  notes: `Venta Ramo - Componente: ${comp.name}`,
+                  created_at: new Date(),
+                  metadata: { 
+                    package_id: item.package_id,
+                    client_ip: request.ip,
+                    unit_cost: comp.cost
+                  }
+                })
+                .execute();
+            }
+
+            console.log('[SALE] All components deducted for package');
+          }
+        }
+
+        console.log('[SALE] Stock processing complete, creating transaction');
+
+        // 2. Create transaction for the sale
+        const transaction = await trx
+          .insertInto('transactions')
+          .values({
+            id: saleTransactionId,
+            business_id: user.business_id,
+            type: 'sale',
+            amount: body.total,
+            payment_method: body.payment_method,
+            category: 'Venta POS',
+            description: `Venta de mostrador - ${body.items.length} productos`,
+            notes: body.notes || null,
+            metadata: {
+              items: body.items,
+              customer_id: body.customer_id || null,
+              is_revenue: true,
+              impacts_cash: body.payment_method === 'cash',
+              client_ip: request.ip
+            },
+            created_by: user.sub,
+            created_at: new Date()
+          })
+          .returningAll()
+          .executeTakeFirst();
+
+        if (!transaction) {
+          throw new Error('Failed to create transaction');
+        }
+
+        console.log('[SALE] Transaction created:', transaction.id);
+
+        // 3. If customer provided, update their stats
+        if (body.customer_id) {
+          console.log('[SALE] Updating customer stats:', body.customer_id);
+
+          const customer = await trx
+            .selectFrom('customers')
+            .select(['total_orders', 'total_spent'])
+            .where('id', '=', body.customer_id)
+            .executeTakeFirst();
+
+          await trx
+            .updateTable('customers')
+            .set({
+              total_orders: (customer?.total_orders || 0) + 1,
+              total_spent: Number(customer?.total_spent || 0) + body.total,
+              last_order_date: new Date(),
+              updated_at: new Date()
+            })
+            .where('id', '=', body.customer_id)
+            .execute();
+
+          console.log('[SALE] Customer stats updated');
+        }
+
+        console.log('[SALE] Sale completed successfully!');
+        return transaction;
+      });
+
+      console.log('[SALE] Transaction committed to database');
+      console.log('========================================');
+      return reply.status(201).send(result);
+    } catch (error: any) {
+      console.error('========================================');
+      console.error('[SALE] ERROR:', error.message);
+      console.error('[SALE] Stack:', error.stack);
+      console.error('[SALE] Body was:', JSON.stringify(body, null, 2));
+      console.error('========================================');
+      return reply.status(500).send({
+        error: 'Error processing sale',
+        details: error.message,
+        stack: config.nodeEnv === 'development' ? error.stack : undefined
+      });
+    }
+  });
+
+  // CREATE PURCHASE (Stock increase)
+  fastify.post('/purchase', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+
+    const body = z.object({
+      supplier_id: z.string().uuid(),
+      payment_method: z.enum(['cash', 'transfer']),
+      items: z.array(z.object({
         product_id: z.string().uuid(),
         quantity: z.number().int().positive(),
-        unit_price: z.number().positive()
+        cost: z.number().nonnegative()
       })).min(1),
       notes: z.string().optional()
     }).parse(request.body);
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const result = await db.transaction().execute(async (trx) => {
-      // 1. Verify and deduct stock
+      const purchaseTransactionId = randomUUID();
+      let totalAmount = 0;
+      
+      // 1. Update stock and record movements
       for (const item of body.items) {
         const product = await trx
           .selectFrom('products')
-          .select(['stock_quantity', 'name'])
+          .select(['id', 'stock_quantity', 'name'])
           .where('id', '=', item.product_id)
           .forUpdate()
           .executeTakeFirst();
@@ -258,76 +511,76 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
           throw new Error(`Producto no encontrado: ${item.product_id}`);
         }
 
-        if (Number(product.stock_quantity) < item.quantity) {
-          throw new Error(`Stock insuficiente para ${product.name}: hay ${product.stock_quantity}, se necesitan ${item.quantity}`);
-        }
+        const itemTotal = item.cost * item.quantity;
+        totalAmount += itemTotal;
 
-        // Deduct stock
+        // Update stock and cost using relative updates
         await trx
           .updateTable('products')
           .set({ 
-            stock_quantity: Number(product.stock_quantity) - item.quantity,
+            stock_quantity: sql`stock_quantity + ${item.quantity}`,
+            cost: item.cost,
             updated_at: new Date()
           })
-          .where('id', '=', item.product_id)
+          .where('id', '=', product.id)
           .execute();
+
+        // Fetch new balance
+        const updatedProduct = await trx
+          .selectFrom('products')
+          .select('stock_quantity')
+          .where('id', '=', product.id)
+          .executeTakeFirst();
+
+        const newStock = Number(updatedProduct?.stock_quantity || 0);
 
         // Record stock movement
         await trx
           .insertInto('stock_movements')
           .values({
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             business_id: user.business_id,
-            product_id: item.product_id,
-            movement_type: 'sale',
-            quantity: -item.quantity,
-            balance_after: Number(product.stock_quantity) - item.quantity,
-            reference_type: 'sale',
-            reference_id: '00000000-0000-0000-0000-000000000000', // Will update with sale ID
+            product_id: product.id,
+            movement_type: 'purchase' as any,
+            quantity: item.quantity,
+            balance_after: newStock,
+            reference_type: 'purchase',
+            reference_id: purchaseTransactionId, 
             user_id: user.sub,
-            notes: `Venta POS - ${product.name}`,
+            notes: `Compra a proveedor - ${product.name}`,
             created_at: new Date(),
-            metadata: {}
-          })
+            metadata: { 
+              supplier_id: body.supplier_id,
+              client_ip: request.ip
+            }
+          } as any)
           .execute();
       }
 
-      // 2. Create transaction for the sale
+      // 2. Create transaction for the purchase
       const transaction = await trx
         .insertInto('transactions')
         .values({
-          id: crypto.randomUUID(),
+          id: purchaseTransactionId,
           business_id: user.business_id,
-          type: 'sale',
-          amount: body.total,
+          type: 'expense',
+          amount: totalAmount,
           payment_method: body.payment_method,
-          category: 'Venta POS',
-          description: `Venta de mostrador - ${body.items.length} productos`,
+          category: 'Compra a Proveedor',
+          description: `Compra de mercadería - ${body.items.length} productos`,
           notes: body.notes || null,
+          metadata: {
+            items: body.items,
+            supplier_id: body.supplier_id,
+            is_expense: true,
+            impacts_cash: body.payment_method === 'cash',
+            client_ip: request.ip
+          },
           created_by: user.sub,
           created_at: new Date()
         })
         .returningAll()
         .executeTakeFirst();
-
-      // 3. If customer provided, update their stats
-      if (body.customer_id) {
-        const customer = await trx
-          .selectFrom('customers')
-          .select('total_orders')
-          .where('id', '=', body.customer_id)
-          .executeTakeFirst();
-
-        await trx
-          .updateTable('customers')
-          .set({
-            total_orders: (customer?.total_orders || 0) + 1,
-            last_order_date: new Date(),
-            updated_at: new Date()
-          })
-          .where('id', '=', body.customer_id)
-          .execute();
-      }
 
       return transaction;
     });
@@ -355,12 +608,12 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       notes: z.string().optional()
     }).parse(request.body);
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const result = await db
       .insertInto('transactions')
       .values({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         business_id: user.business_id,
         type: 'expense',
         amount: body.amount,
@@ -390,7 +643,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     await db
       .updateTable('transactions')

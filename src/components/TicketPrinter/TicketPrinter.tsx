@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Printer, X } from 'lucide-react';
 import './TicketPrinter.css';
@@ -50,15 +50,17 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
         onAfterPrint: onClose,
     });
 
+    // Auto-print disabled per user request - user will click button manually
+    /*
     useEffect(() => {
         if (isOpen && ticketData) {
-            // Auto-print after a short delay
             const timer = setTimeout(() => {
                 handlePrint();
             }, 300);
             return () => clearTimeout(timer);
         }
     }, [isOpen, ticketData, handlePrint]);
+    */
 
     if (!isOpen || !ticketData) return null;
 

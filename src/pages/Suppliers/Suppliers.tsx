@@ -37,8 +37,13 @@ export const Suppliers = () => {
     useEffect(() => {
         const loadData = async () => {
             setIsLoading(true);
-            await loadSuppliers();
-            setIsLoading(false);
+            try {
+                await loadSuppliers();
+            } catch (err) {
+                console.error("Error loading suppliers:", err);
+            } finally {
+                setIsLoading(false);
+            }
         };
         loadData();
     }, []);
@@ -113,8 +118,8 @@ export const Suppliers = () => {
     const categories = ['all', ...Array.from(new Set(suppliers.map(s => s.category)))];
 
     const filteredSuppliers = suppliers.filter(s => {
-        const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.contactName.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (s.contactName || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'all' || s.category === selectedCategory;
         return matchesSearch && matchesCategory;
     });

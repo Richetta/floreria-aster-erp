@@ -16,6 +16,7 @@ import { Logistics } from './pages/Logistics/Logistics';
 import { Menu } from './pages/Menu/Menu';
 import { Settings } from './pages/Settings/Settings';
 import { Finances } from './pages/Finances/Finances';
+import { Sales } from './pages/Sales/Sales';
 import { Purchases } from './pages/Purchases/Purchases';
 import { Reports } from './pages/Reports/Reports';
 import { CashRegister } from './pages/CashRegister/CashRegister';
@@ -115,6 +116,7 @@ function App() {
                     >
                         <Route index element={<Dashboard />} />
                         <Route path="pos" element={<POS />} />
+                        <Route path="ventas" element={<Sales />} />
                         <Route path="pedidos" element={<Orders />} />
                         <Route path="productos" element={<Products />} />
                         <Route path="paquetes" element={<Packages />} />
