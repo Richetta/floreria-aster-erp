@@ -252,7 +252,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
       const purchase = await trx
         .insertInto('supplier_purchases')
         .values({
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           business_id: user.business_id,
           supplier_id: supplierId,
           total_amount: totalAmount,
@@ -303,7 +303,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
         await trx
           .insertInto('stock_movements')
           .values({
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             business_id: user.business_id,
             product_id: item.product_id,
             movement_type: 'purchase',
@@ -323,7 +323,7 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
       await trx
         .insertInto('transactions')
         .values({
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           business_id: user.business_id,
           type: 'supplier_payment',
           amount: totalAmount,

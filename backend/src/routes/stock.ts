@@ -261,7 +261,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
         const movement = await trx
           .insertInto('stock_movements')
           .values({
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             business_id: user.business_id,
             product_id: body.product_id,
             movement_type: 'adjustment',

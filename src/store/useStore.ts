@@ -77,6 +77,8 @@ export type Order = {
     contactPhone?: string;
     isGift?: boolean;
     includeCard?: boolean;
+    guestName?: string;
+    guestPhone?: string;
 };
 
 export type Sale = {
@@ -229,6 +231,9 @@ interface AppState {
             reference: string;
         };
         contactPhone: string;
+        isGuest: boolean;
+        guestName: string;
+        guestPhone: string;
     };
 
     // Loading states
@@ -327,7 +332,7 @@ const initialShopInfo: ShopInfo = {
 
 const initialPosOrderForm = {
     selectedCustomer: '',
-    deliveryDate: '',
+    deliveryDate: new Date().toISOString().split('T')[0],
     deliveryTimeSlot: 'allday' as const,
     orderNotes: '',
     deliveryMethod: 'pickup' as const,
@@ -339,7 +344,10 @@ const initialPosOrderForm = {
         city: '',
         reference: ''
     },
-    contactPhone: ''
+    contactPhone: '',
+    isGuest: false,
+    guestName: '',
+    guestPhone: ''
 };
 
 // ============================================
@@ -715,7 +723,7 @@ export const useStore = create<AppState>()(
                 name: c.name,
                 phone: c.phone,
                 email: c.email || '',
-                debtBalance: c.debt_balance,
+                debtBalance: Number(c.debt_balance) || 0,
                 importantDateName: c.important_date_name || '',
                 importantDate: c.important_date || '',
                 notes: c.notes || '',
@@ -725,9 +733,9 @@ export const useStore = create<AppState>()(
                 address_number: c.address_number,
                 address_floor: c.address_floor,
                 address_city: c.address_city,
-                orderCount: c.total_orders,
-                total_orders: c.total_orders,
-                total_spent: c.total_spent,
+                orderCount: Number(c.total_orders) || 0,
+                total_orders: Number(c.total_orders) || 0,
+                total_spent: Number(c.total_spent) || 0,
                 lastOrderDate: c.last_order_date,
                 address: [c.address_street, c.address_number, c.address_city].filter(Boolean).join(', '),
             }));
@@ -807,7 +815,7 @@ export const useStore = create<AppState>()(
             set(state => ({
                 customers: state.customers.map(c =>
                     c.id === id
-                        ? { ...c, debtBalance: Math.max(0, c.debtBalance - amount) }
+                        ? { ...c, debtBalance: Math.max(0, (Number(c.debtBalance) || 0) - (Number(amount) || 0)) }
                         : c
                 )
             }));
@@ -831,12 +839,12 @@ export const useStore = create<AppState>()(
                 customerName: o.customer_name,
                 customerPhone: o.customer_phone,
                 customerId: o.customer_id,
-                total: o.total_amount,
+                total: Number(o.total_amount) || 0,
                 status: o.status as any,
                 date: o.delivery_date,
                 items: o.items || [],
                 notes: o.card_message || o.notes,
-                advancePayment: o.advance_payment,
+                advancePayment: Number(o.advance_payment) || 0,
                 deliveryMethod: o.delivery_method,
                 deliveryAddress: o.delivery_address,
                 deliveryTimeSlot: o.delivery_time_slot,
@@ -852,6 +860,8 @@ export const useStore = create<AppState>()(
         try {
             await api.createOrder({
                 customer_id: order.customerId || '',
+                guest_name: order.guestName,
+                guest_phone: order.guestPhone,
                 delivery_date: order.date,
                 delivery_method: order.deliveryMethod || 'pickup',
                 delivery_time_slot: order.deliveryTimeSlot,
@@ -859,12 +869,13 @@ export const useStore = create<AppState>()(
                 contact_phone: order.contactPhone,
                 card_message: order.notes,
                 items: order.items.map((item: any) => ({
-                    product_id: item.product_id || item.id,
-                    package_id: item.package_id,
-                    quantity: item.qty || item.quantity,
-                    unit_price: item.price,
+                    product_id: item.isPackage ? undefined : (item.product_id || item.id),
+                    package_id: item.isPackage ? (item.package_id || item.id) : undefined,
+                    quantity: Number(item.qty || item.quantity),
+                    unit_price: Number(item.price),
+                    product_name: item.name
                 })),
-                advance_payment: order.advancePayment || 0,
+                advance_payment: Number(order.advancePayment || 0),
             });
             
             set(state => ({
@@ -874,6 +885,7 @@ export const useStore = create<AppState>()(
         } catch (error: any) {
             get().addNotification('Error al registrar el pedido', 'error');
             console.error('Error adding order:', error);
+            throw error; // Re-throw to inform POS UI
         }
     },
 
@@ -903,7 +915,7 @@ export const useStore = create<AppState>()(
                 id: t.id,
                 type: (t.type === 'sale' || t.type === 'payment_received') ? 'income' : 'expense',
                 category: t.category,
-                amount: t.amount,
+                amount: Number(t.amount) || 0, // Ensure amount is numeric (API might return as string)
                 date: t.created_at,
                 method: t.payment_method as any || 'cash',
                 description: t.description || t.notes || '',
@@ -1063,9 +1075,10 @@ export const useStore = create<AppState>()(
 
     addTransaction: async (transaction: TransactionLocal) => {
         try {
+            const cleanAmount = Number(transaction.amount) || 0;
             if (transaction.type === 'expense') {
                 await api.createExpense({
-                    amount: transaction.amount,
+                    amount: cleanAmount,
                     category: transaction.category,
                     payment_method: transaction.method as any,
                     description: transaction.description,
@@ -1074,7 +1087,7 @@ export const useStore = create<AppState>()(
             } else {
                 await api.createTransaction({
                     type: transaction.type === 'income' ? 'payment_received' : 'expense',
-                    amount: transaction.amount,
+                    amount: cleanAmount,
                     category: transaction.category,
                     payment_method: transaction.method,
                     description: transaction.description,
@@ -1082,7 +1095,7 @@ export const useStore = create<AppState>()(
             }
             
             set(state => ({
-                transactions: [...state.transactions, transaction]
+                transactions: [...state.transactions, { ...transaction, amount: cleanAmount }]
             }));
         } catch (error: any) {
             console.error('Error adding transaction:', error);

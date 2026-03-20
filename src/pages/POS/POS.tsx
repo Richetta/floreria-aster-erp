@@ -20,7 +20,8 @@ import {
     ChevronDown,
     AlertCircle,
     Copy,
-    Printer
+    Printer,
+    UserPlus
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
@@ -69,7 +70,10 @@ export const POS = () => {
         deliveryMethod,
         advancePayment,
         deliveryAddress,
-        contactPhone
+        contactPhone,
+        isGuest,
+        guestName,
+        guestPhone,
     } = posOrderForm;
 
     // Local-only state
@@ -99,6 +103,13 @@ export const POS = () => {
         date: string 
     } | null>(null);
     const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
+    const [lastOrderData, setLastOrderData] = useState<{
+        id: string,
+        customerName: string,
+        deliveryDate: string,
+        total: number,
+        advancePayment: number
+    } | null>(null);
     const [showTemplatesModal, setShowTemplatesModal] = useState(false);
 
     // Ticket Printer State
@@ -270,12 +281,10 @@ export const POS = () => {
     const handleCheckout = async (method: 'cash' | 'card') => {
         if (cart.length === 0) return;
 
-        // For cash payments, require payment amount and calculate change
-        if (method === 'cash') {
-            if (typeof paymentWithAmount !== 'number' || paymentWithAmount < total) {
-                alert(`⚠️ El monto con el que paga ($${paymentWithAmount || '0'}) es insuficiente.\n\nTotal a pagar: $${total.toLocaleString()}`);
-                return;
-            }
+        // For cash payments, we no longer block if the amount is insufficient (as per user request)
+        // We only provide a warning for clarity if they did enter an amount
+        if (method === 'cash' && typeof paymentWithAmount === 'number' && paymentWithAmount < total) {
+            console.log(`[POS] Pago en efectivo menor al total (${paymentWithAmount} < ${total}). Continuando...`);
         }
 
         // Final Stock Validation before processing
@@ -296,8 +305,16 @@ export const POS = () => {
         }
 
         if (checkoutMode === 'order') {
-            if (!selectedCustomer) {
-                alert("Debes seleccionar un cliente para crear un pedido programado.");
+            const orderId = generateIdWithPrefix('o');
+            const [y, m, d] = deliveryDate.split('-').map(Number);
+            const localDeliveryDate = new Date(y, m - 1, d);
+
+            if (!isGuest && !selectedCustomer) {
+                alert("Debes seleccionar un cliente o activar el modo 'Invitado' para crear un pedido programado.");
+                return;
+            }
+            if (isGuest && !guestName.trim()) {
+                alert("Debes ingresar el nombre del cliente invitado.");
                 return;
             }
             if (!deliveryDate) {
@@ -312,50 +329,72 @@ export const POS = () => {
             const customerObj = customers.find(c => c.id === selectedCustomer);
             const remainingDebt = total - advancePayment;
 
-            await addOrder({
-                id: generateIdWithPrefix('o'),
-                customerName: customerObj ? customerObj.name : 'Desconocido',
-                customerId: selectedCustomer,
-                total: total,
-                status: 'pending',
-                date: new Date(deliveryDate).toISOString(),
-                items: cart,
-                notes: orderNotes,
-                advancePayment: advancePayment,
-                deliveryMethod: deliveryMethod,
-                deliveryAddress: deliveryMethod === 'delivery' ? deliveryAddress : undefined,
-                deliveryTimeSlot,
-                contactPhone: deliveryMethod === 'delivery' ? contactPhone : customerObj?.phone,
-            });
-
-            if (remainingDebt > 0 && customerObj) {
-                await updateCustomer(customerObj.id, {
-                    debtBalance: customerObj.debtBalance + remainingDebt,
-                    orderCount: (customerObj.orderCount || 0) + 1,
-                    lastOrderDate: new Date().toISOString()
+            try {
+                await addOrder({
+                    id: orderId,
+                    customerName: isGuest ? guestName : (customerObj ? customerObj.name : 'Desconocido'),
+                    customerId: isGuest ? 'guest' : selectedCustomer,
+                    guestName: isGuest ? guestName : undefined,
+                    guestPhone: isGuest ? guestPhone : undefined,
+                    total: total,
+                    status: 'pending',
+                    date: localDeliveryDate.toISOString(),
+                    items: cart,
+                    notes: orderNotes,
+                    advancePayment: advancePayment,
+                    deliveryMethod: deliveryMethod,
+                    deliveryAddress: deliveryMethod === 'delivery' ? deliveryAddress : undefined,
+                    deliveryTimeSlot,
+                    contactPhone: isGuest ? guestPhone : (deliveryMethod === 'delivery' ? contactPhone : customerObj?.phone),
                 });
-            }
 
-            if (advancePayment > 0) {
-                await addTransaction({
-                    id: generateIdWithPrefix('t'),
-                    type: 'income',
-                    category: 'Adelanto Pedido',
-                    amount: advancePayment,
-                    date: new Date().toISOString(),
-                    method: method,
-                    description: `Seña para Pedido Nuevo de ${customerObj ? customerObj.name : 'Desconocido'}`,
+                if (remainingDebt > 0 && customerObj) {
+                    await updateCustomer(customerObj.id, {
+                        debtBalance: customerObj.debtBalance + remainingDebt,
+                        orderCount: (customerObj.orderCount || 0) + 1,
+                        lastOrderDate: new Date().toISOString()
+                    });
+                }
+
+                if (advancePayment > 0) {
+                    await addTransaction({
+                        id: generateIdWithPrefix('t'),
+                        type: 'income',
+                        category: 'Adelanto Pedido',
+                        amount: advancePayment,
+                        date: new Date().toISOString(),
+                        method: method,
+                        description: `Seña para Pedido Nuevo de ${customerObj ? customerObj.name : 'Desconocido'}`,
+                    });
+                }
+
+                setLastOrderData({
+                    id: orderId,
+                    customerName: customerObj ? customerObj.name : 'Desconocido',
+                    deliveryDate: deliveryDate,
+                    total: total,
+                    advancePayment: advancePayment
                 });
-            }
 
-            // Show success notification or modal
-            setShowOrderSuccessModal(true);
+                // Show success notification or modal
+                setShowOrderSuccessModal(true);
+
+                // Reset everything only on success
+                clearCart();
+                clearPosOrderForm();
+                setCheckoutMode('sale');
+                setPaymentWithAmount('');
+            } catch (err) {
+                console.error("Failed to process order:", err);
+                // Notification is handled in addOrder
+                return;
+            }
 
             // Prepare and print ticket for order
             const orderTicket: TicketData = {
                 type: 'order',
-                id: generateIdWithPrefix('o').toUpperCase(),
-                date: new Date(deliveryDate).toISOString(),
+                id: orderId.toUpperCase(),
+                date: localDeliveryDate.toISOString(),
                 customerName: customerObj ? customerObj.name : 'Desconocido',
                 customerPhone: customerObj?.phone,
                 items: cart.map(item => ({
@@ -895,9 +934,9 @@ export const POS = () => {
                                         <span className="section-number">1</span>
                                         <h4 className="section-title">Cliente</h4>
                                     </div>
-                                    {selectedCustomer && (
+                                    {(selectedCustomer || (isGuest && guestName)) && (
                                         <span className="selected-value">
-                                            {customers.find(c => c.id === selectedCustomer)?.name}
+                                            {isGuest ? (guestName || 'Invitado') : (customers.find(c => c.id === selectedCustomer)?.name)}
                                         </span>
                                     )}
                                     <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 1 ? 'expanded' : ''}`} />
@@ -905,45 +944,83 @@ export const POS = () => {
 
                                 {expandedSection === 1 && (
                                     <div className="section-content expanded">
-                                        <div className="search-input-wrapper">
-                                            <Search size={16} className="search-icon" />
-                                            <input
-                                                type="text"
-                                                className="form-input customer-search-input"
-                                                placeholder="Buscar cliente..."
-                                                value={customerSearch}
-                                                onChange={(e) => setCustomerSearch(e.target.value)}
-                                                autoFocus
-                                            />
-                                        </div>
-
-                                        <div className="customer-list-compact">
-                                            {filteredCustomers.slice(0, 6).map(customer => (
-                                                <button
-                                                    key={customer.id}
-                                                    className={`customer-list-item-compact ${selectedCustomer === customer.id ? 'selected' : ''}`}
-                                                    onClick={() => updatePosOrderForm({ selectedCustomer: customer.id })}
-                                                >
-                                                    <div className="customer-list-info">
-                                                        <span className="customer-list-name">{customer.name}</span>
-                                                        <span className="customer-list-phone">{customer.phone}</span>
-                                                    </div>
-                                                    {selectedCustomer === customer.id && (
-                                                        <Check size={16} className="text-primary" />
-                                                    )}
-                                                </button>
-                                            ))}
+                                        <div className="guest-toggle-container mb-3">
                                             <button
-                                                className="customer-list-item-compact new-customer-btn"
-                                                onClick={() => setIsAddingCustomer(true)}
+                                                className={`guest-toggle-btn ${isGuest ? 'active' : ''}`}
+                                                onClick={() => updatePosOrderForm({ isGuest: !isGuest, selectedCustomer: '' })}
+                                                type="button"
                                             >
-                                                <div className="customer-list-info">
-                                                    <span className="customer-list-name">+ Nuevo Cliente</span>
-                                                    <span className="customer-list-phone">Crear en agenda</span>
-                                                </div>
+                                                <UserPlus size={16} />
+                                                <span>{isGuest ? 'Cambiar a Cliente Agendado' : 'Venta como Invitado (Sin agendar)'}</span>
                                             </button>
                                         </div>
 
+                                        {isGuest ? (
+                                            <div className="guest-fields">
+                                                <div className="form-group mb-2">
+                                                    <label className="text-micro mb-1">Nombre del Cliente <span className="text-danger">*</span></label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        placeholder="Nombre para el pedido..."
+                                                        value={guestName}
+                                                        onChange={(e) => updatePosOrderForm({ guestName: e.target.value })}
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                                <div className="form-group mb-2">
+                                                    <label className="text-micro mb-1">Teléfono (Opcional)</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        placeholder="Teléfono de contacto..."
+                                                        value={guestPhone}
+                                                        onChange={(e) => updatePosOrderForm({ guestPhone: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="search-input-wrapper">
+                                                    <Search size={16} className="search-icon" />
+                                                    <input
+                                                        type="text"
+                                                        className="form-input customer-search-input"
+                                                        placeholder="Buscar cliente..."
+                                                        value={customerSearch}
+                                                        onChange={(e) => setCustomerSearch(e.target.value)}
+                                                        autoFocus
+                                                    />
+                                                </div>
+
+                                                <div className="customer-list-compact">
+                                                    {filteredCustomers.slice(0, 6).map(customer => (
+                                                        <button
+                                                            key={customer.id}
+                                                            className={`customer-list-item-compact ${selectedCustomer === customer.id ? 'selected' : ''}`}
+                                                            onClick={() => updatePosOrderForm({ selectedCustomer: customer.id, isGuest: false })}
+                                                        >
+                                                            <div className="customer-list-info">
+                                                                <span className="customer-list-name">{customer.name}</span>
+                                                                <span className="customer-list-phone">{customer.phone}</span>
+                                                            </div>
+                                                            {selectedCustomer === customer.id && (
+                                                                <Check size={16} className="text-primary" />
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                    <button
+                                                        className="customer-list-item-compact new-customer-btn"
+                                                        onClick={() => setIsAddingCustomer(true)}
+                                                    >
+                                                        <div className="customer-list-info">
+                                                            <span className="customer-list-name">+ Nuevo Cliente</span>
+                                                            <span className="customer-list-phone">Crear en agenda</span>
+                                                        </div>
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
                                         {isAddingCustomer && (
                                             <div className="new-customer-form-compact">
                                                 <input
@@ -1152,9 +1229,12 @@ export const POS = () => {
                                 {deliveryDate && isValidDate(deliveryDate) && (
                                     <div className="summary-row">
                                         <span className="summary-label">Entrega</span>
-                                        <span className="summary-value">
-                                            {new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(new Date(deliveryDate))}
-                                        </span>
+                                         <span className="summary-value">
+                                             {(() => {
+                                                 const [y, m, d] = deliveryDate.split('-').map(Number);
+                                                 return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
+                                             })()}
+                                         </span>
                                     </div>
                                 )}
                             </div>
@@ -1189,14 +1269,27 @@ export const POS = () => {
                                 </div>
                             )}
 
-                            <button
-                                className="btn-confirm-order-mini"
-                                onClick={() => handleCheckout('cash')}
-                                disabled={cart.length === 0 || !selectedCustomer || !deliveryDate}
-                            >
-                                <Check size={18} />
-                                Confirmar Pedido
-                            </button>
+                            <div className="order-payment-buttons">
+                                <p className="text-micro text-muted mb-2">Método de pago {advancePayment > 0 ? 'de la seña' : ''}:</p>
+                                <div className="payment-buttons-compact">
+                                    <button
+                                        className="payment-btn-compact payment-cash"
+                                        disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
+                                        onClick={() => handleCheckout('cash')}
+                                    >
+                                        <Banknote size={18} />
+                                        <span>Efectivo</span>
+                                    </button>
+                                    <button
+                                        className="payment-btn-compact payment-card"
+                                        disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
+                                        onClick={() => handleCheckout('card')}
+                                    >
+                                        <CreditCard size={18} />
+                                        <span>Tarjeta</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -1240,7 +1333,7 @@ export const POS = () => {
                             <div className="payment-buttons-compact">
                                 <button
                                     className="payment-btn-compact payment-cash"
-                                    disabled={cart.length === 0 || (typeof paymentWithAmount === 'number' && paymentWithAmount < total)}
+                                    disabled={cart.length === 0}
                                     onClick={() => handleCheckout('cash')}
                                     title="Pagar en efectivo"
                                 >
@@ -1334,25 +1427,28 @@ export const POS = () => {
                             <div className="order-success-row">
                                 <span className="order-success-label">Cliente</span>
                                 <span className="order-success-value">
-                                    {customers.find(c => c.id === selectedCustomer)?.name}
+                                    {lastOrderData?.customerName}
                                 </span>
                             </div>
                             <div className="order-success-row">
                                 <span className="order-success-label">Entrega</span>
                                 <span className="order-success-value">
-                                    {deliveryDate && isValidDate(deliveryDate)
-                                        ? new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(new Date(deliveryDate))
+                                    {lastOrderData?.deliveryDate && isValidDate(lastOrderData.deliveryDate)
+                                        ? (() => {
+                                            const [y, m, d] = lastOrderData.deliveryDate.split('-').map(Number);
+                                            return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
+                                        })()
                                         : 'N/A'}
                                 </span>
                             </div>
                             <div className="order-success-row">
                                 <span className="order-success-label">Total</span>
-                                <span className="order-success-value">${total.toLocaleString()}</span>
+                                <span className="order-success-value">${lastOrderData?.total.toLocaleString()}</span>
                             </div>
-                            {advancePayment > 0 && (
+                            {lastOrderData && lastOrderData.advancePayment > 0 && (
                                 <div className="order-success-row">
                                     <span className="order-success-label">Seña</span>
-                                    <span className="order-success-value">${advancePayment.toLocaleString()}</span>
+                                    <span className="order-success-value">${lastOrderData.advancePayment.toLocaleString()}</span>
                                 </div>
                             )}
                         </div>

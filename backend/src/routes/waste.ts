@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
 import { db } from '../db/index.js';
+import { randomUUID } from 'crypto';
 
 export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
   // Create waste report schema
@@ -217,7 +218,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
         const wasteLog = await trx
           .insertInto('waste_logs')
           .values({
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             business_id: user.business_id,
             product_id: body.product_id,
             quantity: body.quantity,
@@ -233,7 +234,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
         await trx
           .insertInto('stock_movements')
           .values({
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             business_id: user.business_id,
             product_id: body.product_id,
             movement_type: 'waste',
@@ -252,7 +253,7 @@ export const wasteRoutes: FastifyPluginAsync = async (fastify) => {
         await trx
           .insertInto('transactions')
           .values({
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             business_id: user.business_id,
             type: 'expense',
             amount: lossValue,

@@ -9,6 +9,7 @@ const require = createRequire(import.meta.url);
 const PDFParse = require('pdf-parse');
 import { parse as csvParse } from 'csv-parse/sync';
 import { sql } from 'kysely';
+import { randomUUID } from 'crypto';
 
 export const importRoutes: FastifyPluginAsync = async (fastify) => {
   // Register multipart for file uploads
@@ -256,7 +257,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
                 await trx
                   .insertInto('price_history')
                   .values({
-                    id: crypto.randomUUID(),
+                    id: randomUUID(),
                     business_id: user.business_id,
                     product_id: product.id,
                     old_cost: product.cost,
@@ -277,7 +278,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
                 await trx
                     .insertInto('products')
                     .values({
-                        id: crypto.randomUUID(),
+                        id: randomUUID(),
                         business_id: user.business_id,
                         code: row.code,
                         name: row.name,

@@ -230,7 +230,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
       const reminder = await db
         .insertInto('audit_logs')
         .values({
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           business_id: user.business_id,
           user_id: user.sub,
           action: 'whatsapp_reminder_sent',
@@ -293,7 +293,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
       const reminder = await db
         .insertInto('audit_logs')
         .values({
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           business_id: user.business_id,
           user_id: user.sub,
           action: 'email_reminder_sent',
@@ -376,7 +376,7 @@ export const remindersRoutes: FastifyPluginAsync = async (fastify) => {
           await db
             .insertInto('audit_logs')
             .values({
-              id: crypto.randomUUID(),
+              id: randomUUID(),
               business_id: user.business_id,
               user_id: user.sub,
               action: `${body.method}_bulk_reminder_sent`,

@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
 import { db } from '../db/index.js';
+import { randomUUID } from 'crypto';
 
 export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================
@@ -55,7 +56,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
       await db
         .insertInto('app_settings')
         .values({
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           business_id: user.business_id,
           key: `opening_${body.date}`,
           value: JSON.stringify(opening),
@@ -321,7 +322,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
       await db
         .insertInto('app_settings')
         .values({
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           business_id: user.business_id,
           key: `closing_${body.date}`,
           value: JSON.stringify(closing),
@@ -341,7 +342,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
         await db
           .insertInto('transactions')
           .values({
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             business_id: user.business_id,
             type: discrepancy > 0 ? 'income' : 'expense',
             category: 'Ajuste de Caja',

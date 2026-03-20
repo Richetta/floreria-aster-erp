@@ -117,7 +117,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       const result = await db
         .insertInto('users')
         .values({
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           business_id: currentUser.business_id,
           name: body.name,
           email: body.email,

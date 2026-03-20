@@ -65,7 +65,7 @@ export const Dashboard = () => {
         // Sum all actual money that came in today (sales + order advance payments)
         const tSales = transactions
             .filter(t => t.type === 'income' && isToday(t.date))
-            .reduce((sum, t) => sum + t.amount, 0);
+            .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
         // Count pending/assembling orders scheduled for today
         const tOrders = orders.filter(o => isToday(o.date) && o.status !== 'delivered').length;
@@ -74,7 +74,7 @@ export const Dashboard = () => {
         const cProducts = products.filter(p => p.stock <= p.min);
 
         // Total money owed by clients
-        const tDebt = customers.reduce((sum, c) => sum + c.debtBalance, 0);
+        const tDebt = customers.reduce((sum, c) => sum + (Number(c.debtBalance) || 0), 0);
 
         // Closest upcoming orders (Max 5)
         const uOrders = orders

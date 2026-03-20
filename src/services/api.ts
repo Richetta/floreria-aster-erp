@@ -890,7 +890,9 @@ class ApiClient {
   }
 
   async createOrder(order: {
-    customer_id: string;
+    customer_id: string; // "guest" or UUID
+    guest_name?: string;
+    guest_phone?: string;
     delivery_date: string;
     delivery_method: 'pickup' | 'delivery';
     delivery_time_slot?: 'morning' | 'afternoon' | 'evening' | 'allday';

@@ -7,7 +7,9 @@ import { randomUUID } from 'crypto';
 export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
   // Create order schema
   const createOrderSchema = z.object({
-    customer_id: z.string().uuid(),
+    customer_id: z.string().uuid().or(z.literal('guest')),
+    guest_name: z.string().optional(),
+    guest_phone: z.string().optional(),
     delivery_date: z.string(),
     delivery_address: z.object({
       street: z.string().optional(),
@@ -165,28 +167,77 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
           0
         );
 
-        // Get customer name for denormalization
-        const customerData = await trx
-            .selectFrom('customers')
-            .select(['name'])
-            .where('id', '=', body.customer_id)
-            .executeTakeFirst();
+        // Get next order number for this business
+        const lastOrder = await trx
+          .selectFrom('orders')
+          .select(['order_number'])
+          .where('business_id', '=', user.business_id)
+          .orderBy('order_number', 'desc')
+          .executeTakeFirst();
+        
+        const nextOrderNumber = (lastOrder?.order_number || 0) + 1;
+
+        let finalCustomerId = body.customer_id;
+        let finalCustomerName = 'Unknown';
+        let finalCustomerPhone = body.contact_phone || null;
+
+        if (body.customer_id === 'guest') {
+            // Find or create "Consumidor Final"
+            let genericCustomer = await trx
+                .selectFrom('customers')
+                .select(['id', 'name'])
+                .where('business_id', '=', user.business_id)
+                .where('name', '=', 'Consumidor Final')
+                .executeTakeFirst();
+            
+            if (!genericCustomer) {
+                genericCustomer = await trx
+                    .insertInto('customers')
+                    .values({
+                        id: randomUUID(),
+                        business_id: user.business_id,
+                        name: 'Consumidor Final',
+                        phone: '0000',
+                        is_active: true,
+                        created_at: new Date(),
+                        updated_at: new Date()
+                    } as any)
+                    .returning(['id', 'name'])
+                    .executeTakeFirst();
+            }
+            
+            finalCustomerId = genericCustomer!.id;
+            finalCustomerName = body.guest_name || 'Consumidor Final';
+            finalCustomerPhone = body.guest_phone || null;
+        } else {
+            // Get customer name for denormalization
+            const customerData = await trx
+                .selectFrom('customers')
+                .select(['name', 'phone'])
+                .where('id', '=', body.customer_id)
+                .executeTakeFirst();
+            
+            finalCustomerName = customerData?.name || 'Unknown';
+            finalCustomerPhone = body.contact_phone || customerData?.phone || null;
+        }
 
         // Create order
-        const orderId = crypto.randomUUID();
+        const orderId = randomUUID();
         const order = await trx
           .insertInto('orders')
           .values({
             id: orderId,
             business_id: user.business_id,
-            customer_id: body.customer_id,
-            customer_name: customerData?.name || 'Unknown',
+            order_number: nextOrderNumber,
+            customer_id: finalCustomerId,
+            customer_name: finalCustomerName,
+            customer_phone: finalCustomerPhone,
             status: 'pending',
             delivery_date: new Date(body.delivery_date),
             delivery_address: body.delivery_address || null, // Kysely handles Record<string, any>
             delivery_time_slot: body.delivery_time_slot,
             delivery_method: body.delivery_method,
-            contact_phone: body.contact_phone || null,
+            contact_phone: finalCustomerPhone,
             card_message: body.card_message || null,
             total_amount: totalAmount,
             subtotal: totalAmount,
@@ -204,7 +255,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
           await trx
             .insertInto('order_items')
             .values({
-              id: crypto.randomUUID(),
+              id: randomUUID(),
               business_id: user.business_id,
               order_id: orderId,
               product_id: item.product_id || null,
@@ -224,7 +275,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
           await trx
             .insertInto('transactions')
             .values({
-              id: crypto.randomUUID(),
+              id: randomUUID(),
               business_id: user.business_id,
               type: 'payment_received',
               category: 'Seña',
@@ -243,7 +294,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
         const customer = await trx
             .selectFrom('customers')
             .select(['total_orders', 'debt_balance'])
-            .where('id', '=', body.customer_id)
+            .where('id', '=', finalCustomerId)
             .executeTakeFirst();
 
         const remainingBalance = totalAmount - body.advance_payment;
@@ -256,7 +307,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
             last_order_date: new Date(),
             updated_at: new Date()
           })
-          .where('id', '=', body.customer_id)
+          .where('id', '=', finalCustomerId)
           .execute();
 
         return order;

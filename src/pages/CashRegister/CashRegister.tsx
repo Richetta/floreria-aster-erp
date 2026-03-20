@@ -156,7 +156,12 @@ export const CashRegister = () => {
     };
 
     const formatCurrency = (amount: number) => {
-        return `$${amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        return new Intl.NumberFormat('es-AR', {
+            style: 'currency',
+            currency: 'ARS',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(Number(amount) || 0);
     };
 
     return (
