@@ -16,7 +16,7 @@ import {
     TrendingUp,
     List,
     Award,
-    Sparkles,
+    Filter,
     ChevronDown,
     AlertCircle,
     Copy,
@@ -89,7 +89,7 @@ export const POS = () => {
     const [activeCategory, setActiveCategory] = useState<string>('Todos');
     const [activeTag, setActiveTag] = useState<string | null>(null);
     const [productView, setProductView] = useState<ProductView>('all');
-    const [barcodeInput, setBarcodeInput] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
 
@@ -158,27 +158,38 @@ export const POS = () => {
         return true;
     };
 
-    // Handle barcode scan
-    const handleBarcodeSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!barcodeInput.trim()) return;
+    // Handle unified search submit (either manual Enter or Barcode)
+    const handleSearchSubmit = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        const term = searchTerm.trim();
+        if (!term) return;
 
-        const product = products.find(p => p.code === barcodeInput.trim());
-        if (product && product.stock > 0) {
-            addToCart(product);
-            setBarcodeInput('');
+        // Try to find product by exact code first (Barcode behavior)
+        const productByCode = products.find(p => p.code === term);
+        
+        if (productByCode) {
+            if (productByCode.stock > 0) {
+                addToCart(productByCode);
+                setSearchTerm('');
+                playBeepSound();
+            } else {
+                alert('Producto sin stock');
+                setSearchTerm('');
+            }
+            return;
+        }
 
-            // Sonido beep al escanear exitosamente
-            playBeepSound();
+        // If not a code, maybe it's the first search result (Existing behavior)
+        const firstMatch = products.find(p =>
+            p.name.toLowerCase().includes(term.toLowerCase()) ||
+            p.code.toLowerCase().includes(term.toLowerCase())
+        );
 
-            // Focus back to barcode input for next scan
-            setTimeout(() => {
-                const barcodeInputEl = document.getElementById('barcode-input');
-                barcodeInputEl?.focus();
-            }, 100);
-        } else {
-            alert('Producto no encontrado o sin stock');
-            setBarcodeInput('');
+        if (firstMatch && firstMatch.stock > 0) {
+            addToCart(firstMatch);
+            setSearchTerm('');
+        } else if (firstMatch && firstMatch.stock <= 0) {
+             alert('El primer resultado no tiene stock');
         }
     };
 
@@ -220,15 +231,9 @@ export const POS = () => {
                     clearCart();
                 }
             }
-            // Enter en búsqueda: agregar primer producto
+            // Enter en búsqueda: procesar (barcode o primer match)
             if (e.key === 'Enter' && searchTerm) {
-                const firstProduct = products.find(p =>
-                    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    p.code.toLowerCase().includes(searchTerm.toLowerCase())
-                );
-                if (firstProduct && firstProduct.stock > 0) {
-                    addToCart(firstProduct);
-                }
+                handleSearchSubmit();
             }
         };
 
@@ -573,126 +578,116 @@ export const POS = () => {
                         <p className="text-body text-muted">Seleccioná productos y gestioná tus ventas diarias</p>
                     </div>
 
-                    {/* Search Bar */}
-                    <div className="search-bar pos-search mb-3">
-                        <Search className="search-icon text-muted" size={20} />
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            placeholder="Buscar producto por nombre o código..."
-                            className="form-input search-input"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            autoFocus
-                        />
-                    </div>
-
-                    {/* Barcode Input */}
-                    <form onSubmit={handleBarcodeSubmit} className="barcode-input-wrapper flex gap-2 mb-3">
-                        <input
-                            id="barcode-input"
-                            type="text"
-                            className="form-input flex-1"
-                            placeholder="📷 Escanear código de barras (o escribir código)"
-                            value={barcodeInput}
-                            onChange={(e) => setBarcodeInput(e.target.value)}
-                            autoFocus
-                        />
-                        <button type="submit" className="btn btn-primary">
-                            Agregar
-                        </button>
-                    </form>
-
-                    {/* Keyboard shortcuts hint */}
-                    <p className="text-micro text-muted flex gap-4">
-                        <span><kbd className="kbd">Ctrl+F</kbd> Buscar</span>
-                        <span><kbd className="kbd">Enter</kbd> Agregar primero</span>
-                        <span><kbd className="kbd">Esc</kbd> Vaciar carrito</span>
-                    </p>
-
-                    {/* View Tabs */}
-                    <div className="view-tabs mt-4">
-                        <button
-                            className={`view-tab ${productView === 'recent' ? 'active' : ''}`}
-                            onClick={() => setProductView('recent')}
-                        >
-                            <Clock size={18} />
-                            <span>Últimos Vendidos</span>
-                        </button>
-                        <button
-                            className={`view-tab ${productView === 'top' ? 'active' : ''}`}
-                            onClick={() => setProductView('top')}
-                        >
-                            <Award size={18} />
-                            <span>Más Vendidos</span>
-                        </button>
-                        <button
-                            className={`view-tab ${productView === 'all' ? 'active' : ''}`}
-                            onClick={() => setProductView('all')}
-                        >
-                            <List size={18} />
-                            <span>Productos</span>
-                        </button>
-                        <button
-                            className={`view-tab ${productView === 'packages' ? 'active' : ''}`}
-                            onClick={() => setProductView('packages')}
-                        >
-                            <ShoppingCart size={18} />
-                            <span>Ramos</span>
-                        </button>
-                    </div>
-
-                    {/* Category & Tag Filters */}
-                    <div className="filters-section mt-4">
-                        <div className="category-filters flex gap-2 overflow-x-auto pb-2">
-                            <button
-                                className={`category-chip ${activeCategory === 'Todos' ? 'active' : ''}`}
-                                onClick={() => setActiveCategory('Todos')}
-                            >
-                                Todos
-                            </button>
-                            {categories.map(cat => (
+                    {/* Smart Unified Search & View Toggle */}
+                    <div className="pos-actions-bar mb-4">
+                        <div className="search-bar pos-search flex-1">
+                            <Search className="search-icon text-muted" size={20} />
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder="Buscar nombre o código... (escanea o escribe)"
+                                className="form-input search-input"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                autoFocus
+                            />
+                            {searchTerm && (
                                 <button
-                                    key={cat}
-                                    className={`category-chip ${activeCategory === cat ? 'active' : ''}`}
-                                    onClick={() => setActiveCategory(cat)}
-                                    title={`Filtrar por ${cat}`}
+                                    className="clear-search-btn"
+                                    onClick={() => setSearchTerm('')}
                                 >
-                                    {cat}
-                                </button>
-                            ))}
-                            {products.some(p => p.category === 'Sin Categoría') && (
-                                <button
-                                    className={`category-chip ${activeCategory === 'Sin Categoría' ? 'active' : ''}`}
-                                    onClick={() => setActiveCategory('Sin Categoría')}
-                                    title="Ver productos sin categoría asignada"
-                                >
-                                    Sin Categoría
+                                    <X size={16} />
                                 </button>
                             )}
                         </div>
 
-                        {/* Custom Tag Filters */}
-                        {tags.length > 0 && (
-                            <div className="tag-filters flex gap-2 overflow-x-auto pb-2 mt-2">
-                                <button
-                                    className={`tag-chip ${activeTag === null ? 'active' : ''}`}
-                                    onClick={() => setActiveTag(null)}
-                                >
-                                    <Sparkles size={12} />
-                                    Todos los filtros
-                                </button>
-                                {tags.map(tag => (
+                        <button
+                            className={`filter-toggle-btn ${showFilters || activeCategory !== 'Todos' || activeTag ? 'active' : ''}`}
+                            onClick={() => setShowFilters(!showFilters)}
+                            title="Filtros por categoría y etiquetas"
+                        >
+                            <Filter size={20} />
+                            <span>Filtros</span>
+                            {(activeCategory !== 'Todos' || activeTag) && <span className="filter-dot"></span>}
+                        </button>
+                    </div>
+
+                    {/* Collapsible Filters Drawer */}
+                    {showFilters && (
+                        <div className="filters-drawer animate-slide-down mb-4">
+                            <div className="filters-header mb-3">
+                                <h3 className="text-small font-bold uppercase tracking-wider text-muted">Filtrar Productos</h3>
+                                <button className="text-micro text-primary font-bold" onClick={() => {
+                                    setActiveCategory('Todos');
+                                    setActiveTag(null);
+                                }}>Limpiar Filtros</button>
+                            </div>
+
+                            {/* Category & Tag Filters Componentized internally */}
+                            <div className="category-filters-minimal mb-3">
+                                {['Todos', ...categories, (products.some(p => p.category === 'Sin Categoría') ? 'Sin Categoría' : '')].filter(Boolean).map(cat => (
                                     <button
-                                        key={tag}
-                                        className={`tag-chip ${activeTag === tag ? 'active' : ''}`}
-                                        onClick={() => setActiveTag(tag)}
+                                        key={cat}
+                                        className={`minimal-chip ${activeCategory === cat ? 'active' : ''}`}
+                                        onClick={() => setActiveCategory(cat)}
                                     >
-                                        {tag}
+                                        {cat}
                                     </button>
                                 ))}
                             </div>
-                        )}
+
+                            {tags.length > 0 && (
+                                <div className="tag-filters-minimal">
+                                    <button
+                                        className={`minimal-chip tag ${activeTag === null ? 'active' : ''}`}
+                                        onClick={() => setActiveTag(null)}
+                                    >
+                                        Todos los tags
+                                    </button>
+                                    {tags.map(tag => (
+                                        <button
+                                            key={tag}
+                                            className={`minimal-chip tag ${activeTag === tag ? 'active' : ''}`}
+                                            onClick={() => setActiveTag(tag)}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* View Tabs - Modern Segmented Style */}
+                    <div className="pos-nav-pills mb-4">
+                        <button
+                            className={`nav-pill ${productView === 'recent' ? 'active' : ''}`}
+                            onClick={() => setProductView('recent')}
+                        >
+                            <Clock size={16} />
+                            <span>Recientes</span>
+                        </button>
+                        <button
+                            className={`nav-pill ${productView === 'top' ? 'active' : ''}`}
+                            onClick={() => setProductView('top')}
+                        >
+                            <Award size={16} />
+                            <span>Top</span>
+                        </button>
+                        <button
+                            className={`nav-pill ${productView === 'all' ? 'active' : ''}`}
+                            onClick={() => setProductView('all')}
+                        >
+                            <List size={16} />
+                            <span>Todos</span>
+                        </button>
+                        <button
+                            className={`nav-pill ${productView === 'packages' ? 'active' : ''}`}
+                            onClick={() => setProductView('packages')}
+                        >
+                            <ShoppingCart size={16} />
+                            <span>Ramos</span>
+                        </button>
                     </div>
                 </div>
 

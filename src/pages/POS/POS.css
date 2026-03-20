@@ -66,164 +66,201 @@
     color: #64748b;
 }
 
-/* Search Bar */
+/* Smart Actions Bar (Search + Filter Toggle) */
+.pos-actions-bar {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
 .pos-search {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    background: #f8fafc;
-    border: 2px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 0.75rem 1rem;
+    background: #f1f5f9;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 0 1rem;
+    height: 48px;
     transition: all 0.2s ease;
 }
 
 .pos-search:focus-within {
-    border-color: #9b51e0;
     background: white;
+    border-color: #9b51e0;
     box-shadow: 0 0 0 4px rgba(155, 81, 224, 0.1);
 }
 
 .pos-search .search-icon {
     color: #94a3b8;
-    flex-shrink: 0;
 }
 
-.pos-search input {
+.pos-search .search-input {
     flex: 1;
     border: none;
     background: transparent;
-    font-size: 1.125rem;
+    font-size: 1rem;
     color: #0f172a;
     outline: none;
+    padding: 0 0.5rem;
 }
 
-.pos-search input::placeholder {
-    color: #94a3b8;
-    font-size: 1.125rem;
-}
-
-.pos-search input {
-    padding-left: 2.75rem !important; /* Extra padding to avoid magnifying glass overlap */
-}
-
-.pos-search .search-icon {
-    margin-left: 0.25rem;
-}
-
-/* View Tabs */
-.view-tabs {
+.clear-search-btn {
+    border: none;
+    background: #e2e8f0;
+    color: #64748b;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
     display: flex;
-    gap: 0.5rem;
-    margin-top: 1rem;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.view-tab {
+.clear-search-btn:hover {
+    background: #cbd5e1;
+    color: #0f172a;
+}
+
+/* Filter Toggle Button */
+.filter-toggle-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 48px;
+    padding: 0 1.25rem;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-toggle-btn:hover {
+    border-color: #9b51e0;
+    color: #9b51e0;
+    background: #f5f3ff;
+}
+
+.filter-toggle-btn.active {
+    background: #f5f3ff;
+    border-color: #9b51e0;
+    color: #9b51e0;
+}
+
+.filter-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    background: #9b51e0;
+    border: 2px solid white;
+    border-radius: 50%;
+}
+
+/* Filters Drawer */
+.filters-drawer {
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 1.25rem;
+    border: 1px solid #e2e8f0;
+}
+
+.filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.category-filters-minimal, .tag-filters-minimal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.minimal-chip {
+    padding: 0.4rem 1rem;
+    border-radius: 8px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.minimal-chip:hover {
+    border-color: #9b51e0;
+    color: #9b51e0;
+}
+
+.minimal-chip.active {
+    background: #9b51e0;
+    color: white;
+    border-color: #9b51e0;
+}
+
+.minimal-chip.tag {
+    border-radius: 20px;
+    font-size: 0.75rem;
+    background: #f1f5f9;
+}
+
+.minimal-chip.tag.active {
+    background: #4f46e5;
+}
+
+/* Modern Nav Pills (Segmented Control) */
+.pos-nav-pills {
+    display: flex;
+    background: #f1f5f9;
+    padding: 0.4rem;
+    border-radius: 14px;
+    gap: 0.4rem;
+}
+
+.nav-pill {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    border-radius: 14px;
-    border: 2px solid #e2e8f0;
-    background: white;
+    padding: 0.6rem;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
     color: #64748b;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.view-tab:hover {
-    border-color: #9b51e0;
-    color: #9b51e0;
+.nav-pill:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.5);
+    color: #0f172a;
 }
 
-.view-tab.active {
-    background: linear-gradient(135deg, #9b51e0 0%, #8b5cf6 100%);
-    border-color: #9b51e0;
-    color: white;
-    box-shadow: 0 4px 12px rgba(155, 81, 224, 0.3);
-}
-
-/* Category Filters */
-.category-filters {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
-}
-
-.category-filters::-webkit-scrollbar {
-    height: 6px;
-}
-
-.category-filters::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
-    border-radius: 3px;
-}
-
-.category-chip {
-    padding: 0.5rem 1rem;
-    border-radius: 9999px;
-    background: #f8fafc;
-    color: #64748b;
-    font-size: 0.8rem;
-    font-weight: 600;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.category-chip:hover {
-    background: #f1f5f9;
-    border-color: #9b51e0;
-}
-
-.category-chip.active {
-    background: #9b51e0;
-    color: white;
-    border-color: #9b51e0;
-    box-shadow: 0 4px 12px rgba(155, 81, 224, 0.3);
-}
-
-/* Tag Filters */
-.tag-filters {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
-}
-
-.tag-chip {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.4rem 0.875rem;
-    border-radius: 9999px;
+.nav-pill.active {
     background: white;
-    color: #64748b;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border: 2px solid #e2e8f0;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
+    color: #9b51e0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.tag-chip:hover {
-    border-color: #9b51e0;
-    color: #9b51e0;
+.animate-slide-down {
+    animation: slideDown 0.3s ease-out;
 }
 
-.tag-chip.active {
-    background: #f5f3ff;
-    color: #9b51e0;
-    border-color: #9b51e0;
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* Product List */
