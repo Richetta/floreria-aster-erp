@@ -139,7 +139,7 @@
     color: white;
 }
 
-.status-shipping {
+.status-out_for_delivery {
     background-color: #eab308; /* Amarillo */
     color: white;
 }
@@ -152,7 +152,7 @@
 .status-pending .text-primary,
 .status-assembling .text-primary,
 .status-ready .text-primary,
-.status-shipping .text-primary,
+.status-out_for_delivery .text-primary,
 .status-delivered .text-primary {
     color: white !important;
 }
@@ -397,7 +397,7 @@
 .status-indicator.status-pending { background-color: #ef4444; }
 .status-indicator.status-assembling { background-color: #a855f7; }
 .status-indicator.status-ready { background-color: #3b82f6; }
-.status-indicator.status-shipping { background-color: #eab308; }
+.status-indicator.status-out_for_delivery { background-color: #eab308; }
 .status-indicator.status-delivered { background-color: #22c55e; }
 
 .order-identity {
@@ -457,7 +457,7 @@
 .status-tag.status-pending { background: #fef2f2; color: #ef4444; }
 .status-tag.status-assembling { background: #faf5ff; color: #a855f7; }
 .status-tag.status-ready { background: #eff6ff; color: #3b82f6; }
-.status-tag.status-shipping { background: #fefce8; color: #ca8a04; }
+.status-tag.status-out_for_delivery { background: #fefce8; color: #ca8a04; }
 .status-tag.status-delivered { background: #f0fdf4; color: #22c55e; }
 
 .modal-close-elegant {

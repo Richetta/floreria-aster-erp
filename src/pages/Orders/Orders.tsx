@@ -314,7 +314,7 @@ export const Orders = () => {
                                                 onDragEnd={() => handleDragEnd(order.id)}
                                             >
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <span className="text-micro font-black bg-white/20 px-1.5 py-0.5 rounded text-white tracking-widest uppercase">ID: {order.id.replace('o', '')}</span>
+                                                    <span className="text-micro font-black bg-white/20 px-1.5 py-0.5 rounded text-white tracking-widest uppercase">ID: #{order.id.split('-')[0]}</span>
                                                     <div className="p-1 bg-white/20 rounded shadow-sm">
                                                         {order.deliveryMethod === 'delivery' ? <Truck size={12} className="text-white" /> : <MapPin size={12} className="text-white" />}
                                                     </div>
