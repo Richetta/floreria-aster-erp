@@ -14,7 +14,9 @@ import {
     Download,
     Building2,
     Truck,
-    Briefcase
+    Briefcase,
+    Tag,
+    Edit2
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { SupplierLocal } from '../../store/useStore';
