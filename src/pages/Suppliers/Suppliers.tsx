@@ -11,7 +11,10 @@ import {
     AlertCircle,
     Upload,
     Sparkles,
-    Download
+    Download,
+    Building2,
+    Truck,
+    Briefcase
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { SupplierLocal } from '../../store/useStore';
@@ -311,53 +314,99 @@ export const Suppliers = () => {
                 </Card>
             )}
 
-            {/* Supplier Modal */}
+            {/* Supplier Modal - Redesigned for Premium Experience */}
             {isModalOpen && (
                 <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-                    <div className="modal-content max-w-md" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header flex justify-between items-center mb-6">
-                            <h2 className="text-section-title">
-                                {editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
-                            </h2>
-                            <button className="btn-icon" onClick={() => setIsModalOpen(false)}>
+                    <div className="supplier-modal-content animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
+                        <div className="supplier-modal-header">
+                            <div className="header-icon-container">
+                                {editingSupplier ? <Edit2 size={28} /> : <Building2 size={28} />}
+                            </div>
+                            <div className="header-text">
+                                <h2 className="text-h2 text-white">
+                                    {editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+                                </h2>
+                                <p className="text-small text-white opacity-80">
+                                    {editingSupplier ? `Actualizando datos de ${editingSupplier.name}` : 'Registrá un nuevo socio comercial'}
+                                </p>
+                            </div>
+                            <button className="close-modal-btn" onClick={() => setIsModalOpen(false)}>
                                 <X size={24} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSave}>
-                            <div className="form-group mb-4">
-                                <label className="form-label text-label">Nombre de Fantasía / Empresa</label>
-                                <input name="name" className="form-input" defaultValue={editingSupplier?.name} required placeholder="Ej: Vivero El Rosal" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 mb-4">
-                                <div className="form-group">
-                                    <label className="form-label text-label">Nombre de Contacto</label>
-                                    <input name="contactName" className="form-input" defaultValue={editingSupplier?.contactName} required placeholder="Ej: Ricardo" />
+                        <form onSubmit={handleSave} className="supplier-modal-form">
+                            <div className="form-grid">
+                                {/* Section 1: Business Info */}
+                                <div className="form-section">
+                                    <div className="section-title">
+                                        <Briefcase size={18} className="text-primary" />
+                                        <h3>Datos de Empresa</h3>
+                                    </div>
+                                    
+                                    <div className="form-group mb-4">
+                                        <label className="form-label-premium">
+                                            <Building2 size={14} /> Nombre de Fantasía
+                                        </label>
+                                        <input name="name" className="form-input-premium" defaultValue={editingSupplier?.name} required placeholder="Ej: Vivero El Rosal" />
+                                    </div>
+
+                                    <div className="form-group mb-4">
+                                        <label className="form-label-premium">
+                                            <Tag size={14} /> Rubro / Categoría
+                                        </label>
+                                        <input name="category" className="form-input-premium" defaultValue={editingSupplier?.category} required placeholder="Ej: Flores de Corte, Insumos..." />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label-premium">
+                                            <MapPin size={14} /> Dirección
+                                        </label>
+                                        <input name="address" className="form-input-premium" defaultValue={editingSupplier?.address} placeholder="Ej: Sarmiento 123, CABA" />
+                                    </div>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label text-label">Teléfono</label>
-                                    <input name="phone" className="form-input" defaultValue={editingSupplier?.phone} required placeholder="Ej: 11-4433-2211" />
+
+                                {/* Section 2: Contact & Logistics */}
+                                <div className="form-section">
+                                    <div className="section-title">
+                                        <Truck size={18} className="text-primary" />
+                                        <h3>Contacto y Logística</h3>
+                                    </div>
+
+                                    <div className="form-group mb-4">
+                                        <label className="form-label-premium">
+                                            <User size={14} /> Nombre de Contacto
+                                        </label>
+                                        <input name="contactName" className="form-input-premium" defaultValue={editingSupplier?.contactName} required placeholder="Ej: Ricardo" />
+                                    </div>
+
+                                    <div className="form-group mb-4">
+                                        <label className="form-label-premium">
+                                            <Phone size={14} /> Teléfono
+                                        </label>
+                                        <input name="phone" className="form-input-premium" defaultValue={editingSupplier?.phone} required placeholder="Ej: 11-4433-2211" />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label-premium">
+                                            <Calendar size={14} /> Próxima Visita
+                                        </label>
+                                        <input name="nextVisitDate" type="date" className="form-input-premium" defaultValue={editingSupplier?.nextVisitDate} />
+                                    </div>
                                 </div>
                             </div>
-                            <div className="form-group mb-4">
-                                <label className="form-label text-label">Rubro / Categoría</label>
-                                <input name="category" className="form-input" defaultValue={editingSupplier?.category} required placeholder="Ej: Flores de Corte, Insumos..." />
-                            </div>
-                            <div className="form-group mb-6">
-                                <label className="form-label text-label">Dirección</label>
-                                <input name="address" className="form-input" defaultValue={editingSupplier?.address} placeholder="Ej: Sarmiento 123, CABA" />
-                            </div>
-                            <div className="form-group mb-6">
-                                <label className="form-label text-label">Próxima Visita</label>
-                                <input name="nextVisitDate" type="date" className="form-input" defaultValue={editingSupplier?.nextVisitDate} />
-                            </div>
-                            <div className="flex gap-3 mt-8">
-                                <Button type="button" variant="secondary" fullWidth onClick={() => { setIsModalOpen(false); setEditingSupplier(null); }}>
+
+                            <div className="modal-actions-premium mt-8">
+                                <button 
+                                    type="button" 
+                                    className="btn-premium-secondary" 
+                                    onClick={() => { setIsModalOpen(false); setEditingSupplier(null); }}
+                                >
                                     Cancelar
-                                </Button>
-                                <Button type="submit" variant="primary" fullWidth>
-                                    Guardar Proveedor
-                                </Button>
+                                </button>
+                                <button type="submit" className="btn-premium-primary">
+                                    {editingSupplier ? 'Guardar Cambios' : 'Registrar Proveedor'}
+                                </button>
                             </div>
                         </form>
                     </div>
