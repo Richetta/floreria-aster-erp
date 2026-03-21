@@ -254,7 +254,7 @@
 }
 
 .supplier-modal-header {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, #7c3aed 100%);
     padding: 2.5rem 2rem;
     display: flex;
     align-items: center;
