@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, FileText, CheckCircle2, Download, Settings } from 'lucide-react';
 import { api } from '../../services/api';
+import { useModal } from '../../hooks/useModal';
+import { AlertModal } from '../ui/Modals';
 import './CsvImportModal.css';
 
 interface CsvImportModalProps {
@@ -27,6 +29,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     const [autoMargin, setAutoMargin] = useState(false);
     const [marginPercent, setMarginPercent] = useState(50);
 
+    const { alertModal, showAlert } = useModal();
+
     if (!isOpen) return null;
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,7 +41,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         const hasValidExt = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
 
         if (!hasValidExt) {
-            alert('Por favor seleccioná un archivo válido (CSV, XLSX, TXT, PDF o DOCX)');
+            showAlert({ title: 'Archivo inválido', message: 'Por favor seleccioná un archivo válido (CSV, XLSX, TXT, PDF o DOCX)', variant: 'warning' });
             return;
         }
 
@@ -48,7 +52,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             setParsedData(result);
             setStep('preview');
         } catch (error: any) {
-            alert('Error al leer el archivo: ' + error.message);
+            showAlert({ title: 'Error', message: 'Error al leer el archivo: ' + error.message, variant: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -63,7 +67,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             setParsedData(result);
             setStep('preview');
         } catch (error: any) {
-            alert('Error al procesar el texto: ' + error.message);
+            showAlert({ title: 'Error', message: 'Error al procesar el texto: ' + error.message, variant: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -85,7 +89,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             setImportResult(result);
             setStep('result');
         } catch (error: any) {
-            alert('Error al importar: ' + error.message);
+            showAlert({ title: 'Error', message: 'Error al importar: ' + error.message, variant: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -101,7 +105,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             a.download = 'productos_aster.csv';
             a.click();
         } catch (error) {
-            alert('Error al descargar plantilla');
+            showAlert({ title: 'Error', message: 'Error al descargar plantilla', variant: 'error' });
         }
     };
 
@@ -402,6 +406,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                     )}
                 </div>
             </div>
+            {alertModal && <AlertModal {...alertModal} />}
         </div>
     );
 };

@@ -13,6 +13,8 @@ import {
     X
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useModal } from '../../hooks/useModal';
+import { AlertModal } from '../../components/ui/Modals';
 import './CashRegister.css';
 
 export const CashRegister = () => {
@@ -33,6 +35,8 @@ export const CashRegister = () => {
     const [closingResult, setClosingResult] = useState<any>(null);
     const [cashInDrawer, setCashInDrawer] = useState<any>(null);
     const [cashStatus, setCashStatus] = useState<{is_open: boolean; is_closed: boolean; opening: any} | null>(null);
+
+    const { alertModal, showAlert } = useModal();
 
     // Load daily summary
     useEffect(() => {
@@ -70,7 +74,7 @@ export const CashRegister = () => {
 
     const handleOpenClosing = () => {
         if (!cashStatus?.is_open) {
-            alert('Primero debés abrir la caja');
+            showAlert({ title: 'Caja cerrada', message: 'Primero debés abrir la caja', variant: 'warning' });
             return;
         }
         setClosingData({
@@ -98,13 +102,13 @@ export const CashRegister = () => {
                 opening_balance: openingData.opening_balance,
                 notes: openingData.notes || undefined
             });
-            alert('Caja abierta exitosamente');
+            showAlert({ title: 'Éxito', message: 'Caja abierta exitosamente', variant: 'success' });
             setShowOpeningModal(false);
             // Reload status
             const status = await api.getCashRegisterStatus(selectedDate);
             setCashStatus(status);
         } catch (error: any) {
-            alert('Error al abrir caja: ' + error.message);
+            showAlert({ title: 'Error', message: 'Error al abrir caja: ' + error.message, variant: 'error' });
         }
     };
 
@@ -119,7 +123,7 @@ export const CashRegister = () => {
             });
             setClosingResult(result);
         } catch (error: any) {
-            alert('Error al crear cierre: ' + error.message);
+            showAlert({ title: 'Error', message: 'Error al crear cierre: ' + error.message, variant: 'error' });
         }
     };
 
@@ -151,7 +155,7 @@ export const CashRegister = () => {
             a.download = `cierre_${selectedDate}.csv`;
             a.click();
         } catch (error) {
-            alert('Error al exportar');
+            showAlert({ title: 'Error', message: 'Error al exportar', variant: 'error' });
         }
     };
 
@@ -626,6 +630,8 @@ export const CashRegister = () => {
                     </div>
                 </div>
             )}
+
+            {alertModal && <AlertModal {...alertModal} />}
         </div>
     );
 };

@@ -819,6 +819,13 @@ class ApiClient {
     });
   }
 
+  async updateCategory(id: string, category: { name: string; parent_id?: string }): Promise<Category> {
+    return this.request<Category>(`/categories/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(category),
+    });
+  }
+
   async deleteCategory(id: string): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>(`/categories/${id}`, {
       method: 'DELETE',
@@ -1136,6 +1143,21 @@ class ApiClient {
   async deleteWaste(id: string): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>(`/waste/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  // ============================================
+  // BUSINESS ENDPOINTS
+  // ============================================
+
+  async getBusinessInfo(): Promise<any> {
+    return this.request('/business');
+  }
+
+  async updateBusinessInfo(data: any): Promise<any> {
+    return this.request('/business', {
+      method: 'PUT',
+      body: JSON.stringify(data),
     });
   }
 }

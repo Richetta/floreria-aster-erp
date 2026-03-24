@@ -299,41 +299,7 @@ textarea {
   box-shadow: var(--shadow-md);
 }
 
-/* Typography Helpers */
-.text-h1 {
-  font-size: 2.25rem;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-}
-
-.text-h2 {
-  font-size: 1.75rem;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.01em;
-}
-
-.text-h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.text-body {
-  font-size: 1.125rem;
-  color: var(--color-text-main);
-}
-
-.text-small {
-  font-size: 1rem;
-  color: var(--color-text-muted);
-}
-
-.text-micro {
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
+/* Typography Helpers — see lines ~149-168 for definitions (accessibility-first sizes) */
 
 /* Buttons */
 .btn {

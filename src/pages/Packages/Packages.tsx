@@ -10,6 +10,8 @@ import {
 import { useStore } from '../../store/useStore';
 import type { Package } from '../../store/useStore';
 import { PackageBuilderModal } from '../../components/PackageBuilder/PackageBuilderModal';
+import { useModal } from '../../hooks/useModal';
+import { ConfirmModal } from '../../components/ui/Modals';
 import './Packages.css';
 
 export const Packages = () => {
@@ -38,6 +40,8 @@ export const Packages = () => {
     // Modal State
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
     const [packageToEdit, setPackageToEdit] = useState<Package | null>(null);
+
+    const { confirmModal, showConfirm } = useModal();
 
     // Filter Logic
     const filteredPackages = useMemo(() => {
@@ -71,8 +75,14 @@ export const Packages = () => {
         setIsBuilderOpen(true);
     };
 
-    const handleDelete = (id: string, name: string) => {
-        if (confirm(`¿Estás seguro de eliminar el arreglo "${name}"?`)) {
+    const handleDelete = async (id: string, name: string) => {
+        const confirmed = await showConfirm({
+            title: '¿Eliminar arreglo?',
+            message: `Se eliminará el arreglo "${name}". Esta acción no se puede deshacer.`,
+            confirmText: 'Eliminar',
+            variant: 'danger'
+        });
+        if (confirmed) {
             deletePackage(id);
         }
     };
@@ -227,6 +237,8 @@ export const Packages = () => {
                 onClose={() => setIsBuilderOpen(false)}
                 packageToEdit={packageToEdit || undefined}
             />
+
+            {confirmModal && <ConfirmModal {...confirmModal} />}
         </div>
     );
 };

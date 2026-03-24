@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Upload, Download, X, Check, AlertCircle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
+import { useModal } from '../../hooks/useModal';
+import { AlertModal } from '../ui/Modals';
 import './BulkPriceUpdateModal.css';
 
 interface BulkPriceUpdateModalProps {
@@ -22,6 +24,8 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
     const products = useStore(state => state.products);
     const updateProduct = useStore(state => state.updateProduct);
     const addTransaction = useStore(state => state.addTransaction);
+
+    const { alertModal, showAlert } = useModal();
 
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -167,7 +171,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
             });
         });
 
-        alert(`✅ Se actualizaron ${previewChanges.length} productos exitosamente`);
+        showAlert({ title: 'Precios actualizados', message: `Se actualizaron ${previewChanges.length} productos exitosamente`, variant: 'success' });
         setStep(1);
         setPercentageIncrease(0);
         setCustomPrices({});
@@ -451,6 +455,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                     )}
                 </div>
             </div>
+            {alertModal && <AlertModal {...alertModal} />}
         </div>
     );
 };

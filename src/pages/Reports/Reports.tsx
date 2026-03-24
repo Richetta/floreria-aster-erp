@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useModal } from '../../hooks/useModal';
+import { AlertModal } from '../../components/ui/Modals';
 import './Reports.css';
 
 type Period = 'today' | 'week' | 'month' | 'custom';
@@ -22,6 +24,8 @@ export const Reports = () => {
     const [toDate, setToDate] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'customers' | 'profits'>('sales');
+
+    const { alertModal, showAlert } = useModal();
 
     // Data states
     const [salesSummary, setSalesSummary] = useState<any>(null);
@@ -101,7 +105,7 @@ export const Reports = () => {
             a.download = `ventas_${from}_${to}.csv`;
             a.click();
         } catch (error) {
-            alert('Error al exportar: ' + error);
+            showAlert({ title: 'Error', message: 'Error al exportar: ' + error, variant: 'error' });
         }
     };
 
@@ -507,6 +511,8 @@ export const Reports = () => {
                     )}
                 </>
             )}
+
+            {alertModal && <AlertModal {...alertModal} />}
         </div>
     );
 };

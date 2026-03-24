@@ -28,6 +28,8 @@ import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
 import { OrderTemplatesModal } from '../../components/OrderTemplates/OrderTemplatesModal';
 import type { TicketData } from '../../components/TicketPrinter/TicketPrinter';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
+import { useModal } from '../../hooks/useModal';
+import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import './POS.css';
 
 type ProductView = 'recent' | 'top' | 'all' | 'packages';
@@ -116,6 +118,9 @@ export const POS = () => {
     const [showTicketPrinter, setShowTicketPrinter] = useState(false);
     const [ticketData, setTicketData] = useState<TicketData | null>(null);
 
+    // Custom modal hook (replaces native alert/confirm)
+    const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
+
     // Load data from backend on mount
     useEffect(() => {
         const loadData = async () => {
@@ -143,7 +148,11 @@ export const POS = () => {
                 .map(c => `• ${c.productName}: faltan ${c.shortage}`)
                 .join('\n');
 
-            alert(`⚠️ No se puede agregar el ramo "${pkg.name}"\n\nFaltan componentes:\n${missingList}\n\nReponé el stock antes de vender.`);
+            showAlert({
+                title: 'Faltan componentes',
+                message: `No se puede agregar el ramo "${pkg.name}"\n\nFaltan componentes:\n${missingList}\n\nReponé el stock antes de vender.`,
+                variant: 'warning'
+            });
             return false;
         }
 
@@ -173,7 +182,7 @@ export const POS = () => {
                 setSearchTerm('');
                 playBeepSound();
             } else {
-                alert('Producto sin stock');
+                showAlert({ title: 'Sin stock', message: 'Este producto no tiene stock disponible.', variant: 'warning' });
                 setSearchTerm('');
             }
             return;
@@ -189,7 +198,7 @@ export const POS = () => {
             addToCart(firstMatch);
             setSearchTerm('');
         } else if (firstMatch && firstMatch.stock <= 0) {
-             alert('El primer resultado no tiene stock');
+             showAlert({ title: 'Sin stock', message: 'El primer resultado no tiene stock disponible.', variant: 'warning' });
         }
     };
 
@@ -227,9 +236,15 @@ export const POS = () => {
             }
             // Escape: Limpiar carrito
             if (e.key === 'Escape' && cart.length > 0) {
-                if (confirm('¿Vaciar carrito?')) {
-                    clearCart();
-                }
+                showConfirm({
+                    title: '¿Vaciar carrito?',
+                    message: `Tenés ${cart.length} productos en el carrito. ¿Querés vaciarlo?`,
+                    confirmText: 'Sí, vaciar',
+                    cancelText: 'No',
+                    variant: 'warning'
+                }).then(confirmed => {
+                    if (confirmed) clearCart();
+                });
             }
             // Enter en búsqueda: procesar (barcode o primer match)
             if (e.key === 'Enter' && searchTerm) {
@@ -300,7 +315,11 @@ export const POS = () => {
                     const missingList = availability.missingComponents
                         .map(c => `• ${c.productName}: faltan ${c.shortage}`)
                         .join('\n');
-                    alert(`⚠️ Error de stock de último momento:\nEl ramo "${item.name}" ya no puede armarse.\n\nFaltan:\n${missingList}\n\nPor favor, quitá el item o reponé stock.`);
+                    showAlert({
+                        title: 'Error de stock',
+                        message: `El ramo "${item.name}" ya no puede armarse.\n\nFaltan:\n${missingList}\n\nPor favor, quitá el item o reponé stock.`,
+                        variant: 'error'
+                    });
                     return;
                 }
             } else {
@@ -315,19 +334,19 @@ export const POS = () => {
             const localDeliveryDate = new Date(y, m - 1, d);
 
             if (!isGuest && !selectedCustomer) {
-                alert("Debes seleccionar un cliente o activar el modo 'Invitado' para crear un pedido programado.");
+                showAlert({ title: 'Cliente requerido', message: 'Debes seleccionar un cliente o activar el modo "Invitado" para crear un pedido programado.', variant: 'warning' });
                 return;
             }
             if (isGuest && !guestName.trim()) {
-                alert("Debes ingresar el nombre del cliente invitado.");
+                showAlert({ title: 'Nombre requerido', message: 'Debes ingresar el nombre del cliente invitado.', variant: 'warning' });
                 return;
             }
             if (!deliveryDate) {
-                alert("Debes indicar una fecha de entrega.");
+                showAlert({ title: 'Fecha requerida', message: 'Debes indicar una fecha de entrega.', variant: 'warning' });
                 return;
             }
             if (deliveryMethod === 'delivery' && !deliveryAddress.street) {
-                alert("Debes completar la dirección de entrega.");
+                showAlert({ title: 'Dirección requerida', message: 'Debes completar la dirección de entrega.', variant: 'warning' });
                 return;
             }
 
@@ -464,7 +483,11 @@ export const POS = () => {
             } catch (err: any) {
                 // Error notification is already handled in processSale
                 console.error('[POS] Checkout failed:', err);
-                alert(`❌ Error al generar la venta: ${err.message || 'Error desconocido'}\n\nRevisí la consola para más detalles.`);
+                showAlert({
+                    title: 'Error en la venta',
+                    message: err.message || 'Ocurrió un error desconocido al procesar la venta. Revisá tu conexión e intentá de nuevo.',
+                    variant: 'error'
+                });
             }
         }
     };
@@ -536,9 +559,9 @@ export const POS = () => {
     };
 
     const getRankBadge = (index: number) => {
-        if (index === 0) return '🥇 #1';
-        if (index === 1) return '🥈 #2';
-        if (index === 2) return '🥉 #3';
+        if (index === 0) return '#1 Top';
+        if (index === 1) return '#2';
+        if (index === 2) return '#3';
         return `#${index + 1}`;
     };
 
@@ -738,7 +761,7 @@ export const POS = () => {
                                                         return (
                                                             <span key={idx} className={`recipe-tag ${isShort ? 'text-danger' : 'text-muted'}`}>
                                                                 {comp.quantity}x {p?.name || 'Producto'}
-                                                                {isShort && ` (disp. ${p?.stock || 0})`}
+                                                                {isShort && ` (disponibles: ${p?.stock || 0})`}
                                                             </span>
                                                         );
                                                     })}
@@ -748,7 +771,7 @@ export const POS = () => {
 
                                         <div className="product-list-actions">
                                             <span className={`stock-badge ${availability.available ? 'in' : 'out'}`}>
-                                                {availability.available ? '✅ Armable' : '❌ Falta Stock'}
+                                                {availability.available ? 'Armable' : 'Falta Stock'}
                                             </span>
                                             {availability.available ? (
                                                 <button className="add-to-cart-btn" onClick={(e) => {
@@ -766,7 +789,7 @@ export const POS = () => {
                                                         const missingList = availability.missingComponents
                                                             .map(c => `• ${c.productName}: faltan ${c.shortage}`)
                                                             .join('\n');
-                                                        alert(`⚠️ No se puede vender\n\nFaltan componentes:\n${missingList}`);
+                                                        showAlert({ title: 'Faltan componentes', message: `No se puede vender\n\nFaltan componentes:\n${missingList}`, variant: 'warning' });
                                                     }}
                                                 >
                                                     <AlertCircle size={18} />
@@ -805,7 +828,7 @@ export const POS = () => {
                                         )}
                                         <span className="product-list-price">${item.price.toLocaleString()}</span>
                                         <span className={`stock-badge ${item.stock === 0 ? 'out' : item.stock < item.min ? 'low' : 'in'}`}>
-                                            {item.stock} disp.
+                                            {item.stock === 0 ? 'Sin stock' : `${item.stock} disponibles`}
                                         </span>
                                         <button className="add-to-cart-btn" onClick={(e) => {
                                                 e.stopPropagation();
@@ -1509,6 +1532,29 @@ export const POS = () => {
                     }
                 }}
             />
+
+            {/* Custom modal overlays (replaces native alert/confirm) */}
+            {alertModal && (
+                <AlertModal
+                    isOpen={alertModal.isOpen}
+                    title={alertModal.title}
+                    message={alertModal.message}
+                    variant={alertModal.variant}
+                    onClose={alertModal.onClose}
+                />
+            )}
+            {confirmModal && (
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    confirmText={confirmModal.confirmText}
+                    cancelText={confirmModal.cancelText}
+                    variant={confirmModal.variant}
+                    onConfirm={confirmModal.onConfirm}
+                    onCancel={confirmModal.onCancel}
+                />
+            )}
         </div>
     );
 };

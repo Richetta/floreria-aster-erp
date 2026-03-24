@@ -1,0 +1,89 @@
+/* ============================================
+   CONFIRM & ALERT MODALS
+   ============================================ */
+
+.modal-confirm {
+    max-width: 420px;
+    text-align: center;
+    padding: 2rem 2rem 1.5rem;
+}
+
+.modal-confirm-icon {
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: center;
+}
+
+.modal-confirm-title {
+    font-size: 1.375rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: var(--color-text-main);
+}
+
+.modal-confirm-message {
+    font-size: 1.0625rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    white-space: pre-line;
+}
+
+.modal-confirm-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.modal-confirm-actions .btn {
+    min-width: 120px;
+    font-size: 1rem;
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-text-muted);
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.modal-close-btn:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text-main);
+}
+
+/* Button variants for modals */
+.btn-warning {
+    background-color: var(--color-warning);
+    color: white;
+}
+
+.btn-warning:hover {
+    filter: brightness(1.1);
+}
+
+.btn-success {
+    background-color: var(--color-success);
+    color: white;
+}
+
+.btn-success:hover {
+    filter: brightness(1.1);
+}
+
+/* Make modal-content relative for close btn positioning */
+.modal-content {
+    position: relative;
+}

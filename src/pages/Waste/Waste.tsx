@@ -12,6 +12,8 @@ import {
 import { useStore } from '../../store/useStore';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { WasteBuilderModal } from '../../components/WasteBuilder/WasteBuilderModal';
+import { useModal } from '../../hooks/useModal';
+import { AlertModal } from '../../components/ui/Modals';
 import './Waste.css';
 
 // Helpers para fechas
@@ -48,6 +50,8 @@ export const Waste = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [dateFilter, setDateFilter] = useState<'all' | 'month' | 'week'>('month');
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const { alertModal, showAlert } = useModal();
 
     // 1. Obtener todas las transacciones de Merma reales
     const rawWasteHistory = useMemo(() => 
@@ -120,7 +124,7 @@ export const Waste = () => {
 
     // Export Handler
     const handleExport = () => {
-        if(dateFilteredHistory.length === 0) return alert('No hay datos para exportar.');
+        if(dateFilteredHistory.length === 0) { showAlert({ title: 'Sin datos', message: 'No hay datos para exportar.', variant: 'info' }); return; }
         let csv = 'Fecha,Producto/Motivo,Costo Perdido\n';
         dateFilteredHistory.forEach(h => {
             const row = `"${new Date(h.date).toLocaleDateString()}","${h.description}","${h.amount}"`;
@@ -334,6 +338,8 @@ export const Waste = () => {
 
             {/* Modal "Mesa de Armado" pero para Reportar Bajas */}
             <WasteBuilderModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+            {alertModal && <AlertModal {...alertModal} />}
         </div>
     );
 };

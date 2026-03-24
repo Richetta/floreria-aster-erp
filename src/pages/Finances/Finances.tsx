@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
+import { useModal } from '../../hooks/useModal';
+import { ConfirmModal } from '../../components/ui/Modals';
 import './Finances.css';
 
 // --- UTILS ---
@@ -84,6 +86,8 @@ export const Finances = () => {
     const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean, customerId: string, amount: string }>({
         isOpen: false, customerId: '', amount: ''
     });
+
+    const { confirmModal, showConfirm } = useModal();
 
     // --- CALCULATIONS (SAFE NUMERIC REDUCTION) ---
     const totalAccountsReceivable = (customers || []).reduce((sum, c) => sum + (Number(c.debtBalance) || 0), 0);
@@ -156,7 +160,13 @@ export const Finances = () => {
         const totalToCollect = debtors.reduce((sum, d) => sum + (Number(d.debtBalance) || 0), 0);
         if (totalToCollect === 0) return;
 
-        if (confirm(`¿Estás segura de cobrar el TOTAL de las deudas (${formatCurrency(totalToCollect)}) en efectivo?`)) {
+        const confirmed = await showConfirm({
+            title: '¿Cobrar todas las deudas?',
+            message: `Se cobrarán ${formatCurrency(totalToCollect)} en efectivo de ${debtors.length} clientes. Esta acción no se puede deshacer.`,
+            confirmText: 'Cobrar todo',
+            variant: 'warning'
+        });
+        if (confirmed) {
             for (const d of debtors) {
                 await registerPayment(d.id, d.debtBalance);
                 await addTransaction({
@@ -440,6 +450,8 @@ export const Finances = () => {
                     </div>
                 </div>
             )}
+
+            {confirmModal && <ConfirmModal {...confirmModal} />}
         </div>
     );
 };

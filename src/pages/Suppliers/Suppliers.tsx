@@ -25,6 +25,8 @@ import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { Button } from '../../components/ui/Button/Button';
 import { Card } from '../../components/ui/Card/Card';
 import { api } from '../../services/api';
+import { useModal } from '../../hooks/useModal';
+import { AlertModal } from '../../components/ui/Modals';
 import './Suppliers.css';
 
 export const Suppliers = () => {
@@ -63,6 +65,8 @@ export const Suppliers = () => {
     const [isMagicProcessing, setIsMagicProcessing] = useState(false);
     const [detectedChanges, setDetectedChanges] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
+
+    const { alertModal, showAlert } = useModal();
 
     const handleMagicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -115,7 +119,7 @@ export const Suppliers = () => {
         for (const change of detectedChanges) {
             await updateProduct(change.id, { price: change.newPrice });
         }
-        alert('¡Precios actualizados con éxito!');
+        showAlert({ title: 'Éxito', message: '¡Precios actualizados con éxito!', variant: 'success' });
         setIsMagicModalOpen(false);
         setDetectedChanges([]);
     };
@@ -167,7 +171,7 @@ export const Suppliers = () => {
             }));
             await api.downloadCSV('proveedores.csv', csvData);
         } catch (error) {
-            alert('Error al exportar proveedores');
+            showAlert({ title: 'Error', message: 'Error al exportar proveedores', variant: 'error' });
         }
     };
 
@@ -505,6 +509,8 @@ export const Suppliers = () => {
                     </div>
                 </div>
             )}
+
+            {alertModal && <AlertModal {...alertModal} />}
         </div>
     );
 };

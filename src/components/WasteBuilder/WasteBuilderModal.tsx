@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { X, Search, Plus, Minus, Folder, CheckCircle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Product } from '../../store/useStore';
+import { useModal } from '../../hooks/useModal';
+import { AlertModal } from '../ui/Modals';
 import './WasteBuilderModal.css';
 
 interface WasteBuilderModalProps {
@@ -17,6 +19,8 @@ export const WasteBuilderModal: React.FC<WasteBuilderModalProps> = ({
     const categories = useStore((state) => state.categories) || [];
     const registerWaste = useStore((state) => state.registerWaste);
     const loadProducts = useStore((state) => state.loadProducts);
+
+    const { alertModal, showAlert } = useModal();
 
     // Form State
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -54,9 +58,9 @@ export const WasteBuilderModal: React.FC<WasteBuilderModalProps> = ({
     };
 
     const handleSave = async () => {
-        if (!selectedProduct) return alert('Debes seleccionar un producto.');
-        if (quantity <= 0) return alert('La cantidad debe ser mayor a 0.');
-        if (quantity > selectedProduct.stock) return alert(`No puedes dar de baja más de lo que hay en depósito (${selectedProduct.stock}).`);
+        if (!selectedProduct) { showAlert({ title: 'Producto requerido', message: 'Debes seleccionar un producto.', variant: 'warning' }); return; }
+        if (quantity <= 0) { showAlert({ title: 'Cantidad inválida', message: 'La cantidad debe ser mayor a 0.', variant: 'warning' }); return; }
+        if (quantity > selectedProduct.stock) { showAlert({ title: 'Stock insuficiente', message: `No puedes dar de baja más de lo que hay en depósito (${selectedProduct.stock}).`, variant: 'warning' }); return; }
 
         await registerWaste(selectedProduct.id, quantity, reason);
         await loadProducts(); // Recargar productos con stock actualizado
@@ -216,6 +220,7 @@ export const WasteBuilderModal: React.FC<WasteBuilderModalProps> = ({
                     </div>
                 </div>
             </div>
+            {alertModal && <AlertModal {...alertModal} />}
         </div>
     );
 };

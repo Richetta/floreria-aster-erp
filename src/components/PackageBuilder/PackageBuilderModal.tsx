@@ -3,6 +3,8 @@ import { X, Search, Plus, Minus, Package as PackageIcon, Save, Folder } from 'lu
 import { useStore } from '../../store/useStore';
 import type { Package, PackageItem, Product } from '../../store/useStore';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
+import { useModal } from '../../hooks/useModal';
+import { AlertModal } from '../ui/Modals';
 import './PackageBuilderModal.css';
 
 interface PackageBuilderModalProps {
@@ -21,6 +23,8 @@ export const PackageBuilderModal: React.FC<PackageBuilderModalProps> = ({
     const addPackage = useStore((state) => state.addPackage);
     const updatePackage = useStore((state) => state.updatePackage);
     const loadPackages = useStore((state) => state.loadPackages);
+
+    const { alertModal, showAlert } = useModal();
 
     // Form State
     const [name, setName] = useState('');
@@ -102,9 +106,9 @@ export const PackageBuilderModal: React.FC<PackageBuilderModalProps> = ({
     };
 
     const handleSave = async () => {
-        if (!name.trim()) return alert('El paquete necesita un nombre.');
-        if (items.length === 0) return alert('Debes agregar al menos 1 producto a la receta.');
-        if (price === '' || price < 0) return alert('Debes fijar un precio de venta.');
+        if (!name.trim()) { showAlert({ title: 'Nombre requerido', message: 'El paquete necesita un nombre.', variant: 'warning' }); return; }
+        if (items.length === 0) { showAlert({ title: 'Receta vacía', message: 'Debes agregar al menos 1 producto a la receta.', variant: 'warning' }); return; }
+        if (price === '' || price < 0) { showAlert({ title: 'Precio requerido', message: 'Debes fijar un precio de venta.', variant: 'warning' }); return; }
 
         const basePackage = {
             name,
@@ -307,6 +311,7 @@ export const PackageBuilderModal: React.FC<PackageBuilderModalProps> = ({
                     </div>
                 </footer>
             </div>
+            {alertModal && <AlertModal {...alertModal} />}
         </div>
     );
 };

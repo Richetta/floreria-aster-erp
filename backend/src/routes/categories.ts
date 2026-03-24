@@ -109,6 +109,53 @@ export const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(500).send({ error: 'Error al eliminar la categoría' });
     }
   });
+
+  // RENAME/UPDATE CATEGORY
+  fastify.patch('/:id', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+    const { id } = request.params as { id: string };
+    const schema = z.object({
+      name: z.string().min(1, 'El nombre es obligatorio'),
+      parent_id: z.string().uuid().optional().nullable()
+    });
+
+    try {
+      const body = schema.parse(request.body);
+
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+
+      const result = await db
+        .updateTable('categories')
+        .set({ 
+          name: body.name,
+          parent_id: body.parent_id !== undefined ? body.parent_id : undefined,
+          updated_at: new Date() 
+        })
+        .where('id', '=', id)
+        .returningAll()
+        .executeTakeFirst();
+
+      if (!result) {
+        return reply.status(404).send({ error: 'Categoría no encontrada' });
+      }
+
+      return reply.send(result);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'Error de validación', details: error.errors });
+      }
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Error al actualizar la categoría' });
+    }
+  });
 };
 
 export default categoriesRoutes;

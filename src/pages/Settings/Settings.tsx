@@ -24,6 +24,8 @@ import {
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
 import { api, type User } from '../../services/api';
+import { useModal } from '../../hooks/useModal';
+import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import './Settings.css';
 
 type UserFormData = {
@@ -42,6 +44,8 @@ export const Settings = () => {
     const [isSaved, setIsSaved] = useState(false);
     const [activeTab, setActiveTab] = useState<'general' | 'data' | 'users'>('general');
     const [theme, setTheme] = useState('violet');
+
+    const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
 
     // Themes Mapping
     const themes = {
@@ -96,7 +100,7 @@ export const Settings = () => {
             setUsers(usersList);
         } catch (error: any) {
             console.error('Error loading users:', error);
-            alert('Error al cargar usuarios: ' + error.message);
+            showAlert({ title: 'Error', message: 'Error al cargar usuarios: ' + error.message, variant: 'error' });
         }
         setIsLoadingUsers(false);
     };
@@ -129,25 +133,35 @@ export const Settings = () => {
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             try {
                 const data = JSON.parse(event.target?.result as string);
                 // Simple validation
                 if (!data.products && !data.customers) throw new Error('Formato inválido');
                 
-                if (confirm('¿Deseas importar los datos? Esto podría duplicar registros si ya existen.')) {
-                    // Logic to merge would be here, but for now we confirm it was read
-                    alert('¡Datos leídos correctamente! (Fase de importación masiva finalizada)');
+                if (await showConfirm({
+                    title: '¿Importar datos?',
+                    message: 'Esto podría duplicar registros si ya existen.',
+                    confirmText: 'Importar',
+                    variant: 'warning'
+                })) {
+                    showAlert({ title: 'Éxito', message: '¡Datos leídos correctamente! (Fase de importación masiva finalizada)', variant: 'success' });
                 }
             } catch (error) {
-                alert('Error al leer el archivo. Asegúrate que sea un JSON válido exportado del sistema.');
+                showAlert({ title: 'Error', message: 'Error al leer el archivo. Asegurate que sea un JSON válido exportado del sistema.', variant: 'error' });
             }
         };
         reader.readAsText(file);
     };
 
-    const handleLogout = () => {
-        if (confirm('¿Cerrar sesión?')) {
+    const handleLogout = async () => {
+        const confirmed = await showConfirm({
+            title: '¿Cerrar sesión?',
+            message: 'Se cerrará tu sesión actual.',
+            confirmText: 'Cerrar sesión',
+            variant: 'warning'
+        });
+        if (confirmed) {
             logout();
         }
     };
@@ -178,12 +192,12 @@ export const Settings = () => {
         e.preventDefault();
 
         if (!userForm.name || !userForm.email) {
-            alert('Nombre y email son obligatorios');
+            showAlert({ title: 'Campos requeridos', message: 'Nombre y email son obligatorios', variant: 'warning' });
             return;
         }
 
         if (!userToEdit && !userForm.password) {
-            alert('La contraseña es obligatoria para nuevos usuarios');
+            showAlert({ title: 'Contraseña requerida', message: 'La contraseña es obligatoria para nuevos usuarios', variant: 'warning' });
             return;
         }
 
@@ -195,7 +209,7 @@ export const Settings = () => {
                     role: userForm.role,
                     ...(userForm.password && { password: userForm.password })
                 });
-                alert('Usuario actualizado exitosamente');
+                showAlert({ title: 'Éxito', message: 'Usuario actualizado exitosamente', variant: 'success' });
             } else {
                 await api.createUser({
                     name: userForm.name,
@@ -203,30 +217,36 @@ export const Settings = () => {
                     password: userForm.password,
                     role: userForm.role
                 });
-                alert('Usuario creado exitosamente');
+                showAlert({ title: 'Éxito', message: 'Usuario creado exitosamente', variant: 'success' });
             }
             setIsUserModalOpen(false);
             loadUsers();
         } catch (error: any) {
             console.error('Error saving user:', error);
-            alert('Error al guardar usuario: ' + (error.message || 'Error desconocido'));
+            showAlert({ title: 'Error', message: 'Error al guardar usuario: ' + (error.message || 'Error desconocido'), variant: 'error' });
         }
     };
 
     const handleDeleteUser = async (user: User) => {
         if (user.id === currentUser?.id) {
-            alert('No puedes eliminar tu propia cuenta');
+            showAlert({ title: 'Acción no permitida', message: 'No puedes eliminar tu propia cuenta', variant: 'warning' });
             return;
         }
 
-        if (confirm(`¿Estás seguro de eliminar al usuario "${user.name}"?`)) {
+        const confirmed = await showConfirm({
+            title: '¿Eliminar usuario?',
+            message: `Se eliminará al usuario "${user.name}". Esta acción no se puede deshacer.`,
+            confirmText: 'Eliminar',
+            variant: 'danger'
+        });
+        if (confirmed) {
             try {
                 await api.deleteUser(user.id);
-                alert('Usuario eliminado exitosamente');
+                showAlert({ title: 'Éxito', message: 'Usuario eliminado exitosamente', variant: 'success' });
                 loadUsers();
             } catch (error: any) {
                 console.error('Error deleting user:', error);
-                alert('Error al eliminar usuario: ' + error.message);
+                showAlert({ title: 'Error', message: 'Error al eliminar usuario: ' + error.message, variant: 'error' });
             }
         }
     };
@@ -614,6 +634,9 @@ export const Settings = () => {
                     )}
                 </div>
             )}
+
+            {alertModal && <AlertModal {...alertModal} />}
+            {confirmModal && <ConfirmModal {...confirmModal} />}
         </div>
     );
 };

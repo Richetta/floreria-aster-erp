@@ -10,6 +10,8 @@ import {
     CheckCircle2
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useModal } from '../../hooks/useModal';
+import { AlertModal } from '../../components/ui/Modals';
 import './Reminders.css';
 
 type ReminderType = 'birthday' | 'anniversary' | 'important_date' | 'debt';
@@ -23,6 +25,8 @@ export const Reminders = () => {
     const [daysAhead] = useState(30);
     const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
     const [customMessage, setCustomMessage] = useState('');
+
+    const { alertModal, showAlert } = useModal();
 
     // Load data
     useEffect(() => {
@@ -76,15 +80,15 @@ export const Reminders = () => {
             const result = await api.sendWhatsAppReminder(phone, message, type);
             // Open WhatsApp in new tab
             window.open(result.whatsapp_url, '_blank');
-            alert('WhatsApp abierto. Enviá el mensaje para confirmar.');
+            showAlert({ title: 'WhatsApp', message: 'WhatsApp abierto. Enviá el mensaje para confirmar.', variant: 'success' });
         } catch (error: any) {
-            alert('Error: ' + error.message);
+            showAlert({ title: 'Error', message: 'Error: ' + error.message, variant: 'error' });
         }
     };
 
     const handleSendBulkWhatsApp = async () => {
         if (selectedCustomers.length === 0) {
-            alert('Seleccioná al menos un cliente');
+            showAlert({ title: 'Selección requerida', message: 'Seleccioná al menos un cliente', variant: 'warning' });
             return;
         }
 
@@ -92,11 +96,11 @@ export const Reminders = () => {
         
         try {
             const result = await api.sendBulkReminders(selectedCustomers, template, 'whatsapp');
-            alert(`Enviados ${result.sent} recordatorios. Fallidos: ${result.failed}`);
+            showAlert({ title: 'Enviados', message: `Enviados ${result.sent} recordatorios. Fallidos: ${result.failed}`, variant: 'success' });
             setSelectedCustomers([]);
             setCustomMessage('');
         } catch (error: any) {
-            alert('Error: ' + error.message);
+            showAlert({ title: 'Error', message: 'Error: ' + error.message, variant: 'error' });
         }
     };
 
@@ -444,6 +448,8 @@ Recordamos que hoy es ${extra?.event_name || 'tu día especial'}.
                     )}
                 </>
             )}
+
+            {alertModal && <AlertModal {...alertModal} />}
         </div>
     );
 };

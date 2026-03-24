@@ -8,7 +8,8 @@ import {
     Package,
     ShoppingCart,
     MessageCircle,
-    DollarSign
+    DollarSign,
+    Sun
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
@@ -101,7 +102,8 @@ export const Dashboard = () => {
             <header className="dashboard-header mb-6">
                 <div>
                     <h1 className="text-h1">
-                        ¡Buen día{user?.name ? `, ${user.name.split(' ')[0]}` : ''}! 👋
+                        ¡Buen día{user?.name ? `, ${user.name.split(' ')[0]}` : ''}!
+                        <Sun size={28} className="text-warning" style={{ display: 'inline', marginLeft: '0.5rem', verticalAlign: 'middle' }} />
                     </h1>
                     <p className="text-body mt-2">
                         {isAdmin
@@ -165,44 +167,31 @@ export const Dashboard = () => {
                         <p className="text-h2">{criticalProducts.length} Items</p>
                     </div>
                 </div>
-
-                {/* KPIs adicionales para Admin */}
-                {isAdmin && (
-                    <>
-                        <div className="card kpi-card">
-                            <div className="kpi-icon-wrapper bg-primary-light">
-                                <Users className="text-primary" size={24} />
-                            </div>
-                            <div className="kpi-content">
-                                <h3 className="text-small">Total Clientes</h3>
-                                <p className="text-h2">{customers.length}</p>
-                            </div>
-                        </div>
-                        <div className="card kpi-card">
-                            <div className="kpi-icon-wrapper bg-success-light">
-                                <Package className="text-success" size={24} />
-                            </div>
-                            <div className="kpi-content">
-                                <h3 className="text-small">Productos en Stock</h3>
-                                <p className="text-h2">{products.length}</p>
-                            </div>
-                        </div>
-                    </>
-                )}
-
-                {/* KPIs adicionales para Empleado */}
-                {!isAdmin && (
-                    <div className="card kpi-card">
-                        <div className="kpi-icon-wrapper bg-success-light">
-                            <ShoppingCart className="text-success" size={24} />
-                        </div>
-                        <div className="kpi-content">
-                            <h3 className="text-small">Productos Disponibles</h3>
-                            <p className="text-h2">{products.filter(p => p.stock > 0).length}</p>
-                        </div>
-                    </div>
-                )}
             </section>
+
+            {/* Secondary stats - compact row */}
+            {isAdmin && (
+                <section className="kpi-secondary mb-6">
+                    <div className="kpi-secondary-item">
+                        <Users size={18} className="text-primary" />
+                        <span className="text-small">{customers.length} clientes</span>
+                    </div>
+                    <div className="kpi-secondary-item">
+                        <Package size={18} className="text-success" />
+                        <span className="text-small">{products.length} productos en stock</span>
+                    </div>
+                </section>
+            )}
+
+            {/* KPIs para Empleado */}
+            {!isAdmin && (
+                <section className="kpi-secondary mb-6">
+                    <div className="kpi-secondary-item">
+                        <ShoppingCart size={18} className="text-success" />
+                        <span className="text-small">{products.filter(p => p.stock > 0).length} productos disponibles</span>
+                    </div>
+                </section>
+            )}
 
             <div className="dashboard-grid">
                 {/* Urgent Actions / Orders */}

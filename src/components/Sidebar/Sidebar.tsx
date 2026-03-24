@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -17,104 +18,187 @@ import {
   Map,
   Bell,
   Layers,
-  FileText
+  FileText,
+  X,
+  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import './Sidebar.css';
 
-// Navegación organizada y con sentido para Alejandra
-const navGroups = [
+type NavLink = {
+  path: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  desc: string;
+  highlight?: boolean;
+};
+
+type NavGroup = {
+  id: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  desc: string;
+  children: { path: string; label: string; icon?: typeof LayoutDashboard }[];
+};
+
+type NavItem = NavLink | NavGroup;
+
+// Navegación reorganizada: 8 items primarios con submenús
+const navItems: NavItem[] = [
+  // ── PRINCIPAL (siempre visible, sin grupo) ──
+  { path: '/', icon: LayoutDashboard, label: 'Inicio', desc: 'Resumen del día' },
+  { path: '/pos', icon: ShoppingCart, label: 'Vender', desc: 'Nueva venta rápida', highlight: true },
+  { path: '/pedidos', icon: Truck, label: 'Pedidos', desc: 'Entregas y envíos' },
+  { path: '/clientes', icon: Users, label: 'Clientes', desc: 'Base de datos' },
+
+  // ── GESTIÓN (con submenús colapsables) ──
   {
-    id: 'principal',
-    title: 'VENTAS Y CLIENTES',
-    items: [
-      { path: '/', icon: LayoutDashboard, label: 'Inicio', desc: 'Resumen del día' },
-      { path: '/pos', icon: ShoppingCart, label: 'Vender', desc: 'Nueva venta rápida' },
-      { path: '/pedidos', icon: Truck, label: 'Pedidos', desc: 'Entregas y envíos' },
-      { path: '/ventas', icon: FileText, label: 'Historial Ventas', desc: 'Historial de ventas y tickets' },
-      { path: '/clientes', icon: Users, label: 'Clientes', desc: 'Base de datos de clientes' },
+    id: 'productos',
+    icon: Package,
+    label: 'Productos',
+    desc: 'Inventario y stock',
+    children: [
+      { path: '/productos', label: 'Catálogo' },
+      { path: '/paquetes', label: 'Ramos', icon: Layers },
+      { path: '/stock', label: 'Movimientos', icon: Activity },
+      { path: '/mermas', label: 'Mermas', icon: Trash2 },
     ]
   },
   {
-    id: 'inventario',
-    title: 'PRODUCTOS Y STOCK',
-    items: [
-      { path: '/productos', icon: Package, label: 'Productos', desc: 'Gestión de productos y precios' },
-      { path: '/paquetes', icon: Layers, label: 'Ramos', desc: 'Gestión de ramos y artículos compuestos' },
-      { path: '/stock', icon: Activity, label: 'Movimientos', desc: 'Historial de stock' },
-      { path: '/mermas', icon: Trash2, label: 'Mermas', desc: 'Registro de desperdicios' },
+    id: 'proveedores',
+    icon: Store,
+    label: 'Proveedores',
+    desc: 'Compras y suministros',
+    children: [
+      { path: '/proveedores', label: 'Directorio' },
+      { path: '/compras', label: 'Compras', icon: ShoppingBag },
     ]
   },
   {
-    id: 'suministros',
-    title: 'COMPRAS Y SUMINISTROS',
-    items: [
-      { path: '/proveedores', icon: Store, label: 'Proveedores', desc: 'Gestión de proveedores' },
-      { path: '/compras', icon: ShoppingBag, label: 'Compras', desc: 'Registro de facturas y compras' },
+    id: 'finanzas',
+    icon: Wallet,
+    label: 'Finanzas',
+    desc: 'Control económico',
+    children: [
+      { path: '/finanzas', label: 'Ingresos y Egresos' },
+      { path: '/ventas', label: 'Historial Ventas', icon: FileText },
+      { path: '/caja', label: 'Caja Diaria', icon: Vault },
+      { path: '/reportes', label: 'Reportes', icon: BarChart3 },
     ]
   },
   {
-    id: 'gestion',
-    title: 'OPERACIONES',
-    items: [
-      { path: '/logistica', icon: Map, label: 'Logística', desc: 'Planificación de rutas' },
-      { path: '/recordatorios', icon: Bell, label: 'Recordatorios', desc: 'Alertas y avisos' },
-    ]
-  },
-  {
-    id: 'administracion',
-    title: 'ADMINISTRACIÓN',
-    items: [
-      { path: '/finanzas', icon: Wallet, label: 'Finanzas', desc: 'Control de ingresos y egresos' },
-      { path: '/caja', icon: Vault, label: 'Caja', desc: 'Apertura y cierre de caja diaria' },
-      { path: '/reportes', icon: BarChart3, label: 'Reportes', desc: 'Estadísticas e informes gerenciales' },
-      { path: '/configuracion', icon: Settings, label: 'Ajustes', desc: 'Configuración técnica' },
+    id: 'ajustes',
+    icon: Settings,
+    label: 'Ajustes',
+    desc: 'Configuración',
+    children: [
+      { path: '/configuracion', label: 'General' },
+      { path: '/logistica', label: 'Logística', icon: Map },
+      { path: '/recordatorios', label: 'Recordatorios', icon: Bell },
     ]
   },
 ];
 
-export const Sidebar = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
 
   const handleLogout = () => {
-    if (confirm('¿Cerrar sesión?')) {
-      logout();
-      navigate('/login');
-    }
+    logout();
+    navigate('/login');
   };
 
+  const toggleSubmenu = (id: string) => {
+    setExpandedMenus(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Auto-expand a submenu if one of its children is the active route
+  const isChildActive = (children: { path: string }[]) =>
+    children.some(child =>
+      child.path === '/' ? location.pathname === '/' : location.pathname.startsWith(child.path)
+    );
+
+  const isNavGroup = (item: NavItem): item is NavGroup => 'children' in item;
+
   return (
-    <aside className="sidebar hidden-mobile">
+    <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
+      {/* Mobile close button */}
+      <div className="sidebar-mobile-close">
+        <button
+          className="sidebar-close-btn"
+          onClick={onClose}
+          aria-label="Cerrar menú"
+        >
+          <X size={22} />
+        </button>
+      </div>
+
       <div className="sidebar-brand">
         <span className="brand-icon">✿</span>
         <h1 className="brand-text">Aster</h1>
       </div>
 
       <nav className="sidebar-nav">
-        {navGroups.map((group) => {
-          const isActiveGroup = group.items.some(item =>
-            item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path)
-          );
+        {navItems.map((item) => {
+          // Collapsible group (has children)
+          if (isNavGroup(item)) {
+            const isExpanded = expandedMenus[item.id] || isChildActive(item.children);
 
-          return (
-            <div key={group.id} className={`nav-group ${isActiveGroup ? 'group-active' : ''}`}>
-              <h3 className="nav-group-title">{group.title}</h3>
-              {group.items.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `sidebar-link ${isActive ? 'active' : ''}`
-                  }
+            return (
+              <div key={item.id} className={`sidebar-group ${isExpanded ? 'sidebar-group-open' : ''}`}>
+                <button
+                  className={`sidebar-link sidebar-group-toggle ${isChildActive(item.children) ? 'active' : ''}`}
+                  onClick={() => toggleSubmenu(item.id)}
                   title={item.desc}
                 >
-                  <item.icon className="sidebar-icon" size={18} />
+                  <item.icon className="sidebar-icon" size={20} />
                   <span className="sidebar-label">{item.label}</span>
-                </NavLink>
-              ))}
-            </div>
+                  <ChevronDown
+                    className={`sidebar-chevron ${isExpanded ? 'sidebar-chevron-open' : ''}`}
+                    size={16}
+                  />
+                </button>
+
+                <div className={`sidebar-submenu ${isExpanded ? 'sidebar-submenu-open' : ''}`}>
+                  {item.children.map((child) => (
+                    <NavLink
+                      key={child.path}
+                      to={child.path}
+                      className={({ isActive }) =>
+                        `sidebar-sublink ${isActive ? 'active' : ''}`
+                      }
+                      onClick={onClose}
+                    >
+                      <span className="sidebar-sublabel">{child.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
+          // Simple link (no children)
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `sidebar-link ${isActive ? 'active' : ''} ${item.highlight ? 'sidebar-link-highlight' : ''}`
+              }
+              title={item.desc}
+              onClick={onClose}
+              end={item.path === '/'}
+            >
+              <item.icon className="sidebar-icon" size={20} />
+              <span className="sidebar-label">{item.label}</span>
+            </NavLink>
           );
         })}
       </nav>

@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Plus, Search, Truck, Package, DollarSign, Check, X, Minus, Trash2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { useModal } from '../../hooks/useModal';
+import { AlertModal } from '../../components/ui/Modals';
 import './Purchases.css';
 
 export const Purchases = () => {
@@ -17,6 +19,8 @@ export const Purchases = () => {
     const [selectedSupplier, setSelectedSupplier] = useState('');
     const [purchaseItems, setPurchaseItems] = useState<any[]>([]);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('transfer');
+
+    const { alertModal, showAlert } = useModal();
 
     // Load data from backend on mount
     useEffect(() => {
@@ -83,12 +87,12 @@ export const Purchases = () => {
 
     const handleConfirmPurchase = async () => {
         if (!selectedSupplier) {
-            alert('Seleccioná un proveedor');
+            showAlert({ title: 'Proveedor requerido', message: 'Seleccioná un proveedor', variant: 'warning' });
             return;
         }
 
         if (purchaseItems.length === 0) {
-            alert('Agregá al menos un producto');
+            showAlert({ title: 'Productos requeridos', message: 'Agregá al menos un producto', variant: 'warning' });
             return;
         }
 
@@ -372,6 +376,8 @@ export const Purchases = () => {
                     </div>
                 </div>
             )}
+
+            {alertModal && <AlertModal {...alertModal} />}
         </div>
     );
 };

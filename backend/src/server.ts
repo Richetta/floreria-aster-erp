@@ -4,6 +4,7 @@ import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import { config } from './config/index.js';
 import { checkDatabaseConnection } from './db/index.js';
+import { authenticate } from './middleware/auth.js';
 
 console.log('--- SERVER INITIALIZING ---');
 const fastify = Fastify({
@@ -68,6 +69,35 @@ fastify.get('/health', async (request, reply) => {
   }
 });
 
+// ============================================
+// GLOBAL AUTH — applies to all /api/* routes
+// Skips public routes that don't need authentication.
+// ============================================
+
+const PUBLIC_ROUTES = [
+  '/api/auth/login',
+  '/api/auth/google',
+  '/api/auth/google/callback',
+  '/health',
+];
+
+fastify.addHook('onRequest', async (request, reply) => {
+  const url = request.url.split('?')[0]; // strip query params
+  
+  // Skip public routes
+  if (PUBLIC_ROUTES.includes(url) || url === '/health') {
+    return;
+  }
+  
+  // Skip non-API routes
+  if (!url.startsWith('/api/')) {
+    return;
+  }
+  
+  // Authenticate all other API routes
+  await authenticate(request, reply);
+});
+
 // API Routes
 console.log('Registering Routes...');
 console.log('Loading auth.js...');
@@ -102,22 +132,12 @@ console.log('Loading activity.js...');
 await fastify.register(import('./routes/activity.js'), { prefix: '/api/activity' });
 console.log('Loading categories.js...');
 await fastify.register(import('./routes/categories.js'), { prefix: '/api/categories' });
+console.log('Loading business.js...');
+await fastify.register(import('./routes/business.js'), { prefix: '/api/business' });
 console.log('Loading diagnostic.js...');
 await fastify.register(import('./routes/diagnostic.js'), { prefix: '/api/admin' });
 
-// Diagnostic Route
-fastify.get('/api/diag/auth', async (request, reply) => {
-  return {
-    nodeEnv: config.nodeEnv,
-    hasClientId: !!config.googleClientId,
-    clientIdStart: config.googleClientId?.substring(0, 10),
-    hasClientSecret: !!config.googleClientSecret,
-    redirectUri: config.googleRedirectUri,
-    frontendUrl: config.frontendUrl,
-    defaultBusinessId: config.defaultBusinessId,
-    timestamp: new Date().toISOString()
-  };
-});
+// Diagnostic Route — removed for security (was exposing config without auth)
 
 // Global Error Handler
 fastify.setErrorHandler((error: any, request, reply) => {
@@ -132,12 +152,12 @@ fastify.setErrorHandler((error: any, request, reply) => {
     });
   }
 
-  // FORCE DEV MODE FOR DEBUGGING
+  const isDev = config.nodeEnv === 'development';
   return reply.status(500).send({
     error: 'Internal Server Error',
-    message: error.message,
-    stack: error.stack,
-    hint: 'Check the backend terminal for [SERVER ERROR] logs'
+    message: isDev ? error.message : 'Ocurrió un error interno. Intenta de nuevo.',
+    stack: isDev ? error.stack : undefined,
+    hint: isDev ? 'Check the backend terminal for [SERVER ERROR] logs' : undefined
   });
 });
 

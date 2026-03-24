@@ -10,6 +10,8 @@ import { CsvImportModal } from '../../components/CsvImportModal/CsvImportModal';
 import { OCRImportModal } from '../../components/OCRImportModal/OCRImportModal';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useModal } from '../../hooks/useModal';
+import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import './Products.css';
 
 export const Products = () => {
@@ -64,6 +66,10 @@ export const Products = () => {
     const [showBarcodePrinter, setShowBarcodePrinter] = useState(false);
     const [showCsvImport, setShowCsvImport] = useState(false);
     const [showOCRImport, setShowOCRImport] = useState(false);
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+    // Custom modal hook
+    const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
 
     // Ensure activeCategory stays valid if categories changes
     useEffect(() => {
@@ -153,7 +159,7 @@ export const Products = () => {
             });
         }
         await loadProducts();
-        alert(`✅ ${products.length} productos importados exitosamente`);
+        showAlert({ title: 'Importación exitosa', message: `${products.length} productos importados exitosamente`, variant: 'success' });
     };
 
     return (
@@ -270,8 +276,14 @@ export const Products = () => {
                                         </button>
                                         <button
                                             className="btn-icon text-danger"
-                                            onClick={() => {
-                                                if (confirm(`¿Eliminar la carpeta "${activeCategory}"? Los productos se moverán a "Sin Categoría".`)) {
+                                            onClick={async () => {
+                                                const confirmed = await showConfirm({
+                                                    title: '¿Eliminar carpeta?',
+                                                    message: `Se eliminará "${activeCategory}". Los productos se moverán a "Sin Categoría".`,
+                                                    confirmText: 'Eliminar',
+                                                    variant: 'danger'
+                                                });
+                                                if (confirmed) {
                                                     deleteCategory(activeCategory);
                                                     setActiveCategory('Todos');
                                                 }
@@ -338,38 +350,79 @@ export const Products = () => {
                             </button>
                         </div>
                         
-                        <button
-                            className="btn btn-secondary btn-lg"
-                            onClick={() => setIsPriceHistoryOpen(true)}
-                        >
-                            <History size={20} />
-                            <span className="hidden-mobile">Historial</span>
-                        </button>
-
-                        <button
-                            className="btn btn-secondary btn-lg"
-                            onClick={() => setShowOCRImport(true)}
-                            title="Digitalizar lista de precios con OCR"
-                        >
-                            <FileText size={20} />
-                            <span className="hidden-mobile">Digitalizar (OCR)</span>
-                        </button>
-
-                        <button
-                            className="btn btn-secondary btn-lg"
-                            onClick={() => setShowCsvImport(true)}
-                        >
-                            <Upload size={20} />
-                            <span className="hidden-mobile">Importar CSV</span>
-                        </button>
-
-                        <button
-                            className="btn btn-secondary btn-lg"
-                            onClick={() => setIsBulkUpdateOpen(true)}
-                        >
-                            <TrendingUp size={20} />
-                            <span className="hidden-mobile">Actualizar Precios</span>
-                        </button>
+                        {/* More Actions Dropdown */}
+                        <div className="more-actions-dropdown" style={{ position: 'relative' }}>
+                            <button
+                                className={`btn btn-secondary btn-lg ${showMoreMenu ? 'active' : ''}`}
+                                onClick={() => setShowMoreMenu(!showMoreMenu)}
+                                title="Más acciones"
+                            >
+                                <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>⋯</span>
+                                <span className="hidden-mobile">Más</span>
+                            </button>
+                            
+                            {showMoreMenu && (
+                                <>
+                                    <div
+                                        style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+                                        onClick={() => setShowMoreMenu(false)}
+                                    />
+                                    <div className="dropdown-menu" style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        right: 0,
+                                        marginTop: '0.5rem',
+                                        background: 'var(--color-surface)',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 'var(--radius-lg)',
+                                        boxShadow: 'var(--shadow-lg)',
+                                        zIndex: 100,
+                                        minWidth: '220px',
+                                        padding: '0.5rem',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '0.125rem'
+                                    }}>
+                                        <button
+                                            className="dropdown-item"
+                                            onClick={() => { setIsPriceHistoryOpen(true); setShowMoreMenu(false); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '0.9375rem', color: 'var(--color-text-main)', transition: 'background 0.15s' }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-hover)')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        >
+                                            <History size={18} /> Historial de Precios
+                                        </button>
+                                        <button
+                                            className="dropdown-item"
+                                            onClick={() => { setShowOCRImport(true); setShowMoreMenu(false); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '0.9375rem', color: 'var(--color-text-main)', transition: 'background 0.15s' }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-hover)')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        >
+                                            <FileText size={18} /> Digitalizar (OCR)
+                                        </button>
+                                        <button
+                                            className="dropdown-item"
+                                            onClick={() => { setShowCsvImport(true); setShowMoreMenu(false); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '0.9375rem', color: 'var(--color-text-main)', transition: 'background 0.15s' }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-hover)')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        >
+                                            <Upload size={18} /> Importar CSV
+                                        </button>
+                                        <button
+                                            className="dropdown-item"
+                                            onClick={() => { setIsBulkUpdateOpen(true); setShowMoreMenu(false); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '0.9375rem', color: 'var(--color-text-main)', transition: 'background 0.15s' }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-hover)')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        >
+                                            <TrendingUp size={18} /> Actualizar Precios
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                         
                         <button className="btn btn-primary btn-lg shadow-primary" onClick={handleOpenCreateModal}>
                             <Plus size={20} />
@@ -560,6 +613,9 @@ export const Products = () => {
                 onClose={() => setShowOCRImport(false)}
                 onImport={handleOCRImport}
             />
+
+            {alertModal && <AlertModal {...alertModal} />}
+            {confirmModal && <ConfirmModal {...confirmModal} />}
         </div>
     );
 };

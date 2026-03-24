@@ -12,6 +12,8 @@ import {
 import { useStore } from '../../store/useStore';
 import { CustomerModal } from '../../components/CustomerModal/CustomerModal';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
+import { useModal } from '../../hooks/useModal';
+import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import './Customers.css';
 
 export const Customers = () => {
@@ -35,6 +37,8 @@ export const Customers = () => {
     const [customerToEdit, setCustomerToEdit] = useState<any>(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentData, setPaymentData] = useState({ customerId: '', amount: '' });
+
+    const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
 
     // Advanced search logic
     const filteredCustomers = useMemo(() => {
@@ -66,10 +70,15 @@ export const Customers = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (customer: any) => {
-        if (confirm(`¿Estás seguro de eliminar a ${customer.name}?`)) {
-            // Implement delete when backend is ready
-            alert('Función a implementar con backend');
+    const handleDelete = async (customer: any) => {
+        const confirmed = await showConfirm({
+            title: '¿Eliminar cliente?',
+            message: `Se eliminará a ${customer.name} del sistema.`,
+            confirmText: 'Eliminar',
+            variant: 'danger'
+        });
+        if (confirmed) {
+            showAlert({ title: 'En desarrollo', message: 'Esta función será implementada próximamente.', variant: 'info' });
         }
     };
 
@@ -103,7 +112,7 @@ export const Customers = () => {
             relatedId: customer.id
         });
 
-        alert(`Se cobraron $${amount.toLocaleString()} exitosamente`);
+        showAlert({ title: 'Cobro registrado', message: `Se cobraron $${amount.toLocaleString()} exitosamente`, variant: 'success' });
         setShowPaymentModal(false);
         setPaymentData({ customerId: '', amount: '' });
     };
@@ -279,6 +288,9 @@ export const Customers = () => {
                     </div>
                 </div>
             )}
+
+            {alertModal && <AlertModal {...alertModal} />}
+            {confirmModal && <ConfirmModal {...confirmModal} />}
         </div>
     );
 };
