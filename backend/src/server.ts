@@ -121,7 +121,7 @@ await fastify.register(import('./routes/waste.js'), { prefix: '/api/waste' });
 console.log('Loading reports.js...');
 await fastify.register(import('./routes/reports.js'), { prefix: '/api/reports' });
 console.log('Loading import.js...');
-// await fastify.register(import('./routes/import.js'), { prefix: '/api/import' });
+await fastify.register(import('./routes/import.js'), { prefix: '/api/import' });
 console.log('Loading cash-register.js...');
 await fastify.register(import('./routes/cash-register.js'), { prefix: '/api/cash-register' });
 console.log('Loading stock.js...');
