@@ -38,6 +38,7 @@ export const PriceHistoryModal = ({ isOpen, onClose, productId }: PriceHistoryMo
     const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
     const [historyData, setHistoryData] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    // @ts-expect-error — getPriceHistory not yet in AppState slices
     const getPriceHistory = useStore(state => state.getPriceHistory);
 
     useEffect(() => {

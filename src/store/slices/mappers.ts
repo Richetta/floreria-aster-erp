@@ -1,8 +1,8 @@
-import type { Product, Category, Category as FrontendCategory } from './types';
+import type { Product, Category } from './types';
 import type { Product as ApiProduct } from '../../services/api';
 
 // Map API Product to Frontend Product
-export const mapApiProductToFrontend = (apiProduct: ApiProduct, categoriesData: FrontendCategory[]): Product => ({
+export const mapApiProductToFrontend = (apiProduct: ApiProduct, categoriesData: Category[]): Product => ({
     id: apiProduct.id,
     code: apiProduct.code,
     name: apiProduct.name,
@@ -18,7 +18,7 @@ export const mapApiProductToFrontend = (apiProduct: ApiProduct, categoriesData: 
 });
 
 // Map Frontend Product to API Product
-export const mapFrontendToApiProduct = (product: Partial<Product>, categoriesData: FrontendCategory[]) => {
+export const mapFrontendToApiProduct = (product: Partial<Product>, categoriesData: Category[]) => {
     let categoryId = product.category_id;
     if (!categoryId && product.category) {
         const catName = product.category.toLowerCase();

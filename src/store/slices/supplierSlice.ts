@@ -63,7 +63,7 @@ export const createSupplierSlice: StateCreator<AppState, [], [], SupplierSlice> 
                 phone: updates.phone,
                 category: updates.category,
                 address: updates.address,
-                next_visit_date: updates.next_visit_date,
+                next_visit_date: updates.nextVisitDate,
             });
             
             set(state => ({

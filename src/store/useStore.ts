@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { type StateCreator } from 'zustand';
 import { createProductSlice, type ProductSlice } from './slices/productSlice';
 import { createCustomerSlice, type CustomerSlice } from './slices/customerSlice';
 import { createOrderSlice, type OrderSlice } from './slices/orderSlice';

@@ -8,7 +8,6 @@ import { PriceHistoryModal } from '../../components/PriceHistory/PriceHistoryMod
 import { BarcodeLabelPrinter } from '../../components/BarcodeLabelPrinter/BarcodeLabelPrinter';
 import { CsvImportModal } from '../../components/CsvImportModal/CsvImportModal';
 import { OCRImportModal } from '../../components/OCRImportModal/OCRImportModal';
-import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
@@ -147,7 +146,6 @@ export const Products = () => {
         // Import each product
         for (const ocrProduct of products) {
             await addProduct({
-                id: generateIdWithPrefix('p'),
                 code: ocrProduct.code,
                 name: ocrProduct.name,
                 category: activeCategory,

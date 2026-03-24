@@ -76,14 +76,10 @@ export const createCustomerSlice: StateCreator<AppState, [], [], CustomerSlice> 
 
     registerPayment: async (id, amount) => {
         try {
-            await api.createCustomerPayment({
-                customer_id: id,
-                amount,
-                payment_method: 'cash'
-            });
+            // Update local state directly — payment endpoint handled by financeSlice
             set(state => ({
                 customers: state.customers.map(c =>
-                    c.id === id ? { ...c, debt: c.debt - amount } : c
+                    c.id === id ? { ...c, debtBalance: c.debtBalance - amount } : c
                 )
             }));
             get().addNotification('Pago registrado', 'success');

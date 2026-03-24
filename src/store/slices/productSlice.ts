@@ -2,7 +2,6 @@ import { type StateCreator } from 'zustand';
 import type { Product, Category } from './types';
 import type { AppState } from '../useStore';
 import { api } from '../../services/api';
-import { logger } from '../../utils/logger';
 import { mapApiProductToFrontend, mapFrontendToApiProduct } from './mappers';
 
 export interface ProductSlice {
@@ -139,7 +138,7 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
         set(state => ({
             categories: state.categories.filter(c => c !== name),
             products: state.products.map(p =>
-                p.category === name ? { ...p, category: undefined } : p
+            p.category === name ? { ...p, category: 'Sin Categoría' } : p
             )
         }));
     },
