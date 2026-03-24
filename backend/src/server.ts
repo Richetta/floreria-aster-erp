@@ -24,7 +24,7 @@ console.log('Registering JWT...');
 await fastify.register(jwt, {
   secret: config.jwtSecret,
   sign: {
-    expiresIn: '15m' // Access token expires in 15 minutes
+    expiresIn: '7d' // Token valid for 7 days
   }
 });
 

@@ -73,15 +73,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
   // ENDPOINTS
   // ============================================
 
-  fastify.post('/parse-file', {
-    preHandler: [async (request, reply) => {
-      try {
-        await request.jwtVerify();
-      } catch (err) {
-        reply.code(401).send({ error: 'Unauthorized' });
-      }
-    }]
-  }, async (request, reply) => {
+  fastify.post('/parse-file', async (request, reply) => {
     try {
       const fileRequest = await request.file();
       if (!fileRequest) return reply.status(400).send({ error: 'No file uploaded' });
