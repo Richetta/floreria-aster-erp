@@ -87,9 +87,9 @@ export const Dashboard = () => {
         const uOrders = orders
             .filter(o => o.status !== 'delivered')
             .sort((a, b) => {
-                const da = new Date(a.date).getTime() || 0;
-                const db = new Date(b.date).getTime() || 0;
-                return da - db;
+                const da = a.date ? new Date(a.date).getTime() : 0;
+                const db = b.date ? new Date(b.date).getTime() : 0;
+                return (isNaN(da) ? 0 : da) - (isNaN(db) ? 0 : db);
             })
             .slice(0, 5);
 
@@ -226,7 +226,14 @@ export const Dashboard = () => {
                                         </h4>
                                         <p className="text-small text-muted flex items-center gap-1 mt-1">
                                             <Clock size={14} />
-                                            {new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date(order.date))}
+                                            {(() => {
+                                                try {
+                                                    if (!order.date) return '';
+                                                    const d = new Date(order.date);
+                                                    if (isNaN(d.getTime())) return order.date;
+                                                    return new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'short' }).format(d);
+                                                } catch { return order.date || ''; }
+                                            })()}
                                         </p>
                                     </div>
                                 </div>
