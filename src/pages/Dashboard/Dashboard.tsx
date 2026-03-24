@@ -58,9 +58,15 @@ export const Dashboard = () => {
     const metrics = useMemo(() => {
         const isToday = (dateStr: string) => {
             if (!dateStr) return false;
-            const dStr = new Date(dateStr).toISOString().split('T')[0];
-            const tStr = new Date().toISOString().split('T')[0];
-            return dStr === tStr;
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return false;
+                const dStr = d.toISOString().split('T')[0];
+                const tStr = new Date().toISOString().split('T')[0];
+                return dStr === tStr;
+            } catch {
+                return false;
+            }
         };
 
         // Sum all actual money that came in today (sales + order advance payments)
@@ -80,7 +86,11 @@ export const Dashboard = () => {
         // Closest upcoming orders (Max 5)
         const uOrders = orders
             .filter(o => o.status !== 'delivered')
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+            .sort((a, b) => {
+                const da = new Date(a.date).getTime() || 0;
+                const db = new Date(b.date).getTime() || 0;
+                return da - db;
+            })
             .slice(0, 5);
 
         return {

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Check, X, Edit2, Trash2, Search, Folder, List, Grid3x3, TrendingUp, History, Printer, Upload, FileText } from 'lucide-react';
+import { Plus, Check, X, Edit2, Trash2, Search, Folder, FolderPlus, List, Grid3x3, TrendingUp, History, Printer, Upload, FileText } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Product } from '../../store/useStore';
 import { ProductModal } from '../../components/ProductModal/ProductModal';
@@ -188,178 +188,28 @@ export const Products = () => {
                 </div>
             )}
 
-            {/* Folder Tabs (Physical Metaphor) */}
-            <div className="folder-tabs-wrapper">
-                <div className="folder-tabs">
-                    <button
-                        className={`folder-tab ${activeCategory === 'Todos' ? 'active' : ''}`}
-                        onClick={() => {
-                            setActiveCategory('Todos');
-                            setIsEditingCategory(false);
-                        }}
-                    >
-                        <span className="tab-label">Todos</span>
-                        {activeCategory === 'Todos' && (
-                            <span className="tab-indicator" />
-                        )}
-                    </button>
-                    {(categories || []).map((cat) => (
-                        <button
-                            key={cat}
-                            className={`folder-tab ${activeCategory === cat ? 'active' : ''}`}
-                            onClick={() => {
-                                setActiveCategory(cat);
-                                setIsEditingCategory(false);
-                            }}
-                        >
-                            <span className="tab-label">{cat}</span>
-                            {activeCategory === cat && (
-                                <span className="tab-indicator" />
-                            )}
-                        </button>
-                    ))}
-                    {(products || []).some(p => p.category === 'Sin Categoría') && (
-                        <button
-                            className={`folder-tab ${activeCategory === 'Sin Categoría' ? 'active' : ''}`}
-                            onClick={() => {
-                                setActiveCategory('Sin Categoría');
-                                setIsEditingCategory(false);
-                            }}
-                        >
-                            <span className="tab-label">Sin Categoría</span>
-                            {activeCategory === 'Sin Categoría' && (
-                                <span className="tab-indicator" />
-                            )}
-                        </button>
-                    )}
-                    <button className="folder-tab add-tab" onClick={handleAddCategory}>
-                        <Plus size={18} />
-                    </button>
-                </div>
-            </div>
+            {/* Folder Tabs Removed - Now integrated into the unified toolbar */}
 
-            {/* Active Sheet Content */}
-            <div className="physical-sheet card">
-                <header className="sheet-header">
-                    <div className="header-left">
-                        {isEditingCategory ? (
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="text"
-                                    className="form-input text-h2"
-                                    value={categoryNameInput}
-                                    onChange={(e) => setCategoryNameInput(e.target.value)}
-                                    autoFocus
-                                />
-                                <button className="btn-icon text-success" onClick={handleRenameCategory}>
-                                    <Check size={20} />
-                                </button>
-                                <button className="btn-icon text-muted" onClick={() => setIsEditingCategory(false)}>
-                                    <X size={20} />
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-h1 sheet-title">{activeCategory}</h1>
-                                {activeCategory !== 'Todos' && activeCategory !== 'Sin Categoría' && (
-                                    <>
-                                        <button
-                                            className="btn-icon text-muted"
-                                            onClick={() => {
-                                                setCategoryNameInput(activeCategory);
-                                                setIsEditingCategory(true);
-                                            }}
-                                        >
-                                            <Edit2 size={18} />
-                                        </button>
-                                        <button
-                                            className="btn-icon text-danger"
-                                            onClick={async () => {
-                                                const confirmed = await showConfirm({
-                                                    title: '¿Eliminar carpeta?',
-                                                    message: `Se eliminará "${activeCategory}". Los productos se moverán a "Sin Categoría".`,
-                                                    confirmText: 'Eliminar',
-                                                    variant: 'danger'
-                                                });
-                                                if (confirmed) {
-                                                    deleteCategory(activeCategory);
-                                                    setActiveCategory('Todos');
-                                                }
-                                            }}
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        )}
-                        <p className="text-body text-muted mt-1">
-                            {filteredProducts.length} productos en esta carpeta
-                        </p>
+            {/* Unified Header & Toolbar */}
+            <div className="unified-toolbar card mb-4">
+                <div className="toolbar-top-row">
+                    <div className="toolbar-title-group">
+                        <h1 className="text-h2 font-bold m-0">Catálogo</h1>
+                        <span className="badge bg-surface-hover text-muted">{filteredProducts.length} productos</span>
                     </div>
-
-                    <div className="header-actions">
-                        <div className="search-pill">
-                            <Search size={18} className="text-muted" />
-                            <input
-                                type="text"
-                                placeholder="Buscar en esta carpeta..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        
-                        {/* View Mode Toggle */}
-                        <div className="view-toggle flex gap-1">
-                            <button
-                                className={`btn-icon ${viewMode === 'grid' ? 'active' : ''}`}
-                                onClick={() => setViewMode('grid')}
-                                title="Vista de Grilla"
-                            >
-                                <Grid3x3 size={18} />
-                            </button>
-                            <button
-                                className={`btn-icon ${viewMode === 'list' ? 'active' : ''}`}
-                                onClick={() => setViewMode('list')}
-                                title="Vista de Lista"
-                            >
-                                <List size={18} />
-                            </button>
-                        </div>
-                        
-                        {/* Sort Controls */}
-                        <div className="sort-controls flex items-center gap-2">
-                            <select
-                                className="form-input text-small"
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value as any)}
-                            >
-                                <option value="name">Nombre</option>
-                                <option value="code">Código</option>
-                                <option value="price">Precio</option>
-                                <option value="stock">Stock</option>
-                            </select>
-                            <button
-                                className="btn-icon"
-                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                                title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
-                            >
-                                {sortOrder === 'asc' ? '↑' : '↓'}
-                            </button>
-                        </div>
-                        
+                    
+                    <div className="toolbar-actions-group">
                         {/* More Actions Dropdown */}
                         <div className="more-actions-dropdown" style={{ position: 'relative' }}>
                             <button
-                                className={`btn btn-secondary btn-lg ${showMoreMenu ? 'active' : ''}`}
+                                className={`btn btn-secondary ${showMoreMenu ? 'active' : ''}`}
                                 onClick={() => setShowMoreMenu(!showMoreMenu)}
                                 title="Más acciones"
                             >
                                 <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>⋯</span>
                                 <span className="hidden-mobile">Más</span>
                             </button>
-                            
-                            {showMoreMenu && (
+                                                   {showMoreMenu && (
                                 <>
                                     <div
                                         style={{ position: 'fixed', inset: 0, zIndex: 99 }}
@@ -408,6 +258,7 @@ export const Products = () => {
                                         >
                                             <Upload size={18} /> Importar CSV
                                         </button>
+                                        <div style={{ height: '1px', background: 'var(--color-border)', margin: '0.25rem 0' }}></div>
                                         <button
                                             className="dropdown-item"
                                             onClick={() => { setIsBulkUpdateOpen(true); setShowMoreMenu(false); }}
@@ -421,15 +272,162 @@ export const Products = () => {
                                 </>
                             )}
                         </div>
-                        
-                        <button className="btn btn-primary btn-lg shadow-primary" onClick={handleOpenCreateModal}>
-                            <Plus size={20} />
-                            <span>Nuevo Producto</span>
+
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                                setProductToEdit(null); // Changed from setEditingProduct to setProductToEdit
+                                setIsModalOpen(true);
+                            }}
+                        >
+                            <Plus size={20} className="mr-2" />
+                            Nuevo Producto
                         </button>
                     </div>
-                </header>
+                </div>
 
-                {/* Products List */}
+                <div className="toolbar-bottom-row pt-4 mt-4 border-t border-border flex flex-wrap items-center justify-between gap-4">
+                    {/* Search Pill */}
+                    <div className="search-pill flex-1 min-w-[280px]">
+                        <Search size={18} className="text-muted" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nombre o código..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Category Dropdown replacing tabs */}
+                        <div className="category-select-group flex items-center gap-2 bg-surface-hover p-1 rounded-lg border border-border">
+                            <Folder size={16} className="text-muted ml-2 hidden-mobile" />
+                            {isEditingCategory ? (
+                                <div className="flex items-center gap-1">
+                                    <input
+                                        type="text"
+                                        className="form-input text-small py-1 px-2 m-0 h-8"
+                                        value={categoryNameInput}
+                                        onChange={(e) => setCategoryNameInput(e.target.value)}
+                                        autoFocus
+                                    />
+                                    <button className="btn-icon text-success p-1" onClick={handleRenameCategory}>
+                                        <Check size={16} />
+                                    </button>
+                                    <button className="btn-icon text-muted p-1" onClick={() => setIsEditingCategory(false)}>
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <select
+                                    className="form-input border-none bg-transparent font-medium py-1 m-0 h-8 focus:ring-0"
+                                    value={activeCategory}
+                                    onChange={(e) => {
+                                        setActiveCategory(e.target.value);
+                                        setIsEditingCategory(false);
+                                    }}
+                                >
+                                    <option value="Todos">Todas las categorías</option>
+                                    <optgroup label="Carpetas">
+                                        {(categories || []).map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </optgroup>
+                                    {(products || []).some(p => p.category === 'Sin Categoría') && (
+                                        <option value="Sin Categoría">Sin Categoría</option>
+                                    )}
+                                </select>
+                            )}
+                            
+                            {/* Category Actions */}
+                            <div className="flex gap-1 border-l border-border pl-1 ml-1 pr-1">
+                                <button
+                                    className="btn-icon text-muted p-1 hover-primary"
+                                    onClick={handleAddCategory}
+                                    title="Nueva Categoría"
+                                >
+                                    <FolderPlus size={16} />
+                                </button>
+                                {activeCategory !== 'Todos' && activeCategory !== 'Sin Categoría' && !isEditingCategory && (
+                                    <>
+                                        <button
+                                            className="btn-icon text-muted p-1 hover-primary"
+                                            onClick={() => {
+                                                setCategoryNameInput(activeCategory);
+                                                setIsEditingCategory(true);
+                                            }}
+                                            title="Renombrar Categoría"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <button
+                                            className="btn-icon text-muted p-1 hover-danger"
+                                            onClick={async () => {
+                                                const confirmed = await showConfirm({
+                                                    title: '¿Eliminar categoría?',
+                                                    message: `Se eliminará "${activeCategory}". Los productos se moverán a "Sin Categoría".`,
+                                                    confirmText: 'Eliminar',
+                                                    variant: 'danger'
+                                                });
+                                                if (confirmed) {
+                                                    deleteCategory(activeCategory);
+                                                    setActiveCategory('Todos');
+                                                }
+                                            }}
+                                            title="Eliminar Categoría"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Sort Controls */}
+                        <div className="sort-controls flex items-center gap-1 bg-surface border border-border rounded-lg p-1">
+                            <select
+                                className="form-input text-small border-none bg-transparent m-0 py-1 h-8 focus:ring-0"
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value as any)}
+                            >
+                                <option value="name">Nombre</option>
+                                <option value="code">Código</option>
+                                <option value="price">Precio</option>
+                                <option value="stock">Stock</option>
+                            </select>
+                            <div className="w-px h-4 bg-border"></div>
+                            <button
+                                className="btn-icon p-1 w-8 h-8 flex items-center justify-center text-muted hover-primary"
+                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
+                            >
+                                {sortOrder === 'asc' ? '↑' : '↓'}
+                            </button>
+                        </div>
+
+                        {/* View Mode Toggle */}
+                        <div className="view-toggle flex gap-1 bg-surface border border-border rounded-lg p-1 m-0">
+                            <button
+                                className={`btn-icon p-1 w-8 h-8 flex items-center justify-center rounded-md transition-colors ${viewMode === 'grid' ? 'bg-surface-hover text-primary' : 'text-muted'}`}
+                                onClick={() => setViewMode('grid')}
+                                title="Vista de Grilla"
+                            >
+                                <Grid3x3 size={16} />
+                            </button>
+                            <button
+                                className={`btn-icon p-1 w-8 h-8 flex items-center justify-center rounded-md transition-colors ${viewMode === 'list' ? 'bg-surface-hover text-primary' : 'text-muted'}`}
+                                onClick={() => setViewMode('list')}
+                                title="Vista de Lista"
+                            >
+                                <List size={16} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* List/Grid Content Area */}
+            <div className="bg-surface rounded-xl border border-border shadow-sm p-4">      {/* Products List */}
                 <div className="sheet-body">
                     {filteredProducts.length === 0 ? (
                         <div className="empty-state">
