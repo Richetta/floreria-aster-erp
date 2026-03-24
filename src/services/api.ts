@@ -195,9 +195,13 @@ class ApiClient {
     logger.debug(`API Request: ${options.method || 'GET'} ${endpoint}`, null, 'ApiClient');
 
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
       ...options.headers,
     };
+
+    // Only set Content-Type if it's not FormData (fetch handles FormData automatically)
+    if (!(options.body instanceof FormData)) {
+      (headers as any)['Content-Type'] = 'application/json';
+    }
 
     if (this.token) {
       (headers as any)['Authorization'] = `Bearer ${this.token}`;
@@ -222,7 +226,11 @@ class ApiClient {
         throw new Error(error.error || error.message || 'Request failed');
       }
 
-      return response.json();
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return response.json();
+      }
+      return response.text() as any;
     } catch (error: any) {
       logger.error(`Request failed: ${error.message}`, error, 'ApiClient');
       throw error;
@@ -394,17 +402,9 @@ class ApiClient {
     if (from_date) params.append('from_date', from_date);
     if (to_date) params.append('to_date', to_date);
 
-    const response = await fetch(`${API_BASE_URL}/reports/export/sales${params.toString() ? `?${params.toString()}` : ''}`, {
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
+    return this.request<string>(`/reports/export/sales${params.toString() ? `?${params.toString()}` : ''}`, {
+      method: 'GET'
     });
-
-    if (!response.ok) {
-      throw new Error('Export failed');
-    }
-
-    return response.text();
   }
 
   // ============================================
@@ -421,20 +421,10 @@ class ApiClient {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE_URL}/import/parse-file`, {
+    return this.request('/import/parse-file', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      },
       body: formData
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Error parsing file');
-    }
-
-    return response.json();
   }
 
   async parseCSV(file: File): Promise<any> {
@@ -468,17 +458,9 @@ class ApiClient {
   }
 
   async exportProductsTemplate(): Promise<string> {
-    const response = await fetch(`${API_BASE_URL}/import/export-template`, {
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      }
+    return this.request<string>('/import/export-template', {
+      method: 'GET'
     });
-
-    if (!response.ok) {
-      throw new Error('Export failed');
-    }
-
-    return response.text();
   }
 
   async downloadCSV(filename: string, data: any[]): Promise<void> {
