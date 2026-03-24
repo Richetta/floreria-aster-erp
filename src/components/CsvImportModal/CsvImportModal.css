@@ -127,7 +127,91 @@
     font-weight: 600;
 }
 
-/* Import Options */
+/* Editable Preview Improvements */
+.editable-preview {
+    display: flex;
+    flex-direction: column;
+}
+
+.table-scroll-area {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.table-input {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.table-input:hover {
+    background: rgba(255, 255, 255, 0.5);
+    border-color: var(--color-border);
+}
+
+.table-input:focus {
+    outline: none;
+    background: white;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+/* Instructions */
+.import-instructions {
+    background: var(--color-primary-light);
+    border: 1px solid var(--color-primary);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+}
+
+.instructions-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.instruction-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.instruction-item .step-num {
+    background: var(--color-primary);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.instruction-item p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.instruction-item strong {
+    color: var(--color-primary-dark);
+}
+
+@media (min-width: 640px) {
+    .instructions-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
 .import-options {
     display: flex;
     flex-direction: column;

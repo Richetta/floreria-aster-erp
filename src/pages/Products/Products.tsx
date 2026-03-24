@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Check, X, Edit2, Trash2, Search, Folder, FolderPlus, List, Grid3x3, TrendingUp, History, Printer, Upload, FileText } from 'lucide-react';
+import { Plus, Check, X, Edit2, Trash2, Search, Folder, FolderPlus, List, Grid3x3, TrendingUp, History, Printer, Upload } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Product } from '../../store/useStore';
 import { ProductModal } from '../../components/ProductModal/ProductModal';
@@ -7,7 +7,6 @@ import { BulkPriceUpdateModal } from '../../components/BulkPriceUpdate/BulkPrice
 import { PriceHistoryModal } from '../../components/PriceHistory/PriceHistoryModal';
 import { BarcodeLabelPrinter } from '../../components/BarcodeLabelPrinter/BarcodeLabelPrinter';
 import { CsvImportModal } from '../../components/CsvImportModal/CsvImportModal';
-import { OCRImportModal } from '../../components/OCRImportModal/OCRImportModal';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
@@ -20,7 +19,6 @@ export const Products = () => {
     const addCategory = useStore((state) => state.addCategory);
     const renameCategory = useStore((state) => state.renameCategory);
     const deleteCategory = useStore((state) => state.deleteCategory);
-    const addProduct = useStore((state) => state.addProduct);
     const deleteProduct = useStore((state) => state.deleteProduct);
     const loadProducts = useStore((state) => state.loadProducts);
     const loadCategories = useStore((state) => state.loadCategories);
@@ -63,12 +61,11 @@ export const Products = () => {
     const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
     const [productForBarcode, setProductForBarcode] = useState<Product | null>(null);
     const [showBarcodePrinter, setShowBarcodePrinter] = useState(false);
-    const [showCsvImport, setShowCsvImport] = useState(false);
-    const [showOCRImport, setShowOCRImport] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
 
     // Custom modal hook
-    const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
+    const { alertModal, confirmModal, showConfirm } = useModal();
 
     // Ensure activeCategory stays valid if categories changes
     useEffect(() => {
@@ -140,24 +137,6 @@ export const Products = () => {
     const handlePrintBarcode = (product: Product) => {
         setProductForBarcode(product);
         setShowBarcodePrinter(true);
-    };
-
-    const handleOCRImport = async (products: any[]) => {
-        // Import each product
-        for (const ocrProduct of products) {
-            await addProduct({
-                code: ocrProduct.code,
-                name: ocrProduct.name,
-                category: activeCategory,
-                price: ocrProduct.price,
-                cost: ocrProduct.price * 0.5, // Default 50% margin
-                stock: ocrProduct.stock || 0,
-                min: ocrProduct.min || 5,
-                tags: []
-            });
-        }
-        await loadProducts();
-        showAlert({ title: 'Importación exitosa', message: `${products.length} productos importados exitosamente`, variant: 'success' });
     };
 
     return (
@@ -242,21 +221,12 @@ export const Products = () => {
                                         </button>
                                         <button
                                             className="dropdown-item"
-                                            onClick={() => { setShowOCRImport(true); setShowMoreMenu(false); }}
+                                            onClick={() => { setShowImportModal(true); setShowMoreMenu(false); }}
                                             style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '0.9375rem', color: 'var(--color-text-main)', transition: 'background 0.15s' }}
                                             onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-hover)')}
                                             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                         >
-                                            <FileText size={18} /> Digitalizar (OCR)
-                                        </button>
-                                        <button
-                                            className="dropdown-item"
-                                            onClick={() => { setShowCsvImport(true); setShowMoreMenu(false); }}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '0.9375rem', color: 'var(--color-text-main)', transition: 'background 0.15s' }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-hover)')}
-                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                        >
-                                            <Upload size={18} /> Importar CSV
+                                            <Upload size={18} /> Importar
                                         </button>
                                         <div style={{ height: '1px', background: 'var(--color-border)', margin: '0.25rem 0' }}></div>
                                         <button
@@ -441,13 +411,9 @@ export const Products = () => {
                                     <span>Crear Producto</span>
                                 </button>
                                 <div className="flex gap-2">
-                                    <button className="btn btn-secondary flex-1" onClick={() => setShowOCRImport(true)}>
-                                        <FileText size={18} />
-                                        <span>Digitalizar</span>
-                                    </button>
-                                    <button className="btn btn-secondary flex-1" onClick={() => setShowCsvImport(true)}>
+                                    <button className="btn btn-secondary flex-1" onClick={() => setShowImportModal(true)}>
                                         <Upload size={18} />
-                                        <span>Importar CSV</span>
+                                        <span>Importar Lista</span>
                                     </button>
                                 </div>
                             </div>
@@ -600,14 +566,8 @@ export const Products = () => {
             />
 
             <CsvImportModal
-                isOpen={showCsvImport}
-                onClose={() => setShowCsvImport(false)}
-            />
-
-            <OCRImportModal
-                isOpen={showOCRImport}
-                onClose={() => setShowOCRImport(false)}
-                onImport={handleOCRImport}
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
             />
 
             {alertModal && <AlertModal {...alertModal} />}

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, FileText, CheckCircle2, Download, Settings } from 'lucide-react';
+import { Upload, X, FileText, CheckCircle2, Download, Settings, Plus } from 'lucide-react';
 import { api } from '../../services/api';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../ui/Modals';
@@ -63,8 +63,32 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
 
         setIsLoading(true);
         try {
-            const result = await (api as any).parseText(pastedText);
-            setParsedData(result);
+            // Client-side parsing for pasted text
+            const lines = pastedText.split('\n').filter(l => l.trim());
+            const data = lines.map(line => {
+                // Regex to find things like "P-101", "ABC-123", "$1500", "1.500", etc.
+                const codeMatch = line.match(/([A-Z0-9]{2,}-[0-9]+|[A-Z]{1,}[0-9]{2,})/i);
+                const priceMatch = line.match(/(\$|USD)?\s*(\d{1,3}([,.]\d{3})*([,.]\d{2})?|\d+([,.]\d+)?)/);
+                
+                let name = line;
+                if (codeMatch) name = name.replace(codeMatch[0], '');
+                if (priceMatch) name = name.replace(priceMatch[0], '');
+                
+                return {
+                    code: codeMatch ? codeMatch[0].toUpperCase() : '',
+                    name: name.trim() || 'Producto sin nombre',
+                    cost: 0,
+                    price: priceMatch ? Number(priceMatch[2].replace(/\./g, '').replace(',', '.')) : 0,
+                    stock: 0
+                };
+            });
+
+            setParsedData({
+                method: 'Texto Pegado',
+                filename: 'Texto manual',
+                total_rows: data.length,
+                data: data
+            });
             setStep('preview');
         } catch (error: any) {
             showAlert({ title: 'Error', message: 'Error al procesar el texto: ' + error.message, variant: 'error' });
@@ -78,8 +102,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
 
         setIsLoading(true);
         try {
-            // Use raw_rows for full import instead of just the preview data
-            const result = await api.importPrices(parsedData.raw_rows || parsedData.data, {
+            // Use only the edited data from the preview table
+            const result = await api.importPrices(parsedData.data, {
                 update_costs: updateCosts,
                 update_prices: updatePrices,
                 update_stock: updateStock,
@@ -124,7 +148,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 <div className="csv-import-header">
                     <h2 className="text-h2 flex items-center gap-2">
                         <Upload size={24} className="text-primary" />
-                        Importador Inteligente de Productos
+                        Importar Productos
                     </h2>
                     <button className="btn-icon" onClick={handleClose}>
                         <X size={20} />
@@ -161,7 +185,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                     />
                                     <Upload size={48} className="text-muted mb-4" />
                                     <h3 className="text-h3 mb-2">Arrastrá cualquier archivo aquí</h3>
-                                    <p className="text-body text-muted mb-4">CSV, Excel, PDF, Word o Texto</p>
+                                    <p className="text-body text-muted mb-4">PDF, Excel, Word, CSV o Texto</p>
                                     <button className="btn btn-secondary" disabled={isLoading}>
                                         {isLoading ? 'Procesando...' : 'Seleccionar Archivo'}
                                     </button>
@@ -184,29 +208,31 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                 </div>
                             )}
 
-                            <div className="import-info mt-6">
+                            <div className="import-instructions mt-6">
                                 <h4 className="text-h4 mb-3 flex items-center gap-2">
                                     <FileText size={18} />
-                                    Multi-formato Inteligente
+                                    Instrucciones de Importación
                                 </h4>
-                                <p className="text-small text-muted mb-3">
-                                    Ahora podés subir listas de precios en casi cualquier formato. El sistema detectará 
-                                    automáticamente los códigos, nombres y precios de tus productos.
-                                </p>
-                                <div className="csv-example">
-                                    <p className="text-micro font-bold mb-2">Formatos Soportados:</p>
-                                    <ul className="text-micro list-none p-0">
-                                        <li>📊 <strong>Excel (.xlsx):</strong> Recomendado para grandes listas.</li>
-                                        <li>📄 <strong>PDF / Word:</strong> Ideal para listas de proveedores.</li>
-                                        <li>📝 <strong>CSV / TXT:</strong> Formatos estándar.</li>
-                                    </ul>
+                                <div className="instructions-grid">
+                                    <div className="instruction-item">
+                                        <div className="step-num">1</div>
+                                        <p><strong>Formatos:</strong> Podés subir listas en PDF, Excel o Word.</p>
+                                    </div>
+                                    <div className="instruction-item">
+                                        <div className="step-num">2</div>
+                                        <p><strong>Detección:</strong> El sistema buscará códigos (ej: P-101) y precios automáticamente.</p>
+                                    </div>
+                                    <div className="instruction-item">
+                                        <div className="step-num">3</div>
+                                        <p><strong>Edición:</strong> Revisá y corregí los datos antes de guardar en el próximo paso.</p>
+                                    </div>
                                 </div>
                                 <button 
-                                    className="btn btn-outline mt-4 flex items-center gap-2"
+                                    className="btn btn-outline mt-4 flex items-center gap-2 w-full justify-center"
                                     onClick={handleDownloadTemplate}
                                 >
                                     <Download size={16} />
-                                    Descargar plantilla con mis productos
+                                    Descargar plantilla ejemplo
                                 </button>
                             </div>
                         </div>
@@ -232,38 +258,119 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                 </div>
                             </div>
 
-                            <div className="preview-table-container">
-                                <h4 className="text-h4 mb-2">Vista previa (primeras 10 filas):</h4>
-                                <table className="preview-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Código</th>
-                                            <th>Nombre</th>
-                                            <th>Costo</th>
-                                            <th>Precio</th>
-                                            <th>Stock</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {parsedData.data.slice(0, 10).map((row: any, i: number) => (
-                                            <tr key={i}>
-                                                <td>{row.code || '-'}</td>
-                                                <td>{row.name || '-'}</td>
-                                                <td>{row.cost !== undefined ? `$${row.cost}` : '-'}</td>
-                                                <td>{row.price !== undefined ? `$${row.price}` : '-'}</td>
-                                                <td>{row.stock !== undefined ? row.stock : '-'}</td>
+                            <div className="preview-table-container editable-preview">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h4 className="text-h4">Revisá y Editá los Datos:</h4>
+                                    <button
+                                        className="btn btn-secondary btn-sm flex items-center gap-1"
+                                        onClick={() => {
+                                            const newItem = { code: '', name: '', cost: 0, price: 0, stock: 0 };
+                                            const newData = [newItem, ...parsedData.data];
+                                            setParsedData({ ...parsedData, data: newData, total_rows: newData.length });
+                                        }}
+                                    >
+                                        <Plus size={14} /> Agregar Fila
+                                    </button>
+                                </div>
+                                <div className="table-scroll-area">
+                                    <table className="preview-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Nombre</th>
+                                                <th style={{ width: '100px' }}>Costo</th>
+                                                <th style={{ width: '100px' }}>Precio</th>
+                                                <th style={{ width: '80px' }}>Stock</th>
+                                                <th style={{ width: '40px' }}></th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {parsedData.data.map((row: any, i: number) => (
+                                                <tr key={i}>
+                                                    <td>
+                                                        <input
+                                                            type="text"
+                                                            value={row.code || ''}
+                                                            onChange={(e) => {
+                                                                const newData = [...parsedData.data];
+                                                                newData[i] = { ...row, code: e.target.value };
+                                                                setParsedData({ ...parsedData, data: newData });
+                                                            }}
+                                                            className="table-input"
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input
+                                                            type="text"
+                                                            value={row.name || ''}
+                                                            onChange={(e) => {
+                                                                const newData = [...parsedData.data];
+                                                                newData[i] = { ...row, name: e.target.value };
+                                                                setParsedData({ ...parsedData, data: newData });
+                                                            }}
+                                                            className="table-input"
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input
+                                                            type="number"
+                                                            value={row.cost || 0}
+                                                            onChange={(e) => {
+                                                                const newData = [...parsedData.data];
+                                                                newData[i] = { ...row, cost: Number(e.target.value) };
+                                                                setParsedData({ ...parsedData, data: newData });
+                                                            }}
+                                                            className="table-input"
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input
+                                                            type="number"
+                                                            value={row.price || 0}
+                                                            onChange={(e) => {
+                                                                const newData = [...parsedData.data];
+                                                                newData[i] = { ...row, price: Number(e.target.value) };
+                                                                setParsedData({ ...parsedData, data: newData });
+                                                            }}
+                                                            className="table-input"
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input
+                                                            type="number"
+                                                            value={row.stock || 0}
+                                                            onChange={(e) => {
+                                                                const newData = [...parsedData.data];
+                                                                newData[i] = { ...row, stock: Number(e.target.value) };
+                                                                setParsedData({ ...parsedData, data: newData });
+                                                            }}
+                                                            className="table-input"
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <button
+                                                            className="btn-icon text-danger p-1"
+                                                            onClick={() => {
+                                                                const newData = parsedData.data.filter((_: any, idx: number) => idx !== i);
+                                                                setParsedData({ ...parsedData, data: newData, total_rows: newData.length });
+                                                            }}
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
 
                             <div className="import-actions">
                                 <button className="btn btn-secondary" onClick={() => setStep('upload')}>
                                     Volver
                                 </button>
-                                <button 
-                                    className="btn btn-primary" 
+                                <button
+                                    className="btn btn-primary"
                                     onClick={() => setStep('options')}
                                 >
                                     Continuar
