@@ -5,8 +5,6 @@ import {
     Trash2,
     CreditCard,
     Banknote,
-    Minus,
-    Plus,
     Calendar,
     X,
     Check,
