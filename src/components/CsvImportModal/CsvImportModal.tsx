@@ -254,41 +254,63 @@ Símbolos:
                                 </div>
                             )}
 
-                            <div className="import-instructions mt-6">
-                                <h4 className="text-h4 mb-3 flex items-center gap-2">
-                                    <FileText size={18} />
-                                    Instrucciones de Importación
+                            <div className="import-instructions mt-8">
+                                <h4 className="text-h4 mb-4 flex items-center gap-2 text-primary-dark">
+                                    <FileText size={20} />
+                                    Guía Rápida de Importación
                                 </h4>
-                                <div className="instructions-grid">
-                                    <div className="instruction-item">
-                                        <div className="step-num">1</div>
-                                        <p><strong>Formatos:</strong> Podés subir listas en PDF, Excel, Word o pegar texto directamente.</p>
+                                
+                                <div className="instructions-layout">
+                                    <div className="instructions-steps">
+                                        <div className="instruction-step">
+                                            <div className="step-icon">1</div>
+                                            <div className="step-content">
+                                                <strong>Subí tu archivo o pegá texto</strong>
+                                                <p>Soportamos Excel (XLSX), CSV, Word, PDF o texto plano.</p>
+                                            </div>
+                                        </div>
+                                        <div className="instruction-step">
+                                            <div className="step-icon">2</div>
+                                            <div className="step-content">
+                                                <strong>Inteligencia Automática</strong>
+                                                <p>El sistema busca códigos (Ej: P-101), nombres y precios extraídos dinámicamente.</p>
+                                            </div>
+                                        </div>
+                                        <div className="instruction-step">
+                                            <div className="step-icon">3</div>
+                                            <div className="step-content">
+                                                <strong>Revisión Flexible</strong>
+                                                <p>En el próximo paso podrás editar todo cómodamente antes de guardarlo en tu base de datos.</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="instruction-item">
-                                        <div className="step-num">2</div>
-                                        <p><strong>Detección automática:</strong> El sistema busca códigos (ej: P-101) y precios.</p>
-                                    </div>
-                                    <div className="instruction-item">
-                                        <div className="step-num">3</div>
-                                        <p><strong>Símbolos para pegar texto:</strong></p>
-                                        <ul className="symbol-list">
-                                            <li><code>$</code> = Precio de venta (ej: <code>$1500</code>)</li>
-                                            <li><code>$$</code> = Costo (ej: <code>$$800</code>)</li>
-                                            <li><code>+</code> = Stock (ej: <code>+50</code>)</li>
-                                            <li>Podés combinar: <code>$$800 $1200 +30</code></li>
-                                        </ul>
-                                    </div>
-                                    <div className="instruction-item">
-                                        <div className="step-num">4</div>
-                                        <p><strong>Edición:</strong> Revisá y corregí los datos antes de guardar en el próximo paso.</p>
+                                    
+                                    <div className="instructions-advanced">
+                                        <h5 className="advanced-title">Atajos para Pegar Texto:</h5>
+                                        <div className="shortcuts-list">
+                                            <div className="shortcut-item">
+                                                <kbd>$</kbd> <span>Precio Venta (ej: $1500)</span>
+                                            </div>
+                                            <div className="shortcut-item">
+                                                <kbd>$$</kbd> <span>Costo (ej: $$800)</span>
+                                            </div>
+                                            <div className="shortcut-item">
+                                                <kbd>+</kbd> <span>Stock (ej: +50)</span>
+                                            </div>
+                                        </div>
+                                        <div className="shortcut-example">
+                                            <span className="example-label">Ejemplo combinando:</span>
+                                            <code>P-004 Rosas $$800 $1200 +30</code>
+                                        </div>
                                     </div>
                                 </div>
+
                                 <button
-                                    className="btn btn-outline mt-4 flex items-center gap-2 w-full justify-center"
+                                    className="btn btn-outline mt-5 flex items-center gap-2 w-full justify-center template-btn"
                                     onClick={handleDownloadTemplate}
                                 >
                                     <Download size={16} />
-                                    Descargar plantilla ejemplo
+                                    Descargar plantilla de ejemplo
                                 </button>
                             </div>
                         </div>
