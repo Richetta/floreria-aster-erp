@@ -31,6 +31,7 @@ import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import './POS.css';
+import './POS.mobile.css';
 
 type ProductView = 'recent' | 'top' | 'all' | 'packages';
 
@@ -95,6 +96,8 @@ export const POS = () => {
     const [showFilters, setShowFilters] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
+    const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
+    const [showCheckoutModal, setShowCheckoutModal] = useState(false);
 
     // Success Modals
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -1557,6 +1560,123 @@ export const POS = () => {
                     onConfirm={confirmModal.onConfirm}
                     onCancel={confirmModal.onCancel}
                 />
+            )}
+
+            {/* Mobile: Botón flotante del carrito */}
+            {cart.length > 0 && (
+                <button
+                    className="cart-float-button"
+                    onClick={() => setIsCartSheetOpen(!isCartSheetOpen)}
+                >
+                    <ShoppingCart size={24} />
+                    <span className="cart-float-count">{itemCount}</span>
+                </button>
+            )}
+
+            {/* Mobile: Bottom Sheet del carrito */}
+            <div className={`cart-bottom-sheet ${isCartSheetOpen ? 'open' : ''}`}>
+                <div
+                    className="cart-sheet-header"
+                    onClick={() => setIsCartSheetOpen(!isCartSheetOpen)}
+                >
+                    <div className="cart-sheet-title">
+                        <ShoppingCart size={18} />
+                        <span>Carrito</span>
+                        <span className="cart-sheet-count">{itemCount} items</span>
+                    </div>
+                    <div className="cart-sheet-total">
+                        ${total.toLocaleString()}
+                    </div>
+                </div>
+
+                <div className="cart-sheet-content">
+                    {cart.length === 0 ? (
+                        <div className="empty-cart-msg">
+                            <ShoppingCart size={32} className="text-muted mb-2 opacity-20" />
+                            <p className="text-body text-center font-medium">
+                                Bandeja vacía.<br />Seleccioná productos.
+                            </p>
+                        </div>
+                    ) : (
+                        cart.map((item, idx) => (
+                            <div key={`${item.id}-${idx}`} className="cart-line-item">
+                                <div className="cart-line-details">
+                                    <h4 className="font-bold text-small line-clamp-1">{item.name}</h4>
+                                    <p className="text-micro text-muted">${item.price?.toLocaleString() || '0'} c/u</p>
+                                </div>
+                                <div className="cart-line-actions">
+                                    <div className="qty-controls">
+                                        <button className="qty-btn" onClick={() => updateQty(item.id, -1)}>
+                                            <Minus size={12} />
+                                        </button>
+                                        <span className="qty-value">{item.qty}</span>
+                                        <button className="qty-btn" onClick={() => updateQty(item.id, 1)}>
+                                            <Plus size={12} />
+                                        </button>
+                                    </div>
+                                    <div className="cart-line-total font-bold">
+                                        ${(item.price * item.qty).toLocaleString()}
+                                    </div>
+                                    <button
+                                        className="btn-icon text-danger"
+                                        onClick={() => removeFromCart(item.id)}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {cart.length > 0 && (
+                    <div className="cart-sheet-footer">
+                        <div className="cart-totals-compact">
+                            <span className="total-label">Total a Pagar</span>
+                            <span className="total-amount">${total.toLocaleString()}</span>
+                        </div>
+                        <div className="payment-buttons-compact">
+                            <button
+                                className="payment-btn-compact payment-cash"
+                                onClick={() => {
+                                    handleCheckout('cash');
+                                    setIsCartSheetOpen(false);
+                                }}
+                            >
+                                <Banknote size={18} />
+                                <span>Efectivo</span>
+                            </button>
+                            <button
+                                className="payment-btn-compact payment-card"
+                                onClick={() => {
+                                    handleCheckout('card');
+                                    setIsCartSheetOpen(false);
+                                }}
+                            >
+                                <CreditCard size={18} />
+                                <span>Tarjeta</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Mobile: Modal de Checkout para Pedidos */}
+            {checkoutMode === 'order' && (
+                <div className="checkout-modal-overlay" style={{ display: isCartSheetOpen ? 'flex' : 'none' }}>
+                    <div className="checkout-modal" onClick={e => e.stopPropagation()}>
+                        <div className="checkout-modal-header">
+                            <h2>Pedir para Después</h2>
+                            <button className="btn-icon" onClick={() => setIsCartSheetOpen(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="checkout-modal-body">
+                            {/* El formulario de pedidos va acá */}
+                            <p className="text-muted text-center">Configurá los detalles del pedido...</p>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
