@@ -88,5 +88,6 @@
 
     .main-content {
         padding-top: 60px; /* offset for fixed mobile header */
+        padding-bottom: 60px; /* offset for bottom nav */
     }
 }

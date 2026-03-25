@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Sidebar } from '../Sidebar/Sidebar';
+import { BottomNav } from '../BottomNav/BottomNav';
 import { useStore } from '../../store/useStore';
 import './Layout.css';
 
@@ -67,6 +68,9 @@ export const Layout = () => {
                     <Outlet />
                 </div>
             </main>
+
+            {/* Bottom Navigation (mobile only) */}
+            <BottomNav />
         </div>
     );
 };

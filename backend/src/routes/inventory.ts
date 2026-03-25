@@ -30,7 +30,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (fastify) => {
           's.name as supplier_name',
           's.phone as supplier_phone',
         ])
-        .where('p.stock_quantity', '<=', db.ref('p.min_stock'))
+        .whereRef('p.stock_quantity', '<=', 'p.min_stock')
         .where('p.deleted_at', 'is', null)
         .where('p.is_active', '=', true)
         .orderBy('p.name', 'asc')
