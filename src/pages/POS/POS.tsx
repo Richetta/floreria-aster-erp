@@ -32,19 +32,7 @@ import './POS.css';
 
 type ProductView = 'recent' | 'top' | 'all' | 'packages';
 
-// Optimized direct SVGs to guarantee visibility in production
-const PlusIcon = ({ size = 16, strokeWidth = 2.5, color = "currentColor" }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}>
-        <line x1="12" y1="5" x2="12" y2="19"></line>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
-);
-
-const MinusIcon = ({ size = 16, strokeWidth = 2.5, color = "currentColor" }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
-);
+// SVGs moved inside POS or defined as static components with explicit React dependency if needed
 
 export const POS = () => {
     const products = useStore((state) => state.products);
@@ -97,6 +85,20 @@ export const POS = () => {
     const [newCustomerName, setNewCustomerName] = useState('');
     const [newCustomerPhone, setNewCustomerPhone] = useState('');
     const [paymentWithAmount, setPaymentWithAmount] = useState<number | ''>('');
+
+    // Re-defined here to ensure scope and React context
+    const PlusIcon = ({ size = 16, strokeWidth = 2.5, color = "currentColor" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none', display: 'block' }}>
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+    );
+
+    const MinusIcon = ({ size = 16, strokeWidth = 2.5, color = "currentColor" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none', display: 'block' }}>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+    );
     
     // UI states
     const [searchTerm, setSearchTerm] = useState('');
