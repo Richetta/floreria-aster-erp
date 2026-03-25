@@ -383,9 +383,155 @@
         padding: 0.25rem 0.5rem;
         font-size: 0.75rem;
     }
-    
+
     .tag {
         padding: 0.25rem 0.625rem;
         font-size: 0.75rem;
+    }
+}
+
+/* ============================================
+   CARDS Y LISTAS MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+    .card-grid,
+    .grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    .list-item {
+        padding: 1rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .list-item-actions {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .list-item-actions .btn {
+        width: 100%;
+    }
+}
+
+/* ============================================
+   DROPDOWNS Y SELECTS MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+    select {
+        min-height: 48px;
+        padding: 0.75rem 2.5rem 0.75rem 1rem;
+        font-size: 16px;
+        background-position: right 0.75rem center;
+        background-size: 1rem;
+    }
+
+    .dropdown-menu {
+        max-width: calc(100vw - 2rem);
+    }
+}
+
+/* ============================================
+   TOASTS Y ALERTAS MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+    .toast,
+    .alert {
+        min-width: calc(100vw - 2rem);
+        margin: 0.5rem;
+        padding: 1rem;
+    }
+
+    .toast-message,
+    .alert-message {
+        font-size: 0.875rem;
+        line-height: 1.4;
+    }
+}
+
+/* ============================================
+   LOADING SKELETONS MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+    .skeleton {
+        height: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .skeleton-title {
+        height: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .skeleton-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+    }
+}
+
+/* ============================================
+   ACCESIBILIDAD MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+    /* Asegurar contraste mínimo */
+    .text-muted {
+        color: #475569 !important; /* Slate 600 - más oscuro para mobile */
+    }
+
+    /* Links más visibles */
+    a {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    /* Focus visible más prominente */
+    :focus-visible {
+        outline: 3px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+}
+
+/* ============================================
+   PREVENIR ZOOM EN IOS EN INPUTS
+   ============================================ */
+@media (max-width: 768px) and (-webkit-min-device-pixel-ratio: 2) {
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="search"],
+    input[type="url"],
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+}
+
+/* ============================================
+   SCROLLBAR PERSONALIZADO MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+    ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 2px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
     }
 }
