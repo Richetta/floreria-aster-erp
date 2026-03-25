@@ -244,12 +244,15 @@ export const Dashboard = () => {
 
                 {/* Low Stock Alerts */}
                 <section className="card">
-                    <h2 className="text-h3 mb-4">Stock Crítico</h2>
+                    <h2 className="text-h3 mb-4 flex justify-between items-center">
+                        Stock Crítico
+                        <Link to="/reposicion" className="text-primary text-small hover:underline font-normal">Gestionar Reposición</Link>
+                    </h2>
                     <div className="stock-list">
                         {criticalProducts.length === 0 ? (
                             <p className="text-body text-center py-4 text-muted">Todo el stock está en orden</p>
                         ) : (
-                            criticalProducts.map((item) => (
+                            criticalProducts.slice(0, 5).map((item) => (
                                 <div key={item.id} className="stock-item flex justify-between items-center bg-surface p-3 rounded-lg border border-danger-light mb-2">
                                     <div className="stock-info">
                                         <h4 className="font-bold">{item.name}</h4>
@@ -257,9 +260,16 @@ export const Dashboard = () => {
                                             Quedan {item.stock} (Mín: {item.min})
                                         </p>
                                     </div>
-                                    <Link to="/productos" className="btn btn-secondary text-small bg-white hover:bg-surface border-border">Reponer</Link>
+                                    <Link to="/reposicion" className="btn btn-secondary text-small bg-white hover:bg-surface border-border">Reponer</Link>
                                 </div>
                             ))
+                        )}
+                        {criticalProducts.length > 5 && (
+                            <div className="text-center mt-3">
+                                <Link to="/reposicion" className="text-small text-muted hover:text-primary">
+                                    Ver {criticalProducts.length - 5} más...
+                                </Link>
+                            </div>
                         )}
                     </div>
                 </section>

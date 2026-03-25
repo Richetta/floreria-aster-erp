@@ -142,6 +142,8 @@ console.log('Loading categories.js...');
 await fastify.register(import('./routes/categories.js'), { prefix: '/api/categories' });
 console.log('Loading business.js...');
 await fastify.register(import('./routes/business.js'), { prefix: '/api/business' });
+console.log('Loading inventory.js...');
+await fastify.register(import('./routes/inventory.js'), { prefix: '/api/inventory' });
 console.log('Loading diagnostic.js...');
 await fastify.register(import('./routes/diagnostic.js'), { prefix: '/api/admin' });
 

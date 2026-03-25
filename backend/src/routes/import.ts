@@ -12,12 +12,7 @@ import { sql } from 'kysely';
 import { randomUUID } from 'crypto';
 
 export const importRoutes: FastifyPluginAsync = async (fastify) => {
-  // Register multipart for file uploads
-  await fastify.register(multipart, {
-    limits: {
-      fileSize: 10 * 1024 * 1024 // 10MB limit
-    }
-  });
+  // Multipart is already registered globally in server.ts
 
   // Validate import data schema
   const importDataSchema = z.array(z.object({

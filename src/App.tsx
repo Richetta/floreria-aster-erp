@@ -21,6 +21,7 @@ import { Purchases } from './pages/Purchases/Purchases';
 import { Reports } from './pages/Reports/Reports';
 import { CashRegister } from './pages/CashRegister/CashRegister';
 import { StockMovements } from './pages/StockMovements/StockMovements';
+import Restock from './pages/Restock/Restock';
 import { Reminders } from './pages/Reminders/Reminders';
 import { useAuth } from './store/useAuth';
 
@@ -130,6 +131,7 @@ function App() {
                         <Route path="reportes" element={<Reports />} />
                         <Route path="caja" element={<CashRegister />} />
                         <Route path="stock" element={<StockMovements />} />
+                        <Route path="reposicion" element={<Restock />} />
                         <Route path="recordatorios" element={<Reminders />} />
                         <Route path="configuracion" element={<Settings />} />
                     </Route>

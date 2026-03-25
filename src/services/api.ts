@@ -454,6 +454,10 @@ class ApiClient {
     return this.request('/stock/low-stock');
   }
 
+  async getRestockItems(): Promise<any[]> {
+    return this.request('/inventory/restock');
+  }
+
   async createStockAdjustment(data: any): Promise<any> {
     return this.request('/stock/adjustment', {
       method: 'POST',

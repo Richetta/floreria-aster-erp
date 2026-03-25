@@ -60,6 +60,7 @@ const navItems: NavItem[] = [
     children: [
       { path: '/productos', label: 'Catálogo' },
       { path: '/paquetes', label: 'Ramos', icon: Layers },
+      { path: '/reposicion', label: 'Reposición' },
       { path: '/stock', label: 'Movimientos', icon: Activity },
       { path: '/mermas', label: 'Mermas', icon: Trash2 },
     ]
