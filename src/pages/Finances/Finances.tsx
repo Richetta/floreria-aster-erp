@@ -93,14 +93,14 @@ export const Finances = () => {
     const totalAccountsReceivable = (customers || []).reduce((sum, c) => sum + (Number(c.debtBalance) || 0), 0);
 
     const incomeByMethod = {
-        cash: transactions.filter(t => t.type === 'income' && t.method === 'cash').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-        card: transactions.filter(t => t.type === 'income' && t.method === 'card').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-        transfer: transactions.filter(t => t.type === 'income' && t.method === 'transfer').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
+        cash: (transactions || []).filter(t => t.type === 'income' && t.method === 'cash').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
+        card: (transactions || []).filter(t => t.type === 'income' && t.method === 'card').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
+        transfer: (transactions || []).filter(t => t.type === 'income' && t.method === 'transfer').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
     };
 
     const expenseByMethod = {
-        cash: transactions.filter(t => t.type === 'expense' && t.method === 'cash').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-        transfer: transactions.filter(t => t.type === 'expense' && t.method === 'transfer').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
+        cash: (transactions || []).filter(t => t.type === 'expense' && t.method === 'cash').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
+        transfer: (transactions || []).filter(t => t.type === 'expense' && t.method === 'transfer').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
     };
 
     const totalIncome = Object.values(incomeByMethod).reduce((a, b) => Number(a) + Number(b), 0);
@@ -303,10 +303,10 @@ export const Finances = () => {
                                 Entradas de Caja
                             </span>
                             <div className="ledger-scroll">
-                                {[...transactions].filter(t => t.type === 'income').map(t => (
+                                {[...(transactions || [])].filter(t => t.type === 'income').map(t => (
                                     <LedgerItemPremium key={t.id} t={t} />
                                 ))}
-                                {transactions.filter(t => t.type === 'income').length === 0 && (
+                                {(transactions || []).filter(t => t.type === 'income').length === 0 && (
                                     <div className="text-center py-10 opacity-40 italic">No hay ingresos registrados hoy</div>
                                 )}
                             </div>
@@ -318,10 +318,10 @@ export const Finances = () => {
                                 Salidas de Caja
                             </span>
                             <div className="ledger-scroll">
-                                {[...transactions].filter(t => t.type === 'expense').map(t => (
+                                {[...(transactions || [])].filter(t => t.type === 'expense').map(t => (
                                     <LedgerItemPremium key={t.id} t={t} />
                                 ))}
-                                {transactions.filter(t => t.type === 'expense').length === 0 && (
+                                {(transactions || []).filter(t => t.type === 'expense').length === 0 && (
                                     <div className="text-center py-10 opacity-40 italic">No hay egresos registrados hoy</div>
                                 )}
                             </div>

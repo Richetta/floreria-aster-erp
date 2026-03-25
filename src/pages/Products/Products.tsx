@@ -86,7 +86,7 @@ export const Products = () => {
     // Filtered Products for the active folder
     const filteredProducts = useMemo(() => {
         if (!products) return [];
-        let result = products.filter(p => {
+        let result = (products || []).filter(p => {
             const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;
             const matchesSearch = p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
                 p.code.toLowerCase().includes(debouncedSearchTerm.toLowerCase());

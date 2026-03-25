@@ -55,13 +55,13 @@ export const Waste = () => {
 
     // 1. Obtener todas las transacciones de Merma reales
     const rawWasteHistory = useMemo(() => 
-        transactions.filter(t => t.category === 'Merma').sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+        (transactions || []).filter(t => t.category === 'Merma').sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
         [transactions]
     );
 
     // 2. Filtrar por Fecha
     const dateFilteredHistory = useMemo(() => {
-        return rawWasteHistory.filter(h => {
+        return (rawWasteHistory || []).filter(h => {
             const d = new Date(h.date);
             if (dateFilter === 'week') return isThisWeek(d);
             if (dateFilter === 'month') return isThisMonth(d);
@@ -71,20 +71,20 @@ export const Waste = () => {
 
     // 3. Filtrar por Búsqueda
     const filteredHistory = useMemo(() => {
-        return dateFilteredHistory.filter(h =>
+        return (dateFilteredHistory || []).filter(h =>
             h.description.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [dateFilteredHistory, searchTerm]);
 
     // 4. Métricas Clave
     const totalLossValue = useMemo(() =>
-        dateFilteredHistory.reduce((sum, t) => sum + t.amount, 0),
+        (dateFilteredHistory || []).reduce((sum, t) => sum + t.amount, 0),
         [dateFilteredHistory]
     );
 
     // 5. Datos para el Gráfico (Pérdidas agrupadas por día)
     const chartData = useMemo(() => {
-        const grouped = dateFilteredHistory.reduce((acc: any, t) => {
+        const grouped = (dateFilteredHistory || []).reduce((acc: any, t) => {
             // "2026-03-10T14:30:00" -> "10 Mar"
             const dateObj = new Date(t.date);
             const dayKey = dateObj.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
@@ -100,7 +100,7 @@ export const Waste = () => {
 
     // 6. Ranking Top 3 Productos Perdidos
     const topLostProducts = useMemo(() => {
-        const productLosses = dateFilteredHistory.reduce((acc: any, t) => {
+        const productLosses = (dateFilteredHistory || []).reduce((acc: any, t) => {
             // asumiendo description format "Merma: 2x Rosas (Motivo)"
             // El relatedId de la transaction de merma esconde el productId!
             const pId = t.relatedId || 'unknown';

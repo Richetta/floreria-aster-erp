@@ -42,7 +42,7 @@ export const Customers = () => {
 
     // Advanced search logic
     const filteredCustomers = useMemo(() => {
-        return customers.filter(c => {
+        return (customers || []).filter(c => {
             const matchesSearch =
                 c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 c.phone.includes(searchTerm);

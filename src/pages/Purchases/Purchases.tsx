@@ -33,7 +33,7 @@ export const Purchases = () => {
     }, []);
 
     const filteredSuppliers = useMemo(() => {
-        return suppliers.filter(s => 
+        return (suppliers || []).filter(s => 
             s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             s.phone.includes(searchTerm)
         );
@@ -253,7 +253,7 @@ export const Purchases = () => {
                                 onChange={(e) => setSelectedSupplier(e.target.value)}
                             >
                                 <option value="">Seleccionar proveedor...</option>
-                                {suppliers.map(s => (
+                                {(suppliers || []).map(s => (
                                     <option key={s.id} value={s.id}>{s.name}</option>
                                 ))}
                             </select>
@@ -265,7 +265,7 @@ export const Purchases = () => {
                                 <Package size={18} /> Agregar Productos
                             </label>
                             <div className="product-selector">
-                                {products.filter(p => p.category !== 'Ramos').map(product => (
+                                {(products || []).filter(p => p.category !== 'Ramos').map(product => (
                                     <button
                                         key={product.id}
                                         className="product-selector-btn"

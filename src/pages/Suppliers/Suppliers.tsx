@@ -126,7 +126,7 @@ export const Suppliers = () => {
 
     const categories = ['all', ...Array.from(new Set(suppliers.map(s => s.category)))];
 
-    const filteredSuppliers = suppliers.filter(s => {
+    const filteredSuppliers = (suppliers || []).filter(s => {
         const matchesSearch = (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (s.contactName || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'all' || s.category === selectedCategory;
@@ -161,7 +161,7 @@ export const Suppliers = () => {
 
     const handleExport = async () => {
         try {
-            const csvData = suppliers.map(s => ({
+            const csvData = (suppliers || []).map(s => ({
                 Nombre: s.name,
                 Contacto: s.contactName,
                 Teléfono: s.phone,

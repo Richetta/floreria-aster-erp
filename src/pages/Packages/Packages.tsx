@@ -45,7 +45,7 @@ export const Packages = () => {
 
     // Filter Logic
     const filteredPackages = useMemo(() => {
-        return packages.filter(pkg => {
+        return (packages || []).filter(pkg => {
             const matchesSearch = pkg.name.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesSection = activeSection ? pkg.section === activeSection : true;
             return matchesSearch && matchesSection;

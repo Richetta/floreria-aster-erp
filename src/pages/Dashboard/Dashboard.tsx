@@ -75,13 +75,13 @@ export const Dashboard = () => {
             .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
         // Count pending/assembling orders scheduled for today
-        const tOrders = orders.filter(o => isToday(o.date) && o.status !== 'delivered').length;
+        const tOrders = (orders || []).filter(o => isToday(o.date) && o.status !== 'delivered').length;
 
         // Products at or below minimum stock
-        const cProducts = products.filter(p => p.stock <= p.min);
+        const cProducts = (products || []).filter(p => p.stock <= p.min);
 
         // Total money owed by clients
-        const tDebt = customers.reduce((sum, c) => sum + (Number(c.debtBalance) || 0), 0);
+        const tDebt = (customers || []).reduce((sum, c) => sum + (Number(c.debtBalance) || 0), 0);
 
         // Closest upcoming orders (Max 5)
         const uOrders = orders
@@ -198,7 +198,7 @@ export const Dashboard = () => {
                 <section className="kpi-secondary mb-6">
                     <div className="kpi-secondary-item">
                         <ShoppingCart size={18} className="text-success" />
-                        <span className="text-small">{products.filter(p => p.stock > 0).length} productos disponibles</span>
+                        <span className="text-small">{(products || []).filter(p => p.stock > 0).length} productos disponibles</span>
                     </div>
                 </section>
             )}
@@ -314,13 +314,13 @@ export const Dashboard = () => {
                         }
                     </div>
 
-                    {customers.filter(c => c.debtBalance > 0).length > 5 && (
+                    {(customers || []).filter(c => c.debtBalance > 0).length > 5 && (
                         <div className="text-center mt-4">
                             <button
                                 className="btn btn-secondary"
                                 onClick={() => navigate('/clientes?filter=debt')}
                             >
-                                Ver todos los deudores ({customers.filter(c => c.debtBalance > 0).length})
+                                Ver todos los deudores ({(customers || []).filter(c => c.debtBalance > 0).length})
                             </button>
                         </div>
                     )}

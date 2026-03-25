@@ -173,8 +173,8 @@ Recordamos que hoy es ${extra?.event_name || 'tu día especial'}.
                 >
                     <Calendar size={18} />
                     Cumpleaños
-                    {birthdayReminders.filter(r => r.is_today).length > 0 && (
-                        <span className="tab-badge">{birthdayReminders.filter(r => r.is_today).length}</span>
+                    {(birthdayReminders || []).filter(r => r.is_today).length > 0 && (
+                        <span className="tab-badge">{(birthdayReminders || []).filter(r => r.is_today).length}</span>
                     )}
                 </button>
                 <button
@@ -231,7 +231,7 @@ Recordamos que hoy es ${extra?.event_name || 'tu día especial'}.
                                     </div>
                                     <div className="metric-data">
                                         <span className="text-small text-muted">Son Hoy</span>
-                                        <h2 className="text-h2 text-success">{birthdayReminders.filter(r => r.is_today).length}</h2>
+                                        <h2 className="text-h2 text-success">{(birthdayReminders || []).filter(r => r.is_today).length}</h2>
                                     </div>
                                 </div>
                                 <div className="metric-card">
@@ -240,7 +240,7 @@ Recordamos que hoy es ${extra?.event_name || 'tu día especial'}.
                                     </div>
                                     <div className="metric-data">
                                         <span className="text-small text-muted">Esta Semana</span>
-                                        <h2 className="text-h2 text-warning">{birthdayReminders.filter(r => r.is_soon).length}</h2>
+                                        <h2 className="text-h2 text-warning">{(birthdayReminders || []).filter(r => r.is_soon).length}</h2>
                                     </div>
                                 </div>
                             </div>
@@ -284,7 +284,7 @@ Recordamos que hoy es ${extra?.event_name || 'tu día especial'}.
                                         <p className="text-body text-muted">No hay cumpleaños o aniversarios próximos.</p>
                                     </div>
                                 ) : (
-                                    birthdayReminders.map((reminder, index) => (
+                                    (birthdayReminders || []).map((reminder, index) => (
                                         <div key={index} className={`reminder-card ${reminder.is_today ? 'today' : ''}`}>
                                             <div className="reminder-header">
                                                 <input
@@ -336,14 +336,14 @@ Recordamos que hoy es ${extra?.event_name || 'tu día especial'}.
                                         <div>
                                             <p className="text-small text-muted">Total por Cobrar</p>
                                             <h2 className="text-h2 text-danger">
-                                                ${debtReminders.reduce((sum, r) => sum + r.debt_amount, 0).toLocaleString()}
+                                                ${(debtReminders || []).reduce((sum, r) => sum + r.debt_amount, 0).toLocaleString()}
                                             </h2>
                                         </div>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-small text-muted">{debtReminders.length} clientes</p>
                                         <p className="text-micro">
-                                            Urgentes: {debtReminders.filter(r => r.urgency === 'high').length}
+                                            Urgentes: {(debtReminders || []).filter(r => r.urgency === 'high').length}
                                         </p>
                                     </div>
                                 </div>
@@ -358,7 +358,7 @@ Recordamos que hoy es ${extra?.event_name || 'tu día especial'}.
                                         <p className="text-body text-muted">No hay clientes con deuda pendiente.</p>
                                     </div>
                                 ) : (
-                                    debtReminders.map((reminder, index) => (
+                                    (debtReminders || []).map((reminder, index) => (
                                         <div key={index} className="reminder-card debt">
                                             <div className="reminder-header">
                                                 <div className="reminder-icon">💰</div>

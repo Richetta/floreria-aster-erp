@@ -68,6 +68,7 @@ export type Order = {
     includeCard?: boolean;
     guestName?: string;
     guestPhone?: string;
+    cardMessage?: string;
 };
 
 export type Sale = {

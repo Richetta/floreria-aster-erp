@@ -21,12 +21,12 @@ export const Logistics = () => {
     }, [loadOrders]);
 
     const readyOrders = useMemo(() =>
-        orders.filter(o => o.status === 'ready' || o.status === 'pending').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+        (orders || []).filter(o => o.status === 'ready' || o.status === 'pending').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
         [orders]
     );
 
     const shippingOrders = useMemo(() =>
-        orders.filter(o => o.status === 'out_for_delivery'),
+        (orders || []).filter(o => o.status === 'out_for_delivery'),
         [orders]
     );
 

@@ -133,7 +133,7 @@ export const CashRegister = () => {
             const csv = [
                 ['Fecha', selectedDate],
                 ['Tipo', 'Categoría', 'Método', 'Monto', 'Descripción'],
-                ...summary.transactions.map((t: any) => [
+                ...(dailySummary.transactions || []).map((t: any) => [
                     t.type,
                     t.category,
                     t.payment_method,
@@ -384,7 +384,7 @@ export const CashRegister = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {dailySummary.transactions.map((t: any) => (
+                                    {(dailySummary.transactions || []).map((t: any) => (
                                         <tr key={t.id}>
                                             <td className="text-micro">
                                                 {new Date(t.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}

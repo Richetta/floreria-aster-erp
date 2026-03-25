@@ -58,7 +58,7 @@ export const Orders = () => {
     ], []);
 
     const filteredOrders = useMemo(() => {
-        let base = orders.filter(o =>
+        let base = (orders || []).filter(o =>
             o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             o.id.toLowerCase().includes(searchTerm.toLowerCase())
         );

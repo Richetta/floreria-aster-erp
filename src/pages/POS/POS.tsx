@@ -280,7 +280,7 @@ export const POS = () => {
     // Filter customers by search
     const filteredCustomers = useMemo(() => {
         if (!customerSearch.trim()) return customers;
-        return customers.filter(c =>
+        return (customers || []).filter(c =>
             c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
             c.phone.includes(customerSearch)
         );
@@ -477,7 +477,7 @@ export const POS = () => {
 
     // Product filtering logic with views
     const filteredProducts = useMemo(() => {
-        let result = products.filter(p => {
+        let result = (products || []).filter(p => {
             const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 p.code.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;
@@ -652,7 +652,7 @@ export const POS = () => {
 
                             {/* Category & Tag Filters Componentized internally */}
                             <div className="category-filters-minimal mb-3">
-                                {['Todos', ...categories, (products.some(p => p.category === 'Sin Categoría') ? 'Sin Categoría' : '')].filter(Boolean).map(cat => (
+                                {['Todos', ...(categories || []), (products.some(p => p.category === 'Sin Categoría') ? 'Sin Categoría' : '')].filter(Boolean).map(cat => (
                                     <button
                                         key={cat}
                                         className={`minimal-chip ${activeCategory === cat ? 'active' : ''}`}
@@ -735,7 +735,7 @@ export const POS = () => {
 
                     <div className="product-list">
                         {productView === 'packages'
-                            ? packages.filter((pkg) => pkg.isActive).map((pkg) => {
+                            ? (packages || []).filter((pkg) => pkg.isActive).map((pkg) => {
                                 // Package View
                                 const availability = checkPackageAvailability(pkg.id);
                                 return (
@@ -836,7 +836,8 @@ export const POS = () => {
                                         </span>
                                         
                                         <div className="catalog-qty-controls">
-                                            {cart.find(i => i.id === item.id) && (
+                                            {cart.find(i => i.id === item.id) ? (
+                                                // Product is in cart - show - [qty] + controls
                                                 <>
                                                     <button className="qty-btn-catalog minus" onClick={(e) => {
                                                         e.stopPropagation();
@@ -847,14 +848,22 @@ export const POS = () => {
                                                     <span className="qty-value-catalog">
                                                         {cart.find(i => i.id === item.id)?.qty}
                                                     </span>
+                                                    <button className="qty-btn-catalog plus" onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        updateQty(item.id, 1);
+                                                    }}>
+                                                        <Plus size={16} />
+                                                    </button>
                                                 </>
-                                            )}
-                                            <button className="add-to-cart-btn" onClick={(e) => {
+                                            ) : (
+                                                // Product not in cart - show only + button
+                                                <button className="add-to-cart-btn" onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleAddToCart(item);
                                                 }}>
                                                     <Plus size={18} />
                                                 </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

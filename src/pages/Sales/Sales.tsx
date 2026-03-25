@@ -33,7 +33,7 @@ export const Sales = () => {
 
     // Filter sales from transactions
     const sales = useMemo(() => {
-        return transactions.filter(t => t.category === 'Venta POS' || (t.type === 'income' && t.description?.toLowerCase().includes('venta')));
+        return (transactions || []).filter(t => t.category === 'Venta POS' || (t.type === 'income' && t.description?.toLowerCase().includes('venta')));
     }, [transactions]);
 
     const filteredSales = useMemo(() => {

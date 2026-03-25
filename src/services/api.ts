@@ -416,6 +416,39 @@ class ApiClient {
     return this.request(`/stock/product/${id}/history?limit=${limit}`);
   }
 
+  async getNotifications(): Promise<any[]> {
+    return this.request('/notifications');
+  }
+
+  // ============================================
+  // REMINDERS ENDPOINTS
+  // ============================================
+
+  async getReminderHistory(limit: number = 100): Promise<any[]> {
+    return this.request(`/reminders/history?limit=${limit}`);
+  }
+
+  async sendBulkReminders(customerIds: string[], template: string, channel: 'whatsapp' | 'email' | 'sms' = 'whatsapp'): Promise<any> {
+    return this.request('/reminders/send-bulk', {
+      method: 'POST',
+      body: JSON.stringify({ customerIds, template, channel })
+    });
+  }
+
+  async downloadCSV(filename: string, data: any[]): Promise<void> {
+    if (!data || data.length === 0) return;
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map(row => Object.values(row).map(v => `"${v}"`).join(',')).join('\n');
+    const csv = `${headers}\n${rows}`;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
   async getLowStockProducts(): Promise<any[]> {
     return this.request('/stock/low-stock');
   }
@@ -694,6 +727,14 @@ class ApiClient {
     return this.request(`/reports/sales/summary?${params.toString()}`);
   }
 
+  async getSalesByPeriod(from_date?: string, to_date?: string, interval: string = 'day'): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (from_date) params.append('from_date', from_date);
+    if (to_date) params.append('to_date', to_date);
+    params.append('interval', interval);
+    return this.request(`/reports/sales/by-period?${params.toString()}`);
+  }
+
   async getProfits(from_date?: string, to_date?: string): Promise<any> {
     const params = new URLSearchParams();
     if (from_date) params.append('from_date', from_date);
@@ -707,6 +748,10 @@ class ApiClient {
     if (to_date) params.append('to_date', to_date);
     params.append('limit', limit.toString());
     return this.request(`/reports/products/top?${params.toString()}`);
+  }
+
+  async getTopCustomers(_from_date?: string, _to_date?: string, _limit: number = 10): Promise<any[]> {
+    return []; // NotImplemented in backend yet
   }
 
   async exportSales(from_date?: string, to_date?: string): Promise<string> {
