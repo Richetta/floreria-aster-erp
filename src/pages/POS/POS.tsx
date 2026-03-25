@@ -587,7 +587,7 @@ export const POS = () => {
                                 ref={searchInputRef}
                                 type="text"
                                 placeholder="Buscar nombre o código... (escanea o escribe)"
-                                className="form-input search-input"
+                                className="search-input"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 autoFocus
@@ -812,7 +812,7 @@ export const POS = () => {
                                                 e.stopPropagation();
                                                 addToCart(item);
                                             }}>
-                                                <Plus size={20} strokeWidth={3} />
+                                                <Plus size={24} strokeWidth={3} color="white" />
                                             </button>
                                     </div>
                                 </div>
@@ -892,11 +892,11 @@ export const POS = () => {
                                     <div className="cart-line-actions">
                                         <div className="qty-controls">
                                             <button className="qty-btn" onClick={() => updateQty(item.id, -1)} title="Disminuir cantidad">
-                                                <Minus size={14} strokeWidth={3} />
+                                                <Minus size={16} strokeWidth={3} color="white" />
                                             </button>
                                             <span className="qty-value">{item.qty}</span>
                                             <button className="qty-btn" onClick={() => updateQty(item.id, 1)} title="Aumentar cantidad">
-                                                <Plus size={14} strokeWidth={3} />
+                                                <Plus size={16} strokeWidth={3} color="white" />
                                             </button>
                                         </div>
 
