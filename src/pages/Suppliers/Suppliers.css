@@ -3,6 +3,40 @@
     animation: fadeIn 0.3s ease-out;
 }
 
+@media (max-width: 768px) {
+    .suppliers-page {
+        padding: var(--space-4);
+    }
+
+    .supplier-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .supplier-card {
+        padding: 1rem;
+    }
+
+    .supplier-header {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .supplier-actions {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .supplier-actions .btn {
+        width: 100%;
+    }
+
+    .search-bar {
+        width: 100%;
+    }
+}
+
 /* Loading State */
 .loading-state {
     text-align: center;

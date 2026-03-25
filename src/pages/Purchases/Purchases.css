@@ -4,6 +4,42 @@
     margin: 0 auto;
 }
 
+@media (max-width: 768px) {
+    .purchases-page {
+        padding: 1rem;
+        max-width: 100%;
+    }
+
+    .suppliers-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .supplier-card {
+        padding: 1rem;
+    }
+
+    .supplier-header {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .purchase-form-card {
+        padding: 1rem;
+        border-radius: var(--radius-lg);
+    }
+
+    .product-selector {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .product-selector-btn {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
+}
+
 .suppliers-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
