@@ -66,20 +66,38 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             // Client-side parsing for pasted text
             const lines = pastedText.split('\n').filter(l => l.trim());
             const data = lines.map(line => {
-                // Regex to find things like "P-101", "ABC-123", "$1500", "1.500", etc.
+                // Regex to find things like "P-101", "ABC-123", "$1500", "$$2000", "+50", etc.
                 const codeMatch = line.match(/([A-Z0-9]{2,}-[0-9]+|[A-Z]{1,}[0-9]{2,})/i);
-                const priceMatch = line.match(/(\$|USD)?\s*(\d{1,3}([,.]\d{3})*([,.]\d{2})?|\d+([,.]\d+)?)/);
-                
+
+                // Detect cost (with $$) and price (with $)
+                const costMatch = line.match(/\$\$\s*(\$|USD)?\s*(\d{1,3}([,.]\d{3})*([,.]\d{2})?|\d+([,.]\d+)?)/);
+                const priceMatch = line.match(/(?<!\$)\$\s*(\$|USD)?\s*(\d{1,3}([,.]\d{3})*([,.]\d{2})?|\d+([,.]\d+)?)/);
+
+                // Detect stock with + symbol
+                const stockMatch = line.match(/\+\s*(\d+)/);
+
+                // Fallback: if no $ or $$, try to find any number as price
+                const anyPriceMatch = line.match(/(?<!\$)(\$|USD)?\s*(\d{1,3}([,.]\d{3})*([,.]\d{2})?|\d+([,.]\d+)?)/);
+
                 let name = line;
                 if (codeMatch) name = name.replace(codeMatch[0], '');
+                if (costMatch) name = name.replace(costMatch[0], '');
                 if (priceMatch) name = name.replace(priceMatch[0], '');
-                
+                if (stockMatch) name = name.replace(stockMatch[0], '');
+                if (anyPriceMatch && !costMatch && !priceMatch) name = name.replace(anyPriceMatch[0], '');
+
+                // Parse numeric values
+                const parseNumber = (str: string) => {
+                    if (!str) return 0;
+                    return Number(str.replace(/\./g, '').replace(',', '.'));
+                };
+
                 return {
                     code: codeMatch ? codeMatch[0].toUpperCase() : '',
                     name: name.trim() || 'Producto sin nombre',
-                    cost: 0,
-                    price: priceMatch ? Number(priceMatch[2].replace(/\./g, '').replace(',', '.')) : 0,
-                    stock: 0
+                    cost: costMatch ? parseNumber(costMatch[2]) : 0,
+                    price: priceMatch ? parseNumber(priceMatch[2]) : (anyPriceMatch && !costMatch ? parseNumber(anyPriceMatch[2]) : 0),
+                    stock: stockMatch ? Number(stockMatch[1]) : 0
                 };
             });
 
@@ -194,12 +212,20 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                 <div className="paste-area">
                                     <textarea
                                         className="form-input w-full min-h-[200px] mb-4 p-4 font-mono text-small"
-                                        placeholder="Pegá aquí tu lista de productos... Ejemplo:&#10;P-001 Ramo de Rosas $1500&#10;P-002 Margaritas $800"
+                                        placeholder={`Pegá aquí tu lista de productos... Ejemplo:
+P-001 Ramo de Rosas $1500
+P-002 Margaritas $$800 $1200
+ABC-123 Tulipanes $950
+
+Símbolos:
+  $ = Precio de venta
+  $$ = Costo (podés usar ambos: $$800 $1200)
+  + = Cantidad de stock (ej: +50)`}
                                         value={pastedText}
                                         onChange={(e) => setPastedText(e.target.value)}
                                     />
-                                    <button 
-                                        className="btn btn-primary w-full" 
+                                    <button
+                                        className="btn btn-primary w-full"
                                         onClick={handleTextSubmit}
                                         disabled={isLoading || !pastedText.trim()}
                                     >
@@ -216,18 +242,28 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                 <div className="instructions-grid">
                                     <div className="instruction-item">
                                         <div className="step-num">1</div>
-                                        <p><strong>Formatos:</strong> Podés subir listas en PDF, Excel o Word.</p>
+                                        <p><strong>Formatos:</strong> Podés subir listas en PDF, Excel, Word o pegar texto directamente.</p>
                                     </div>
                                     <div className="instruction-item">
                                         <div className="step-num">2</div>
-                                        <p><strong>Detección:</strong> El sistema buscará códigos (ej: P-101) y precios automáticamente.</p>
+                                        <p><strong>Detección automática:</strong> El sistema busca códigos (ej: P-101) y precios.</p>
                                     </div>
                                     <div className="instruction-item">
                                         <div className="step-num">3</div>
+                                        <p><strong>Símbolos para pegar texto:</strong></p>
+                                        <ul className="symbol-list">
+                                            <li><code>$</code> = Precio de venta (ej: <code>$1500</code>)</li>
+                                            <li><code>$$</code> = Costo (ej: <code>$$800</code>)</li>
+                                            <li><code>+</code> = Stock (ej: <code>+50</code>)</li>
+                                            <li>Podés combinar: <code>$$800 $1200 +30</code></li>
+                                        </ul>
+                                    </div>
+                                    <div className="instruction-item">
+                                        <div className="step-num">4</div>
                                         <p><strong>Edición:</strong> Revisá y corregí los datos antes de guardar en el próximo paso.</p>
                                     </div>
                                 </div>
-                                <button 
+                                <button
                                     className="btn btn-outline mt-4 flex items-center gap-2 w-full justify-center"
                                     onClick={handleDownloadTemplate}
                                 >

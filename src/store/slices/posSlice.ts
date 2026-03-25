@@ -117,8 +117,8 @@ export const createPosSlice: StateCreator<AppState, [], [], PosSlice> = (set, ge
                 payment_method: sale.method,
                 customer_id: sale.customerId,
                 items: sale.items.map(i => ({
-                    product_id: i.productId,
-                    package_id: i.packageId,
+                    product_id: i.isPackage ? undefined : i.id,
+                    package_id: i.isPackage ? i.id : undefined,
                     quantity: i.qty,
                     unit_price: i.price
                 })),
