@@ -4,6 +4,7 @@
 @import './styles/design-tokens.css';
 @import './styles/typography.css';
 @import './styles/mobile-base.css';
+@import './styles/mobile-ux-system.css';
 
 :root {
   /* Florería Aster - Color Palette */
