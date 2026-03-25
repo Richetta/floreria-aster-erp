@@ -1,8 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Upload, Download, X, Check, AlertCircle, Search } from 'lucide-react';
 import { api } from '../../services/api';
-import { useStore } from '../../store/useStore';
-import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../ui/Modals';
 import './BulkPriceUpdateModal.css';
@@ -24,7 +22,6 @@ interface PriceChange {
 export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalProps) => {
     const products = useStore(state => state.products);
     const updateProduct = useStore(state => state.updateProduct);
-    const addTransaction = useStore(state => state.addTransaction);
 
     const [isLoading, setIsLoading] = useState(false);
     const { alertModal, showAlert } = useModal();
@@ -177,18 +174,6 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         previewChanges.forEach(change => {
             updateProduct(change.productId, { 
                 price: change.newPrice
-            });
-
-            // Registrar transacción de actualización de precio
-            addTransaction({
-                id: generateIdWithPrefix('t'),
-                type: 'expense',
-                category: 'Actualización de Precio',
-                amount: 0,
-                date: new Date().toISOString(),
-                method: 'cash',
-                description: `Precio de ${change.productName}: $${change.oldPrice} → $${change.newPrice}`,
-                relatedId: change.productId
             });
         });
 
