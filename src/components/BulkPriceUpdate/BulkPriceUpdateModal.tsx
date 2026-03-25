@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Upload, Download, X, Check, AlertCircle, Search } from 'lucide-react';
 import { api } from '../../services/api';
+import { useStore } from '../../store/useStore';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../ui/Modals';
 import './BulkPriceUpdateModal.css';
