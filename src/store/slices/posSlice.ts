@@ -127,8 +127,8 @@ export const createPosSlice: StateCreator<AppState, [], [], PosSlice> = (set, ge
 
             // Update individual product stock/sales locally
             sale.items.forEach(item => {
-                if (item.productId) {
-                    get().trackSale(item.productId, item.qty);
+                if (!item.isPackage && item.id) {
+                    get().trackSale(item.id, item.qty);
                 }
             });
 
