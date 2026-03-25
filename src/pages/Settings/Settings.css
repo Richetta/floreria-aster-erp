@@ -2,6 +2,51 @@
     animation: fadeIn 0.3s ease-out;
 }
 
+@media (max-width: 768px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .settings-card {
+        padding: 1.5rem;
+    }
+
+    .users-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .user-card {
+        padding: 1rem;
+    }
+
+    .user-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .user-avatar {
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+    }
+
+    .user-card-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .user-card-actions .btn {
+        width: 100%;
+    }
+
+    .input-with-icon .form-input {
+        padding-left: 2.5rem;
+    }
+}
+
 .settings-grid {
     display: grid;
     grid-template-columns: 1.5fr 1fr;
