@@ -1,4 +1,9 @@
-/* Bottom Navigation Bar - Mobile Only - REDESIGN 2026 */
+/* ============================================
+   BOTTOM NAVIGATION - MOBILE ONLY
+   Breakpoint estricto: 768px
+   ============================================ */
+
+/* Base: OCULTO en todos los dispositivos */
 .bottom-nav {
     display: none;
     position: fixed;
@@ -11,20 +16,54 @@
     z-index: 1000;
     padding-bottom: env(safe-area-inset-bottom);
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
-    display: flex;
     align-items: center;
     justify-content: space-around;
     padding: 0.5rem 0.25rem 0;
 }
 
+/* MOBILE ONLY: Mostrar solo en pantallas ≤ 768px */
 @media (max-width: 768px) {
     .bottom-nav {
         display: flex;
     }
+
+    .bottom-nav-item {
+        display: flex;
+    }
+
+    .bottom-nav-action {
+        display: flex;
+    }
+
+    .bottom-nav-more-overlay.show {
+        display: block;
+    }
+
+    .bottom-nav-more-panel {
+        display: flex;
+    }
+
+    .main-content {
+        padding-bottom: 68px !important;
+    }
+
+    .pos-container {
+        padding-bottom: 68px !important;
+    }
+}
+
+/* DESKTOP: Asegurar que esté oculto en pantallas > 768px */
+@media (min-width: 769px) {
+    .bottom-nav,
+    .bottom-nav-item,
+    .bottom-nav-action,
+    .bottom-nav-more-overlay,
+    .bottom-nav-more-panel {
+        display: none !important;
+    }
 }
 
 .bottom-nav-item {
-    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -98,7 +137,7 @@
     box-shadow: 0 4px 16px rgba(155, 81, 224, 0.4);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
-    margin-top: -24px; /* Sobresale hacia arriba */
+    margin-top: -24px;
 }
 
 .bottom-nav-action:active {
@@ -112,19 +151,12 @@
 
 /* More Panel Overlay */
 .bottom-nav-more-overlay {
-    display: none;
     position: fixed;
     inset: 0;
     background: rgba(15, 23, 42, 0.6);
     backdrop-filter: blur(4px);
     z-index: 999;
     animation: fadeIn 0.2s ease;
-}
-
-@media (max-width: 768px) {
-    .bottom-nav-more-overlay {
-        display: block;
-    }
 }
 
 /* More Panel - Full Screen desde abajo */
@@ -259,15 +291,4 @@
     height: 8px;
     border-radius: 50%;
     background: #9b51e0;
-}
-
-/* Ajustar main content para bottom nav */
-@media (max-width: 768px) {
-    .main-content {
-        padding-bottom: 68px !important;
-    }
-    
-    .pos-container {
-        padding-bottom: 68px !important;
-    }
 }

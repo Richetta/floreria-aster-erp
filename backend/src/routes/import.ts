@@ -14,13 +14,13 @@ import { randomUUID } from 'crypto';
 export const importRoutes: FastifyPluginAsync = async (fastify) => {
   // Multipart is already registered globally in server.ts
 
-  // Validate import data schema
   const importDataSchema = z.array(z.object({
     code: z.string(),
     name: z.string().optional(),
     cost: z.number().nonnegative().optional(),
     price: z.number().nonnegative().optional(),
-    stock: z.number().int().nonnegative().optional()
+    stock: z.number().int().nonnegative().optional(),
+    category_id: z.string().uuid().optional()
   }));
 
   // ============================================
@@ -271,6 +271,10 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
                 updateData.stock_quantity = row.stock;
               }
 
+              if (row.category_id !== undefined) {
+                updateData.category_id = row.category_id;
+              }
+
               await trx
                 .updateTable('products')
                 .set(updateData)
@@ -306,6 +310,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
                         business_id: user.business_id,
                         code: row.code,
                         name: row.name,
+                        category_id: row.category_id || null,
                         cost: row.cost || 0,
                         price: row.price || (body.auto_margin && row.cost ? row.cost * (1 + body.margin_percent / 100) : 0),
                         stock_quantity: row.stock || 0,

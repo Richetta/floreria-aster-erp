@@ -74,7 +74,7 @@
 }
 
 /* ============================================
-   MOBILE RESPONSIVE
+   MOBILE RESPONSIVE (< 768px)
    ============================================ */
 
 @media (max-width: 767px) {
@@ -88,6 +88,25 @@
 
     .main-content {
         padding-top: 60px; /* offset for fixed mobile header */
-        padding-bottom: 60px; /* offset for bottom nav */
+        padding-bottom: 68px; /* offset for bottom nav */
+    }
+}
+
+/* ============================================
+   DESKTOP RESPONSIVE (≥ 768px)
+   ============================================ */
+
+@media (min-width: 768px) {
+    .mobile-header {
+        display: none !important;
+    }
+
+    .sidebar-overlay {
+        display: none !important;
+    }
+
+    .main-content {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
     }
 }

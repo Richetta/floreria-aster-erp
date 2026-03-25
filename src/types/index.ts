@@ -12,8 +12,8 @@ export interface Product {
   code: string;
   name: string;
   description?: string;
-  category_id?: string;
-  category?: string; // For frontend display
+  category_id?: string | null;
+  category_name?: string; // For frontend display
   cost: number;
   price: number;
   margin_percent?: number;
@@ -27,6 +27,16 @@ export interface Product {
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  business_id: string;
+  parent_id?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ProductFormData {

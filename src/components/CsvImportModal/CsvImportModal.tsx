@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
-import { Upload, X, FileText, CheckCircle2, Download, Settings, Plus } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, X, FileText, CheckCircle2, Download, Settings, Plus, Layers } from 'lucide-react';
 import { api } from '../../services/api';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../ui/Modals';
+import type { Category } from '../../types';
 import './CsvImportModal.css';
 
 interface CsvImportModalProps {
@@ -29,7 +30,26 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     const [autoMargin, setAutoMargin] = useState(false);
     const [marginPercent, setMarginPercent] = useState(50);
 
+    // Categories
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [globalCategoryId, setGlobalCategoryId] = useState<string>('');
+
     const { alertModal, showAlert } = useModal();
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchCategories();
+        }
+    }, [isOpen]);
+
+    const fetchCategories = async () => {
+        try {
+            const data = await api.getCategories();
+            setCategories(data);
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -117,7 +137,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                     name: remainingText.replace(/\s+/g, ' ').trim() || 'Producto sin nombre',
                     cost: cost,
                     price: price,
-                    stock: stock
+                    stock: stock,
+                    category_id: globalCategoryId || null
                 };
             });
 
@@ -339,16 +360,40 @@ Símbolos:
                             <div className="preview-table-container editable-preview">
                                 <div className="flex justify-between items-center mb-3">
                                     <h4 className="text-h4">Revisá y Editá los Datos:</h4>
-                                    <button
-                                        className="btn btn-secondary btn-sm flex items-center gap-1"
-                                        onClick={() => {
-                                            const newItem = { code: '', name: '', cost: 0, price: 0, stock: 0 };
-                                            const newData = [newItem, ...parsedData.data];
-                                            setParsedData({ ...parsedData, data: newData, total_rows: newData.length });
-                                        }}
-                                    >
-                                        <Plus size={14} /> Agregar Fila
-                                    </button>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2 bg-slate-800/50 p-1 px-3 rounded-lg border border-slate-700">
+                                            <Layers size={14} className="text-primary" />
+                                            <span className="text-micro text-muted whitespace-nowrap">Aplicar categoría a todos:</span>
+                                            <select 
+                                                className="table-input py-1 text-micro border-none bg-transparent h-auto"
+                                                value={globalCategoryId}
+                                                onChange={(e) => {
+                                                    const cid = e.target.value;
+                                                    setGlobalCategoryId(cid);
+                                                    const newData = parsedData.data.map((row: any) => ({
+                                                        ...row,
+                                                        category_id: cid || null
+                                                    }));
+                                                    setParsedData({ ...parsedData, data: newData });
+                                                }}
+                                            >
+                                                <option value="">(Ninguna)</option>
+                                                {categories.map(c => (
+                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <button
+                                            className="btn btn-secondary btn-sm flex items-center gap-1"
+                                            onClick={() => {
+                                                const newItem = { code: '', name: '', cost: 0, price: 0, stock: 0, category_id: globalCategoryId || null };
+                                                const newData = [newItem, ...parsedData.data];
+                                                setParsedData({ ...parsedData, data: newData, total_rows: newData.length });
+                                            }}
+                                        >
+                                            <Plus size={14} /> Agregar Fila
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="table-scroll-area">
                                     <table className="preview-table">
@@ -356,6 +401,7 @@ Símbolos:
                                             <tr>
                                                 <th>Código</th>
                                                 <th>Nombre</th>
+                                                <th>Categoría</th>
                                                 <th style={{ width: '100px' }}>Costo</th>
                                                 <th style={{ width: '100px' }}>Precio</th>
                                                 <th style={{ width: '80px' }}>Stock</th>
@@ -388,6 +434,22 @@ Símbolos:
                                                             }}
                                                             className="table-input"
                                                         />
+                                                    </td>
+                                                    <td>
+                                                        <select
+                                                            value={row.category_id || ''}
+                                                            onChange={(e) => {
+                                                                const newData = [...parsedData.data];
+                                                                newData[i] = { ...row, category_id: e.target.value || null };
+                                                                setParsedData({ ...parsedData, data: newData });
+                                                            }}
+                                                            className="table-input"
+                                                        >
+                                                            <option value="">(Sin categ.)</option>
+                                                            {categories.map(c => (
+                                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                                            ))}
+                                                        </select>
                                                     </td>
                                                     <td>
                                                         <input

@@ -1,14 +1,13 @@
 /* ============================================
    POS MOBILE & DESKTOP - REDESIGN 2026
-   Enfoque: Mobile-first, Desktop-progressive
+   SEPARACIÓN ESTRICTA: Mobile ≤ 768px, Desktop ≥ 769px
    ============================================ */
 
 /* ============================================
-   BASE - Ambos dispositivos
+   BASE - Ambos dispositivos (estilos compartidos)
    ============================================ */
 .pos-container {
     display: flex;
-    flex-direction: column;
     height: 100vh;
     height: 100dvh;
     overflow: hidden;
@@ -16,13 +15,13 @@
 }
 
 /* ============================================
-   DESKTOP - Panel lateral derecho
+   DESKTOP (≥ 769px) - Panel lateral derecho
    ============================================ */
-@media (min-width: 1025px) {
+@media (min-width: 769px) {
     .pos-container {
         flex-direction: row;
     }
-    
+
     .pos-catalog {
         flex: 1;
         display: flex;
@@ -30,24 +29,32 @@
         overflow: hidden;
         border-right: 1px solid #e2e8f0;
     }
-    
+
     .pos-cart-panel {
         flex: 0 0 420px;
-        display: flex;
+        display: flex !important; /* Forzar visibilidad en desktop */
         flex-direction: column;
         background: white;
         border-left: 1px solid #e2e8f0;
     }
-    
-    .cart-float-button {
-        display: none !important; /* Ocultar botón flotante en desktop */
+
+    /* Elementos MOBILE - OCULTAR en desktop */
+    .cart-float-button,
+    .cart-bottom-sheet,
+    .order-modal-overlay,
+    .pos-view-switcher {
+        display: none !important;
     }
 }
 
 /* ============================================
-   MOBILE - Full screen con bottom sheet
+   MOBILE (≤ 768px) - Full screen con bottom sheet
    ============================================ */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
+    .pos-container {
+        flex-direction: column;
+    }
+
     .pos-catalog {
         flex: 1;
         display: flex;
@@ -55,9 +62,32 @@
         overflow: hidden;
         width: 100%;
     }
-    
+
+    /* Elementos DESKTOP - OCULTAR en mobile */
     .pos-cart-panel {
-        display: none !important; /* Ocultar panel en mobile, usar bottom sheet */
+        display: none !important;
+    }
+
+    /* Elementos MOBILE - MOSTRAR en mobile */
+    .cart-float-button {
+        display: flex !important;
+    }
+
+    .cart-bottom-sheet {
+        display: flex !important;
+    }
+
+    .order-modal-overlay {
+        display: none; /* Se muestra con clase 'show' */
+    }
+
+    .order-modal-overlay.show {
+        display: flex !important;
+    }
+
+    /* View Switcher visible en mobile */
+    .pos-view-switcher {
+        display: flex !important;
     }
 }
 
