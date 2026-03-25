@@ -85,15 +85,6 @@ export const POS = () => {
     const [newCustomerName, setNewCustomerName] = useState('');
     const [newCustomerPhone, setNewCustomerPhone] = useState('');
     const [paymentWithAmount, setPaymentWithAmount] = useState<number | ''>('');
-
-    // Safe symbols that always render in any environment
-    const PlusIcon = () => (
-        <span style={{ fontSize: '20px', fontWeight: '900', color: 'white', lineHeight: 1, display: 'block', transform: 'translateY(-1px)' }}>+</span>
-    );
-
-    const MinusIcon = () => (
-        <span style={{ fontSize: '20px', fontWeight: '900', color: 'white', lineHeight: 1, display: 'block', transform: 'translateY(-2px)' }}>−</span>
-    );
     
     // UI states
     const [searchTerm, setSearchTerm] = useState('');
@@ -590,18 +581,38 @@ export const POS = () => {
 
                     {/* Smart Unified Search & View Toggle */}
                     <div className="pos-actions-bar mb-4">
-                        <div className="search-bar pos-search flex-1">
-                            <Search className="search-icon text-muted" size={20} />
-                            <input
-                                ref={searchInputRef}
-                                type="text"
-                                placeholder="Buscar nombre o código... (escanea o escribe)"
-                                className="search-input"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                autoFocus
-                                style={{ border: 'none', background: 'transparent', boxShadow: 'none' }}
-                            />
+                        <div className="pos-search" style={{
+                                borderRadius: '50px',
+                                overflow: 'hidden',
+                                border: '2px solid #e2e8f0',
+                                background: '#f1f5f9',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '0 1.5rem',
+                                height: '54px',
+                                width: '100%',
+                                transition: 'all 0.3s ease'
+                            }}>
+                                <Search style={{ color: '#94a3b8', flexShrink: 0 }} size={20} />
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    placeholder="Buscar nombre o código... (escanea o escribe)"
+                                    className="search-input"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    autoFocus
+                                    style={{
+                                        border: 'none',
+                                        background: 'transparent',
+                                        boxShadow: 'none',
+                                        flex: 1,
+                                        padding: '0 1rem',
+                                        fontSize: '1rem',
+                                        outline: 'none',
+                                        color: '#0f172a'
+                                    }}
+                                />
                             {searchTerm && (
                                 <button
                                     className="clear-search-btn"
@@ -822,7 +833,7 @@ export const POS = () => {
                                                 e.stopPropagation();
                                                 addToCart(item);
                                             }}>
-                                                <PlusIcon />
+                                                <span style={{ fontSize: '24px', fontWeight: '900', color: 'white' }}>+</span>
                                             </button>
                                     </div>
                                 </div>
@@ -901,12 +912,12 @@ export const POS = () => {
 
                                     <div className="cart-line-actions">
                                         <div className="qty-controls">
-                                            <button className="qty-btn" onClick={() => updateQty(item.id, -1)} title="Disminuir cantidad">
-                                                <MinusIcon />
+                                            <button className="qty-btn" onClick={() => updateQty(item.id, -1)} title="Disminuir cantidad" style={{ background: '#9b51e0', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                                <span style={{ fontSize: '20px', fontWeight: '900', color: 'white', transform: 'translateY(-1px)' }}>−</span>
                                             </button>
                                             <span className="qty-value">{item.qty}</span>
-                                            <button className="qty-btn" onClick={() => updateQty(item.id, 1)} title="Aumentar cantidad">
-                                                <PlusIcon />
+                                            <button className="qty-btn" onClick={() => updateQty(item.id, 1)} title="Aumentar cantidad" style={{ background: '#9b51e0', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                                <span style={{ fontSize: '20px', fontWeight: '900', color: 'white', transform: 'translateY(-1px)' }}>+</span>
                                             </button>
                                         </div>
 
