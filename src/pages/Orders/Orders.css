@@ -877,4 +877,31 @@
         width: 100%;
         justify-content: space-between;
     }
+
+    /* Kanban board mobile */
+    .kanban-board {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .kanban-column {
+        min-width: 100%;
+        margin-bottom: 1rem;
+    }
+
+    .kanban-cards-container {
+        max-height: 300px;
+    }
+
+    .order-card {
+        padding: 0.75rem;
+    }
+
+    .order-card h4 {
+        font-size: 0.875rem;
+    }
+
+    .order-card .text-small {
+        font-size: 0.7rem;
+    }
 }

@@ -13,6 +13,37 @@
     border: 1px solid var(--border-color);
 }
 
+@media (max-width: 768px) {
+    .sales-controls {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .sales-controls .search-box {
+        width: 100%;
+    }
+
+    .filter-group {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .date-filters {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .filter-btn {
+        flex: 0 0 auto;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+    }
+}
+
 .search-box {
     position: relative;
     flex: 1;
@@ -93,6 +124,59 @@
     align-items: center;
     cursor: pointer;
     background: white;
+}
+
+@media (max-width: 768px) {
+    .sale-card-header {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: flex-start;
+    }
+
+    .sale-main-info {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .sale-payment-info {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .payment-tag {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .sale-card.expanded .sale-card-body {
+        padding: 1rem;
+    }
+
+    .table-header,
+    .table-row {
+        grid-template-columns: 1fr 1fr;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .table-header > *:nth-child(3),
+    .table-header > *:nth-child(4),
+    .table-row > *:nth-child(3),
+    .table-row > *:nth-child(4) {
+        display: none;
+    }
+
+    .sale-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .sale-actions .btn {
+        width: 100%;
+    }
 }
 
 .sale-main-info {
