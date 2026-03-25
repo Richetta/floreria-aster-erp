@@ -3,6 +3,7 @@
 /* Importar Design Tokens y Typography */
 @import './styles/design-tokens.css';
 @import './styles/typography.css';
+@import './styles/mobile-base.css';
 
 :root {
   /* Florería Aster - Color Palette */
