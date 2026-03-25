@@ -34,6 +34,20 @@ import './POS.css';
 
 type ProductView = 'recent' | 'top' | 'all' | 'packages';
 
+// Optimized direct SVGs to guarantee visibility in production
+const PlusIcon = ({ size = 16, strokeWidth = 2.5, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}>
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+);
+
+const MinusIcon = ({ size = 16, strokeWidth = 2.5, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+);
+
 export const POS = () => {
     const products = useStore((state) => state.products);
     const packages = useStore((state) => state.packages);
@@ -591,6 +605,7 @@ export const POS = () => {
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 autoFocus
+                                style={{ border: 'none', background: 'transparent', boxShadow: 'none' }}
                             />
                             {searchTerm && (
                                 <button
@@ -812,7 +827,7 @@ export const POS = () => {
                                                 e.stopPropagation();
                                                 addToCart(item);
                                             }}>
-                                                <Plus size={24} strokeWidth={3} color="white" />
+                                                <PlusIcon size={24} strokeWidth={3} color="white" />
                                             </button>
                                     </div>
                                 </div>
@@ -892,11 +907,11 @@ export const POS = () => {
                                     <div className="cart-line-actions">
                                         <div className="qty-controls">
                                             <button className="qty-btn" onClick={() => updateQty(item.id, -1)} title="Disminuir cantidad">
-                                                <Minus size={16} strokeWidth={3} color="white" />
+                                                <MinusIcon size={16} strokeWidth={3} color="white" />
                                             </button>
                                             <span className="qty-value">{item.qty}</span>
                                             <button className="qty-btn" onClick={() => updateQty(item.id, 1)} title="Aumentar cantidad">
-                                                <Plus size={16} strokeWidth={3} color="white" />
+                                                <PlusIcon size={16} strokeWidth={3} color="white" />
                                             </button>
                                         </div>
 
