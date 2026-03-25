@@ -2,6 +2,27 @@
     animation: fadeIn 0.3s ease-out;
 }
 
+@media (max-width: 768px) {
+    .dashboard-grid {
+        gap: 1rem;
+    }
+
+    .filter-chip {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    .date-filters {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+
+    .waste-history-list {
+        max-height: 300px;
+    }
+}
+
 .dashboard-grid {
     display: grid;
     grid-template-columns: 2fr 1fr;
