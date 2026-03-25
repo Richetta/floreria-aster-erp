@@ -97,7 +97,6 @@ export const POS = () => {
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
     const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
-    const [showCheckoutModal, setShowCheckoutModal] = useState(false);
 
     // Success Modals
     const [showSuccessModal, setShowSuccessModal] = useState(false);

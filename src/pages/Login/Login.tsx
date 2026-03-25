@@ -4,6 +4,7 @@ import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import type { CredentialResponse } from '@react-oauth/google';
 import { Lock, Mail, Flower2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
+import { api } from '../../services/api';
 import './Login.css';
 
 // ============================================
@@ -70,6 +71,9 @@ const LoginForm = () => {
             if (data.token) {
                 localStorage.setItem('auth_token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
+
+                // Sync token with the API client explicitly
+                api.setToken(data.token);
 
                 // Update auth store directly
                 useAuth.setState({
