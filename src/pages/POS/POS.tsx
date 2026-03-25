@@ -19,7 +19,9 @@ import {
     AlertCircle,
     Copy,
     Printer,
-    UserPlus
+    UserPlus,
+    Plus,
+    Minus
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
@@ -84,7 +86,6 @@ export const POS = () => {
     const [isAddingCustomer, setIsAddingCustomer] = useState(false);
     const [newCustomerName, setNewCustomerName] = useState('');
     const [newCustomerPhone, setNewCustomerPhone] = useState('');
-    const [paymentWithAmount, setPaymentWithAmount] = useState<number | ''>('');
     
     // UI states
     const [searchTerm, setSearchTerm] = useState('');
@@ -238,6 +239,21 @@ export const POS = () => {
         updateCartQty(id, delta);
     };
 
+    // Wrapper with stock check
+    const handleAddToCart = async (product: any) => {
+        if (product.stock <= 0) {
+            const confirmed = await showConfirm({
+                title: 'Producto sin stock',
+                message: `El producto "${product.name}" no tiene stock disponible. ¿Estás seguro que querés proceder?`,
+                confirmText: 'Sí, proceder',
+                cancelText: 'No',
+                variant: 'warning'
+            });
+            if (!confirmed) return;
+        }
+        addToCart(product);
+    };
+
 
     const handleAddCustomer = () => {
         if (!newCustomerName.trim()) return;
@@ -273,17 +289,8 @@ export const POS = () => {
     const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
-    // Calculate change
-    const change = typeof paymentWithAmount === 'number' ? paymentWithAmount - total : 0;
-
     const handleCheckout = async (method: 'cash' | 'card') => {
         if (cart.length === 0) return;
-
-        // For cash payments, we no longer block if the amount is insufficient (as per user request)
-        // We only provide a warning for clarity if they did enter an amount
-        if (method === 'cash' && typeof paymentWithAmount === 'number' && paymentWithAmount < total) {
-            console.log(`[POS] Pago en efectivo menor al total (${paymentWithAmount} < ${total}). Continuando...`);
-        }
 
         // Final Stock Validation before processing
         for (const item of cart) {
@@ -385,7 +392,6 @@ export const POS = () => {
                 clearCart();
                 clearPosOrderForm();
                 setCheckoutMode('sale');
-                setPaymentWithAmount('');
             } catch (err) {
                 console.error("Failed to process order:", err);
                 // Notification is handled in addOrder
@@ -453,7 +459,6 @@ export const POS = () => {
                     clearCart();
                     setCheckoutMode('sale');
                     clearPosOrderForm();
-                    setPaymentWithAmount(''); // Reset payment amount
                 } else {
                     // processSale returned false - error notification already shown
                     console.warn('[POS] Venta fallida, no se resetea el carrito');
@@ -803,7 +808,7 @@ export const POS = () => {
                                 <div
                                     key={item.id}
                                     className={`product-list-item ${item.stock === 0 ? 'out-of-stock-pos' : ''}`}
-                                    onClick={() => addToCart(item)}
+                                    onClick={() => handleAddToCart(item)}
                                     style={item.stock === 0 ? { borderLeft: '4px solid var(--color-warning)' } : {}}
                                 >
                                     <div className="product-list-main">
@@ -826,15 +831,31 @@ export const POS = () => {
                                             <span className="time-badge">{getTimeAgo(item.lastSaleDate)}</span>
                                         )}
                                         <span className="product-list-price">${item.price.toLocaleString()}</span>
-                                        <span className={`stock-badge ${item.stock === 0 ? 'out' : item.stock < item.min ? 'low' : 'in'}`}>
-                                            {item.stock === 0 ? 'Sin stock' : `${item.stock} disponibles`}
+                                        <span className={`stock-badge ${item.stock <= 0 ? 'out' : item.stock < item.min ? 'low' : 'in'}`}>
+                                            {item.stock <= 0 ? 'Sin stock' : `${item.stock} disponibles`}
                                         </span>
-                                        <button className="add-to-cart-btn" onClick={(e) => {
-                                                e.stopPropagation();
-                                                addToCart(item);
-                                            }}>
-                                                <span style={{ fontSize: '24px', fontWeight: '900', color: 'white' }}>+</span>
-                                            </button>
+                                        
+                                        <div className="catalog-qty-controls">
+                                            {cart.find(i => i.id === item.id) && (
+                                                <>
+                                                    <button className="qty-btn-catalog minus" onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        updateQty(item.id, -1);
+                                                    }}>
+                                                        <Minus size={16} />
+                                                    </button>
+                                                    <span className="qty-value-catalog">
+                                                        {cart.find(i => i.id === item.id)?.qty}
+                                                    </span>
+                                                </>
+                                            )}
+                                            <button className="add-to-cart-btn" onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleAddToCart(item);
+                                                }}>
+                                                    <Plus size={18} />
+                                                </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))
@@ -912,12 +933,12 @@ export const POS = () => {
 
                                     <div className="cart-line-actions">
                                         <div className="qty-controls">
-                                            <button className="qty-btn" onClick={() => updateQty(item.id, -1)} title="Disminuir cantidad" style={{ background: '#9b51e0', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                                <span style={{ fontSize: '20px', fontWeight: '900', color: 'white', transform: 'translateY(-1px)' }}>−</span>
+                                            <button className="qty-btn" onClick={() => updateQty(item.id, -1)} title="Disminuir cantidad">
+                                                <Minus size={16} />
                                             </button>
                                             <span className="qty-value">{item.qty}</span>
-                                            <button className="qty-btn" onClick={() => updateQty(item.id, 1)} title="Aumentar cantidad" style={{ background: '#9b51e0', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                                <span style={{ fontSize: '20px', fontWeight: '900', color: 'white', transform: 'translateY(-1px)' }}>+</span>
+                                            <button className="qty-btn" onClick={() => updateQty(item.id, 1)} title="Aumentar cantidad">
+                                                <Plus size={16} />
                                             </button>
                                         </div>
 
@@ -1320,32 +1341,6 @@ export const POS = () => {
                                 <span className="total-amount">${total.toLocaleString()}</span>
                             </div>
 
-                            {/* Payment Amount Input */}
-                            <div className="payment-with-section">
-                                <label className="payment-with-label">
-                                    <Banknote size={16} />
-                                    <span>Pago con:</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    className="form-input payment-with-input"
-                                    placeholder="Ingresá el monto con el que paga"
-                                    value={paymentWithAmount}
-                                    onChange={(e) => setPaymentWithAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                                    min="0"
-                                    step="0.01"
-                                />
-                                {typeof paymentWithAmount === 'number' && (
-                                    <div className={`change-display ${change < 0 ? 'change-insufficient' : ''}`}>
-                                        <span className="change-label">
-                                            {change >= 0 ? '💵 Vuelto a devolver:' : '⚠️ Falta:'}
-                                        </span>
-                                        <span className={`change-amount ${change >= 0 ? 'change-positive' : 'change-negative'}`}>
-                                            ${Math.abs(change).toLocaleString()}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
 
                             <div className="payment-buttons-compact">
                                 <button
