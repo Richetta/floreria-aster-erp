@@ -511,7 +511,7 @@ export const POS = () => {
             case 'recent': return 'Últimos Vendidos';
             case 'top': return 'Más Vendidos';
             case 'all': return 'Lista Completa';
-            case 'packages': return 'Ramos y Paquetes';
+            case 'packages': return 'Paquetes';
         }
     };
 
@@ -713,7 +713,7 @@ export const POS = () => {
                             onClick={() => setProductView('packages')}
                         >
                             <ShoppingCart size={16} />
-                            <span>Ramos</span>
+                            <span>Paquetes</span>
                         </button>
                     </div>
                 </div>
