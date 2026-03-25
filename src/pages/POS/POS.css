@@ -1597,22 +1597,26 @@
     font-weight: 900;
 }
 
-.qty-btn-catalog span {
-    font-size: 1.4rem;
-    line-height: 1;
-    transform: translateY(-1px);
+.qty-btn-catalog svg {
+    color: #64748b !important;
+    stroke-width: 3px;
 }
 
 .qty-btn-catalog:hover {
     background: #f8fafc;
     border-color: #9b51e0;
-    color: #9b51e0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.qty-btn-catalog.minus:hover {
-    color: #ef4444;
-    border-color: #ef4444;
+.qty-btn-catalog:hover svg {
+    color: #9b51e0 !important;
+}
+
+.qty-btn-catalog.plus:hover svg {
+    color: #10b981 !important;
+}
+
+.qty-btn-catalog.minus:hover svg {
+    color: #ef4444 !important;
 }
 
 .qty-value-catalog {

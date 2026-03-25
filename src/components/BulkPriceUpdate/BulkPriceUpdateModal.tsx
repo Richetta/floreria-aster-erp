@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Upload, Download, X, Check, AlertCircle } from 'lucide-react';
+import { Upload, Download, X, Check, AlertCircle, Search } from 'lucide-react';
 import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
@@ -37,20 +37,43 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
     const [csvData, setCsvData] = useState<any[]>([]);
     const [importMode, setImportMode] = useState<'percentage' | 'csv' | 'manual'>('percentage');
 
+    // New states for selection and search
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+
     // Categorías disponibles
     const categories = useMemo(() => ['all', ...Array.from(new Set(products.map(p => p.category)))], [products]);
 
-    // Productos filtrados por categoría
-    const filteredProducts = useMemo(() => products.filter(p => 
-        selectedCategory === 'all' || p.category === selectedCategory
-    ), [products, selectedCategory]);
+    // Productos filtrados por categoría y búsqueda
+    const visibleProducts = useMemo(() => products.filter(p => {
+        const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              p.code.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesCategory && matchesSearch;
+    }), [products, selectedCategory, searchTerm]);
+
+    const handleToggleAll = () => {
+        if (selectedProductIds.size === visibleProducts.length && visibleProducts.length > 0) {
+            setSelectedProductIds(new Set());
+        } else {
+            setSelectedProductIds(new Set(visibleProducts.map(p => p.id)));
+        }
+    };
+
+    const handleToggleProduct = (id: string) => {
+        const newSet = new Set(selectedProductIds);
+        if (newSet.has(id)) newSet.delete(id);
+        else newSet.add(id);
+        setSelectedProductIds(newSet);
+    };
 
     // Calcular cambios cuando cambian los inputs
     const calculateChanges = useCallback(() => {
         const changes: PriceChange[] = [];
 
         if (importMode === 'percentage') {
-            filteredProducts.forEach(product => {
+            products.forEach(product => {
+                if (!selectedProductIds.has(product.id)) return;
                 const oldPrice = product.price;
                 const newPrice = oldPrice * (1 + percentageIncrease / 100);
                 changes.push({
@@ -63,7 +86,8 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                 });
             });
         } else if (importMode === 'manual') {
-            filteredProducts.forEach(product => {
+            products.forEach(product => {
+                if (!selectedProductIds.has(product.id)) return;
                 if (customPrices[product.id]) {
                     const oldPrice = product.price;
                     const newPrice = customPrices[product.id];
@@ -98,7 +122,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         }
 
         setPreviewChanges(changes);
-    }, [filteredProducts, percentageIncrease, customPrices, csvData, importMode, products]);
+    }, [products, percentageIncrease, customPrices, csvData, importMode, selectedProductIds]);
 
     // Calcular cambios automáticamente
     useEffect(() => {
@@ -239,45 +263,94 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                 </button>
                             </div>
 
-                            {/* Porcentaje Mode */}
-                            {importMode === 'percentage' && (
+                            {/* Porcentaje / Manual Mode with Checkboxes */}
+                            {(importMode === 'percentage' || importMode === 'manual') && (
                                 <div className="config-section">
-                                    <div className="form-group">
-                                        <label className="form-label">Categoría</label>
-                                        <select
-                                            className="form-input"
-                                            value={selectedCategory}
-                                            onChange={(e) => setSelectedCategory(e.target.value)}
-                                        >
-                                            {categories.map(cat => (
-                                                <option key={cat} value={cat}>
-                                                    {cat === 'all' ? 'Todas las categorías' : cat}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label className="form-label">
-                                            Porcentaje de {percentageIncrease > 0 ? 'Aumento' : 'Descuento'}
-                                        </label>
-                                        <div className="percentage-input">
-                                            <input
-                                                type="number"
-                                                className="form-input"
-                                                value={percentageIncrease}
-                                                onChange={(e) => setPercentageIncrease(parseFloat(e.target.value) || 0)}
-                                                min="-100"
-                                                max="1000"
-                                                step="0.1"
-                                            />
-                                            <span className="percentage-symbol">%</span>
+                                    {importMode === 'percentage' && (
+                                        <div className="form-group mb-4">
+                                            <label className="form-label">
+                                                Porcentaje de {percentageIncrease > 0 ? 'Aumento' : 'Descuento'}
+                                            </label>
+                                            <div className="percentage-input">
+                                                <input
+                                                    type="number"
+                                                    className="form-input"
+                                                    value={percentageIncrease}
+                                                    onChange={(e) => setPercentageIncrease(parseFloat(e.target.value) || 0)}
+                                                    min="-100"
+                                                    max="1000"
+                                                    step="0.1"
+                                                />
+                                                <span className="percentage-symbol">%</span>
+                                            </div>
                                         </div>
-                                        {percentageIncrease !== 0 && (
-                                            <p className={`helper-text ${percentageIncrease > 0 ? 'text-success' : 'text-danger'}`}>
-                                                {percentageIncrease > 0 ? '+' : ''}{percentageIncrease}% en {filteredProducts.length} productos
-                                            </p>
-                                        )}
+                                    )}
+
+                                    <div className="selection-area">
+                                        <h4 className="text-body font-bold mb-3">Seleccionar Productos ({selectedProductIds.size})</h4>
+                                        <div className="filters-row flex gap-2 mb-3">
+                                            <div className="search-box flex-1 relative">
+                                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                                                <input
+                                                    type="text"
+                                                    className="form-input pl-9"
+                                                    placeholder="Buscar flor o artículo..."
+                                                    value={searchTerm}
+                                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                                />
+                                            </div>
+                                            <select
+                                                className="form-input w-auto min-w-[200px]"
+                                                value={selectedCategory}
+                                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                            >
+                                                {categories.map(cat => (
+                                                    <option key={cat} value={cat}>
+                                                        {cat === 'all' ? 'Todas las categorías' : cat}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        
+                                        <div className="product-list-container border border-border rounded-lg overflow-hidden">
+                                            <div className="list-header bg-surface-hover p-3 flex items-center justify-between border-b border-border">
+                                                <label className="flex items-center gap-2 cursor-pointer font-medium text-small">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={visibleProducts.length > 0 && selectedProductIds.size === visibleProducts.length}
+                                                        onChange={handleToggleAll}
+                                                        className="checkbox-custom"
+                                                    />
+                                                    Seleccionar todos los filtrados
+                                                </label>
+                                                <span className="text-small text-muted">
+                                                    {visibleProducts.length} resultados
+                                                </span>
+                                            </div>
+                                            <div className="list-body max-h-[250px] overflow-y-auto p-2">
+                                                {visibleProducts.length === 0 ? (
+                                                    <p className="text-center text-muted py-4 text-small">No se encontraron productos.</p>
+                                                ) : (
+                                                    visibleProducts.map(p => (
+                                                        <label key={p.id} className="list-item flex items-center justify-between p-2 hover:bg-surface-hover rounded cursor-pointer transition-colors">
+                                                            <div className="flex items-center gap-3">
+                                                                <input 
+                                                                    type="checkbox" 
+                                                                    checked={selectedProductIds.has(p.id)}
+                                                                    onChange={() => handleToggleProduct(p.id)}
+                                                                    className="checkbox-custom"
+                                                                />
+                                                                <div>
+                                                                    <p className="text-body font-medium leading-none">{p.name}</p>
+                                                                    <span className="text-micro text-muted font-mono">{p.code}</span>
+                                                                </div>
+                                                            </div>
+                                                            <span className="text-small font-bold text-primary">${p.price.toLocaleString()}</span>
+                                                        </label>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -323,25 +396,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                 </div>
                             )}
 
-                            {/* Manual Mode */}
-                            {importMode === 'manual' && (
-                                <div className="config-section">
-                                    <div className="form-group">
-                                        <label className="form-label">Categoría a editar</label>
-                                        <select
-                                            className="form-input"
-                                            value={selectedCategory}
-                                            onChange={(e) => setSelectedCategory(e.target.value)}
-                                        >
-                                            {categories.map(cat => (
-                                                <option key={cat} value={cat}>
-                                                    {cat === 'all' ? 'Todas las categorías' : cat}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-                            )}
+
 
                             <div className="step-actions">
                                 <button className="btn btn-secondary" onClick={onClose}>
@@ -351,7 +406,8 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                     className="btn btn-primary"
                                     onClick={() => setStep(2)}
                                     disabled={
-                                        (importMode === 'percentage' && percentageIncrease === 0) ||
+                                        (importMode === 'percentage' && (selectedProductIds.size === 0 || percentageIncrease === 0)) ||
+                                        (importMode === 'manual' && selectedProductIds.size === 0) ||
                                         (importMode === 'csv' && csvData.length === 0)
                                     }
                                 >
