@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import { config } from './config/index.js';
 import { checkDatabaseConnection } from './db/index.js';
@@ -25,6 +26,13 @@ await fastify.register(jwt, {
   secret: config.jwtSecret,
   sign: {
     expiresIn: '7d' // Token valid for 7 days
+  }
+});
+
+console.log('Registering Multipart...');
+await fastify.register(multipart, {
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
   }
 });
 

@@ -76,29 +76,66 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/parse-file', async (request, reply) => {
     try {
       const fileRequest = await request.file();
-      if (!fileRequest) return reply.status(400).send({ error: 'No file uploaded' });
+      if (!fileRequest) {
+        console.error('[IMPORT] No file uploaded');
+        return reply.status(400).send({ error: 'No file uploaded' });
+      }
 
-      const buffer = await fileRequest.toBuffer();
       const filename = fileRequest.filename.toLowerCase();
+      console.log(`[IMPORT] Parsing file: ${filename}`);
+      
+      const buffer = await fileRequest.toBuffer();
+      if (!buffer || buffer.length === 0) {
+        console.error('[IMPORT] Empty buffer received');
+        throw new Error('El archivo está vacío');
+      }
+
       let parsedData: any[] = [];
       let method = '';
 
       if (filename.endsWith('.xlsx')) {
         method = 'Excel (XLSX)';
+        console.log('[IMPORT] Using ExcelJS for XLSX');
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(buffer as any);
         const worksheet = workbook.getWorksheet(1);
         if (worksheet) {
+          let headers: Record<string, number> = {};
+          
           worksheet.eachRow((row, rowNumber) => {
-            if (rowNumber === 1) return;
-            const values: any = Array.isArray(row.values) ? row.values : [];
-            if (values[1]) {
+            const values = Array.isArray(row.values) ? row.values : [];
+            
+            if (rowNumber === 1) {
+              // Find column indices from headers
+              values.forEach((val, idx) => {
+                const s = String(val).toLowerCase();
+                if (s.includes('cod') || s.includes('art')) headers.code = idx;
+                if (s.includes('nom') || s.includes('desc') || s.includes('prod')) headers.name = idx;
+                if (s.includes('cos')) headers.cost = idx;
+                if (s.includes('pre') || s.includes('vent')) headers.price = idx;
+                if (s.includes('stoc') || s.includes('cant')) headers.stock = idx;
+              });
+              console.log('[IMPORT] Detected headers:', headers);
+              return;
+            }
+
+            const code = headers.code ? String(values[headers.code]).trim() : undefined;
+            if (code) {
+              parsedData.push({
+                code,
+                name: headers.name ? String(values[headers.name] || '').trim() : undefined,
+                cost: headers.cost ? cleanPrice(values[headers.cost]) : undefined,
+                price: headers.price ? cleanPrice(values[headers.price]) : 0,
+                stock: headers.stock ? cleanPrice(values[headers.stock]) : 0,
+              });
+            } else if (values[1]) {
+              // Fallback to old positional parsing if no headers found or first column has data
               parsedData.push({
                 code: String(values[1]).trim(),
                 name: values[2] ? String(values[2]).trim() : undefined,
                 cost: cleanPrice(values[3]),
                 price: cleanPrice(values[4]),
-                stock: values[5] ? parseInt(String(values[5])) : undefined
+                stock: cleanPrice(values[5])
               });
             }
           });

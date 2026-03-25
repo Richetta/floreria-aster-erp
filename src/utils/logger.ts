@@ -20,8 +20,10 @@ class LoggerService {
    * Log message
    */
   private log(entry: LogEntry): void {
-    // En desarrollo, mostrar en consola
-    if (this.isDevelopment) {
+    // Siempre mostrar errores y advertencias en consola, incluso en producción
+    const showInConsole = this.isDevelopment || entry.level === 'error' || entry.level === 'warn';
+
+    if (showInConsole) {
       const logMessage = `[${entry.timestamp}] [${entry.level.toUpperCase()}] ${entry.context ? `[${entry.context}] ` : ''}${entry.message}`;
       
       switch (entry.level) {

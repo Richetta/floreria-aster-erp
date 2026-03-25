@@ -1,0 +1,74 @@
+.printable-catalog {
+  padding: 40px;
+  color: #000;
+  background: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.print-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 40px;
+  border-bottom: 2px solid #000;
+  padding-bottom: 20px;
+}
+
+.print-header .brand h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.print-header .brand p {
+  margin: 5px 0 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.print-header .info p {
+  margin: 2px 0;
+  font-size: 12px;
+  text-align: right;
+}
+
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 40px;
+}
+
+.print-table th {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #000;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.print-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  font-size: 13px;
+}
+
+.print-table .text-right { text-align: right; }
+.print-table .text-center { text-align: center; }
+.print-table .font-mono { font-family: monospace; }
+.print-table .font-bold { font-weight: 600; }
+
+.print-footer {
+  margin-top: 60px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+  text-align: center;
+  font-size: 10px;
+  color: #888;
+}
+
+@media print {
+  @page {
+    margin: 20mm;
+  }
+}

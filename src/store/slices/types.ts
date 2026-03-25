@@ -44,6 +44,7 @@ export type Customer = {
 
 export type Order = {
     id: string;
+    orderNumber?: string;
     customerName: string;
     customerPhone?: string;
     customerId?: string;
@@ -92,13 +93,15 @@ export type TransactionLocal = {
     notes?: string;
 };
 
+export type PackageItem = { productId: string; quantity: number };
+
 export type Package = {
     id: string;
     name: string;
     section: string;
     description: string;
     price: number;
-    items: { productId: string; quantity: number }[];
+    items: PackageItem[];
     isActive: boolean;
 };
 

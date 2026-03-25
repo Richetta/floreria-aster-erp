@@ -23,6 +23,7 @@ export interface ProductSlice {
     
     trackSale: (id: string, q: number) => void;
     registerWaste: (productId: string, quantity: number, reason: string) => Promise<void>;
+    getPriceHistory: (id: string) => Promise<any[]>;
 }
 
 export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = (set, get) => ({
@@ -30,6 +31,15 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
     categories: [],
     categoriesData: [],
     tags: [],
+
+    getPriceHistory: async (id: string) => {
+        try {
+            return await api.getProductPriceHistory(id);
+        } catch (error) {
+            console.error('Error fetching price history:', error);
+            return [];
+        }
+    },
 
     loadProducts: async () => {
         set({ isLoading: true, error: null } as any);

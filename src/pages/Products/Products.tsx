@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Plus, Check, X, Edit2, Trash2, Search, Folder, FolderPlus, List, Grid3x3, TrendingUp, History, Printer, Upload } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Plus, Check, X, Edit2, Trash2, Search, Folder, FolderPlus, List, Grid3x3, TrendingUp, History, Printer, Upload, FileDown } from 'lucide-react';
+import { useReactToPrint } from 'react-to-print';
 import { useStore } from '../../store/useStore';
 import type { Product } from '../../store/useStore';
 import { ProductModal } from '../../components/ProductModal/ProductModal';
@@ -7,6 +8,7 @@ import { BulkPriceUpdateModal } from '../../components/BulkPriceUpdate/BulkPrice
 import { PriceHistoryModal } from '../../components/PriceHistory/PriceHistoryModal';
 import { BarcodeLabelPrinter } from '../../components/BarcodeLabelPrinter/BarcodeLabelPrinter';
 import { CsvImportModal } from '../../components/CsvImportModal/CsvImportModal';
+import { PrintableCatalog } from '../../components/PrintableCatalog/PrintableCatalog';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
@@ -48,6 +50,13 @@ export const Products = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300); // 300ms debounce
     const [activeCategory, setActiveCategory] = useState<string>('Todos');
+
+    // Refs
+    const printRef = useRef<HTMLDivElement>(null);
+    const handlePrint = useReactToPrint({
+        contentRef: printRef,
+        documentTitle: `Catalogo_Aster_${activeCategory}`,
+    });
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [productToEdit, setProductToEdit] = useState<Product | null>(null);
     const [isEditingCategory, setIsEditingCategory] = useState(false);
@@ -237,6 +246,15 @@ export const Products = () => {
                                             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                         >
                                             <TrendingUp size={18} /> Actualizar Precios
+                                        </button>
+                                        <button
+                                            className="dropdown-item"
+                                            onClick={() => { handlePrint(); setShowMoreMenu(false); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '0.9375rem', color: 'var(--color-text-main)', transition: 'background 0.15s' }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-hover)')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        >
+                                            <FileDown size={18} /> Exportar como PDF
                                         </button>
                                     </div>
                                 </>
@@ -570,8 +588,17 @@ export const Products = () => {
                 onClose={() => setShowImportModal(false)}
             />
 
-            {alertModal && <AlertModal {...alertModal} />}
             {confirmModal && <ConfirmModal {...confirmModal} />}
+            {alertModal && <AlertModal {...alertModal} />}
+
+            {/* Hidden Printable Catalog */}
+            <div style={{ display: 'none' }}>
+                <PrintableCatalog 
+                    ref={printRef} 
+                    products={filteredProducts} 
+                    categoryName={activeCategory} 
+                />
+            </div>
         </div>
     );
 };

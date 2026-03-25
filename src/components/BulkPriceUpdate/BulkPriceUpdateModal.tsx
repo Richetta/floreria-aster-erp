@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Upload, Download, X, Check, AlertCircle } from 'lucide-react';
+import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useModal } from '../../hooks/useModal';
@@ -25,6 +26,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
     const updateProduct = useStore(state => state.updateProduct);
     const addTransaction = useStore(state => state.addTransaction);
 
+    const [isLoading, setIsLoading] = useState(false);
     const { alertModal, showAlert } = useModal();
 
     const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -103,35 +105,30 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         calculateChanges();
     }, [calculateChanges]);
 
-    // Manejar CSV file
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Manejar archivo (CSV/Excel) usando la API de parseo inteligente
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const text = event.target?.result as string;
-            const lines = text.split('\n').filter(line => line.trim());
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-            
-            const data = lines.slice(1).map(line => {
-                const values = line.split(',').map(v => v.trim());
-                const row: any = {};
-                headers.forEach((header, index) => {
-                    if (header.includes('codigo') || header.includes('código') || header === 'code') {
-                        row.codigo = values[index];
-                    } else if (header.includes('nombre') || header === 'name') {
-                        row.nombre = values[index];
-                    } else if (header.includes('precio') || header === 'price') {
-                        row.precio = values[index];
-                    }
-                });
-                return row;
+        setIsLoading(true);
+        try {
+            const result = await api.parseFile(file);
+            // Mapear los datos de la API al formato esperado por el modal
+            const mappedData = result.data.map((item: any) => ({
+                codigo: item.code,
+                nombre: item.name,
+                precio: item.price
+            }));
+            setCsvData(mappedData);
+        } catch (error: any) {
+            showAlert({ 
+                title: 'Error al leer archivo', 
+                message: error.message || 'No se pudo procesar el archivo. Asegurate de que sea un Excel o CSV válido.', 
+                variant: 'error' 
             });
-
-            setCsvData(data);
-        };
-        reader.readAsText(file);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // Descargar plantilla CSV
@@ -303,10 +300,15 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                                 accept=".csv,.xlsx,.xls"
                                                 onChange={handleFileUpload}
                                                 id="csv-upload"
+                                                disabled={isLoading}
                                             />
                                             <label htmlFor="csv-upload" className="upload-label">
-                                                <Upload size={32} />
-                                                <p>Arrastrá tu archivo CSV o Excel</p>
+                                                {isLoading ? (
+                                                    <div className="spinner-small" />
+                                                ) : (
+                                                    <Upload size={32} />
+                                                )}
+                                                <p>{isLoading ? 'Procesando archivo...' : 'Arrastrá tu archivo CSV o Excel'}</p>
                                                 <p className="text-muted text-small">o hacé click para seleccionar</p>
                                             </label>
                                         </div>

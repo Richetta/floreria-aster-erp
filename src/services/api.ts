@@ -119,7 +119,7 @@ export type Package = {
   name: string;
   section: string;
   description?: string;
-  suggested_price: number;
+  price: number;
   is_active: boolean;
   components: PackageComponent[];
   items?: PackageComponent[]; // Alias for frontend compatibility
@@ -198,7 +198,6 @@ class ApiClient {
       ...options.headers,
     };
 
-    // Only set Content-Type if it's not FormData (fetch handles FormData automatically)
     if (!(options.body instanceof FormData)) {
       (headers as any)['Content-Type'] = 'application/json';
     }
@@ -246,16 +245,13 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-
     if (response.token) {
       this.setToken(response.token);
-      localStorage.setItem('auth_token', response.token);
     }
-
     return response;
   }
 
-  async register(name: string, email: string, password: string, role: 'admin' | 'seller' | 'viewer' = 'viewer'): Promise<User> {
+  async register(name: string, email: string, password: string, role: string = 'viewer'): Promise<User> {
     return this.request<User>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ name, email, password, role }),
@@ -268,7 +264,6 @@ class ApiClient {
 
   logout() {
     this.setToken(null);
-    localStorage.removeItem('auth_token');
   }
 
   // ============================================
@@ -283,20 +278,14 @@ class ApiClient {
     return this.request<User>(`/users/${id}`);
   }
 
-  async createUser(user: {
-    name: string;
-    email: string;
-    password: string;
-    role: 'admin' | 'seller' | 'driver' | 'viewer';
-    phone?: string;
-  }): Promise<User> {
+  async createUser(user: any): Promise<User> {
     return this.request<User>('/users', {
       method: 'POST',
       body: JSON.stringify(user),
     });
   }
 
-  async updateUser(id: string, user: Partial<User> & { password?: string }): Promise<User> {
+  async updateUser(id: string, user: any): Promise<User> {
     return this.request<User>(`/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(user),
@@ -309,7 +298,7 @@ class ApiClient {
     });
   }
 
-  async changePassword(current_password: string, new_password: string): Promise<{ success: boolean; message: string }> {
+  async changePassword(current_password: string, new_password: string): Promise<any> {
     return this.request('/users/change-password', {
       method: 'POST',
       body: JSON.stringify({ current_password, new_password }),
@@ -321,433 +310,11 @@ class ApiClient {
   }
 
   // ============================================
-  // REPORTS ENDPOINTS
+  // PRODUCTS & STOCK ENDPOINTS
   // ============================================
 
-  async getSalesSummary(from_date?: string, to_date?: string): Promise<{
-    total_sales: number;
-    total_transactions: number;
-    by_payment_method: { method: string; total: number; count: number }[];
-  }> {
-    const params = new URLSearchParams();
-    if (from_date) params.append('from_date', from_date);
-    if (to_date) params.append('to_date', to_date);
-    return this.request(`/reports/sales/summary${params.toString() ? `?${params.toString()}` : ''}`);
-  }
-
-  async getSalesByPeriod(from_date?: string, to_date?: string, group_by: 'day' | 'month' = 'day'): Promise<any[]> {
-    const params = new URLSearchParams();
-    if (from_date) params.append('from_date', from_date);
-    if (to_date) params.append('to_date', to_date);
-    params.append('group_by', group_by);
-    return this.request(`/reports/sales/by-period?${params.toString()}`);
-  }
-
-  async getTopProducts(from_date?: string, to_date?: string, limit: number = 10): Promise<{
-    product_id: string;
-    product_name: string;
-    product_code: string;
-    total_quantity: number;
-    total_revenue: number;
-    avg_price: number;
-  }[]> {
-    const params = new URLSearchParams();
-    if (from_date) params.append('from_date', from_date);
-    if (to_date) params.append('to_date', to_date);
-    params.append('limit', limit.toString());
-    return this.request(`/reports/products/top?${params.toString()}`);
-  }
-
-  async getTopCustomers(from_date?: string, to_date?: string, limit: number = 10): Promise<{
-    id: string;
-    name: string;
-    phone: string;
-    email: string;
-    debt_balance: number;
-    total_orders: number;
-    total_spent: number;
-  }[]> {
-    const params = new URLSearchParams();
-    if (from_date) params.append('from_date', from_date);
-    if (to_date) params.append('to_date', to_date);
-    params.append('limit', limit.toString());
-    return this.request(`/reports/customers/top?${params.toString()}`);
-  }
-
-  async getProfits(from_date?: string, to_date?: string): Promise<{
-    period: { from: string; to: string };
-    summary: {
-      total_revenue: number;
-      total_expenses: number;
-      total_profit: number;
-      profit_margin: number;
-    };
-    by_product: {
-      product_id: string;
-      product_name: string;
-      quantity_sold: number;
-      total_revenue: number;
-      total_cost: number;
-      profit: number;
-    }[];
-  }> {
-    const params = new URLSearchParams();
-    if (from_date) params.append('from_date', from_date);
-    if (to_date) params.append('to_date', to_date);
-    return this.request(`/reports/profits${params.toString() ? `?${params.toString()}` : ''}`);
-  }
-
-  async exportSales(from_date?: string, to_date?: string): Promise<string> {
-    const params = new URLSearchParams();
-    if (from_date) params.append('from_date', from_date);
-    if (to_date) params.append('to_date', to_date);
-
-    return this.request<string>(`/reports/export/sales${params.toString() ? `?${params.toString()}` : ''}`, {
-      method: 'GET'
-    });
-  }
-
-  // ============================================
-  // IMPORT/EXPORT ENDPOINTS
-  // ============================================
-
-  async parseFile(file: File): Promise<{
-    method: string;
-    filename: string;
-    total_rows: number;
-    data: any[];
-    raw_rows: any[];
-  }> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    return this.request('/import/parse-file', {
-      method: 'POST',
-      body: formData
-    });
-  }
-
-  async parseCSV(file: File): Promise<any> {
-    return this.parseFile(file);
-  }
-
-  async importPrices(data: {
-    code: string;
-    name?: string;
-    cost?: number;
-    price?: number;
-    stock?: number;
-  }[], options: {
-    update_costs?: boolean;
-    update_prices?: boolean;
-    update_stock?: boolean;
-    auto_margin?: boolean;
-    margin_percent?: number;
-  }): Promise<{ updated: number; created: number; errors: any[] }> {
-    return this.request('/import/import-prices', {
-      method: 'POST',
-      body: JSON.stringify({
-        data,
-        update_costs: options.update_costs ?? true,
-        update_prices: options.update_prices ?? true,
-        update_stock: options.update_stock ?? false,
-        auto_margin: options.auto_margin ?? false,
-        margin_percent: options.margin_percent ?? 50
-      })
-    });
-  }
-
-  async exportProductsTemplate(): Promise<string> {
-    return this.request<string>('/import/export-template', {
-      method: 'GET'
-    });
-  }
-
-  async downloadCSV(filename: string, data: any[]): Promise<void> {
-    const csv = this.convertToCSV(data);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  }
-
-  private convertToCSV(data: any[]): string {
-    if (data.length === 0) return '';
-
-    const headers = Object.keys(data[0]);
-    const csv = [
-      headers.join(','),
-      ...data.map(row =>
-        headers.map(header =>
-          `"${String(row[header]).replace(/"/g, '""')}"`
-        ).join(',')
-      )
-    ].join('\n');
-
-    return csv;
-  }
-
-  // ============================================
-  // CASH REGISTER ENDPOINTS
-  // ============================================
-
-  async openCashRegister(data: {
-    date: string;
-    opening_balance: number;
-    notes?: string;
-  }): Promise<{ success: boolean; opening: any }> {
-    return this.request('/cash-register/open', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  }
-
-  async getCashRegisterStatus(date?: string): Promise<{
-    date: string;
-    is_open: boolean;
-    is_closed: boolean;
-    opening: any | null;
-    closing: any | null;
-  }> {
-    const params = new URLSearchParams();
-    if (date) params.append('date', date);
-    return this.request(`/cash-register/status${params.toString() ? `?${params.toString()}` : ''}`);
-  }
-
-  async getDailySummary(date?: string): Promise<{
-    date: string;
-    sales: { total: number; cash: number; card: number; transfer: number; count: number };
-    payments_received: { total: number; cash: number; card: number; transfer: number; count: number };
-    expenses: { total: number; cash: number; transfer: number; count: number; by_category: { [key: string]: number } };
-    supplier_payments: { total: number; transfer: number; count: number };
-    balance: number;
-    opening_balance: number;
-    closing_balance: number;
-    transactions: any[];
-  }> {
-    const params = new URLSearchParams();
-    if (date) params.append('date', date);
-    return this.request(`/cash-register/daily-summary${params.toString() ? `?${params.toString()}` : ''}`);
-  }
-
-  async createClosing(data: {
-    date: string;
-    opening_balance: number;
-    observed_cash?: number;
-    notes?: string;
-  }): Promise<{ success: boolean; closing: any }> {
-    return this.request('/cash-register/closing', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  }
-
-  async getClosingHistory(from_date?: string, to_date?: string, limit: number = 30): Promise<any[]> {
-    const params = new URLSearchParams();
-    if (from_date) params.append('from_date', from_date);
-    if (to_date) params.append('to_date', to_date);
-    params.append('limit', limit.toString());
-    return this.request(`/cash-register/closing-history${params.toString() ? `?${params.toString()}` : ''}`);
-  }
-
-  async getCashInDrawer(): Promise<{
-    opening_balance: number;
-    cash_in_drawer: number;
-    transactions_count: number;
-    last_updated: string;
-  }> {
-    return this.request('/cash-register/cash-in-drawer');
-  }
-
-  // ============================================
-  // STOCK ENDPOINTS
-  // ============================================
-
-  async getStockMovements(params?: {
-    product_id?: string;
-    from_date?: string;
-    to_date?: string;
-    type?: string;
-    limit?: number;
-  }): Promise<{
-    id: string;
-    product_id: string;
-    product_name: string;
-    product_code: string;
-    movement_type: string;
-    quantity: number;
-    balance_after: number;
-    reference_type: string;
-    notes: string | null;
-    created_at: string;
-  }[]> {
-    const queryString = new URLSearchParams(params as any).toString();
-    return this.request(`/stock/movements${queryString ? `?${queryString}` : ''}`);
-  }
-
-  async getProductStockHistory(id: string, limit: number = 50): Promise<{
-    product: {
-      id: string;
-      name: string;
-      code: string;
-      current_stock: number;
-      min_stock: number;
-    };
-    summary: {
-      current_stock: number;
-      min_stock: number;
-      total_movements: number;
-      last_movement: string | null;
-      by_type: { [key: string]: number };
-    };
-    movements: {
-      movement_type: string;
-      quantity: number;
-      balance_after: number;
-      reference_type: string;
-      notes: string | null;
-      created_at: string;
-    }[];
-  }> {
-    return this.request(`/stock/product/${id}/history?limit=${limit}`);
-  }
-
-  async getLowStockProducts(): Promise<{
-    id: string;
-    name: string;
-    code: string;
-    stock_quantity: number;
-    min_stock: number;
-    shortage: number;
-    category_id: string | null;
-    price: number;
-  }[]> {
-    return this.request('/stock/low-stock');
-  }
-
-  async createStockAdjustment(data: {
-    product_id: string;
-    quantity: number;
-    reason: string;
-    notes?: string;
-  }): Promise<{ success: boolean; movement: any; new_stock: number }> {
-    return this.request('/stock/adjustment', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  }
-
-  async getStockSummary(): Promise<{
-    total_products: number;
-    total_stock: number;
-    total_value_at_cost: number;
-    total_value_at_price: number;
-    low_stock_count: number;
-    out_of_stock_count: number;
-    movements_today: number;
-  }> {
-    return this.request('/stock/summary');
-  }
-
-  // ============================================
-  // REMINDERS ENDPOINTS
-  // ============================================
-
-  async getBirthdayReminders(days_ahead: number = 30): Promise<{
-    total: number;
-    today: number;
-    this_week: number;
-    reminders: {
-      type: string;
-      customer_id: string;
-      customer_name: string;
-      phone: string;
-      email: string;
-      date: string;
-      days_until: number;
-      message: string;
-      is_today: boolean;
-      is_soon: boolean;
-    }[];
-  }> {
-    return this.request(`/reminders/birthdays?days_ahead=${days_ahead}`);
-  }
-
-  async getDebtReminders(min_amount: number = 0): Promise<{
-    total: number;
-    total_amount: number;
-    by_urgency: { high: number; medium: number; low: number };
-    reminders: {
-      type: string;
-      customer_id: string;
-      customer_name: string;
-      phone: string;
-      email: string;
-      debt_amount: number;
-      last_order_date: string | null;
-      total_orders: number;
-      message: string;
-      urgency: 'high' | 'medium' | 'low';
-    }[];
-  }> {
-    return this.request(`/reminders/debts?min_amount=${min_amount}`);
-  }
-
-  async sendWhatsAppReminder(phone: string, message: string, type: string): Promise<{
-    success: boolean;
-    reminder_id: string;
-    whatsapp_url: string;
-    message: string;
-  }> {
-    return this.request('/reminders/send-whatsapp', {
-      method: 'POST',
-      body: JSON.stringify({ phone, message, type })
-    });
-  }
-
-  async sendEmailReminder(email: string, subject: string, message: string, type: string): Promise<{
-    success: boolean;
-    reminder_id: string;
-    message: string;
-  }> {
-    return this.request('/reminders/send-email', {
-      method: 'POST',
-      body: JSON.stringify({ email, subject, message, type })
-    });
-  }
-
-  async sendBulkReminders(customer_ids: string[], message_template: string, method: 'whatsapp' | 'email' | 'both'): Promise<{
-    total: number;
-    sent: number;
-    failed: number;
-    reminders: any[];
-  }> {
-    return this.request('/reminders/send-bulk', {
-      method: 'POST',
-      body: JSON.stringify({ customer_ids, message_template, method })
-    });
-  }
-
-  async getReminderHistory(limit: number = 50): Promise<{
-    id: string;
-    action: string;
-    customer_name: string;
-    method: string;
-    message: string;
-    created_at: string;
-  }[]> {
-    return this.request(`/reminders/history?limit=${limit}`);
-  }
-
-  // ============================================
-  // PRODUCTS ENDPOINTS
-  // ============================================
-
-  async getProducts(params?: { search?: string; category?: string; low_stock?: boolean; active?: boolean; limit?: number }): Promise<Product[]> {
-    const queryString = new URLSearchParams(params as any).toString();
+  async getProducts(params?: any): Promise<Product[]> {
+    const queryString = new URLSearchParams(params).toString();
     return this.request<Product[]>(`/products${queryString ? `?${queryString}` : ''}`);
   }
 
@@ -779,11 +346,89 @@ class ApiClient {
     return this.request<any[]>(`/products/${id}/price-history`);
   }
 
-  async updateProductStock(id: string, quantity: number, type: 'adjustment' | 'purchase' | 'waste', reason?: string): Promise<any> {
+  /**
+   * Sube un archivo (xlsx, csv, pdf, docx) al backend y retorna los datos parseados.
+   * Usa FormData con multipart/form-data (no puede pasar por this.request que setea Content-Type: json).
+   */
+  async parseFile(file: File): Promise<{ method: string; filename: string; total_rows: number; data: any[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/import/parse-file`, {
+      method: 'POST',
+      headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(err.error || `Error ${response.status}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Importa una lista de precios al backend.
+   */
+  async importPrices(
+    data: any[],
+    options: {
+      update_costs: boolean;
+      update_prices: boolean;
+      update_stock: boolean;
+      auto_margin: boolean;
+      margin_percent: number;
+    }
+  ): Promise<{ updated: number; created: number; errors: any[] }> {
+    return this.request('/import/import-prices', {
+      method: 'POST',
+      body: JSON.stringify({ data, ...options }),
+    });
+  }
+
+  /**
+   * Descarga el catálogo actual como CSV desde el backend.
+   * Retorna el texto CSV listo para descargar.
+   */
+  async exportProductsTemplate(): Promise<string> {
+    const response = await fetch(`${API_BASE_URL}/import/export-template`, {
+      headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
+    });
+    if (!response.ok) {
+      throw new Error(`Error al exportar: ${response.statusText}`);
+    }
+    return response.text();
+  }
+
+  async updateProductStock(id: string, quantity: number, type: string, reason?: string): Promise<any> {
     return this.request(`/products/${id}/stock`, {
       method: 'POST',
       body: JSON.stringify({ quantity, type, reason }),
     });
+  }
+
+  async getStockMovements(params?: any): Promise<any[]> {
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/stock/movements${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getProductStockHistory(id: string, limit: number = 50): Promise<any> {
+    return this.request(`/stock/product/${id}/history?limit=${limit}`);
+  }
+
+  async getLowStockProducts(): Promise<any[]> {
+    return this.request('/stock/low-stock');
+  }
+
+  async createStockAdjustment(data: any): Promise<any> {
+    return this.request('/stock/adjustment', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getStockSummary(): Promise<any> {
+    return this.request('/stock/summary');
   }
 
   // ============================================
@@ -794,14 +439,14 @@ class ApiClient {
     return this.request<Category[]>('/categories');
   }
 
-  async createCategory(category: { name: string; parent_id?: string }): Promise<Category> {
+  async createCategory(category: any): Promise<Category> {
     return this.request<Category>('/categories', {
       method: 'POST',
       body: JSON.stringify(category),
     });
   }
 
-  async updateCategory(id: string, category: { name: string; parent_id?: string }): Promise<Category> {
+  async updateCategory(id: string, category: any): Promise<Category> {
     return this.request<Category>(`/categories/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(category),
@@ -818,8 +463,8 @@ class ApiClient {
   // CUSTOMERS ENDPOINTS
   // ============================================
 
-  async getCustomers(params?: { search?: string; has_debt?: boolean; limit?: number }): Promise<Customer[]> {
-    const queryString = new URLSearchParams(params as any).toString();
+  async getCustomers(params?: any): Promise<Customer[]> {
+    const queryString = new URLSearchParams(params).toString();
     return this.request<Customer[]>(`/customers${queryString ? `?${queryString}` : ''}`);
   }
 
@@ -827,7 +472,7 @@ class ApiClient {
     return this.request<Customer>(`/customers/${id}`);
   }
 
-  async getCustomerHistory(id: string): Promise<Customer & { orders: Order[]; total_orders: number; total_spent: number }> {
+  async getCustomerHistory(id: string): Promise<any> {
     return this.request(`/customers/${id}/history`);
   }
 
@@ -851,7 +496,7 @@ class ApiClient {
     });
   }
 
-  async registerPayment(id: string, amount: number, payment_method?: 'cash' | 'card' | 'transfer', notes?: string): Promise<any> {
+  async registerPayment(id: string, amount: number, payment_method?: string, notes?: string): Promise<any> {
     return this.request(`/customers/${id}/payment`, {
       method: 'POST',
       body: JSON.stringify({ amount, payment_method, notes }),
@@ -869,29 +514,16 @@ class ApiClient {
   // ORDERS ENDPOINTS
   // ============================================
 
-  async getOrders(params?: { status?: string; customer_id?: string; from_date?: string; to_date?: string; delivery_method?: string; limit?: number }): Promise<Order[]> {
-    const queryString = new URLSearchParams(params as any).toString();
+  async getOrders(params?: any): Promise<Order[]> {
+    const queryString = new URLSearchParams(params).toString();
     return this.request<Order[]>(`/orders${queryString ? `?${queryString}` : ''}`);
   }
 
-  async getOrder(id: string): Promise<Order & { items: OrderItem[] }> {
+  async getOrder(id: string): Promise<any> {
     return this.request(`/orders/${id}`);
   }
 
-  async createOrder(order: {
-    customer_id: string; // "guest" or UUID
-    guest_name?: string;
-    guest_phone?: string;
-    delivery_date: string;
-    delivery_method: 'pickup' | 'delivery';
-    delivery_time_slot?: 'morning' | 'afternoon' | 'evening' | 'allday';
-    delivery_address?: any;
-    contact_phone?: string;
-    card_message?: string;
-    notes?: string;
-    items: { product_id?: string; package_id?: string; quantity: number; unit_price: number }[];
-    advance_payment?: number;
-  }): Promise<Order> {
+  async createOrder(order: any): Promise<Order> {
     return this.request<Order>('/orders', {
       method: 'POST',
       body: JSON.stringify(order),
@@ -905,7 +537,7 @@ class ApiClient {
     });
   }
 
-  async updateOrderStatus(id: string, status: Order['status']): Promise<Order> {
+  async updateOrderStatus(id: string, status: string): Promise<Order> {
     return this.request<Order>(`/orders/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
@@ -924,11 +556,11 @@ class ApiClient {
   }
 
   // ============================================
-  // TRANSACTIONS ENDPOINTS
+  // TRANSACTIONS & SALES ENDPOINTS
   // ============================================
 
-  async getTransactions(params?: { type?: string; category?: string; from_date?: string; to_date?: string; payment_method?: string; limit?: number }): Promise<Transaction[]> {
-    const queryString = new URLSearchParams(params as any).toString();
+  async getTransactions(params?: any): Promise<Transaction[]> {
+    const queryString = new URLSearchParams(params).toString();
     return this.request<Transaction[]>(`/transactions${queryString ? `?${queryString}` : ''}`);
   }
 
@@ -936,15 +568,11 @@ class ApiClient {
     return this.request<Transaction>(`/transactions/${id}`);
   }
 
-  async getFinancialSummary(from_date?: string, to_date?: string): Promise<{
-    income: { total: number; cash: number; card: number; transfer: number };
-    expense: { total: number; cash: number; transfer: number };
-    balance: number;
-  }> {
+  async getFinancialSummary(from_date?: string, to_date?: string): Promise<any> {
     const queryString = new URLSearchParams();
     if (from_date) queryString.append('from_date', from_date);
     if (to_date) queryString.append('to_date', to_date);
-    return this.request(`/transactions/summary/period${queryString.toString() ? `?${queryString.toString()}` : ''}`);
+    return this.request(`/transactions/summary/period?${queryString.toString()}`);
   }
 
   async createTransaction(transaction: Partial<Transaction>): Promise<Transaction> {
@@ -954,47 +582,21 @@ class ApiClient {
     });
   }
 
-  async createSale(sale: {
-    total: number;
-    payment_method: 'cash' | 'card' | 'transfer';
-    customer_id?: string;
-    items: {
-      product_id?: string;
-      package_id?: string;
-      quantity: number;
-      unit_price: number;
-    }[];
-    notes?: string;
-  }): Promise<Transaction> {
+  async createSale(sale: any): Promise<Transaction> {
     return this.request<Transaction>('/transactions/sale', {
       method: 'POST',
       body: JSON.stringify(sale),
     });
   }
 
-  async createPurchase(purchase: {
-    supplier_id: string;
-    payment_method: 'cash' | 'transfer';
-    items: {
-      product_id: string;
-      quantity: number;
-      cost: number;
-    }[];
-    notes?: string;
-  }): Promise<Transaction> {
+  async createPurchase(purchase: any): Promise<Transaction> {
     return this.request<Transaction>('/transactions/purchase', {
       method: 'POST',
       body: JSON.stringify(purchase),
     });
   }
 
-  async createExpense(expense: {
-    amount: number;
-    category: string;
-    payment_method: 'cash' | 'transfer';
-    description: string;
-    notes?: string;
-  }): Promise<Transaction> {
+  async createExpense(expense: any): Promise<Transaction> {
     return this.request<Transaction>('/transactions/expense', {
       method: 'POST',
       body: JSON.stringify(expense),
@@ -1008,11 +610,11 @@ class ApiClient {
   }
 
   // ============================================
-  // PACKAGES ENDPOINTS
+  // PACKAGES (ARREGLOS) ENDPOINTS
   // ============================================
 
-  async getPackages(params?: { section?: string; is_active?: boolean; search?: string; limit?: number }): Promise<Package[]> {
-    const queryString = new URLSearchParams(params as any).toString();
+  async getPackages(params?: any): Promise<Package[]> {
+    const queryString = new URLSearchParams(params).toString();
     return this.request<Package[]>(`/packages${queryString ? `?${queryString}` : ''}`);
   }
 
@@ -1020,25 +622,14 @@ class ApiClient {
     return this.request<Package>(`/packages/${id}`);
   }
 
-  async getPackageAvailability(id: string): Promise<{ available: boolean; missing_components: any[]; missingComponents: any[] }> {
-    return this.request(`/packages/${id}/availability`);
-  }
-
-  async createPackage(pkg: {
-    name: string;
-    section: string;
-    description?: string;
-    price: number;
-    is_active?: boolean;
-    components: { product_id: string; quantity: number }[];
-  }): Promise<Package> {
+  async createPackage(pkg: any): Promise<Package> {
     return this.request<Package>('/packages', {
       method: 'POST',
-      body: JSON.stringify({ ...pkg, components: pkg.components }),
+      body: JSON.stringify(pkg),
     });
   }
 
-  async updatePackage(id: string, pkg: Partial<Package>): Promise<Package> {
+  async updatePackage(id: string, pkg: any): Promise<Package> {
     return this.request<Package>(`/packages/${id}`, {
       method: 'PUT',
       body: JSON.stringify(pkg),
@@ -1051,16 +642,20 @@ class ApiClient {
     });
   }
 
+  async getPackageAvailability(id: string): Promise<any> {
+    return this.request(`/packages/${id}/availability`);
+  }
+
   // ============================================
   // SUPPLIERS ENDPOINTS
   // ============================================
 
-  async getSuppliers(params?: { category?: string; search?: string; limit?: number }): Promise<Supplier[]> {
-    const queryString = new URLSearchParams(params as any).toString();
+  async getSuppliers(params?: any): Promise<Supplier[]> {
+    const queryString = new URLSearchParams(params).toString();
     return this.request<Supplier[]>(`/suppliers${queryString ? `?${queryString}` : ''}`);
   }
 
-  async getSupplier(id: string): Promise<Supplier & { purchases: any[] }> {
+  async getSupplier(id: string): Promise<any> {
     return this.request(`/suppliers/${id}`);
   }
 
@@ -1089,33 +684,115 @@ class ApiClient {
   }
 
   // ============================================
+  // REPORTS ENDPOINTS
+  // ============================================
+
+  async getSalesSummary(from_date?: string, to_date?: string): Promise<any> {
+    const params = new URLSearchParams();
+    if (from_date) params.append('from_date', from_date);
+    if (to_date) params.append('to_date', to_date);
+    return this.request(`/reports/sales/summary?${params.toString()}`);
+  }
+
+  async getProfits(from_date?: string, to_date?: string): Promise<any> {
+    const params = new URLSearchParams();
+    if (from_date) params.append('from_date', from_date);
+    if (to_date) params.append('to_date', to_date);
+    return this.request(`/reports/profits?${params.toString()}`);
+  }
+
+  async getTopProducts(from_date?: string, to_date?: string, limit: number = 10): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (from_date) params.append('from_date', from_date);
+    if (to_date) params.append('to_date', to_date);
+    params.append('limit', limit.toString());
+    return this.request(`/reports/products/top?${params.toString()}`);
+  }
+
+  async exportSales(from_date?: string, to_date?: string): Promise<string> {
+    const params = new URLSearchParams();
+    if (from_date) params.append('from_date', from_date);
+    if (to_date) params.append('to_date', to_date);
+    return this.request<string>(`/reports/export/sales?${params.toString()}`);
+  }
+
+
+  // ============================================
+  // CASH REGISTER ENDPOINTS
+  // ============================================
+
+  async getCashRegisterStatus(date?: string): Promise<any> {
+    const queryString = date ? `?date=${date}` : '';
+    return this.request(`/cash-register/status${queryString}`);
+  }
+
+  async openCashRegister(data: any): Promise<any> {
+    return this.request('/cash-register/open', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getDailySummary(date?: string): Promise<any> {
+    const queryString = date ? `?date=${date}` : '';
+    return this.request(`/cash-register/daily-summary${queryString}`);
+  }
+
+  async createClosing(data: any): Promise<any> {
+    return this.request('/cash-register/closing', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getClosingHistory(from_date?: string, to_date?: string, limit: number = 30): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (from_date) params.append('from_date', from_date);
+    if (to_date) params.append('to_date', to_date);
+    params.append('limit', limit.toString());
+    return this.request(`/cash-register/closing-history?${params.toString()}`);
+  }
+
+  async getCashInDrawer(): Promise<any> {
+    return this.request('/cash-register/cash-in-drawer');
+  }
+
+  // ============================================
+  // REMINDERS ENDPOINTS
+  // ============================================
+
+  async getBirthdayReminders(days_ahead: number = 30): Promise<any> {
+    return this.request(`/reminders/birthdays?days_ahead=${days_ahead}`);
+  }
+
+  async getDebtReminders(min_amount: number = 0): Promise<any> {
+    return this.request(`/reminders/debts?min_amount=${min_amount}`);
+  }
+
+  async sendWhatsAppReminder(phone: string, message: string, type: string): Promise<any> {
+    return this.request('/reminders/send-whatsapp', {
+      method: 'POST',
+      body: JSON.stringify({ phone, message, type })
+    });
+  }
+
+  // ============================================
   // WASTE ENDPOINTS
   // ============================================
 
-  async getWasteLogs(params?: { from_date?: string; to_date?: string; reason?: string; product_id?: string; limit?: number }): Promise<WasteLog[]> {
-    const queryString = new URLSearchParams(params as any).toString();
+  async getWasteLogs(params?: any): Promise<WasteLog[]> {
+    const queryString = new URLSearchParams(params).toString();
     return this.request<WasteLog[]>(`/waste${queryString ? `?${queryString}` : ''}`);
   }
 
-  async getWasteSummary(from_date?: string, to_date?: string): Promise<{
-    total_loss: number;
-    by_reason: Record<string, number>;
-    top_products: { product_id: string; product_name: string; total_amount: number; count: number }[];
-    by_date: Record<string, number>;
-    logs: WasteLog[];
-  }> {
+  async getWasteSummary(from_date?: string, to_date?: string): Promise<any> {
     const queryString = new URLSearchParams();
     if (from_date) queryString.append('from_date', from_date);
     if (to_date) queryString.append('to_date', to_date);
-    return this.request(`/waste/summary${queryString.toString() ? `?${queryString.toString()}` : ''}`);
+    return this.request(`/waste/summary?${queryString.toString()}`);
   }
 
-  async createWaste(waste: {
-    product_id: string;
-    quantity: number;
-    reason: 'Deterioro natural' | 'Rotura de proveedor' | 'Rotura en local' | 'Vencimiento' | 'Robo/Extravío' | 'Otro';
-    notes?: string;
-  }): Promise<WasteLog> {
+  async createWaste(waste: any): Promise<WasteLog> {
     return this.request<WasteLog>('/waste', {
       method: 'POST',
       body: JSON.stringify(waste),

@@ -15,12 +15,9 @@ import { ConfirmModal } from '../../components/ui/Modals';
 import './Packages.css';
 
 export const Packages = () => {
-    // @ts-expect-error — packages not yet in AppState slices
-    const packages = useStore((state) => state.packages) as any[];
+    const packages = useStore((state) => state.packages);
     const products = useStore((state) => state.products);
-    // @ts-expect-error — deletePackage not yet in AppState slices
     const deletePackage = useStore((state) => state.deletePackage);
-    // @ts-expect-error — loadPackages not yet in AppState slices
     const loadPackages = useStore((state) => state.loadPackages);
     const loadProducts = useStore((state) => state.loadProducts);
 

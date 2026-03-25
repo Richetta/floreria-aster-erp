@@ -36,21 +36,17 @@ type ProductView = 'recent' | 'top' | 'all' | 'packages';
 
 export const POS = () => {
     const products = useStore((state) => state.products);
-    // @ts-expect-error — packages not yet in AppState slices
     const packages = useStore((state) => state.packages);
-    // @ts-expect-error — checkPackageAvailability not yet in AppState slices
     const checkPackageAvailability = useStore((state) => state.checkPackageAvailability);
     const processSale = useStore((state) => state.processSale);
     const customers = useStore((state) => state.customers);
     const updateCustomer = useStore((state) => state.updateCustomer);
-    // @ts-expect-error — addOrder not yet in AppState slices
     const addOrder = useStore((state) => state.addOrder);
     const addTransaction = useStore((state) => state.addTransaction);
     const categories = useStore((state) => state.categories);
     const addCustomer = useStore((state) => state.addCustomer);
     const tags = useStore((state) => state.tags);
     const loadProducts = useStore((state) => state.loadProducts);
-    // @ts-expect-error — loadPackages not yet in AppState slices
     const loadPackages = useStore((state) => state.loadPackages);
     const loadCustomers = useStore((state) => state.loadCustomers);
 
@@ -145,21 +141,6 @@ export const POS = () => {
 
     // Add package to cart with stock validation
     const addPackageToCart = (pkg: any) => {
-        const availability = checkPackageAvailability(pkg.id);
-
-        if (!availability.available) {
-            const missingList = availability.missingComponents
-                .map((c: any) => `• ${c.productName}: faltan ${c.shortage}`)
-                .join('\n');
-
-            showAlert({
-                title: 'Faltan componentes',
-                message: `No se puede agregar el ramo "${pkg.name}"\n\nFaltan componentes:\n${missingList}\n\nReponé el stock antes de vender.`,
-                variant: 'warning'
-            });
-            return false;
-        }
-
         // Add package as a cart item
         addToCart({
             id: pkg.id,
@@ -181,14 +162,9 @@ export const POS = () => {
         const productByCode = products.find(p => p.code === term);
         
         if (productByCode) {
-            if (productByCode.stock > 0) {
-                addToCart(productByCode);
-                setSearchTerm('');
-                playBeepSound();
-            } else {
-                showAlert({ title: 'Sin stock', message: 'Este producto no tiene stock disponible.', variant: 'warning' });
-                setSearchTerm('');
-            }
+            addToCart(productByCode);
+            setSearchTerm('');
+            playBeepSound();
             return;
         }
 
@@ -198,11 +174,9 @@ export const POS = () => {
             p.code.toLowerCase().includes(term.toLowerCase())
         );
 
-        if (firstMatch && firstMatch.stock > 0) {
+        if (firstMatch) {
             addToCart(firstMatch);
             setSearchTerm('');
-        } else if (firstMatch && firstMatch.stock <= 0) {
-             showAlert({ title: 'Sin stock', message: 'El primer resultado no tiene stock disponible.', variant: 'warning' });
         }
     };
 
@@ -735,7 +709,7 @@ export const POS = () => {
 
                     <div className="product-list">
                         {productView === 'packages'
-                            ? (packages as any[]).filter((pkg: any) => pkg.isActive).map((pkg: any) => {
+                            ? packages.filter((pkg) => pkg.isActive).map((pkg) => {
                                 // Package View
                                 const availability = checkPackageAvailability(pkg.id);
                                 return (
@@ -838,7 +812,7 @@ export const POS = () => {
                                                 e.stopPropagation();
                                                 addToCart(item);
                                             }}>
-                                                <Plus size={18} />
+                                                <Plus size={20} strokeWidth={3} />
                                             </button>
                                     </div>
                                 </div>
@@ -918,11 +892,11 @@ export const POS = () => {
                                     <div className="cart-line-actions">
                                         <div className="qty-controls">
                                             <button className="qty-btn" onClick={() => updateQty(item.id, -1)} title="Disminuir cantidad">
-                                                <Minus size={10} />
+                                                <Minus size={14} strokeWidth={3} />
                                             </button>
                                             <span className="qty-value">{item.qty}</span>
                                             <button className="qty-btn" onClick={() => updateQty(item.id, 1)} title="Aumentar cantidad">
-                                                <Plus size={10} />
+                                                <Plus size={14} strokeWidth={3} />
                                             </button>
                                         </div>
 
