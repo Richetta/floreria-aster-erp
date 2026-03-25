@@ -146,7 +146,7 @@ export const POS = () => {
         addToCart({
             id: pkg.id,
             name: pkg.name,
-            price: pkg.price,
+            price: pkg.price || pkg.suggested_price || 0,
             isPackage: true,
             section: pkg.section
         });
@@ -749,7 +749,7 @@ export const POS = () => {
                                             <div className="product-list-info">
                                                 <div className="flex justify-between items-start">
                                                     <h3 className="product-list-name">{pkg.name}</h3>
-                                                    <span className="product-list-price">${pkg.price.toLocaleString()}</span>
+                                                    <span className="product-list-price">${pkg.price?.toLocaleString() || '0'}</span>
                                                 </div>
                                                 <div className="product-list-meta">
                                                     <span className="text-micro text-muted">{pkg.section}</span>
@@ -830,7 +830,7 @@ export const POS = () => {
                                         {productView === 'recent' && (
                                             <span className="time-badge">{getTimeAgo(item.lastSaleDate)}</span>
                                         )}
-                                        <span className="product-list-price">${item.price.toLocaleString()}</span>
+                                        <span className="product-list-price">${item.price?.toLocaleString() || '0'}</span>
                                         <span className={`stock-badge ${item.stock <= 0 ? 'out' : item.stock < item.min ? 'low' : 'in'}`}>
                                             {item.stock <= 0 ? 'Sin stock' : `${item.stock} disponibles`}
                                         </span>
@@ -937,7 +937,7 @@ export const POS = () => {
                                 <div key={`${item.id}-${idx}`} className="cart-line-item">
                                     <div className="cart-line-details">
                                         <h4 className="font-bold text-small line-clamp-1">{item.name}</h4>
-                                        <p className="text-micro text-muted">${item.price.toLocaleString()} c/u</p>
+                                        <p className="text-micro text-muted">${item.price?.toLocaleString() || '0'} c/u</p>
                                     </div>
 
                                     <div className="cart-line-actions">
@@ -952,7 +952,7 @@ export const POS = () => {
                                         </div>
 
                                         <div className="cart-line-total font-bold">
-                                            ${(item.price * item.qty).toLocaleString()}
+                                            ${((item.price || 0) * item.qty).toLocaleString()}
                                         </div>
 
                                         <button
@@ -1265,7 +1265,7 @@ export const POS = () => {
                             <div className="order-summary-compact">
                                 <div className="summary-row">
                                     <span className="summary-label">Total</span>
-                                    <span className="summary-amount">${total.toLocaleString()}</span>
+                                    <span className="summary-amount">${(total || 0).toLocaleString()}</span>
                                 </div>
                                 {selectedCustomer && (
                                     <div className="summary-row">
@@ -1312,7 +1312,7 @@ export const POS = () => {
                             {advancePayment > 0 && (
                                 <div className="pending-amount-mini">
                                     <span>Pendiente:</span>
-                                    <span className="amount">${(total - advancePayment).toLocaleString()}</span>
+                                    <span className="amount">${((total || 0) - (advancePayment || 0)).toLocaleString()}</span>
                                 </div>
                             )}
 
@@ -1347,7 +1347,7 @@ export const POS = () => {
                         <div className="sale-checkout-compact">
                             <div className="cart-totals-compact">
                                 <span className="total-label">Total a Pagar</span>
-                                <span className="total-amount">${total.toLocaleString()}</span>
+                                <span className="total-amount">${(total || 0).toLocaleString()}</span>
                             </div>
 
 
@@ -1388,7 +1388,7 @@ export const POS = () => {
                         </div>
                         <h2 className="success-modal-title">¡Venta Realizada!</h2>
                         <p className="success-modal-text">
-                            Se cobró <strong>${lastSaleData.total.toLocaleString()}</strong> en <strong>{lastSaleData.method}</strong>
+                            Se cobró <strong>${(lastSaleData.total || 0).toLocaleString()}</strong> en <strong>{lastSaleData.method}</strong>
                         </p>
                         <div className="success-modal-info">
                             <p className="text-small text-muted">Podés visualizar esta venta en:</p>
@@ -1464,12 +1464,12 @@ export const POS = () => {
                             </div>
                             <div className="order-success-row">
                                 <span className="order-success-label">Total</span>
-                                <span className="order-success-value">${lastOrderData?.total.toLocaleString()}</span>
+                                <span className="order-success-value">${(lastOrderData?.total || 0).toLocaleString()}</span>
                             </div>
                             {lastOrderData && lastOrderData.advancePayment > 0 && (
                                 <div className="order-success-row">
                                     <span className="order-success-label">Seña</span>
-                                    <span className="order-success-value">${lastOrderData.advancePayment.toLocaleString()}</span>
+                                    <span className="order-success-value">${(lastOrderData.advancePayment || 0).toLocaleString()}</span>
                                 </div>
                             )}
                         </div>

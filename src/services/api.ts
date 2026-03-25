@@ -120,6 +120,7 @@ export type Package = {
   section: string;
   description?: string;
   price: number;
+  suggested_price?: number;
   is_active: boolean;
   components: PackageComponent[];
   items?: PackageComponent[]; // Alias for frontend compatibility

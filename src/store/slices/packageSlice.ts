@@ -17,7 +17,7 @@ const mapApiToStore = (p: ApiPackage): Package => ({
     name: p.name,
     section: p.section,
     description: p.description || '',
-    price: p.price,
+    price: p.suggested_price || p.price || 0,
     isActive: p.is_active,
     items: (p.components || p.items || []).map(c => ({
         productId: c.product_id || (c as any).productId,

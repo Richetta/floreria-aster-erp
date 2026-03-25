@@ -120,7 +120,7 @@ export const createPosSlice: StateCreator<AppState, [], [], PosSlice> = (set, ge
                     product_id: i.isPackage ? undefined : i.id,
                     package_id: i.isPackage ? i.id : undefined,
                     quantity: i.qty,
-                    unit_price: i.price
+                    unit_price: i.price || 0
                 })),
                 notes: sale.notes
             });
