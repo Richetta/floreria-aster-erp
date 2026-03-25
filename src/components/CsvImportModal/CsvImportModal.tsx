@@ -66,66 +66,63 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             // Client-side parsing for pasted text
             const lines = pastedText.split('\n').filter(l => l.trim());
             const data = lines.map(line => {
-                // Improved regex for codes (e.g., "P-001", "ABC-123", "R-10")
-                const codeMatch = line.match(/([A-Z0-9]+-[A-Z0-9]+|[A-Z]{2,}[0-9]+)/i);
+                // Better regex for codes: Starts with letter/number + hyphen + letter/number
+                // Also catches things like "ABC-123", "P-400", "FLOWER-1"
+                const codeMatch = line.match(/\b([A-Z0-9]+-[A-Z0-9]+|[A-Z]{2,}[0-9]+)\b/i);
 
                 // Detect cost (with $$) and price (with $)
-                // Use non-greedy for symbols and greedy for numbers to avoid truncation
+                // costMatch picks up the $$... part
                 const costMatch = line.match(/\$\$\s*(\$|USD)?\s*(\d+([,.]\d+)*)/i);
-                const priceMatch = line.match(/(?<!\$)\$\s*(\$|USD)?\s*(\d+([,.]\d+)*)/i);
+                
+                // priceMatch picks up $... but NOT $$...
+                // We use lookbehind and lookahead to ensure it's a SINGLE $
+                const priceMatch = line.match(/(?<!\$)\$\s*(?!\$)\s*(\$|USD)?\s*(\d+([,.]\d+)*)/i);
 
                 // Detect stock with + symbol
                 const stockMatch = line.match(/\+\s*(\d+)/);
 
-                // Fallback: if no $ or $$, try to find any number as price ONLY if it doesn't look like code or stock
+                // For removal from name, we need the full matched strings
+                const matchStrings = {
+                    code: codeMatch ? codeMatch[0] : null,
+                    cost: costMatch ? costMatch[0] : null,
+                    price: priceMatch ? priceMatch[0] : null,
+                    stock: stockMatch ? stockMatch[0] : null
+                };
+
+                // Fallback: search for any number NOT already picked up
                 let anyPriceMatch = null;
-                if (!priceMatch && !costMatch) {
-                    const matches = line.match(/(\$|USD)?\s*(\d+([,.]\d+)*)/gi);
-                    if (matches) {
-                        // Filter out matches that were already picked as stock
-                        anyPriceMatch = matches.find(m => {
-                            if (stockMatch && m.includes(stockMatch[1])) return false;
-                            if (codeMatch && m.includes(codeMatch[1])) return false;
+                if (!priceMatch) {
+                    const allNumbers = line.match(/(\$|USD)?\s*(\d+([,.]\d+)*)/gi);
+                    if (allNumbers) {
+                        anyPriceMatch = allNumbers.find(m => {
+                            if (matchStrings.cost && m.includes(matchStrings.cost.replace(/\$\$/g, ''))) return false;
+                            if (matchStrings.stock && m.includes(matchStrings.stock.replace(/\+/g, ''))) return false;
+                            if (matchStrings.code && m.includes(matchStrings.code)) return false;
                             return true;
                         });
                     }
                 }
 
                 let name = line;
-                if (codeMatch) name = name.replace(codeMatch[0], '');
-                if (costMatch) name = name.replace(costMatch[0], '');
-                if (priceMatch) name = name.replace(priceMatch[0], '');
-                if (stockMatch) name = name.replace(stockMatch[0], '');
-                
-                // If we found a fallback price, remove it from name too
-                if (anyPriceMatch && !costMatch && !priceMatch) {
+                Object.values(matchStrings).forEach(m => {
+                    if (m) name = name.replace(m, '');
+                });
+                if (anyPriceMatch && !priceMatch) {
                     name = name.replace(anyPriceMatch, '');
                 }
 
-                // Parse numeric values
-                const parseNumber = (str: string | undefined) => {
+                const parseNumber = (match: RegExpMatchArray | null | string, groupIndex: number = 2) => {
+                    if (!match) return 0;
+                    const str = typeof match === 'string' ? match : match[groupIndex];
                     if (!str) return 0;
-                    // Remove symbols and handle separators
-                    const cleanStr = str.replace(/[^\d,.]/g, '');
-                    if (cleanStr.includes(',') && cleanStr.includes('.')) {
-                        // Likely thousands . and decimal ,
-                        return Number(cleanStr.replace(/\./g, '').replace(',', '.'));
-                    } else if (cleanStr.includes(',')) {
-                        // Single separator, treat as decimal
-                        return Number(cleanStr.replace(',', '.'));
-                    } else if (cleanStr.includes('.')) {
-                        // Single separator. If it's 3 digits after, could be thousands. 
-                        // But for simplicity in "pasted text", we'll treat as decimal unless it's like 1.000
-                        return Number(cleanStr);
-                    }
-                    return Number(cleanStr);
+                    return Number(str.replace(/\./g, '').replace(',', '.'));
                 };
 
                 return {
                     code: codeMatch ? codeMatch[0].toUpperCase() : '',
                     name: name.replace(/\s+/g, ' ').trim() || 'Producto sin nombre',
-                    cost: costMatch ? parseNumber(costMatch[0]) : 0,
-                    price: priceMatch ? parseNumber(priceMatch[0]) : (anyPriceMatch ? parseNumber(anyPriceMatch) : 0),
+                    cost: costMatch ? parseNumber(costMatch, 2) : 0,
+                    price: priceMatch ? parseNumber(priceMatch, 2) : (anyPriceMatch ? parseNumber(anyPriceMatch, 2) : 0),
                     stock: stockMatch ? Number(stockMatch[1]) : 0
                 };
             });
