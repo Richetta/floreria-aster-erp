@@ -182,11 +182,29 @@
     .toolbar-top-row {
         flex-direction: column;
         align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .toolbar-title-group {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
     }
 
     .toolbar-actions-group {
         width: 100%;
-        justify-content: space-between;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .toolbar-actions-group .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .toolbar-bottom-row {
+        width: 100%;
     }
 
     .toolbar-bottom-row .search-pill {
@@ -198,8 +216,67 @@
         justify-content: space-between;
     }
 
+    .category-select-group select {
+        width: 100%;
+        min-width: auto;
+    }
+
     .sheet-table {
         display: none;
+    }
+
+    .unified-toolbar {
+        padding: 1rem;
+    }
+
+    .tag-filters-container {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 0.5rem;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .view-toggle {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .mobile-product-card {
+        display: block;
+        background: var(--color-surface);
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--color-border);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .mobile-product-card .product-name {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .mobile-product-card .product-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+        margin-bottom: 0.5rem;
+    }
+
+    .mobile-product-card .product-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .mobile-product-card .product-actions .btn {
+        flex: 1;
+        padding: 0.5rem;
+        font-size: 0.875rem;
+        min-height: 40px;
     }
 }
 
