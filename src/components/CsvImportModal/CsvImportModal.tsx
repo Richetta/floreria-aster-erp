@@ -66,64 +66,58 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             // Client-side parsing for pasted text
             const lines = pastedText.split('\n').filter(l => l.trim());
             const data = lines.map(line => {
-                // Better regex for codes: Starts with letter/number + hyphen + letter/number
-                // Also catches things like "ABC-123", "P-400", "FLOWER-1"
-                const codeMatch = line.match(/\b([A-Z0-9]+-[A-Z0-9]+|[A-Z]{2,}[0-9]+)\b/i);
-
-                // Detect cost (with $$) and price (with $)
-                // costMatch picks up the $$... part
-                const costMatch = line.match(/\$\$\s*(\$|USD)?\s*(\d+([,.]\d+)*)/i);
+                let remainingText = line;
                 
-                // priceMatch picks up $... but NOT $$...
-                // We use lookbehind and lookahead to ensure it's a SINGLE $
-                const priceMatch = line.match(/(?<!\$)\$\s*(?!\$)\s*(\$|USD)?\s*(\d+([,.]\d+)*)/i);
+                // 1. Extract Code (e.g., "P-001", "ABC-123")
+                const codeMatch = remainingText.match(/\b([A-Z0-9]+-[A-Z0-9]+|[A-Z]{2,}[0-9]+)\b/i);
+                let code = '';
+                if (codeMatch) {
+                    code = codeMatch[0].toUpperCase();
+                    remainingText = remainingText.replace(codeMatch[0], '');
+                }
 
-                // Detect stock with + symbol
-                const stockMatch = line.match(/\+\s*(\d+)/);
+                // 2. Extract Cost (starts with $$)
+                const costMatch = remainingText.match(/\$\$\s*(\$|USD)?\s*(\d+([,.]\d+)*)/i);
+                let cost = 0;
+                if (costMatch) {
+                    const costVal = costMatch[2].replace(/\./g, '').replace(',', '.');
+                    cost = Number(costVal);
+                    remainingText = remainingText.replace(costMatch[0], '');
+                }
 
-                // For removal from name, we need the full matched strings
-                const matchStrings = {
-                    code: codeMatch ? codeMatch[0] : null,
-                    cost: costMatch ? costMatch[0] : null,
-                    price: priceMatch ? priceMatch[0] : null,
-                    stock: stockMatch ? stockMatch[0] : null
-                };
+                // 3. Extract Price (starts with a single $)
+                const priceMatch = remainingText.match(/\$\s*(\$|USD)?\s*(\d+([,.]\d+)*)/i);
+                let price = 0;
+                if (priceMatch) {
+                    const priceVal = priceMatch[2].replace(/\./g, '').replace(',', '.');
+                    price = Number(priceVal);
+                    remainingText = remainingText.replace(priceMatch[0], '');
+                }
 
-                // Fallback: search for any number NOT already picked up
-                let anyPriceMatch = null;
-                if (!priceMatch) {
-                    const allNumbers = line.match(/(\$|USD)?\s*(\d+([,.]\d+)*)/gi);
-                    if (allNumbers) {
-                        anyPriceMatch = allNumbers.find(m => {
-                            if (matchStrings.cost && m.includes(matchStrings.cost.replace(/\$\$/g, ''))) return false;
-                            if (matchStrings.stock && m.includes(matchStrings.stock.replace(/\+/g, ''))) return false;
-                            if (matchStrings.code && m.includes(matchStrings.code)) return false;
-                            return true;
-                        });
+                // 4. Extract Stock (starts with +)
+                const stockMatch = remainingText.match(/\+\s*(\d+)/);
+                let stock = 0;
+                if (stockMatch) {
+                    stock = Number(stockMatch[1]);
+                    remainingText = remainingText.replace(stockMatch[0], '');
+                }
+
+                // 5. Fallback: if no price matched, look for any other number
+                if (price === 0) {
+                    const anyNumberMatch = remainingText.match(/(\$|USD)?\s*(\d+([,.]\d+)*)/i);
+                    if (anyNumberMatch) {
+                        const val = anyNumberMatch[2].replace(/\./g, '').replace(',', '.');
+                        price = Number(val);
+                        remainingText = remainingText.replace(anyNumberMatch[0], '');
                     }
                 }
 
-                let name = line;
-                Object.values(matchStrings).forEach(m => {
-                    if (m) name = name.replace(m, '');
-                });
-                if (anyPriceMatch && !priceMatch) {
-                    name = name.replace(anyPriceMatch, '');
-                }
-
-                const parseNumber = (match: RegExpMatchArray | null | string, groupIndex: number = 2) => {
-                    if (!match) return 0;
-                    const str = typeof match === 'string' ? match : match[groupIndex];
-                    if (!str) return 0;
-                    return Number(str.replace(/\./g, '').replace(',', '.'));
-                };
-
                 return {
-                    code: codeMatch ? codeMatch[0].toUpperCase() : '',
-                    name: name.replace(/\s+/g, ' ').trim() || 'Producto sin nombre',
-                    cost: costMatch ? parseNumber(costMatch, 2) : 0,
-                    price: priceMatch ? parseNumber(priceMatch, 2) : (anyPriceMatch ? parseNumber(anyPriceMatch, 2) : 0),
-                    stock: stockMatch ? Number(stockMatch[1]) : 0
+                    code: code,
+                    name: remainingText.replace(/\s+/g, ' ').trim() || 'Producto sin nombre',
+                    cost: cost,
+                    price: price,
+                    stock: stock
                 };
             });
 
