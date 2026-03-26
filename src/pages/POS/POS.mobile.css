@@ -92,8 +92,10 @@
 }
 
 /* ============================================
-   HEADER - Búsqueda prominente
+   MOBILE SPECIFIC COMPONENTS (≤ 768px)
    ============================================ */
+@media (max-width: 768px) {
+    /* HEADER - Búsqueda prominente */
 .pos-header {
     flex-shrink: 0;
     padding: 1rem;
@@ -856,6 +858,8 @@
 .order-modal-body {
     padding: 1.25rem;
 }
+
+} /* Fin media query mobile */
 
 /* ============================================
    DESKTOP - Panel de carrito
