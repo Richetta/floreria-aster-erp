@@ -963,19 +963,19 @@ export const POS = () => {
                                 </div>
                             ) : (
                                 cart.map((item, idx) => (
-                                        <div className="cart-line-item" key={`${item.id}-${idx}`}>
-                                            <div className="cart-line-details">
-                                                <h4 className="cart-item-name">{item.name}</h4>
-                                                <p className="text-micro text-muted">${item.price?.toLocaleString() || '0'} c/u</p>
-                                            </div>
+                                    <div className="cart-line-item" key={`${item.id}-${idx}`}>
+                                        <div className="cart-line-details">
+                                            <h4 className="cart-item-name">{item.name}</h4>
+                                            <p className="text-micro text-muted">${item.price?.toLocaleString() || '0'} c/u</p>
+                                        </div>
 
                                         <div className="cart-line-actions">
                                             <div className="qty-controls">
-                                                <button className="qty-btn" onClick={() => updateQty(item.id, -1)} title="Disminuir cantidad">
+                                                <button className="qty-btn" onClick={() => updateCartQty(item.id, -1)} title="Disminuir cantidad">
                                                     <Minus size={16} />
                                                 </button>
                                                 <span className="qty-value">{item.qty}</span>
-                                                <button className="qty-btn" onClick={() => updateQty(item.id, 1)} title="Aumentar cantidad">
+                                                <button className="qty-btn" onClick={() => updateCartQty(item.id, 1)} title="Aumentar cantidad">
                                                     <Plus size={16} />
                                                 </button>
                                             </div>
