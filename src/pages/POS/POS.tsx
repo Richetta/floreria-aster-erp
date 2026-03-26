@@ -24,7 +24,6 @@ import {
     Minus
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import type { Product } from '../../store/useStore';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
 import { OrderTemplatesModal } from '../../components/OrderTemplates/OrderTemplatesModal';
 import type { TicketData } from '../../components/TicketPrinter/TicketPrinter';
@@ -101,7 +100,6 @@ export const POS = () => {
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
     const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
     const [showOrderModal, setShowOrderModal] = useState(false);
-    const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
 
     // Success Modals
     const [showSuccessModal, setShowSuccessModal] = useState(false);
