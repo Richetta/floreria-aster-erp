@@ -7,12 +7,16 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 /**
  * Fastify preHandler hook that verifies JWT token.
  * Attach to routes or register globally.
+ * Returns a Promise that resolves if auth succeeds, rejects if it fails.
  */
-export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
+export async function authenticate(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   try {
     await request.jwtVerify();
-  } catch (err) {
-    reply.code(401).send({ error: 'Unauthorized' });
+    // Auth successful, continue
+  } catch (err: any) {
+    // Auth failed, send 401 and throw to stop execution
+    reply.code(401).send({ error: 'Unauthorized', message: err.message });
+    throw new Error('Unauthorized');
   }
 }
 

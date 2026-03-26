@@ -89,21 +89,26 @@ const PUBLIC_ROUTES = [
   '/health',
 ];
 
-fastify.addHook('onRequest', async (request, reply) => {
+fastify.addHook('onRequest', (request, reply, done) => {
   const url = request.url.split('?')[0]; // strip query params
-  
+
   // Skip public routes
   if (PUBLIC_ROUTES.includes(url) || url === '/health') {
-    return;
+    return done();
   }
-  
+
   // Skip non-API routes
   if (!url.startsWith('/api/')) {
-    return;
+    return done();
   }
-  
+
   // Authenticate all other API routes
-  await authenticate(request, reply);
+  authenticate(request, reply)
+    .then(() => done())
+    .catch((err) => {
+      console.error('[GLOBAL AUTH] Error:', err);
+      done(err);
+    });
 });
 
 // API Routes

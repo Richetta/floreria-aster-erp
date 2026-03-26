@@ -14,6 +14,34 @@ import { randomUUID } from 'crypto';
 export const importRoutes: FastifyPluginAsync = async (fastify) => {
   // Multipart is already registered globally in server.ts
 
+  // Debug endpoint to verify routes are registered
+  fastify.get('/debug', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+    console.log('[IMPORT DEBUG] User:', user?.email, 'Role:', user?.role);
+    return reply.send({
+      status: 'ok',
+      routes: [
+        'POST /parse-file',
+        'POST /parse-text',
+        'POST /import-prices',
+        'GET /export-template'
+      ],
+      user: {
+        email: user?.email,
+        role: user?.role,
+        business_id: user?.business_id
+      }
+    });
+  });
+
   const importDataSchema = z.array(z.object({
     code: z.string(),
     name: z.string().optional(),
@@ -211,20 +239,18 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  fastify.post('/import-prices', {
-    preHandler: [async (request, reply) => {
-      try {
-        await request.jwtVerify();
-        const user = request.user as any;
-        if (user.role !== 'admin') {
-          return reply.code(403).send({ error: 'Only admins can import prices' });
-        }
-      } catch (err) {
-        reply.code(401).send({ error: 'Unauthorized' });
-      }
-    }]
-  }, async (request, reply) => {
+  // Import prices endpoint - uses global auth hook, only checks admin role here
+  fastify.post('/import-prices', async (request, reply) => {
     const user = request.user as any;
+
+    // Check admin role (auth is handled by global hook)
+    if (user.role !== 'admin') {
+      console.log('[IMPORT-PRICES] Forbidden: User is not admin, role:', user?.role);
+      return reply.code(403).send({ error: 'Only admins can import prices' });
+    }
+
+    console.log('[IMPORT-PRICES] User authenticated:', user?.email, 'Role:', user?.role);
+    console.log('[IMPORT-PRICES] Request body keys:', Object.keys(request.body || {}));
 
     try {
       const body = z.object({
@@ -235,6 +261,8 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
         auto_margin: z.boolean().default(false),
         margin_percent: z.number().default(50)
       }).parse(request.body);
+
+      console.log('[IMPORT-PRICES] Validation passed, importing', body.data.length, 'products');
 
       const results = await db.transaction().execute(async (trx) => {
         await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
@@ -336,24 +364,22 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
 
       return reply.send(results);
     } catch (error: any) {
-      console.error('Error importing prices:', error);
+      console.error('[IMPORT-PRICES] Error:', error);
+      console.error('[IMPORT-PRICES] Stack:', error.stack);
       if (error instanceof z.ZodError) {
+        console.log('[IMPORT-PRICES] Validation errors:', JSON.stringify(error.errors));
         return reply.status(400).send({ error: 'Validation error', details: error.errors });
       }
-      return reply.status(500).send({ error: 'Error importing prices: ' + error.message });
+      return reply.status(500).send({
+        error: 'Error importing prices: ' + error.message,
+        debug: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   });
 
-  fastify.get('/export-template', {
-    preHandler: [async (request, reply) => {
-      try {
-        await request.jwtVerify();
-      } catch (err) {
-        reply.code(401).send({ error: 'Unauthorized' });
-      }
-    }]
-  }, async (request, reply) => {
+  fastify.get('/export-template', async (request, reply) => {
     const user = request.user as any;
+    console.log('[EXPORT-TEMPLATE] User:', user?.email);
 
     const csv = await db.transaction().execute(async (trx) => {
       await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
