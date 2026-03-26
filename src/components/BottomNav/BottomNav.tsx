@@ -3,19 +3,22 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, ShoppingCart, ClipboardList, Plus, Menu, Package, Users, FileText, TrendingUp, Settings, Truck, Wallet, BookOpen } from 'lucide-react';
 import './BottomNav.css';
 
-export const BottomNav = () => {
+interface BottomNavProps {
+    className?: string;
+}
+
+export const BottomNav = ({ className = '' }: BottomNavProps) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [showMore, setShowMore] = useState(false);
 
-    // 4 items principales - límite de Miller's Law
+    // ... (rest of items)
     const mainItems = [
         { icon: Home, label: 'Inicio', path: '/dashboard' },
         { icon: ShoppingCart, label: 'Vender', path: '/pos' },
         { icon: ClipboardList, label: 'Pedidos', path: '/pedidos' },
     ];
 
-    // Menú Más organizado por categorías
     const moreItems = [
         {
             category: 'Gestión',
@@ -57,7 +60,7 @@ export const BottomNav = () => {
     };
 
     return (
-        <>
+        <div className={className}>
             <nav className="bottom-nav">
                 {mainItems.map((item) => (
                     <button
@@ -123,6 +126,6 @@ export const BottomNav = () => {
                     </div>
                 </div>
             )}
-        </>
+        </div>
     );
 };

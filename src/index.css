@@ -476,13 +476,32 @@ textarea {
   box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.4);
 }
 
-@media (min-width: 768px) {
-  .hidden-mobile {
-    display: initial;
-  }
+/* ============================================
+   VISIBILITY UTILITIES (Standardized 768px)
+   ============================================ */
 
-  .hidden-desktop {
-    display: none;
+@media (min-width: 768px) {
+  /* Using attribute selector for extreme specificity to fight 3rd party or nested styles */
+  [class*="hide-on-desktop"],
+  [class*="hidden-desktop"],
+  .bottom-nav,
+  .cart-float-button,
+  .mobile-header,
+  .cart-sheet-header,
+  .cart-bottom-sheet {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  [class*="hide-on-mobile"],
+  [class*="hidden-mobile"] {
+    display: none !important;
   }
 }
 

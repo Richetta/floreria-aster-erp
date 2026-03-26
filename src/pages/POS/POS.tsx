@@ -24,11 +24,13 @@ import {
     Minus
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import type { Product } from '../../store/useStore';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
 import { OrderTemplatesModal } from '../../components/OrderTemplates/OrderTemplatesModal';
 import type { TicketData } from '../../components/TicketPrinter/TicketPrinter';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useModal } from '../../hooks/useModal';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import './POS.css';
 import './POS.mobile.css';
@@ -47,6 +49,7 @@ export const POS = () => {
     const addOrder = useStore((state) => state.addOrder);
     const addTransaction = useStore((state) => state.addTransaction);
     const categories = useStore((state) => state.categories);
+    const isMobile = useMediaQuery('(max-width: 768px)');
     const addCustomer = useStore((state) => state.addCustomer);
     const tags = useStore((state) => state.tags);
     const loadProducts = useStore((state) => state.loadProducts);
@@ -98,6 +101,7 @@ export const POS = () => {
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
     const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
     const [showOrderModal, setShowOrderModal] = useState(false);
+    const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
 
     // Success Modals
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -909,457 +913,492 @@ export const POS = () => {
                     </div>
                 </div>
             </div>
-
-            {/* Right Side: Shopping Cart & Checkout */}
-            <div className="pos-cart-panel card">
-                {/* Cart Header - FIXED */}
-                <div className="cart-header">
-                    <div className="pos-tabs">
-                        <button
-                            className={`pos-tab pos-tab-strong ${checkoutMode === 'sale' ? 'active-sale' : 'inactive'}`}
-                            onClick={() => setCheckoutMode('sale')}
-                        >
-                            <ShoppingCart size={16} />
-                            <span>Venta Rápida</span>
-                        </button>
-                        <button
-                            className={`pos-tab pos-tab-strong ${checkoutMode === 'order' ? 'active-order' : 'inactive'}`}
-                            onClick={() => setCheckoutMode('order')}
-                        >
-                            <Calendar size={16} />
-                            <span>Pedir Después</span>
-                        </button>
-                    </div>
-
-                    <div className="cart-header-title">
-                        <div className="flex justify-between items-center">
-                            <h2 className="text-h3">Carrito</h2>
-                            <div className="flex gap-2">
-                                <button
-                                    className="btn-icon text-primary"
-                                    onClick={() => setShowTemplatesModal(true)}
-                                    title="Cargar pedido frecuente"
-                                >
-                                    <Copy size={18} />
-                                </button>
-                            </div>
+             {/* Right Side: Shopping Cart & Checkout - Solo visible en DESKTOP */}
+            {!isMobile && (
+                <div className="pos-cart-panel card">
+                    {/* Cart Header - FIXED */}
+                    <div className="cart-header">
+                        <div className="pos-tabs">
+                            <button
+                                className={`pos-tab pos-tab-strong ${checkoutMode === 'sale' ? 'active-sale' : 'inactive'}`}
+                                onClick={() => setCheckoutMode('sale')}
+                            >
+                                <ShoppingCart size={16} />
+                                <span>Venta Rápida</span>
+                            </button>
+                            <button
+                                className={`pos-tab pos-tab-strong ${checkoutMode === 'order' ? 'active-order' : 'inactive'}`}
+                                onClick={() => setCheckoutMode('order')}
+                            >
+                                <Calendar size={16} />
+                                <span>Pedir Después</span>
+                            </button>
                         </div>
-                        <span className="badge badge-warning text-small">{itemCount} items</span>
-                    </div>
-                </div>
 
-                {/* Cart Items & Order Form - Unified Scrollable Area */}
-                <div className="cart-scroll-container">
-                    <div className="cart-items-section">
-                        {cart.length === 0 ? (
-                            <div className="empty-cart-msg">
-                                <ShoppingCart size={48} className="text-muted mb-2 opacity-20" />
-                                <p className="text-body text-center font-medium">
-                                    Bandeja vacía.<br />
-                                    Seleccioná productos.
-                                </p>
+                        <div className="cart-header-title">
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-h3">Carrito</h2>
+                                <div className="flex gap-2">
+                                    <button
+                                        className="btn-icon text-primary"
+                                        onClick={() => setShowTemplatesModal(true)}
+                                        title="Cargar pedido frecuente"
+                                    >
+                                        <Copy size={18} />
+                                    </button>
+                                </div>
                             </div>
-                        ) : (
-                            cart.map((item, idx) => (
-                                <div key={`${item.id}-${idx}`} className="cart-line-item">
-                                    <div className="cart-line-details">
-                                        <h4 className="font-bold text-small line-clamp-1">{item.name}</h4>
-                                        <p className="text-micro text-muted">${item.price?.toLocaleString() || '0'} c/u</p>
+                            <span className="badge badge-warning text-small">{itemCount} items</span>
+                        </div>
+                    </div>
+
+                    {/* Cart Items & Order Form - Unified Scrollable Area */}
+                    <div className="cart-scroll-container">
+                        <div className="cart-items-section">
+                            {cart.length === 0 ? (
+                                <div className="empty-cart-msg">
+                                    <ShoppingCart size={48} className="text-muted mb-2 opacity-20" />
+                                    <p className="text-body text-center font-medium">
+                                        Bandeja vacía.<br />
+                                        Seleccioná productos.
+                                    </p>
+                                </div>
+                            ) : (
+                                cart.map((item, idx) => (
+                                    <div key={`${item.id}-${idx}`} className="cart-line-item">
+                                        <div className="cart-line-details">
+                                            <h4 className="font-bold text-small line-clamp-1">{item.name}</h4>
+                                            <p className="text-micro text-muted">${item.price?.toLocaleString() || '0'} c/u</p>
+                                        </div>
+
+                                        <div className="cart-line-actions">
+                                            <div className="qty-controls">
+                                                <button className="qty-btn" onClick={() => updateQty(item.id, -1)} title="Disminuir cantidad">
+                                                    <Minus size={16} />
+                                                </button>
+                                                <span className="qty-value">{item.qty}</span>
+                                                <button className="qty-btn" onClick={() => updateQty(item.id, 1)} title="Aumentar cantidad">
+                                                    <Plus size={16} />
+                                                </button>
+                                            </div>
+
+                                            <div className="cart-line-total font-bold">
+                                                ${((item.price || 0) * item.qty).toLocaleString()}
+                                            </div>
+
+                                            <button
+                                                className="btn-icon text-danger"
+                                                onClick={() => removeFromCart(item.id)}
+                                                title="Quitar del carrito (Esc)"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {checkoutMode === 'order' && (
+                            /* PEDIR PARA DESPUÉS - Formulario con Acordeón */
+                            <div className="order-form-scrollable">
+                                {/* Step 1: Customer */}
+                                <div className="order-form-section">
+                                    <div
+                                        className={`section-header ${expandedSection === 1 ? 'expanded' : ''}`}
+                                        onClick={() => toggleSection(1)}
+                                    >
+                                        <div className="section-title-row">
+                                            <span className="section-number">1</span>
+                                            <h4 className="section-title">Cliente</h4>
+                                        </div>
+                                        {(selectedCustomer || (isGuest && guestName)) && (
+                                            <span className="selected-value">
+                                                {isGuest ? (guestName || 'Invitado') : (customers.find(c => c.id === selectedCustomer)?.name)}
+                                            </span>
+                                        )}
+                                        <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 1 ? 'expanded' : ''}`} />
                                     </div>
 
-                                    <div className="cart-line-actions">
-                                        <div className="qty-controls">
-                                            <button className="qty-btn" onClick={() => updateQty(item.id, -1)} title="Disminuir cantidad">
-                                                <Minus size={16} />
-                                            </button>
-                                            <span className="qty-value">{item.qty}</span>
-                                            <button className="qty-btn" onClick={() => updateQty(item.id, 1)} title="Aumentar cantidad">
-                                                <Plus size={16} />
-                                            </button>
-                                        </div>
+                                    {expandedSection === 1 && (
+                                        <div className="section-content expanded">
+                                            <div className="guest-toggle-container mb-3">
+                                                <button
+                                                    className={`guest-toggle-btn ${isGuest ? 'active' : ''}`}
+                                                    onClick={() => updatePosOrderForm({ isGuest: !isGuest, selectedCustomer: '' })}
+                                                    type="button"
+                                                >
+                                                    <UserPlus size={16} />
+                                                    <span>{isGuest ? 'Cambiar a Cliente Agendado' : 'Venta como Invitado (Sin agendar)'}</span>
+                                                </button>
+                                            </div>
 
-                                        <div className="cart-line-total font-bold">
-                                            ${((item.price || 0) * item.qty).toLocaleString()}
-                                        </div>
+                                            {isGuest ? (
+                                                <div className="guest-fields">
+                                                    <div className="form-group mb-2">
+                                                        <label className="text-micro mb-1">Nombre del Cliente <span className="text-danger">*</span></label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-input"
+                                                            placeholder="Nombre para el pedido..."
+                                                            value={guestName}
+                                                            onChange={(e) => updatePosOrderForm({ guestName: e.target.value })}
+                                                            autoFocus
+                                                        />
+                                                    </div>
+                                                    <div className="form-group mb-2">
+                                                        <label className="text-micro mb-1">Teléfono (Opcional)</label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-input"
+                                                            placeholder="Teléfono de contacto..."
+                                                            value={guestPhone}
+                                                            onChange={(e) => updatePosOrderForm({ guestPhone: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="search-input-wrapper">
+                                                        <Search size={16} className="search-icon" />
+                                                        <input
+                                                            type="text"
+                                                            className="form-input customer-search-input"
+                                                            placeholder="Buscar cliente..."
+                                                            value={customerSearch}
+                                                            onChange={(e) => setCustomerSearch(e.target.value)}
+                                                            autoFocus
+                                                        />
+                                                    </div>
 
+                                                    <div className="customer-list-compact">
+                                                        {filteredCustomers.slice(0, 6).map(customer => (
+                                                            <button
+                                                                key={customer.id}
+                                                                className={`customer-list-item-compact ${selectedCustomer === customer.id ? 'selected' : ''}`}
+                                                                onClick={() => updatePosOrderForm({ selectedCustomer: customer.id, isGuest: false })}
+                                                            >
+                                                                <div className="customer-list-info">
+                                                                    <span className="customer-list-name">{customer.name}</span>
+                                                                    <span className="customer-list-phone">{customer.phone}</span>
+                                                                </div>
+                                                                {selectedCustomer === customer.id && (
+                                                                    <Check size={16} className="text-primary" />
+                                                                )}
+                                                            </button>
+                                                        ))}
+                                                        <button
+                                                            className="customer-list-item-compact new-customer-btn"
+                                                            onClick={() => setIsAddingCustomer(true)}
+                                                        >
+                                                            <div className="customer-list-info">
+                                                                <span className="customer-list-name">+ Nuevo Cliente</span>
+                                                                <span className="customer-list-phone">Crear en agenda</span>
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
+                                            {isAddingCustomer && (
+                                                <div className="new-customer-form-compact">
+                                                    <input
+                                                        type="text"
+                                                        className="form-input mb-2"
+                                                        placeholder="Nombre completo"
+                                                        value={newCustomerName}
+                                                        onChange={(e) => setNewCustomerName(e.target.value)}
+                                                    />
+                                                    <input
+                                                        type="tel"
+                                                        className="form-input mb-2"
+                                                        placeholder="Teléfono"
+                                                        value={newCustomerPhone}
+                                                        onChange={(e) => setNewCustomerPhone(e.target.value)}
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            className="btn btn-sm btn-success flex-1"
+                                                            onClick={handleAddCustomer}
+                                                            disabled={!newCustomerName.trim()}
+                                                        >
+                                                            <Check size={14} /> Guardar
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-sm btn-secondary flex-1"
+                                                            onClick={() => setIsAddingCustomer(false)}
+                                                        >
+                                                            <X size={14} /> Cancelar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Step 2: Delivery */}
+                                <div className="order-form-section">
+                                    <div
+                                        className={`section-header ${expandedSection === 2 ? 'expanded' : ''}`}
+                                        onClick={() => toggleSection(2)}
+                                    >
+                                        <div className="section-title-row">
+                                            <span className="section-number">2</span>
+                                            <h4 className="section-title">Entrega</h4>
+                                        </div>
+                                        <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 2 ? 'expanded' : ''}`} />
+                                    </div>
+
+                                    {expandedSection === 2 && (
+                                        <div className="section-content expanded">
+                                            <div className="delivery-method-toggle">
+                                                <button
+                                                    className={`toggle-btn ${deliveryMethod === 'pickup' ? 'active' : ''}`}
+                                                    onClick={() => updatePosOrderForm({ deliveryMethod: 'pickup' })}
+                                                >
+                                                    <Store size={14} />
+                                                    <span>Local</span>
+                                                </button>
+                                                <button
+                                                    className={`toggle-btn ${deliveryMethod === 'delivery' ? 'active' : ''}`}
+                                                    onClick={() => updatePosOrderForm({ deliveryMethod: 'delivery' })}
+                                                >
+                                                    <Truck size={14} />
+                                                    <span>Domicilio</span>
+                                                </button>
+                                            </div>
+
+                                            {deliveryMethod === 'delivery' && (
+                                                <>
+                                                    <div className="form-row-compact mt-3">
+                                                        <div className="form-group-compact flex-1">
+                                                            <label className="form-label-compact">Calle</label>
+                                                            <input
+                                                                type="text"
+                                                                className="form-input"
+                                                                placeholder="Calle"
+                                                                value={deliveryAddress.street}
+                                                                onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, street: e.target.value } })}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group-compact" style={{ width: '70px' }}>
+                                                            <label className="form-label-compact">N°</label>
+                                                            <input
+                                                                type="text"
+                                                                className="form-input"
+                                                                placeholder="N°"
+                                                                value={deliveryAddress.number}
+                                                                onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, number: e.target.value } })}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-row-compact mt-2">
+                                                        <div className="form-group-compact" style={{ width: '70px' }}>
+                                                            <label className="form-label-compact">Piso</label>
+                                                            <input
+                                                                type="text"
+                                                                className="form-input"
+                                                                placeholder="Piso"
+                                                                value={deliveryAddress.floor}
+                                                                onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, floor: e.target.value } })}
+                                                            />
+                                                        </div>
+                                                        <div className="form-group-compact flex-1">
+                                                            <label className="form-label-compact">Localidad</label>
+                                                            <input
+                                                                type="text"
+                                                                className="form-input"
+                                                                placeholder="Localidad"
+                                                                value={deliveryAddress.city}
+                                                                onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, city: e.target.value } })}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-group-compact mt-2">
+                                                        <label className="form-label-compact">Teléfono</label>
+                                                        <input
+                                                            type="tel"
+                                                            className="form-input"
+                                                            placeholder="11-2345-6789"
+                                                            value={contactPhone}
+                                                            onChange={(e) => updatePosOrderForm({ contactPhone: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            {deliveryMethod === 'pickup' && (
+                                                <div className="pickup-info-compact">
+                                                    <Store size={16} className="text-primary" />
+                                                    <span className="text-small">Retiro sin cargo en local</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Step 3: Date & Time */}
+                                <div className="order-form-section">
+                                    <div
+                                        className={`section-header ${expandedSection === 3 ? 'expanded' : ''}`}
+                                        onClick={() => toggleSection(3)}
+                                    >
+                                        <div className="section-title-row">
+                                            <span className="section-number">3</span>
+                                            <h4 className="section-title">Fecha</h4>
+                                        </div>
+                                        <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 3 ? 'expanded' : ''}`} />
+                                    </div>
+
+                                    {expandedSection === 3 && (
+                                        <div className="section-content expanded">
+                                            <div className="form-row-compact">
+                                                <div className="form-group-compact flex-1">
+                                                    <label className="form-label-compact">Fecha</label>
+                                                    <input
+                                                        type="date"
+                                                        className="form-input"
+                                                        value={deliveryDate}
+                                                        onChange={(e) => updatePosOrderForm({ deliveryDate: e.target.value })}
+                                                        min={new Date().toISOString().split('T')[0]}
+                                                    />
+                                                </div>
+                                                <div className="form-group-compact flex-1">
+                                                    <label className="form-label-compact">Horario</label>
+                                                    <select
+                                                        className="form-input"
+                                                        value={deliveryTimeSlot}
+                                                        onChange={(e) => updatePosOrderForm({ deliveryTimeSlot: e.target.value as any })}
+                                                    >
+                                                        <option value="allday">Todo el día</option>
+                                                        <option value="morning">Mañana (9-13hs)</option>
+                                                        <option value="afternoon">Tarde (14-18hs)</option>
+                                                        <option value="evening">Noche (18-21hs)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group-compact mt-2">
+                                                <label className="form-label-compact">Notas</label>
+                                                <textarea
+                                                    className="form-input notes-input-compact"
+                                                    rows={2}
+                                                    placeholder="Ej: Tarjeta, moño..."
+                                                    value={orderNotes}
+                                                    onChange={(e) => updatePosOrderForm({ orderNotes: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Summary & Confirm - Always Visible */}
+                                <div className="order-summary-compact">
+                                    <div className="summary-row">
+                                        <span className="summary-label">Total</span>
+                                        <span className="summary-amount">${(total || 0).toLocaleString()}</span>
+                                    </div>
+                                    {selectedCustomer && (
+                                        <div className="summary-row">
+                                            <span className="summary-label">Cliente</span>
+                                            <span className="summary-value">{customers.find(c => c.id === selectedCustomer)?.name}</span>
+                                        </div>
+                                    )}
+                                    {deliveryDate && isValidDate(deliveryDate) && (
+                                        <div className="summary-row">
+                                            <span className="summary-label">Entrega</span>
+                                            <span className="summary-value">
+                                                {(() => {
+                                                    const [y, m, d] = deliveryDate.split('-').map(Number);
+                                                    return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
+                                                })()}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="advance-payment-mini">
+                                    <label className="checkbox-label-mini">
+                                        <input
+                                            type="checkbox"
+                                            checked={advancePayment > 0}
+                                            onChange={(e) => updatePosOrderForm({ advancePayment: e.target.checked ? Math.min(1000, total) : 0 })}
+                                        />
+                                        <span className="checkbox-text-mini">Seña:</span>
+                                    </label>
+                                    {advancePayment > 0 && (
+                                        <div className="advance-input-mini">
+                                            <input
+                                                type="number"
+                                                className="form-input"
+                                                value={advancePayment}
+                                                onChange={(e) => updatePosOrderForm({ advancePayment: Number(e.target.value) })}
+                                                min="0"
+                                                max={total}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {advancePayment > 0 && (
+                                    <div className="pending-amount-mini">
+                                        <span>Pendiente:</span>
+                                        <span className="amount">${((total || 0) - (advancePayment || 0)).toLocaleString()}</span>
+                                    </div>
+                                )}
+
+                                <div className="order-payment-buttons">
+                                    <p className="text-micro text-muted mb-2">Método de pago {advancePayment > 0 ? 'de la seña' : ''}:</p>
+                                    <div className="payment-buttons-compact">
                                         <button
-                                            className="btn-icon text-danger"
-                                            onClick={() => removeFromCart(item.id)}
-                                            title="Quitar del carrito (Esc)"
+                                            className="payment-btn-compact payment-cash"
+                                            disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
+                                            onClick={() => handleCheckout('cash')}
                                         >
-                                            <Trash2 size={14} />
+                                            <Banknote size={18} />
+                                            <span>Efectivo</span>
+                                        </button>
+                                        <button
+                                            className="payment-btn-compact payment-card"
+                                            disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
+                                            onClick={() => handleCheckout('card')}
+                                        >
+                                            <CreditCard size={18} />
+                                            <span>Tarjeta</span>
                                         </button>
                                     </div>
                                 </div>
-                            ))
+                            </div>
                         )}
                     </div>
 
-                    {checkoutMode === 'order' && (
-                        /* PEDIR PARA DESPUÉS - Formulario con Acordeón */
-                        <div className="order-form-scrollable">
-                            {/* Step 1: Customer */}
-                            <div className="order-form-section">
-                                <div
-                                    className={`section-header ${expandedSection === 1 ? 'expanded' : ''}`}
-                                    onClick={() => toggleSection(1)}
-                                >
-                                    <div className="section-title-row">
-                                        <span className="section-number">1</span>
-                                        <h4 className="section-title">Cliente</h4>
-                                    </div>
-                                    {(selectedCustomer || (isGuest && guestName)) && (
-                                        <span className="selected-value">
-                                            {isGuest ? (guestName || 'Invitado') : (customers.find(c => c.id === selectedCustomer)?.name)}
-                                        </span>
-                                    )}
-                                    <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 1 ? 'expanded' : ''}`} />
+                    {/* Cart Footer - FIXED for Sale Mode */}
+                    {checkoutMode === 'sale' && (
+                        <div className="cart-footer">
+                            <div className="sale-checkout-compact">
+                                <div className="cart-totals-compact">
+                                    <span className="total-label">Total a Pagar</span>
+                                    <span className="total-amount">${(total || 0).toLocaleString()}</span>
                                 </div>
 
-                                {expandedSection === 1 && (
-                                    <div className="section-content expanded">
-                                        <div className="guest-toggle-container mb-3">
-                                            <button
-                                                className={`guest-toggle-btn ${isGuest ? 'active' : ''}`}
-                                                onClick={() => updatePosOrderForm({ isGuest: !isGuest, selectedCustomer: '' })}
-                                                type="button"
-                                            >
-                                                <UserPlus size={16} />
-                                                <span>{isGuest ? 'Cambiar a Cliente Agendado' : 'Venta como Invitado (Sin agendar)'}</span>
-                                            </button>
-                                        </div>
 
-                                        {isGuest ? (
-                                            <div className="guest-fields">
-                                                <div className="form-group mb-2">
-                                                    <label className="text-micro mb-1">Nombre del Cliente <span className="text-danger">*</span></label>
-                                                    <input
-                                                        type="text"
-                                                        className="form-input"
-                                                        placeholder="Nombre para el pedido..."
-                                                        value={guestName}
-                                                        onChange={(e) => updatePosOrderForm({ guestName: e.target.value })}
-                                                        autoFocus
-                                                    />
-                                                </div>
-                                                <div className="form-group mb-2">
-                                                    <label className="text-micro mb-1">Teléfono (Opcional)</label>
-                                                    <input
-                                                        type="text"
-                                                        className="form-input"
-                                                        placeholder="Teléfono de contacto..."
-                                                        value={guestPhone}
-                                                        onChange={(e) => updatePosOrderForm({ guestPhone: e.target.value })}
-                                                    />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="search-input-wrapper">
-                                                    <Search size={16} className="search-icon" />
-                                                    <input
-                                                        type="text"
-                                                        className="form-input customer-search-input"
-                                                        placeholder="Buscar cliente..."
-                                                        value={customerSearch}
-                                                        onChange={(e) => setCustomerSearch(e.target.value)}
-                                                        autoFocus
-                                                    />
-                                                </div>
-
-                                                <div className="customer-list-compact">
-                                                    {filteredCustomers.slice(0, 6).map(customer => (
-                                                        <button
-                                                            key={customer.id}
-                                                            className={`customer-list-item-compact ${selectedCustomer === customer.id ? 'selected' : ''}`}
-                                                            onClick={() => updatePosOrderForm({ selectedCustomer: customer.id, isGuest: false })}
-                                                        >
-                                                            <div className="customer-list-info">
-                                                                <span className="customer-list-name">{customer.name}</span>
-                                                                <span className="customer-list-phone">{customer.phone}</span>
-                                                            </div>
-                                                            {selectedCustomer === customer.id && (
-                                                                <Check size={16} className="text-primary" />
-                                                            )}
-                                                        </button>
-                                                    ))}
-                                                    <button
-                                                        className="customer-list-item-compact new-customer-btn"
-                                                        onClick={() => setIsAddingCustomer(true)}
-                                                    >
-                                                        <div className="customer-list-info">
-                                                            <span className="customer-list-name">+ Nuevo Cliente</span>
-                                                            <span className="customer-list-phone">Crear en agenda</span>
-                                                        </div>
-                                                    </button>
-                                                </div>
-                                            </>
-                                        )}
-                                        {isAddingCustomer && (
-                                            <div className="new-customer-form-compact">
-                                                <input
-                                                    type="text"
-                                                    className="form-input mb-2"
-                                                    placeholder="Nombre completo"
-                                                    value={newCustomerName}
-                                                    onChange={(e) => setNewCustomerName(e.target.value)}
-                                                />
-                                                <input
-                                                    type="tel"
-                                                    className="form-input mb-2"
-                                                    placeholder="Teléfono"
-                                                    value={newCustomerPhone}
-                                                    onChange={(e) => setNewCustomerPhone(e.target.value)}
-                                                />
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        className="btn btn-sm btn-success flex-1"
-                                                        onClick={handleAddCustomer}
-                                                        disabled={!newCustomerName.trim()}
-                                                    >
-                                                        <Check size={14} /> Guardar
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-sm btn-secondary flex-1"
-                                                        onClick={() => setIsAddingCustomer(false)}
-                                                    >
-                                                        <X size={14} /> Cancelar
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Step 2: Delivery */}
-                            <div className="order-form-section">
-                                <div
-                                    className={`section-header ${expandedSection === 2 ? 'expanded' : ''}`}
-                                    onClick={() => toggleSection(2)}
-                                >
-                                    <div className="section-title-row">
-                                        <span className="section-number">2</span>
-                                        <h4 className="section-title">Entrega</h4>
-                                    </div>
-                                    <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 2 ? 'expanded' : ''}`} />
-                                </div>
-
-                                {expandedSection === 2 && (
-                                    <div className="section-content expanded">
-                                        <div className="delivery-method-toggle">
-                                            <button
-                                                className={`toggle-btn ${deliveryMethod === 'pickup' ? 'active' : ''}`}
-                                                onClick={() => updatePosOrderForm({ deliveryMethod: 'pickup' })}
-                                            >
-                                                <Store size={14} />
-                                                <span>Local</span>
-                                            </button>
-                                            <button
-                                                className={`toggle-btn ${deliveryMethod === 'delivery' ? 'active' : ''}`}
-                                                onClick={() => updatePosOrderForm({ deliveryMethod: 'delivery' })}
-                                            >
-                                                <Truck size={14} />
-                                                <span>Domicilio</span>
-                                            </button>
-                                        </div>
-
-                                        {deliveryMethod === 'delivery' && (
-                                            <>
-                                                <div className="form-row-compact mt-3">
-                                                    <div className="form-group-compact flex-1">
-                                                        <label className="form-label-compact">Calle</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-input"
-                                                            placeholder="Calle"
-                                                            value={deliveryAddress.street}
-                                                            onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, street: e.target.value } })}
-                                                        />
-                                                    </div>
-                                                    <div className="form-group-compact" style={{ width: '70px' }}>
-                                                        <label className="form-label-compact">N°</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-input"
-                                                            placeholder="N°"
-                                                            value={deliveryAddress.number}
-                                                            onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, number: e.target.value } })}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="form-row-compact mt-2">
-                                                    <div className="form-group-compact" style={{ width: '70px' }}>
-                                                        <label className="form-label-compact">Piso</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-input"
-                                                            placeholder="Piso"
-                                                            value={deliveryAddress.floor}
-                                                            onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, floor: e.target.value } })}
-                                                        />
-                                                    </div>
-                                                    <div className="form-group-compact flex-1">
-                                                        <label className="form-label-compact">Localidad</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-input"
-                                                            placeholder="Localidad"
-                                                            value={deliveryAddress.city}
-                                                            onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, city: e.target.value } })}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="form-group-compact mt-2">
-                                                    <label className="form-label-compact">Teléfono</label>
-                                                    <input
-                                                        type="tel"
-                                                        className="form-input"
-                                                        placeholder="11-2345-6789"
-                                                        value={contactPhone}
-                                                        onChange={(e) => updatePosOrderForm({ contactPhone: e.target.value })}
-                                                    />
-                                                </div>
-                                            </>
-                                        )}
-
-                                        {deliveryMethod === 'pickup' && (
-                                            <div className="pickup-info-compact">
-                                                <Store size={16} className="text-primary" />
-                                                <span className="text-small">Retiro sin cargo en local</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Step 3: Date & Time */}
-                            <div className="order-form-section">
-                                <div
-                                    className={`section-header ${expandedSection === 3 ? 'expanded' : ''}`}
-                                    onClick={() => toggleSection(3)}
-                                >
-                                    <div className="section-title-row">
-                                        <span className="section-number">3</span>
-                                        <h4 className="section-title">Fecha</h4>
-                                    </div>
-                                    <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 3 ? 'expanded' : ''}`} />
-                                </div>
-
-                                {expandedSection === 3 && (
-                                    <div className="section-content expanded">
-                                        <div className="form-row-compact">
-                                            <div className="form-group-compact flex-1">
-                                                <label className="form-label-compact">Fecha</label>
-                                                <input
-                                                    type="date"
-                                                    className="form-input"
-                                                    value={deliveryDate}
-                                                    onChange={(e) => updatePosOrderForm({ deliveryDate: e.target.value })}
-                                                    min={new Date().toISOString().split('T')[0]}
-                                                />
-                                            </div>
-                                            <div className="form-group-compact flex-1">
-                                                <label className="form-label-compact">Horario</label>
-                                                <select
-                                                    className="form-input"
-                                                    value={deliveryTimeSlot}
-                                                    onChange={(e) => updatePosOrderForm({ deliveryTimeSlot: e.target.value as any })}
-                                                >
-                                                    <option value="allday">Todo el día</option>
-                                                    <option value="morning">Mañana (9-13hs)</option>
-                                                    <option value="afternoon">Tarde (14-18hs)</option>
-                                                    <option value="evening">Noche (18-21hs)</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div className="form-group-compact mt-2">
-                                            <label className="form-label-compact">Notas</label>
-                                            <textarea
-                                                className="form-input notes-input-compact"
-                                                rows={2}
-                                                placeholder="Ej: Tarjeta, moño..."
-                                                value={orderNotes}
-                                                onChange={(e) => updatePosOrderForm({ orderNotes: e.target.value })}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Summary & Confirm - Always Visible */}
-                            <div className="order-summary-compact">
-                                <div className="summary-row">
-                                    <span className="summary-label">Total</span>
-                                    <span className="summary-amount">${(total || 0).toLocaleString()}</span>
-                                </div>
-                                {selectedCustomer && (
-                                    <div className="summary-row">
-                                        <span className="summary-label">Cliente</span>
-                                        <span className="summary-value">{customers.find(c => c.id === selectedCustomer)?.name}</span>
-                                    </div>
-                                )}
-                                {deliveryDate && isValidDate(deliveryDate) && (
-                                    <div className="summary-row">
-                                        <span className="summary-label">Entrega</span>
-                                         <span className="summary-value">
-                                             {(() => {
-                                                 const [y, m, d] = deliveryDate.split('-').map(Number);
-                                                 return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
-                                             })()}
-                                         </span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="advance-payment-mini">
-                                <label className="checkbox-label-mini">
-                                    <input
-                                        type="checkbox"
-                                        checked={advancePayment > 0}
-                                        onChange={(e) => updatePosOrderForm({ advancePayment: e.target.checked ? Math.min(1000, total) : 0 })}
-                                    />
-                                    <span className="checkbox-text-mini">Seña:</span>
-                                </label>
-                                {advancePayment > 0 && (
-                                    <div className="advance-input-mini">
-                                        <input
-                                            type="number"
-                                            className="form-input"
-                                            value={advancePayment}
-                                            onChange={(e) => updatePosOrderForm({ advancePayment: Number(e.target.value) })}
-                                            min="0"
-                                            max={total}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-
-                            {advancePayment > 0 && (
-                                <div className="pending-amount-mini">
-                                    <span>Pendiente:</span>
-                                    <span className="amount">${((total || 0) - (advancePayment || 0)).toLocaleString()}</span>
-                                </div>
-                            )}
-
-                            <div className="order-payment-buttons">
-                                <p className="text-micro text-muted mb-2">Método de pago {advancePayment > 0 ? 'de la seña' : ''}:</p>
                                 <div className="payment-buttons-compact">
                                     <button
                                         className="payment-btn-compact payment-cash"
-                                        disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
+                                        disabled={cart.length === 0}
                                         onClick={() => handleCheckout('cash')}
+                                        title="Pagar en efectivo"
                                     >
-                                        <Banknote size={18} />
+                                        <Banknote size={20} />
                                         <span>Efectivo</span>
                                     </button>
                                     <button
                                         className="payment-btn-compact payment-card"
-                                        disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
+                                        disabled={cart.length === 0}
                                         onClick={() => handleCheckout('card')}
+                                        title="Pagar con tarjeta o transferencia"
                                     >
-                                        <CreditCard size={18} />
+                                        <CreditCard size={20} />
                                         <span>Tarjeta</span>
                                     </button>
                                 </div>
@@ -1367,41 +1406,7 @@ export const POS = () => {
                         </div>
                     )}
                 </div>
-
-                {/* Cart Footer - FIXED for Sale Mode */}
-                {checkoutMode === 'sale' && (
-                    <div className="cart-footer">
-                        <div className="sale-checkout-compact">
-                            <div className="cart-totals-compact">
-                                <span className="total-label">Total a Pagar</span>
-                                <span className="total-amount">${(total || 0).toLocaleString()}</span>
-                            </div>
-
-
-                            <div className="payment-buttons-compact">
-                                <button
-                                    className="payment-btn-compact payment-cash"
-                                    disabled={cart.length === 0}
-                                    onClick={() => handleCheckout('cash')}
-                                    title="Pagar en efectivo"
-                                >
-                                    <Banknote size={20} />
-                                    <span>Efectivo</span>
-                                </button>
-                                <button
-                                    className="payment-btn-compact payment-card"
-                                    disabled={cart.length === 0}
-                                    onClick={() => handleCheckout('card')}
-                                    title="Pagar con tarjeta o transferencia"
-                                >
-                                    <CreditCard size={20} />
-                                    <span>Tarjeta</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+            )}
 
             {/* Success Modal */}
             {showSuccessModal && lastSaleData && (
@@ -1587,7 +1592,7 @@ export const POS = () => {
             )}
 
             {/* Mobile: Botón flotante del carrito */}
-            {cart.length > 0 && (
+            {isMobile && cart.length > 0 && (
                 <button
                     className="cart-float-button"
                     onClick={() => setIsCartSheetOpen(!isCartSheetOpen)}
@@ -1598,92 +1603,94 @@ export const POS = () => {
             )}
 
             {/* Mobile: Bottom Sheet del carrito */}
-            <div className={`cart-bottom-sheet ${isCartSheetOpen ? 'open' : ''}`}>
-                <div
-                    className="cart-sheet-header"
-                    onClick={() => setIsCartSheetOpen(!isCartSheetOpen)}
-                >
-                    <div className="cart-sheet-title">
-                        <ShoppingCart size={18} />
-                        <span>Carrito</span>
-                        <span className="cart-sheet-count">{itemCount} items</span>
-                    </div>
-                    <div className="cart-sheet-total">
-                        ${total.toLocaleString()}
-                    </div>
-                </div>
-
-                <div className="cart-sheet-content">
-                    {cart.length === 0 ? (
-                        <div className="empty-cart-msg">
-                            <ShoppingCart size={32} className="text-muted mb-2 opacity-20" />
-                            <p className="text-body text-center font-medium">
-                                Bandeja vacía.<br />Seleccioná productos.
-                            </p>
+            {isMobile && (
+                <div className={`cart-bottom-sheet ${isCartSheetOpen ? 'open' : ''}`}>
+                    <div
+                        className="cart-sheet-header"
+                        onClick={() => setIsCartSheetOpen(!isCartSheetOpen)}
+                    >
+                        <div className="cart-sheet-title">
+                            <ShoppingCart size={18} />
+                            <span>Carrito</span>
+                            <span className="cart-sheet-count">{itemCount} items</span>
                         </div>
-                    ) : (
-                        cart.map((item, idx) => (
-                            <div key={`${item.id}-${idx}`} className="cart-line-item">
-                                <div className="cart-line-details">
-                                    <h4 className="font-bold text-small line-clamp-1">{item.name}</h4>
-                                    <p className="text-micro text-muted">${item.price?.toLocaleString() || '0'} c/u</p>
-                                </div>
-                                <div className="cart-line-actions">
-                                    <div className="qty-controls">
-                                        <button className="qty-btn" onClick={() => updateQty(item.id, -1)}>
-                                            <Minus size={12} />
-                                        </button>
-                                        <span className="qty-value">{item.qty}</span>
-                                        <button className="qty-btn" onClick={() => updateQty(item.id, 1)}>
-                                            <Plus size={12} />
-                                        </button>
-                                    </div>
-                                    <div className="cart-line-total font-bold">
-                                        ${(item.price * item.qty).toLocaleString()}
-                                    </div>
-                                    <button
-                                        className="btn-icon text-danger"
-                                        onClick={() => removeFromCart(item.id)}
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
+                        <div className="cart-sheet-total">
+                            ${total.toLocaleString()}
+                        </div>
+                    </div>
+
+                    <div className="cart-sheet-content">
+                        {cart.length === 0 ? (
+                            <div className="empty-cart-msg">
+                                <ShoppingCart size={32} className="text-muted mb-2 opacity-20" />
+                                <p className="text-body text-center font-medium">
+                                    Bandeja vacía.<br />Seleccioná productos.
+                                </p>
                             </div>
-                        ))
+                        ) : (
+                            cart.map((item, idx) => (
+                                <div key={`${item.id}-${idx}`} className="cart-line-item">
+                                    <div className="cart-line-details">
+                                        <h4 className="font-bold text-small line-clamp-1">{item.name}</h4>
+                                        <p className="text-micro text-muted">${item.price?.toLocaleString() || '0'} c/u</p>
+                                    </div>
+                                    <div className="cart-line-actions">
+                                        <div className="qty-controls">
+                                            <button className="qty-btn" onClick={() => updateQty(item.id, -1)}>
+                                                <Minus size={12} />
+                                            </button>
+                                            <span className="qty-value">{item.qty}</span>
+                                            <button className="qty-btn" onClick={() => updateQty(item.id, 1)}>
+                                                <Plus size={12} />
+                                            </button>
+                                        </div>
+                                        <div className="cart-line-total font-bold">
+                                            ${(item.price * item.qty).toLocaleString()}
+                                        </div>
+                                        <button
+                                            className="btn-icon text-danger"
+                                            onClick={() => removeFromCart(item.id)}
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {cart.length > 0 && (
+                        <div className="cart-sheet-footer">
+                            <div className="cart-totals-compact">
+                                <span className="total-label">Total a Pagar</span>
+                                <span className="total-amount">${total.toLocaleString()}</span>
+                            </div>
+                            <div className="payment-buttons-compact">
+                                <button
+                                    className="payment-btn-compact payment-cash"
+                                    onClick={() => {
+                                        handleCheckout('cash');
+                                        setIsCartSheetOpen(false);
+                                    }}
+                                >
+                                    <Banknote size={18} />
+                                    <span>Efectivo</span>
+                                </button>
+                                <button
+                                    className="payment-btn-compact payment-card"
+                                    onClick={() => {
+                                        handleCheckout('card');
+                                        setIsCartSheetOpen(false);
+                                    }}
+                                >
+                                    <CreditCard size={18} />
+                                    <span>Tarjeta</span>
+                                </button>
+                            </div>
+                        </div>
                     )}
                 </div>
-
-                {cart.length > 0 && (
-                    <div className="cart-sheet-footer">
-                        <div className="cart-totals-compact">
-                            <span className="total-label">Total a Pagar</span>
-                            <span className="total-amount">${total.toLocaleString()}</span>
-                        </div>
-                        <div className="payment-buttons-compact">
-                            <button
-                                className="payment-btn-compact payment-cash"
-                                onClick={() => {
-                                    handleCheckout('cash');
-                                    setIsCartSheetOpen(false);
-                                }}
-                            >
-                                <Banknote size={18} />
-                                <span>Efectivo</span>
-                            </button>
-                            <button
-                                className="payment-btn-compact payment-card"
-                                onClick={() => {
-                                    handleCheckout('card');
-                                    setIsCartSheetOpen(false);
-                                }}
-                            >
-                                <CreditCard size={18} />
-                                <span>Tarjeta</span>
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
+            )}
 
             {/* Mobile: Modal de "Pedir Después" - Full screen */}
             <div className={`order-modal-overlay ${showOrderModal ? 'show' : ''}`} onClick={() => setShowOrderModal(false)}>

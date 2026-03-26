@@ -4,9 +4,11 @@ import { Menu } from 'lucide-react';
 import { Sidebar } from '../Sidebar/Sidebar';
 import { BottomNav } from '../BottomNav/BottomNav';
 import { useStore } from '../../store/useStore';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import './Layout.css';
 
 export const Layout = () => {
+    const isMobile = useMediaQuery('(max-width: 768px)');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const location = useLocation();
     const loadShopInfo = useStore(state => state.loadShopInfo);
@@ -30,47 +32,46 @@ export const Layout = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    const isPosPage = location.pathname === '/pos';
 
     return (
         <div className="app-container">
-            {/* Mobile Header with Hamburger */}
-            <header className="mobile-header">
-                <button
-                    className="hamburger-btn"
-                    onClick={() => setIsSidebarOpen(true)}
-                    aria-label="Abrir menú"
-                >
-                    <Menu size={24} />
-                </button>
-                <span className="mobile-brand">
-                    <span className="mobile-brand-icon">✿</span>
-                    Aster
-                </span>
-            </header>
+            {/* Header móvil - Solo visible en < 768px */}
+            {isMobile && (
+                <header className="mobile-header">
+                    <button 
+                        className="hamburger-btn"
+                        onClick={() => setIsSidebarOpen(true)}
+                    >
+                        <Menu size={24} />
+                    </button>
+                    <div className="mobile-brand">
+                        <span className="mobile-brand-icon">🌸</span>
+                        <span>Aster</span>
+                    </div>
+                </header>
+            )}
 
-            {/* Sidebar Overlay (mobile) */}
+            {/* Sidebar Desktop y Mobile */}
+            <aside className={`sidebar-container ${isSidebarOpen ? 'open' : ''}`}>
+                <Sidebar onClose={() => setIsSidebarOpen(false)} />
+            </aside>
+
+            {/* Overlay para cerrar sidebar en mobile */}
             {isSidebarOpen && (
-                <div
+                <div 
                     className="sidebar-overlay"
                     onClick={() => setIsSidebarOpen(false)}
                 />
             )}
 
-            {/* Sidebar */}
-            <Sidebar
-                isOpen={isSidebarOpen}
-                onClose={() => setIsSidebarOpen(false)}
-            />
-
-            <main className={`main-content ${isPosPage ? 'pos-page' : ''}`}>
+            <main className={`main-content ${location.pathname === '/pos' ? 'pos-page' : ''}`}>
                 <div className="page-container">
                     <Outlet />
                 </div>
             </main>
 
-            {/* Bottom Navigation (mobile only) */}
-            <BottomNav />
+            {/* Navegación Inferior - Solo visible en mobile */}
+            {isMobile && <BottomNav />}
         </div>
     );
 };

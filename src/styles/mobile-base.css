@@ -252,9 +252,9 @@
     }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 768px) {
     .hide-mobile {
-        display: block !important;
+        display: none !important;
     }
     
     .show-mobile {

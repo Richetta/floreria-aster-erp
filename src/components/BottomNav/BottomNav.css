@@ -53,13 +53,18 @@
 }
 
 /* DESKTOP: Asegurar que esté oculto en pantallas > 768px */
-@media (min-width: 769px) {
+@media (min-width: 768px) {
     .bottom-nav,
     .bottom-nav-item,
     .bottom-nav-action,
     .bottom-nav-more-overlay,
     .bottom-nav-more-panel {
         display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        position: absolute !important;
+        left: -9999px !important;
     }
 }
 

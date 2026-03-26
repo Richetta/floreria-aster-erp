@@ -11,6 +11,7 @@ import { CsvImportModal } from '../../components/CsvImportModal/CsvImportModal';
 import { PrintableCatalog } from '../../components/PrintableCatalog/PrintableCatalog';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useModal } from '../../hooks/useModal';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import './Products.css';
 
@@ -24,6 +25,7 @@ export const Products = () => {
     const deleteProduct = useStore((state) => state.deleteProduct);
     const loadProducts = useStore((state) => state.loadProducts);
     const loadCategories = useStore((state) => state.loadCategories);
+    const isMobile = useMediaQuery('(max-width: 768px)');
 
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
@@ -188,13 +190,14 @@ export const Products = () => {
                     
                     <div className="toolbar-actions-group">
                         {/* More Actions Dropdown */}
-                        <div className="more-actions-dropdown" style={{ position: 'relative' }}>
+                        <div className="more-actions-dropdown">
                             <button
+                                id="more-actions-button"
                                 className={`btn btn-secondary ${showMoreMenu ? 'active' : ''}`}
                                 onClick={() => setShowMoreMenu(!showMoreMenu)}
                                 title="Más acciones"
                             >
-                                <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>⋯</span>
+                                <Upload size={18} className="mr-1" />
                                 <span className="hidden-mobile">Más</span>
                             </button>
                                                    {showMoreMenu && (
@@ -203,56 +206,29 @@ export const Products = () => {
                                         style={{ position: 'fixed', inset: 0, zIndex: 99 }}
                                         onClick={() => setShowMoreMenu(false)}
                                     />
-                                    <div className="dropdown-menu" style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        right: 0,
-                                        marginTop: '0.5rem',
-                                        background: 'var(--color-surface)',
-                                        border: '1px solid var(--color-border)',
-                                        borderRadius: 'var(--radius-lg)',
-                                        boxShadow: 'var(--shadow-lg)',
-                                        zIndex: 100,
-                                        minWidth: '220px',
-                                        padding: '0.5rem',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '0.125rem'
-                                    }}>
+                                    <div className="dropdown-menu">
                                         <button
                                             className="dropdown-item"
                                             onClick={() => { setIsPriceHistoryOpen(true); setShowMoreMenu(false); }}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '0.9375rem', color: 'var(--color-text-main)', transition: 'background 0.15s' }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-hover)')}
-                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                         >
                                             <History size={18} /> Historial de Precios
                                         </button>
                                         <button
                                             className="dropdown-item"
                                             onClick={() => { setShowImportModal(true); setShowMoreMenu(false); }}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '0.9375rem', color: 'var(--color-text-main)', transition: 'background 0.15s' }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-hover)')}
-                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                         >
                                             <Upload size={18} /> Importar
                                         </button>
-                                        <div style={{ height: '1px', background: 'var(--color-border)', margin: '0.25rem 0' }}></div>
+                                        <div className="dropdown-divider"></div>
                                         <button
                                             className="dropdown-item"
                                             onClick={() => { setIsBulkUpdateOpen(true); setShowMoreMenu(false); }}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '0.9375rem', color: 'var(--color-text-main)', transition: 'background 0.15s' }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-hover)')}
-                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                         >
                                             <TrendingUp size={18} /> Actualizar Precios
                                         </button>
                                         <button
                                             className="dropdown-item"
                                             onClick={() => { handlePrint(); setShowMoreMenu(false); }}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '0.9375rem', color: 'var(--color-text-main)', transition: 'background 0.15s' }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-hover)')}
-                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                         >
                                             <FileDown size={18} /> Exportar como PDF
                                         </button>
@@ -537,24 +513,26 @@ export const Products = () => {
             </div>
 
             {/* Mobile List (Accessible Sheet) */}
-            <div className="mobile-sheet hidden-desktop">
-                {filteredProducts.map(p => (
-                    <div key={p.id} className="mobile-product-card" onClick={() => handleOpenEditModal(p)}>
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h3 className="font-bold">{p.name}</h3>
-                                <p className="text-small text-muted font-mono">{p.code}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="font-bold text-primary">${p.price.toLocaleString()}</p>
-                                <span className={`stock-pill text-micro ${p.stock <= p.min ? 'danger' : 'success'}`}>
-                                    {p.stock} unid.
-                                </span>
+            {isMobile && (
+                <div className="mobile-sheet hidden-desktop">
+                    {filteredProducts.map(p => (
+                        <div key={p.id} className="mobile-product-card" onClick={() => handleOpenEditModal(p)}>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h3 className="font-bold">{p.name}</h3>
+                                    <p className="text-small text-muted font-mono">{p.code}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-bold text-primary">${p.price.toLocaleString()}</p>
+                                    <span className={`stock-pill text-micro ${p.stock <= p.min ? 'danger' : 'success'}`}>
+                                        {p.stock} unid.
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
 
             <ProductModal
                 isOpen={isModalOpen}

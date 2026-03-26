@@ -542,9 +542,11 @@
         display: none !important;
     }
     
+@media (min-width: 768px) {
     .show-mobile {
-        display: block !important;
+        display: none !important;
     }
+}
 }
 
 /* ============================================

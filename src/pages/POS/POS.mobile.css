@@ -464,7 +464,7 @@
     transition: all 0.3s;
 }
 
-@media (min-width: 1025px) {
+@media (min-width: 769px) {
     .cart-float-button {
         display: none !important;
     }
@@ -517,7 +517,7 @@
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@media (min-width: 1025px) {
+@media (min-width: 769px) {
     .cart-bottom-sheet {
         display: none !important;
     }
@@ -781,7 +781,7 @@
     align-items: flex-end;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
     .order-modal-overlay.show {
         display: flex;
     }

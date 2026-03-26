@@ -100,6 +100,65 @@
 
 .toolbar-bottom-row {
     flex-wrap: wrap;
+    display: flex;
+}
+
+/* More Actions Dropdown */
+.more-actions-dropdown {
+    position: relative;
+    z-index: 100;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    width: 240px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    padding: 0.5rem;
+    z-index: 101;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    border: none;
+    background: transparent;
+    color: var(--color-text-main);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    width: 100%;
+}
+
+.dropdown-item:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-primary);
+}
+
+.dropdown-item svg {
+    color: var(--color-text-muted);
+}
+
+.dropdown-item:hover svg {
+    color: var(--color-primary);
 }
 
 .category-select-group select {
