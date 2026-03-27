@@ -239,23 +239,14 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // Import prices endpoint - uses global auth hook, only checks admin role here
-  // Import prices endpoint
-  fastify.post('/import-prices', {
-    preHandler: [async (request, reply) => {
-      try {
-        await request.jwtVerify();
-      } catch (err) {
-        reply.code(401).send({ error: 'Unauthorized' });
-      }
-    }]
-  }, async (request, reply) => {
+  // Bulk import endpoint
+  fastify.post('/bulk-import', async (request, reply) => {
     const user = request.user as any;
-    console.log(`[IMPORT-PRICES] Request: ${request.method} ${request.url} User: ${user?.email}`);
+    console.log(`[BULK-IMPORT] Request: ${request.method} ${request.url} User: ${user?.email}`);
 
     // Check admin role
     if (user.role !== 'admin') {
-      console.log('[IMPORT-PRICES] Forbidden: Not admin');
+      console.log('[BULK-IMPORT] Forbidden: Not admin');
       return reply.code(403).send({ error: 'Only admins can import prices' });
     }
 

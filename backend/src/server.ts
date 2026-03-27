@@ -142,6 +142,9 @@ await fastify.register(import('./routes/reports.js'), { prefix: '/api/reports' }
 console.log('Loading import-data.js...');
 const importDataModule = await import('./routes/import-data.js');
 await fastify.register(importDataModule.default || importDataModule.importRoutes, { prefix: '/api/import-data' });
+
+// EMERGENCY TEST ROUTE
+fastify.post('/api/import-data/direct-test', async () => ({ status: 'direct-ok' }));
 console.log('Loading cash-register.js...');
 await fastify.register(import('./routes/cash-register.js'), { prefix: '/api/cash-register' });
 console.log('Loading stock.js...');

@@ -385,7 +385,7 @@ class ApiClient {
       margin_percent: number;
     }
   ): Promise<{ updated: number; created: number; errors: any[] }> {
-    return this.request('/import-data/import-prices', {
+    return this.request('/import-data/bulk-import', {
       method: 'POST',
       body: JSON.stringify({ data, ...options }),
     });
