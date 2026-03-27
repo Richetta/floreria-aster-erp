@@ -140,7 +140,8 @@ await fastify.register(import('./routes/waste.js'), { prefix: '/api/waste' });
 console.log('Loading reports.js...');
 await fastify.register(import('./routes/reports.js'), { prefix: '/api/reports' });
 console.log('Loading import-data.js...');
-await fastify.register(import('./routes/import-data.js'), { prefix: '/api/import-data' });
+const importDataModule = await import('./routes/import-data.js');
+await fastify.register(importDataModule.default || importDataModule.importRoutes, { prefix: '/api/import-data' });
 console.log('Loading cash-register.js...');
 await fastify.register(import('./routes/cash-register.js'), { prefix: '/api/cash-register' });
 console.log('Loading stock.js...');
@@ -159,6 +160,16 @@ console.log('Loading diagnostic.js...');
 await fastify.register(import('./routes/diagnostic.js'), { prefix: '/api/admin' });
 
 // Diagnostic Route — removed for security (was exposing config without auth)
+
+// Global 404 Handler for Troubleshooting
+fastify.setNotFoundHandler((request, reply) => {
+  console.log(`[404] Route not found: ${request.method} ${request.url}`);
+  reply.code(404).send({
+    error: 'Not Found',
+    message: `Route ${request.method}:${request.url} not found`,
+    statusCode: 404
+  });
+});
 
 // Global Error Handler
 fastify.setErrorHandler((error: any, request, reply) => {
