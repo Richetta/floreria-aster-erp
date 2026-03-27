@@ -405,7 +405,11 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     reply.header('Content-Disposition', 'attachment; filename="productos_aster.csv"');
     
     return reply.send(csv);
-  });
+    });
+  } catch (err: any) {
+    console.error('[IMPORT] Plugin initialization error:', err);
+    fastify.get('/error-status', async () => ({ error: err.message }));
+  }
 };
 
 export default importRoutes;
