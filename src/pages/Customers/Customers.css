@@ -240,10 +240,7 @@
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     animation: modalSlideUp 0.3s ease-out;
 }
-    right: 0;
-    height: 4px;
-    background-color: var(--color-danger);
-}
+
 
 .hover-danger:hover {
     background-color: rgba(239, 68, 68, 0.1);
@@ -370,5 +367,4 @@
     font-size: 0.9rem;
     font-weight: 800;
     color: var(--color-primary);
-}
 }

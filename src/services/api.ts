@@ -5,7 +5,10 @@
 import { logger } from '../utils/logger';
 
 const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const API_BASE_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\/$/, '')}/api`;
+// Use relative path in production for Vercel Proxy, absolute in dev or if explicitly set as absolute
+const API_BASE_URL = import.meta.env.PROD 
+  ? '/api' 
+  : (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\/$/, '')}/api`);
 
 // ============================================
 // TYPES
@@ -356,7 +359,7 @@ class ApiClient {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE_URL}/import/parse-file`, {
+    const response = await fetch(`${API_BASE_URL}/import-data/parse-file`, {
       method: 'POST',
       headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
       body: formData,
@@ -382,7 +385,7 @@ class ApiClient {
       margin_percent: number;
     }
   ): Promise<{ updated: number; created: number; errors: any[] }> {
-    return this.request('/import/import-prices', {
+    return this.request('/import-data/import-prices', {
       method: 'POST',
       body: JSON.stringify({ data, ...options }),
     });
@@ -393,7 +396,7 @@ class ApiClient {
    * Retorna el texto CSV listo para descargar.
    */
   async exportProductsTemplate(): Promise<string> {
-    const response = await fetch(`${API_BASE_URL}/import/export-template`, {
+    const response = await fetch(`${API_BASE_URL}/import-data/export-template`, {
       headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
     });
     if (!response.ok) {

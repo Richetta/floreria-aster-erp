@@ -143,6 +143,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
             }));
             setCsvData(mappedData);
         } catch (error: any) {
+            console.error('[BULK-UPDATE] Error reading file:', error);
             showAlert({ 
                 title: 'Error al leer archivo', 
                 message: error.message || 'No se pudo procesar el archivo. Asegurate de que sea un Excel o CSV válido.', 
@@ -171,19 +172,38 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
     };
 
     // Aplicar cambios
-    const applyChanges = () => {
-        previewChanges.forEach(change => {
-            updateProduct(change.productId, { 
-                price: change.newPrice
-            });
-        });
+    const applyChanges = async () => {
+        setIsLoading(true);
+        try {
+            // Apply updates sequentially to avoid overwhelming the server
+            let count = 0;
+            for (const change of previewChanges) {
+                await updateProduct(change.productId, { 
+                    price: change.newPrice
+                });
+                count++;
+            }
 
-        showAlert({ title: 'Precios actualizados', message: `Se actualizaron ${previewChanges.length} productos exitosamente`, variant: 'success' });
-        setStep(1);
-        setPercentageIncrease(0);
-        setCustomPrices({});
-        setCsvData([]);
-        onClose();
+            showAlert({ 
+                title: 'Precios actualizados', 
+                message: `Se actualizaron ${count} productos exitosamente`, 
+                variant: 'success' 
+            });
+            setStep(1);
+            setPercentageIncrease(0);
+            setCustomPrices({});
+            setCsvData([]);
+            onClose();
+        } catch (error: any) {
+            console.error('[BULK-UPDATE] Error:', error);
+            showAlert({ 
+                title: 'Error al actualizar', 
+                message: 'Ocurrió un error al aplicar los cambios. Revisá la consola para más detalles.', 
+                variant: 'error' 
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if (!isOpen) return null;
