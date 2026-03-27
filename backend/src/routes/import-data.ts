@@ -12,33 +12,21 @@ import { sql } from 'kysely';
 import { randomUUID } from 'crypto';
 
 export const importRoutes: FastifyPluginAsync = async (fastify) => {
-  // Multipart is already registered globally in server.ts
-
-  // Debug endpoint to verify routes are registered
+  // Debug endpoint
   fastify.get('/debug', {
     preHandler: [async (request, reply) => {
       try {
         await request.jwtVerify();
       } catch (err) {
-        reply.code(401).send({ error: 'Unauthorized' });
+        return reply.code(401).send({ error: 'Unauthorized', debug: 'v5-test' });
       }
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    console.log('[IMPORT DEBUG] User:', user?.email, 'Role:', user?.role);
     return reply.send({
       status: 'ok',
-      routes: [
-        'POST /parse-file',
-        'POST /parse-text',
-        'POST /import-prices',
-        'GET /export-template'
-      ],
-      user: {
-        email: user?.email,
-        role: user?.role,
-        business_id: user?.business_id
-      }
+      version: 'v5-fixed',
+      user_role: user?.role
     });
   });
 
@@ -405,11 +393,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     reply.header('Content-Disposition', 'attachment; filename="productos_aster.csv"');
     
     return reply.send(csv);
-    });
-  } catch (err: any) {
-    console.error('[IMPORT] Plugin initialization error:', err);
-    fastify.get('/error-status', async () => ({ error: err.message }));
-  }
+  });
 };
 
 export default importRoutes;
