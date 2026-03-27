@@ -166,10 +166,11 @@ await fastify.register(import('./routes/diagnostic.js'), { prefix: '/api/admin' 
 
 // Global 404 Handler for Troubleshooting
 fastify.setNotFoundHandler((request, reply) => {
-  console.log(`[404] Route not found: ${request.method} ${request.url}`);
+  const version = 'vFINAL-ROBUST';
+  console.log(`[404] Route not found: ${request.method} ${request.url} (Version: ${version})`);
   reply.code(404).send({
     error: 'Not Found',
-    message: `Route ${request.method}:${request.url} not found`,
+    message: `Route ${request.method}:${request.url} not found (${version})`,
     statusCode: 404
   });
 });
