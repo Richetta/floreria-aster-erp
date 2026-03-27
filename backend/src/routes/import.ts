@@ -249,8 +249,9 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(403).send({ error: 'Only admins can import prices' });
     }
 
-    console.log('[IMPORT-PRICES] User authenticated:', user?.email, 'Role:', user?.role);
-    console.log('[IMPORT-PRICES] Request body keys:', Object.keys(request.body || {}));
+    console.log(`[IMPORT-PRICES] Request received: POST ${request.url}`);
+    console.log(`[IMPORT-PRICES] User authenticated: ${user?.email} Role: ${user?.role}`);
+    console.log(`[IMPORT-PRICES] Request body keys: ${Object.keys(request.body || {})}`);
 
     try {
       const body = z.object({

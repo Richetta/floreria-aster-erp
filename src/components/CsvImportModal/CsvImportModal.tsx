@@ -172,7 +172,11 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             setImportResult(result);
             setStep('result');
         } catch (error: any) {
-            showAlert({ title: 'Error', message: 'Error al importar: ' + error.message, variant: 'error' });
+            console.error('[IMPORT] Error:', error);
+            const errorMessage = error.message.includes('404') 
+                ? 'Error 404: El servidor no encontró la ruta de importación. Verificá la configuración de la API.'
+                : error.message;
+            showAlert({ title: 'Error', message: 'Error al importar: ' + errorMessage, variant: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -522,11 +526,15 @@ Símbolos:
                     {/* STEP 3: OPTIONS */}
                     {step === 'options' && (
                         <div className="import-step">
-                            <h3 className="text-h3 mb-4">Opciones de Importación</h3>
+                            <h3 className="text-h3 mb-4">Configuración de Carga</h3>
 
                             <div className="import-options">
                                 <div className="option-group">
-                                    <h4 className="text-h4 mb-3">¿Qué datos querés actualizar?</h4>
+                                    <h4 className="text-h4 mb-3">¿Qué datos querés procesar?</h4>
+                                    <p className="text-micro text-muted mb-4">
+                                        Si el producto ya existe, se aplicarán estas reglas de actualización. 
+                                        Si es nuevo, se creará con todos los datos proporcionados.
+                                    </p>
                                     
                                     <label className="option-checkbox">
                                         <input
