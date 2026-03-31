@@ -104,16 +104,35 @@ const Restock: React.FC = () => {
                                     <h3 className="text-h3 font-semibold">{supplier.supplierName}</h3>
                                     <span className="text-small text-muted">{supplier.items.length} productos faltantes</span>
                                 </div>
-                                {supplier.supplierPhone && supplier.supplierId && (
-                                    <a 
-                                        href={generateWhatsAppLink(supplier)} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="btn btn-primary whatsapp-btn"
-                                    >
-                                        <MessageCircle size={18} />
-                                        <span className="hidden sm:inline">Pedir por WhatsApp</span>
-                                    </a>
+                                {supplier.supplierId && (
+                                    <div className="flex gap-2">
+                                        <Link 
+                                            to="/compras" 
+                                            state={{ 
+                                                supplierId: supplier.supplierId, 
+                                                items: supplier.items.map(item => ({
+                                                    productId: item.id,
+                                                    productName: item.name,
+                                                    quantity: item.minStock > item.stock ? item.minStock - item.stock : 10,
+                                                    cost: item.cost
+                                                }))
+                                            }}
+                                            className="btn btn-primary"
+                                        >
+                                            <PackageOpen size={18} />
+                                            <span className="hidden sm:inline">Generar Compra</span>
+                                        </Link>
+                                        {supplier.supplierPhone && (
+                                            <a 
+                                                href={generateWhatsAppLink(supplier)} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="btn btn-secondary whatsapp-btn"
+                                            >
+                                                <MessageCircle size={18} />
+                                            </a>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                             

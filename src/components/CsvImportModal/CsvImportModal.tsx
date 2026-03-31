@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, X, FileText, CheckCircle2, Download, Settings, Plus, Layers } from 'lucide-react';
+import { Upload, X, FileText, CheckCircle2, Download, Settings, Plus, Layers, TrendingUp } from 'lucide-react';
 import { api } from '../../services/api';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../ui/Modals';
@@ -229,11 +229,13 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         <div className="csv-import-overlay">
             <div className="csv-import-modal">
                 <div className="csv-import-header">
-                    <h2 className="text-h2 flex items-center gap-2">
-                        <Upload size={24} className="text-primary" />
-                        Importar Productos
+                    <h2 className="text-h2 flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                            <Upload size={24} className="text-primary" />
+                        </div>
+                        <span className="font-black text-slate-800">Importar Productos</span>
                     </h2>
-                    <button className="btn-icon" onClick={handleClose}>
+                    <button className="btn-icon hover:bg-slate-100 rounded-full p-2 transition-colors" onClick={handleClose}>
                         <X size={20} />
                     </button>
                 </div>
@@ -242,18 +244,20 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                     {/* STEP 1: UPLOAD / PASTE */}
                     {step === 'upload' && (
                         <div className="import-step">
-                            <div className="flex border-b mb-6 border-slate-700">
+                            <div className="flex border-b mb-8 border-slate-200">
                                 <button
-                                    className={`px-6 py-2 font-medium transition-all ${importMode === 'file' ? 'border-b-2 border-primary text-primary' : 'text-muted'}`}
+                                    className={`px-8 py-3 font-bold transition-all relative ${importMode === 'file' ? 'text-primary' : 'text-muted hover:text-slate-600'}`}
                                     onClick={() => setImportMode('file')}
                                 >
                                     Archivo
+                                    {importMode === 'file' && <div className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full" />}
                                 </button>
                                 <button
-                                    className={`px-6 py-2 font-medium transition-all ${importMode === 'text' ? 'border-b-2 border-primary text-primary' : 'text-muted'}`}
+                                    className={`px-8 py-3 font-bold transition-all relative ${importMode === 'text' ? 'text-primary' : 'text-muted hover:text-slate-600'}`}
                                     onClick={() => setImportMode('text')}
                                 >
                                     Pegar Texto
+                                    {importMode === 'text' && <div className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full" />}
                                 </button>
                             </div>
 
@@ -266,17 +270,21 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                         onChange={handleFileSelect}
                                         style={{ display: 'none' }}
                                     />
-                                    <Upload size={48} className="text-muted mb-4" />
-                                    <h3 className="text-h3 mb-2">Arrastrá cualquier archivo aquí</h3>
-                                    <p className="text-body text-muted mb-4">PDF, Excel, Word, CSV o Texto</p>
-                                    <button className="btn btn-secondary" disabled={isLoading}>
-                                        {isLoading ? 'Procesando...' : 'Seleccionar Archivo'}
-                                    </button>
+                                    <div className="flex flex-col items-center">
+                                        <div className="p-6 bg-primary/5 rounded-3xl mb-4">
+                                            <Upload size={48} className="text-primary opacity-60" />
+                                        </div>
+                                        <h3 className="text-h3 font-bold text-slate-800 mb-2">Arrastrá cualquier archivo aquí</h3>
+                                        <p className="text-body text-muted mb-6">Excel (XLSX), CSV, Word, PDF o Texto</p>
+                                        <button className="btn btn-primary px-8" disabled={isLoading}>
+                                            {isLoading ? 'Procesando...' : 'Seleccionar Archivo'}
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="paste-area">
                                     <textarea
-                                        className="form-input w-full min-h-[200px] mb-4 p-4 font-mono text-small"
+                                        className="form-input w-full min-h-[220px] mb-6 p-6 font-mono text-small border-2 border-slate-100 focus:border-primary rounded-2xl shadow-inner bg-slate-50/50"
                                         placeholder={`Pegá aquí tu lista de productos... Ejemplo:
 P-001 Ramo de Rosas $1500
 P-002 Margaritas $$800 $1200
@@ -290,7 +298,7 @@ Símbolos:
                                         onChange={(e) => setPastedText(e.target.value)}
                                     />
                                     <button
-                                        className="btn btn-primary w-full"
+                                        className="btn btn-primary w-full py-4 font-bold text-lg rounded-2xl shadow-lg shadow-primary/20"
                                         onClick={handleTextSubmit}
                                         disabled={isLoading || !pastedText.trim()}
                                     >
@@ -299,63 +307,62 @@ Símbolos:
                                 </div>
                             )}
 
-                            <div className="import-instructions mt-8">
-                                <h4 className="text-h4 mb-4 flex items-center gap-2 text-primary-dark">
-                                    <FileText size={20} />
+                            <div className="import-instructions mt-10">
+                                <h4 className="text-h4 mb-6 flex items-center gap-2 text-slate-800 font-bold">
+                                    <FileText size={22} className="text-primary" />
                                     Guía Rápida de Importación
                                 </h4>
                                 
                                 <div className="instructions-layout">
                                     <div className="instructions-steps">
                                         <div className="instruction-step">
-                                            <div className="step-icon">1</div>
+                                            <div className="step-icon flex-shrink-0">1</div>
                                             <div className="step-content">
-                                                <strong>Subí tu archivo o pegá texto</strong>
-                                                <p>Soportamos Excel (XLSX), CSV, Word, PDF o texto plano.</p>
+                                                <strong className="text-slate-800">Subí tu archivo o pegá texto</strong>
+                                                <p>Soportamos casi cualquier formato comercial para tu comodidad.</p>
                                             </div>
                                         </div>
                                         <div className="instruction-step">
-                                            <div className="step-icon">2</div>
+                                            <div className="step-icon flex-shrink-0">2</div>
                                             <div className="step-content">
-                                                <strong>Inteligencia Automática</strong>
-                                                <p>El sistema busca códigos (Ej: P-101), nombres y precios extraídos dinámicamente.</p>
+                                                <strong className="text-slate-800">Inteligencia Automática</strong>
+                                                <p>Detectamos códigos, nombres y precios de forma inteligente.</p>
                                             </div>
                                         </div>
                                         <div className="instruction-step">
-                                            <div className="step-icon">3</div>
+                                            <div className="step-icon flex-shrink-0">3</div>
                                             <div className="step-content">
-                                                <strong>Revisión Flexible</strong>
-                                                <p>En el próximo paso podrás editar todo cómodamente antes de guardarlo en tu base de datos.</p>
+                                                <strong className="text-slate-800">Revisión Flexible</strong>
+                                                <p>Podrás editar cada fila manualmente antes de confirmar el guardado.</p>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <div className="instructions-advanced">
-                                        <h5 className="advanced-title">Atajos para Pegar Texto:</h5>
-                                        <div className="shortcuts-list">
-                                            <div className="shortcut-item">
-                                                <kbd>$</kbd> <span>Precio Venta (ej: $1500)</span>
+                                    <div className="instructions-advanced bg-slate-50/80 p-6 rounded-2xl border border-slate-100">
+                                        <h5 className="advanced-title text-slate-800 font-bold mb-4">Atajos útiles:</h5>
+                                        <div className="shortcuts-list space-y-3">
+                                            <div className="shortcut-item flex items-center gap-3">
+                                                <kbd className="px-2 py-1 bg-white border border-slate-200 rounded shadow-sm text-primary font-bold font-mono">$</kbd> 
+                                                <span className="text-small text-slate-600">Precio Venta</span>
                                             </div>
-                                            <div className="shortcut-item">
-                                                <kbd>$$</kbd> <span>Costo (ej: $$800)</span>
+                                            <div className="shortcut-item flex items-center gap-3">
+                                                <kbd className="px-2 py-1 bg-white border border-slate-200 rounded shadow-sm text-primary font-bold font-mono">$$</kbd> 
+                                                <span className="text-small text-slate-600">Costo Unitario</span>
                                             </div>
-                                            <div className="shortcut-item">
-                                                <kbd>+</kbd> <span>Stock (ej: +50)</span>
+                                            <div className="shortcut-item flex items-center gap-3">
+                                                <kbd className="px-2 py-1 bg-white border border-slate-200 rounded shadow-sm text-primary font-bold font-mono">+</kbd> 
+                                                <span className="text-small text-slate-600">Sumar Stock</span>
                                             </div>
-                                        </div>
-                                        <div className="shortcut-example">
-                                            <span className="example-label">Ejemplo combinando:</span>
-                                            <code>P-004 Rosas $$800 $1200 +30</code>
                                         </div>
                                     </div>
                                 </div>
 
                                 <button
-                                    className="btn btn-outline mt-5 flex items-center gap-2 w-full justify-center template-btn"
+                                    className="template-btn mt-8 flex items-center gap-3 w-full justify-center transition-all hover:bg-primary/10"
                                     onClick={handleDownloadTemplate}
                                 >
-                                    <Download size={16} />
-                                    Descargar plantilla de ejemplo
+                                    <Download size={18} />
+                                    Descargar plantilla CSV de referencia
                                 </button>
                             </div>
                         </div>
@@ -363,33 +370,37 @@ Símbolos:
 
                     {/* STEP 2: PREVIEW */}
                     {step === 'preview' && parsedData && (
-                        <div className="import-step">
+                        <div className="import-step animate-fade-in">
                             <div className="preview-summary">
                                 <div className="summary-card">
-                                    <CheckCircle2 size={24} className="text-success" />
+                                    <div className="p-3 bg-success/10 rounded-xl">
+                                        <CheckCircle2 size={24} className="text-success" />
+                                    </div>
                                     <div>
-                                        <p className="text-h3">{parsedData.total_rows}</p>
-                                        <p className="text-small text-muted">Productos detectados</p>
+                                        <p className="text-h2 font-black text-slate-800 leading-tight">{parsedData.total_rows}</p>
+                                        <p className="text-micro font-bold uppercase tracking-wider text-muted">Productos detectados</p>
                                     </div>
                                 </div>
                                 <div className="summary-card">
-                                    <FileText size={24} className="text-primary" />
+                                    <div className="p-3 bg-primary/10 rounded-xl">
+                                        <FileText size={24} className="text-primary" />
+                                    </div>
                                     <div>
-                                        <p className="text-small font-bold truncate max-w-[120px]">{parsedData.filename}</p>
-                                        <p className="text-micro text-muted">Método: {parsedData.method}</p>
+                                        <p className="text-small font-bold text-slate-800 truncate max-w-[150px]">{parsedData.filename}</p>
+                                        <p className="text-micro font-bold uppercase tracking-wider text-muted">Origen: {parsedData.method}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="preview-table-container editable-preview">
-                                <div className="flex justify-between items-center mb-3">
-                                    <h4 className="text-h4">Revisá y Editá los Datos:</h4>
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-2 bg-slate-800/50 p-1 px-3 rounded-lg border border-slate-700">
+                            <div className="editable-preview">
+                                <div className="flex justify-between items-center mb-4 px-1">
+                                    <h4 className="text-body font-black text-slate-800">Revisá y Editá los Datos</h4>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 bg-slate-100 p-1.5 px-3 rounded-xl border border-slate-200">
                                             <Layers size={14} className="text-primary" />
-                                            <span className="text-micro text-muted whitespace-nowrap">Aplicar categoría a todos:</span>
+                                            <span className="text-micro font-bold text-muted whitespace-nowrap">Categoría global:</span>
                                             <select 
-                                                className="table-input py-1 text-micro border-none bg-transparent h-auto"
+                                                className="table-input py-0 text-micro border-none bg-transparent h-auto font-bold text-slate-700"
                                                 value={globalCategoryId}
                                                 onChange={(e) => {
                                                     const cid = e.target.value;
@@ -408,133 +419,135 @@ Símbolos:
                                             </select>
                                         </div>
                                         <button
-                                            className="btn btn-secondary btn-sm flex items-center gap-1"
+                                            className="btn btn-secondary btn-sm rounded-xl py-2 px-3 flex items-center gap-2"
                                             onClick={() => {
                                                 const newItem = { code: '', name: '', cost: 0, price: 0, stock: 0, category_id: globalCategoryId || null };
                                                 const newData = [newItem, ...parsedData.data];
                                                 setParsedData({ ...parsedData, data: newData, total_rows: newData.length });
                                             }}
                                         >
-                                            <Plus size={14} /> Agregar Fila
+                                            <Plus size={14} /> Fila
                                         </button>
                                     </div>
                                 </div>
-                                <div className="table-scroll-area">
-                                    <table className="preview-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Código</th>
-                                                <th>Nombre</th>
-                                                <th>Categoría</th>
-                                                <th style={{ width: '100px' }}>Costo</th>
-                                                <th style={{ width: '100px' }}>Precio</th>
-                                                <th style={{ width: '80px' }}>Stock</th>
-                                                <th style={{ width: '40px' }}></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {parsedData.data.map((row: any, i: number) => (
-                                                <tr key={i}>
-                                                    <td>
-                                                        <input
-                                                            type="text"
-                                                            value={row.code || ''}
-                                                            onChange={(e) => {
-                                                                const newData = [...parsedData.data];
-                                                                newData[i] = { ...row, code: e.target.value };
-                                                                setParsedData({ ...parsedData, data: newData });
-                                                            }}
-                                                            className="table-input"
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        <input
-                                                            type="text"
-                                                            value={row.name || ''}
-                                                            onChange={(e) => {
-                                                                const newData = [...parsedData.data];
-                                                                newData[i] = { ...row, name: e.target.value };
-                                                                setParsedData({ ...parsedData, data: newData });
-                                                            }}
-                                                            className="table-input"
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            value={row.category_id || ''}
-                                                            onChange={(e) => {
-                                                                const newData = [...parsedData.data];
-                                                                newData[i] = { ...row, category_id: e.target.value || null };
-                                                                setParsedData({ ...parsedData, data: newData });
-                                                            }}
-                                                            className="table-input"
-                                                        >
-                                                            <option value="">(Sin categ.)</option>
-                                                            {categories.map(c => (
-                                                                <option key={c.id} value={c.id}>{c.name}</option>
-                                                            ))}
-                                                        </select>
-                                                    </td>
-                                                    <td>
-                                                        <input
-                                                            type="number"
-                                                            value={row.cost || 0}
-                                                            onChange={(e) => {
-                                                                const newData = [...parsedData.data];
-                                                                newData[i] = { ...row, cost: Number(e.target.value) };
-                                                                setParsedData({ ...parsedData, data: newData });
-                                                            }}
-                                                            className="table-input"
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        <input
-                                                            type="number"
-                                                            value={row.price || 0}
-                                                            onChange={(e) => {
-                                                                const newData = [...parsedData.data];
-                                                                newData[i] = { ...row, price: Number(e.target.value) };
-                                                                setParsedData({ ...parsedData, data: newData });
-                                                            }}
-                                                            className="table-input"
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        <input
-                                                            type="number"
-                                                            value={row.stock || 0}
-                                                            onChange={(e) => {
-                                                                const newData = [...parsedData.data];
-                                                                newData[i] = { ...row, stock: Number(e.target.value) };
-                                                                setParsedData({ ...parsedData, data: newData });
-                                                            }}
-                                                            className="table-input"
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        <button
-                                                            className="btn-icon text-danger p-1"
-                                                            onClick={() => {
-                                                                const newData = parsedData.data.filter((_: any, idx: number) => idx !== i);
-                                                                setParsedData({ ...parsedData, data: newData, total_rows: newData.length });
-                                                            }}
-                                                        >
-                                                            <X size={14} />
-                                                        </button>
-                                                    </td>
+                                <div className="preview-table-container">
+                                    <div className="table-scroll-area">
+                                        <table className="preview-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Código</th>
+                                                    <th>Nombre</th>
+                                                    <th>Categoría</th>
+                                                    <th style={{ width: '100px' }}>Costo</th>
+                                                    <th style={{ width: '100px' }}>Precio</th>
+                                                    <th style={{ width: '80px' }}>Stock</th>
+                                                    <th style={{ width: '40px' }}></th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                {parsedData.data.map((row: any, i: number) => (
+                                                    <tr key={i}>
+                                                        <td>
+                                                            <input
+                                                                type="text"
+                                                                value={row.code || ''}
+                                                                onChange={(e) => {
+                                                                    const newData = [...parsedData.data];
+                                                                    newData[i] = { ...row, code: e.target.value };
+                                                                    setParsedData({ ...parsedData, data: newData });
+                                                                }}
+                                                                className="table-input font-mono font-bold"
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            <input
+                                                                type="text"
+                                                                value={row.name || ''}
+                                                                onChange={(e) => {
+                                                                    const newData = [...parsedData.data];
+                                                                    newData[i] = { ...row, name: e.target.value };
+                                                                    setParsedData({ ...parsedData, data: newData });
+                                                                }}
+                                                                className="table-input font-bold"
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            <select
+                                                                value={row.category_id || ''}
+                                                                onChange={(e) => {
+                                                                    const newData = [...parsedData.data];
+                                                                    newData[i] = { ...row, category_id: e.target.value || null };
+                                                                    setParsedData({ ...parsedData, data: newData });
+                                                                }}
+                                                                className="table-input font-medium"
+                                                            >
+                                                                <option value="">(Sin categ.)</option>
+                                                                {categories.map(c => (
+                                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <input
+                                                                type="number"
+                                                                value={row.cost || 0}
+                                                                onChange={(e) => {
+                                                                    const newData = [...parsedData.data];
+                                                                    newData[i] = { ...row, cost: Number(e.target.value) };
+                                                                    setParsedData({ ...parsedData, data: newData });
+                                                                }}
+                                                                className="table-input text-right font-bold"
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            <input
+                                                                type="number"
+                                                                value={row.price || 0}
+                                                                onChange={(e) => {
+                                                                    const newData = [...parsedData.data];
+                                                                    newData[i] = { ...row, price: Number(e.target.value) };
+                                                                    setParsedData({ ...parsedData, data: newData });
+                                                                }}
+                                                                className="table-input text-right text-primary font-black"
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            <input
+                                                                type="number"
+                                                                value={row.stock || 0}
+                                                                onChange={(e) => {
+                                                                    const newData = [...parsedData.data];
+                                                                    newData[i] = { ...row, stock: Number(e.target.value) };
+                                                                    setParsedData({ ...parsedData, data: newData });
+                                                                }}
+                                                                className="table-input text-center font-bold"
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            <button
+                                                                className="btn-icon text-danger hover:bg-danger/10 p-2 rounded-lg"
+                                                                onClick={() => {
+                                                                    const newData = parsedData.data.filter((_: any, idx: number) => idx !== i);
+                                                                    setParsedData({ ...parsedData, data: newData, total_rows: newData.length });
+                                                                }}
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="import-actions">
-                                <button className="btn btn-secondary" onClick={() => setStep('upload')}>
+                                <button className="btn btn-secondary px-8 font-bold" onClick={() => setStep('upload')}>
                                     Volver
                                 </button>
                                 <button
-                                    className="btn btn-primary"
+                                    className="btn btn-primary px-12 font-black shadow-lg shadow-primary/20"
                                     onClick={() => setStep('confirm')}
                                 >
                                     Continuar
@@ -546,80 +559,94 @@ Símbolos:
                     {/* STEP 3: CONFIRM (Summary) */}
                     {step === 'confirm' && parsedData && (
                         <div className="import-step animate-fade-in">
-                            <div className="flex items-center gap-3 mb-6 bg-primary/10 p-4 rounded-xl border border-primary/20">
-                                <CheckCircle2 size={32} className="text-primary" />
+                            <div className="flex items-center gap-4 mb-8 bg-primary/5 p-6 rounded-2xl border border-primary/10">
+                                <div className="p-3 bg-primary/10 rounded-xl">
+                                    <CheckCircle2 size={32} className="text-primary" />
+                                </div>
                                 <div>
-                                    <h3 className="text-h3 font-bold">Resumen de Importación</h3>
-                                    <p className="text-small text-muted">Confirmá los datos y la configuración antes de procesar.</p>
+                                    <h3 className="text-h3 font-bold text-slate-800">Casi listo para importar</h3>
+                                    <p className="text-small text-muted">Ajustá las preferencias de actualización y confirmá para comenzar.</p>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 mb-8">
-                                <div className="summary-card p-6 bg-slate-800/40 border border-slate-700/50 rounded-2xl flex flex-col items-center justify-center text-center">
-                                    <p className="text-micro uppercase tracking-wider text-muted mb-1 font-bold">Total de Productos</p>
-                                    <p className="text-h1 font-black text-primary leading-none">{parsedData.total_rows}</p>
+                            <div className="preview-summary">
+                                <div className="summary-card">
+                                    <div className="p-3 bg-success/10 rounded-xl">
+                                        <Layers size={24} className="text-success" />
+                                    </div>
+                                    <div>
+                                        <p className="text-h3 font-black text-slate-800 leading-tight">{parsedData.total_rows}</p>
+                                        <p className="text-micro uppercase tracking-wider text-muted font-bold">Productos</p>
+                                    </div>
                                 </div>
-                                <div className="summary-card p-6 bg-slate-800/40 border border-slate-700/50 rounded-2xl flex flex-col items-center justify-center text-center">
-                                    <p className="text-micro uppercase tracking-wider text-muted mb-1 font-bold">Archivo/Origen</p>
-                                    <p className="text-body font-bold truncate max-w-full text-white">{parsedData.filename || 'Pasted Text'}</p>
+                                <div className="summary-card">
+                                    <div className="p-3 bg-primary/10 rounded-xl">
+                                        <FileText size={24} className="text-primary" />
+                                    </div>
+                                    <div>
+                                        <p className="text-small font-bold truncate max-w-[140px] text-slate-800">{parsedData.filename || 'Texto Pegado'}</p>
+                                        <p className="text-micro uppercase tracking-wider text-muted font-bold">Origen</p>
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="import-options space-y-6">
-                                <div className="option-group bg-slate-800/20 p-5 rounded-2xl border border-slate-700/30">
-                                    <h4 className="text-body font-bold mb-4 flex items-center gap-2">
-                                        <Layers size={18} className="text-primary" />
-                                        ¿Qué datos querés actualizar?
+                                <div className="option-group">
+                                    <h4 className="text-body font-bold mb-6 flex items-center gap-2 text-slate-800">
+                                        <Settings size={20} className="text-primary" />
+                                        Preferencias de Actualización
                                     </h4>
                                     
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <label className={`option-selector ${updateCosts ? 'active' : ''}`}>
                                             <input type="checkbox" checked={updateCosts} onChange={(e) => setUpdateCosts(e.target.checked)} />
                                             <div className="selector-content">
-                                                <strong>Costos</strong>
-                                                <span>Actualizar costo unitario</span>
+                                                <strong>Actualizar Costos</strong>
+                                                <span>Se ajustará el costo unitario de cada producto.</span>
                                             </div>
                                         </label>
 
                                         <label className={`option-selector ${updatePrices ? 'active' : ''}`}>
                                             <input type="checkbox" checked={updatePrices} onChange={(e) => setUpdatePrices(e.target.checked)} />
                                             <div className="selector-content">
-                                                <strong>Precios</strong>
-                                                <span>Actualizar precio de venta</span>
+                                                <strong>Actualizar Precios</strong>
+                                                <span>Se aplicarán los nuevos precios de venta.</span>
                                             </div>
                                         </label>
 
                                         <label className={`option-selector ${updateStock ? 'active' : ''}`}>
                                             <input type="checkbox" checked={updateStock} onChange={(e) => setUpdateStock(e.target.checked)} />
                                             <div className="selector-content">
-                                                <strong>Stock</strong>
-                                                <span>Actualizar unidades disponibles</span>
+                                                <strong>Actualizar Stock</strong>
+                                                <span>Se modificarán las cantidades disponibles.</span>
                                             </div>
                                         </label>
 
                                         {updateStock && (
-                                            <div className="stock-mode-selector col-span-full mt-2 bg-slate-900/50 p-2 rounded-xl flex">
-                                                <button 
-                                                    className={`flex-1 py-2 text-small font-bold rounded-lg transition-all ${stockAction === 'add' ? 'bg-primary text-white shadow-lg' : 'text-muted hover:text-white'}`}
-                                                    onClick={() => setStockAction('add')}
-                                                >
-                                                    Sumar al Stock actual
-                                                </button>
-                                                <button 
-                                                    className={`flex-1 py-2 text-small font-bold rounded-lg transition-all ${stockAction === 'set' ? 'bg-primary text-white shadow-lg' : 'text-muted hover:text-white'}`}
-                                                    onClick={() => setStockAction('set')}
-                                                >
-                                                    Sobreescribir Stock
-                                                </button>
+                                            <div className="col-span-full animate-fade-in">
+                                                <div className="stock-mode-selector">
+                                                    <button 
+                                                        className={stockAction === 'add' ? 'active' : ''}
+                                                        onClick={() => setStockAction('add')}
+                                                    >
+                                                        Sumar al Stock actual
+                                                    </button>
+                                                    <button 
+                                                        className={stockAction === 'set' ? 'active' : ''}
+                                                        onClick={() => setStockAction('set')}
+                                                    >
+                                                        Sobreescribir Stock
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="option-group bg-slate-800/20 p-5 rounded-2xl border border-slate-700/30">
-                                    <h4 className="text-body font-bold mb-4 flex items-center gap-2">
-                                        <Settings size={18} className="text-primary" />
-                                        Automatización
+                                <div className="option-group">
+                                    <h4 className="text-body font-bold mb-6 flex items-center gap-2 text-slate-800">
+                                        <TrendingUp size={20} className="text-primary" />
+                                        Margen y Automatización
                                     </h4>
                                     
                                     <label className={`option-selector ${autoMargin ? 'active' : ''}`}>
@@ -631,7 +658,7 @@ Símbolos:
                                     </label>
 
                                     {autoMargin && (
-                                        <div className="mt-4 px-4">
+                                        <div className="mt-8 px-2 animate-fade-in">
                                             <input
                                                 type="range"
                                                 min="0"
@@ -639,11 +666,11 @@ Símbolos:
                                                 step="5"
                                                 value={marginPercent}
                                                 onChange={(e) => setMarginPercent(Number(e.target.value))}
-                                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary"
+                                                className="w-full accent-primary"
                                             />
-                                            <div className="flex justify-between text-micro text-muted mt-2">
+                                            <div className="flex justify-between text-micro font-bold text-muted mt-3">
                                                 <span>0%</span>
-                                                <span className="text-primary font-bold">{marginPercent}% Margen</span>
+                                                <span className="text-primary text-small">{marginPercent}% de Margen</span>
                                                 <span>200%</span>
                                             </div>
                                         </div>
@@ -651,8 +678,8 @@ Símbolos:
                                 </div>
                             </div>
 
-                            <div className="import-actions mt-8">
-                                <button className="btn btn-secondary btn-lg px-8" onClick={() => setStep('preview')}>
+                            <div className="import-actions">
+                                <button className="btn btn-secondary px-8 font-bold" onClick={() => setStep('preview')}>
                                     Volver
                                 </button>
                                 <button 
@@ -662,12 +689,12 @@ Símbolos:
                                 >
                                     <span className="relative z-10">
                                         {isLoading ? (
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center justify-center gap-3">
                                                 <div className="loader-small" />
-                                                Procesando {importProgress.current}/{importProgress.total}...
+                                                Importando {importProgress.current}/{importProgress.total}...
                                             </div>
                                         ) : (
-                                            'CONFIRMAR E IMPORTAR AHORA'
+                                            'COMENZAR IMPORTACIÓN'
                                         )}
                                     </span>
                                 </button>
@@ -677,54 +704,54 @@ Símbolos:
 
                     {/* STEP 4: RESULT */}
                     {step === 'result' && importResult && (
-                        <div className="import-step">
-                            <div className="import-result">
-                                <div className="result-icon">
-                                    <CheckCircle2 size={64} className="text-success" />
+                        <div className="import-step animate-fade-in">
+                            <div className="result-screen">
+                                <div className="result-icon-container">
+                                    <CheckCircle2 size={48} className="text-success" />
                                 </div>
-                                <h3 className="text-h2 mb-4">¡Importación Completada!</h3>
+                                <h2 className="text-h1 font-black text-slate-800 mb-2">¡Todo listo!</h2>
+                                <p className="text-body text-muted mb-8">La importación se procesó correctamente.</p>
                                 
-                                <div className="result-summary">
-                                    <div className="result-item">
-                                        <span className="result-label">Actualizados:</span>
-                                        <span className="result-value text-success">{importResult.updated}</span>
+                                <div className="preview-summary max-w-md mx-auto">
+                                    <div className="summary-card flex-col items-center text-center p-6">
+                                        <span className="text-h2 font-black text-success leading-tight">{importResult.updated}</span>
+                                        <span className="text-micro font-bold uppercase text-muted">Actualizados</span>
                                     </div>
-                                    <div className="result-item">
-                                        <span className="result-label">Creados:</span>
-                                        <span className="result-value text-primary">{importResult.created}</span>
+                                    <div className="summary-card flex-col items-center text-center p-6">
+                                        <span className="text-h2 font-black text-primary leading-tight">{importResult.created}</span>
+                                        <span className="text-micro font-bold uppercase text-muted">Creados</span>
                                     </div>
                                     {importResult.errors.length > 0 && (
-                                        <div className="result-item">
-                                            <span className="result-label">Errores:</span>
-                                            <span className="result-value text-danger">{importResult.errors.length}</span>
+                                        <div className="summary-card flex-col items-center text-center p-6 border-danger/20 bg-danger/5">
+                                            <span className="text-h2 font-black text-danger leading-tight">{importResult.errors.length}</span>
+                                            <span className="text-micro font-bold uppercase text-muted">Errores</span>
                                         </div>
                                     )}
                                 </div>
 
                                 {importResult.errors.length > 0 && (
-                                    <div className="errors-detail mt-6 bg-danger/5 border border-danger/20 p-4 rounded-xl">
-                                        <h4 className="text-body font-bold mb-3 text-danger flex items-center gap-2">
-                                            <X size={18} />
-                                            Detalle de Errores ({importResult.errors.length}):
-                                        </h4>
-                                        <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2">
-                                            {importResult.errors.map((error: any, i: number) => (
-                                                <div key={i} className="error-item text-small bg-slate-900/50 p-2 rounded border border-slate-700/50 flex justify-between">
-                                                    <span className="font-mono text-muted">{error.code || 'N/A'}:</span>
-                                                    <span className="text-white ml-2 text-right">{error.error}</span>
-                                                </div>
-                                            ))}
+                                    <div className="mt-8 text-left max-w-lg mx-auto">
+                                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                                            <h4 className="text-body font-bold mb-4 text-slate-800 flex items-center gap-2">
+                                                <X size={18} className="text-danger" />
+                                                Detalle de Errores ({importResult.errors.length}):
+                                            </h4>
+                                            <div className="max-h-[180px] overflow-y-auto space-y-2 pr-2">
+                                                {importResult.errors.map((error: any, i: number) => (
+                                                    <div key={i} className="text-small bg-white p-3 rounded-xl border border-slate-100 flex justify-between shadow-sm">
+                                                        <span className="font-mono text-muted">{error.code || 'N/A'}:</span>
+                                                        <span className="text-slate-700 font-medium ml-4">{error.error}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <p className="text-micro text-muted mt-3">
-                                            Los productos con error no fueron procesados. Podés corregirlos e intentar de nuevo.
-                                        </p>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="import-actions">
-                                <button className="btn btn-primary" onClick={handleClose}>
-                                    Cerrar
+                            <div className="import-actions mt-8">
+                                <button className="btn btn-primary btn-lg w-full" onClick={handleClose}>
+                                    Finalizar y Cerrar
                                 </button>
                             </div>
                         </div>

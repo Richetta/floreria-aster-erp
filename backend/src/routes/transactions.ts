@@ -481,111 +481,127 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    const body = z.object({
-      supplier_id: z.string().uuid(),
-      payment_method: z.enum(['cash', 'transfer']),
-      items: z.array(z.object({
-        product_id: z.string().uuid(),
-        quantity: z.number().int().positive(),
-        cost: z.number().nonnegative()
-      })).min(1),
-      notes: z.string().optional()
-    }).parse(request.body);
+    try {
+      const body = z.object({
+        supplier_id: z.string().uuid(),
+        payment_method: z.enum(['cash', 'transfer']),
+        items: z.array(z.object({
+          product_id: z.string().uuid(),
+          quantity: z.number().int().positive(),
+          cost: z.number().nonnegative()
+        })).min(1),
+        notes: z.string().optional()
+      }).parse(request.body);
 
-    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
-    const result = await db.transaction().execute(async (trx) => {
-      const purchaseTransactionId = randomUUID();
-      let totalAmount = 0;
-      
-      // 1. Update stock and record movements
-      for (const item of body.items) {
-        const product = await trx
-          .selectFrom('products')
-          .select(['id', 'stock_quantity', 'name'])
-          .where('id', '=', item.product_id)
-          .forUpdate()
-          .executeTakeFirst();
+      const result = await db.transaction().execute(async (trx) => {
+        const purchaseTransactionId = randomUUID();
+        let totalAmount = 0;
+        
+        // 1. Update stock and record movements
+        for (const item of body.items) {
+          const product = await trx
+            .selectFrom('products')
+            .select(['id', 'stock_quantity', 'name'])
+            .where('id', '=', item.product_id)
+            .forUpdate()
+            .executeTakeFirst();
 
-        if (!product) {
-          throw new Error(`Producto no encontrado: ${item.product_id}`);
+          if (!product) {
+            throw new Error(`Producto no encontrado: ${item.product_id}`);
+          }
+
+          const itemTotal = item.cost * item.quantity;
+          totalAmount += itemTotal;
+
+          // Update stock and cost using relative updates
+          await trx
+            .updateTable('products')
+            .set({ 
+              stock_quantity: sql`stock_quantity + ${item.quantity}`,
+              cost: item.cost,
+              updated_at: new Date()
+            })
+            .where('id', '=', product.id)
+            .execute();
+
+          // Fetch new balance
+          const updatedProduct = await trx
+            .selectFrom('products')
+            .select('stock_quantity')
+            .where('id', '=', product.id)
+            .executeTakeFirst();
+
+          const newStock = Number(updatedProduct?.stock_quantity || 0);
+
+          // Record stock movement
+          await trx
+            .insertInto('stock_movements')
+            .values({
+              id: randomUUID(),
+              business_id: user.business_id,
+              product_id: product.id,
+              movement_type: 'purchase' as any,
+              quantity: item.quantity,
+              balance_after: newStock,
+              reference_type: 'purchase',
+              reference_id: purchaseTransactionId, 
+              user_id: user.sub,
+              notes: `Compra a proveedor - ${product.name}`,
+              created_at: new Date(),
+              metadata: { 
+                supplier_id: body.supplier_id,
+                client_ip: request.ip
+              }
+            } as any)
+            .execute();
         }
 
-        const itemTotal = item.cost * item.quantity;
-        totalAmount += itemTotal;
-
-        // Update stock and cost using relative updates
-        await trx
-          .updateTable('products')
-          .set({ 
-            stock_quantity: sql`stock_quantity + ${item.quantity}`,
-            cost: item.cost,
-            updated_at: new Date()
+        // 2. Create transaction for the purchase
+        const transaction = await trx
+          .insertInto('transactions')
+          .values({
+            id: purchaseTransactionId,
+            business_id: user.business_id,
+            type: 'expense',
+            amount: totalAmount,
+            payment_method: body.payment_method,
+            category: 'Compra a Proveedor',
+            description: `Compra de mercadería - ${body.items.length} productos`,
+            notes: body.notes || null,
+            metadata: {
+              items: body.items,
+              supplier_id: body.supplier_id,
+              is_expense: true,
+              impacts_cash: body.payment_method === 'cash',
+              client_ip: request.ip
+            },
+            created_by: user.sub,
+            created_at: new Date()
           })
-          .where('id', '=', product.id)
-          .execute();
-
-        // Fetch new balance
-        const updatedProduct = await trx
-          .selectFrom('products')
-          .select('stock_quantity')
-          .where('id', '=', product.id)
+          .returningAll()
           .executeTakeFirst();
 
-        const newStock = Number(updatedProduct?.stock_quantity || 0);
+        return transaction;
+      });
 
-        // Record stock movement
-        await trx
-          .insertInto('stock_movements')
-          .values({
-            id: randomUUID(),
-            business_id: user.business_id,
-            product_id: product.id,
-            movement_type: 'purchase' as any,
-            quantity: item.quantity,
-            balance_after: newStock,
-            reference_type: 'purchase',
-            reference_id: purchaseTransactionId, 
-            user_id: user.sub,
-            notes: `Compra a proveedor - ${product.name}`,
-            created_at: new Date(),
-            metadata: { 
-              supplier_id: body.supplier_id,
-              client_ip: request.ip
-            }
-          } as any)
-          .execute();
+      return reply.status(201).send(result);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        console.error('[PURCHASE VALIDATION ERROR]:', error.errors);
+        return reply.status(400).send({ 
+          error: 'Validation error', 
+          message: 'Error de validación en los datos de la compra',
+          details: error.errors 
+        });
       }
-
-      // 2. Create transaction for the purchase
-      const transaction = await trx
-        .insertInto('transactions')
-        .values({
-          id: purchaseTransactionId,
-          business_id: user.business_id,
-          type: 'expense',
-          amount: totalAmount,
-          payment_method: body.payment_method,
-          category: 'Compra a Proveedor',
-          description: `Compra de mercadería - ${body.items.length} productos`,
-          notes: body.notes || null,
-          metadata: {
-            items: body.items,
-            supplier_id: body.supplier_id,
-            is_expense: true,
-            impacts_cash: body.payment_method === 'cash',
-            client_ip: request.ip
-          },
-          created_by: user.sub,
-          created_at: new Date()
-        })
-        .returningAll()
-        .executeTakeFirst();
-
-      return transaction;
-    });
-
-    return reply.status(201).send(result);
+      console.error('[PURCHASE ERROR]:', error);
+      return reply.status(500).send({ 
+        error: 'Internal server error', 
+        message: error.message 
+      });
+    }
   });
 
   // CREATE EXPENSE

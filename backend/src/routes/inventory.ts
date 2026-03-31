@@ -62,9 +62,13 @@ export const inventoryRoutes: FastifyPluginAsync = async (fastify) => {
       }, {} as Record<string, any>);
 
       return reply.send(Object.values(grouped));
-    } catch (error) {
+    } catch (error: any) {
+      console.error('[INVENTORY RESTOCK ERROR]:', error);
       request.log.error(error);
-      return reply.status(500).send({ error: 'Failed to fetch restock data' });
+      return reply.status(500).send({ 
+        error: 'Failed to fetch restock data',
+        message: error.message
+      });
     }
   });
 };

@@ -65,8 +65,8 @@ export const createFinanceSlice: StateCreator<AppState, [], [], FinanceSlice> = 
                 payment_method: purchase.method,
                 items: purchase.items.map(i => ({
                     product_id: i.productId,
-                    quantity: i.qty,
-                    cost: i.price
+                    quantity: i.quantity,
+                    cost: i.cost
                 })),
                 notes: purchase.notes
             });

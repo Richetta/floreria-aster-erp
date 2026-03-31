@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Plus, Search, Truck, Package, DollarSign, Check, X, Minus, Trash2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useModal } from '../../hooks/useModal';
@@ -21,6 +22,19 @@ export const Purchases = () => {
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('transfer');
 
     const { alertModal, showAlert } = useModal();
+    const location = useLocation();
+
+    // Check for pre-filled data from Restock page
+    useEffect(() => {
+        const stateData = location.state as any;
+        if (stateData && stateData.supplierId && stateData.items) {
+            setSelectedSupplier(stateData.supplierId);
+            setPurchaseItems(stateData.items);
+            setView('new');
+            // Clear location state to prevent re-filling on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location]);
 
     // Load data from backend on mount
     useEffect(() => {
