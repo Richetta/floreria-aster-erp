@@ -23,6 +23,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     const updateProduct = useStore((state) => state.updateProduct);
     const categories = useStore((state) => state.categories);
     const loadProducts = useStore((state) => state.loadProducts);
+    const suppliers = useStore((state) => state.suppliers);
+    const loadSuppliers = useStore((state) => state.loadSuppliers);
 
     const [formData, setFormData] = useState<Partial<Product>>({
         code: '',
@@ -32,10 +34,17 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         cost: 0,
         stock: 0,
         min: 5,
+        supplierId: '',
         tags: []
     });
 
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            loadSuppliers();
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -51,6 +60,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 cost: 0,
                 stock: 0,
                 min: 5,
+                supplierId: '',
                 tags: []
             });
         }
@@ -187,6 +197,21 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                             />
                         </div>
+                    </div>
+
+                    <div className="form-group mb-6">
+                        <label className="form-label font-bold text-primary">Proveedor que lo suministra (Opcional)</label>
+                        <select
+                            className="form-input"
+                            value={formData.supplierId || ''}
+                            onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                        >
+                            <option value="">-- Sin Proveedor Asignado --</option>
+                            {(suppliers || []).map(sup => (
+                                <option key={sup.id} value={sup.id}>{sup.name}</option>
+                            ))}
+                        </select>
+                        <p className="text-micro text-muted mt-1">Esto ayuda a organizar la reposición de stock por proveedor.</p>
                     </div>
 
                     <div className="grid grid-2 gap-4 mb-6">

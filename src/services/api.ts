@@ -41,6 +41,7 @@ export type Product = {
   min_stock: number;
   is_active: boolean;
   is_barcode: boolean;
+  supplier_id?: string;
   tags: string[];
   created_at: string;
   updated_at: string;

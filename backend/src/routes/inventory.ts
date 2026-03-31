@@ -17,8 +17,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (fastify) => {
       // Left join with supplier_products and suppliers to get the supplier info
       const lowStockItems = await db
         .selectFrom('products as p')
-        .leftJoin('supplier_products as sp', 'sp.product_id', 'p.id')
-        .leftJoin('suppliers as s', 's.id', 'sp.supplier_id')
+        .leftJoin('suppliers as s', 's.id', 'p.supplier_id')
         .select([
           'p.id',
           'p.code',
@@ -33,6 +32,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (fastify) => {
         .whereRef('p.stock_quantity', '<=', 'p.min_stock')
         .where('p.deleted_at', 'is', null)
         .where('p.is_active', '=', true)
+        .orderBy('s.name', 'asc')
         .orderBy('p.name', 'asc')
         .execute();
 

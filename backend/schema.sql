@@ -87,6 +87,7 @@ CREATE TABLE products (
     max_stock INTEGER,
     is_active BOOLEAN DEFAULT TRUE,
     is_barcode BOOLEAN DEFAULT FALSE,
+    supplier_id UUID REFERENCES suppliers(id),
     tags TEXT[] DEFAULT '{}',
     images TEXT[] DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

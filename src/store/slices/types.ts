@@ -9,6 +9,7 @@ export type Product = {
     stock: number;
     min: number;
     tags: string[];
+    supplierId?: string;
     salesCount?: number;
     lastSaleDate?: string;
     weeklySales?: number;

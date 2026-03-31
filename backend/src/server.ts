@@ -200,6 +200,12 @@ fastify.setErrorHandler((error: any, request, reply) => {
 // Start server
 const start = async () => {
   try {
+    console.log('--- STARTING SERVER ---');
+    
+    // Run emergency migrations
+    const { runEmergencyMigrations } = await import('./db/migrations.js');
+    await runEmergencyMigrations();
+    
     console.log(`Starting Fastify on port ${config.port}...`);
     await fastify.listen({ port: config.port, host: '0.0.0.0' });
     console.log(`🚀 Server running at http://localhost:${config.port}`);

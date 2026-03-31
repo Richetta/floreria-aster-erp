@@ -15,6 +15,7 @@ export const mapApiProductToFrontend = (apiProduct: ApiProduct, categoriesData: 
     stock: apiProduct.stock_quantity,
     min: apiProduct.min_stock,
     tags: apiProduct.tags || [],
+    supplierId: apiProduct.supplier_id,
 });
 
 // Map Frontend Product to API Product
@@ -36,5 +37,6 @@ export const mapFrontendToApiProduct = (product: Partial<Product>, categoriesDat
         is_barcode: false,
         is_active: true,
         category_id: categoryId,
+        supplier_id: product.supplierId,
     };
 };

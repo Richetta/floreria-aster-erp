@@ -93,6 +93,7 @@ interface ProductsTable {
   max_stock: number | null;
   is_active: boolean;
   is_barcode: boolean;
+  supplier_id: string | null;
   tags: string[];
   images: string[];
   created_at: Date;
