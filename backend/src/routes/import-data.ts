@@ -6,7 +6,12 @@ import ExcelJS from 'exceljs';
 import mammoth from 'mammoth';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const PDFParse = require('pdf-parse');
+let PDFParse: any = null;
+try {
+  PDFParse = require('pdf-parse');
+} catch (err: any) {
+  console.warn('[IMPORT-DATA] PDFParse could not be loaded:', err.message);
+}
 import { parse as csvParse } from 'csv-parse/sync';
 import { sql } from 'kysely';
 import { randomUUID } from 'crypto';

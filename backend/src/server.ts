@@ -87,14 +87,15 @@ const PUBLIC_ROUTES = [
   '/api/auth/login',
   '/api/auth/google',
   '/api/auth/google/callback',
-  '/health',
+  '/api/health',
+  '/health', // Support both paths
 ];
 
 fastify.addHook('onRequest', (request, reply, done) => {
   const url = request.url.split('?')[0]; // strip query params
 
   // Skip public routes
-  if (PUBLIC_ROUTES.includes(url) || url === '/health') {
+  if (PUBLIC_ROUTES.includes(url)) {
     return done();
   }
 
@@ -164,9 +165,8 @@ await fastify.register(import('./routes/diagnostic.js'), { prefix: '/api/admin' 
 
 // Diagnostic Route — removed for security (was exposing config without auth)
 
-// Global 404 Handler for Troubleshooting
 fastify.setNotFoundHandler((request, reply) => {
-  const version = 'vFINAL-ROBUST';
+  const version = 'vFINAL-DEPLOYED';
   console.log(`[404] Route not found: ${request.method} ${request.url} (Version: ${version})`);
   reply.code(404).send({
     error: 'Not Found',
