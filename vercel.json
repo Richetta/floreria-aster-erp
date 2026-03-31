@@ -5,7 +5,7 @@
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
     "rewrites": [
-        { "source": "/api/(.*)", "destination": "https://aster-erp-production.up.railway.app/api/$1" },
+        { "source": "/api/(.*)", "destination": "https://aster-backend-production.up.railway.app/api/$1" },
         { "source": "/(.*)", "destination": "/index.html" }
     ],
     "headers": [
