@@ -64,11 +64,13 @@ export const createOrderSlice: StateCreator<AppState, [], [], OrderSlice> = (set
                 items: orderData.items.map((item: any) => ({
                     product_id: item.isPackage ? undefined : item.id,
                     package_id: item.isPackage ? item.id : undefined,
-                    quantity: Number(item.qty),
-                    unit_price: Number(item.price)
+                    quantity: parseInt(String(item.qty), 10) || 1,
+                    unit_price: parseFloat(String(item.price || 0))
                 })),
-                advance_payment: Number(orderData.advancePayment || 0)
+                advance_payment: parseFloat(String(orderData.advancePayment || 0))
             };
+
+            console.log('[OrderSlice] Rendering final API payload:', JSON.stringify(apiData, null, 2));
 
             const newOrder = await api.createOrder(apiData);
             const mappedOrder = mapApiToStore(newOrder);

@@ -211,6 +211,10 @@ class ApiClient {
       (headers as any)['Authorization'] = `Bearer ${this.token}`;
     }
 
+    if (options.body && typeof options.body === 'string') {
+      console.log(`[ApiClient] Request Body for ${endpoint}:`, JSON.parse(options.body));
+    }
+
     try {
       const response = await fetch(url, {
         ...options,
