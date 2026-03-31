@@ -40,14 +40,30 @@ export const createCustomerSlice: StateCreator<AppState, [], [], CustomerSlice> 
 
     addCustomer: async (customer) => {
         try {
-            await api.createCustomer({
+            const newApiCustomer = await api.createCustomer({
                 name: customer.name,
                 phone: customer.phone,
                 email: customer.email,
                 notes: customer.notes
             });
+
+            // Map backend to frontend format
+            const mappedCustomer: Customer = {
+                id: newApiCustomer.id,
+                name: newApiCustomer.name,
+                phone: newApiCustomer.phone,
+                email: newApiCustomer.email || '',
+                address: '',
+                debtBalance: 0,
+                importantDateName: '',
+                importantDate: '',
+                orderCount: 0,
+                lastOrderDate: undefined,
+                notes: newApiCustomer.notes || ''
+            };
+
             set(state => ({
-                customers: [...state.customers, customer]
+                customers: [...state.customers, mappedCustomer]
             }));
             get().addNotification('Cliente añadido', 'success');
         } catch (error: any) {

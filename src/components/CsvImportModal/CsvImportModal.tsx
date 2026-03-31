@@ -19,9 +19,11 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     const [parsedData, setParsedData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [importResult, setImportResult] = useState<any>(null);
-    const [step, setStep] = useState<'upload' | 'preview' | 'options' | 'result'>('upload');
+    const [step, setStep] = useState<'upload' | 'preview' | 'confirm' | 'result'>('upload');
     const [importMode, setImportMode] = useState<'file' | 'text'>('file');
     const [pastedText, setPastedText] = useState('');
+    const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+    const [stockAction, setStockAction] = useState<'set' | 'add'>('add');
 
     // Import options
     const [updateCosts, setUpdateCosts] = useState(true);
@@ -160,16 +162,33 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         if (!parsedData) return;
 
         setIsLoading(true);
+        const data = parsedData.data;
+        const CHUNK_SIZE = 200;
+        const totalItems = data.length;
+        setImportProgress({ current: 0, total: totalItems });
+        
+        let aggregatedResult = { updated: 0, created: 0, errors: [] as any[] };
+
         try {
-            // Use only the edited data from the preview table
-            const result = await api.importPrices(parsedData.data, {
-                update_costs: updateCosts,
-                update_prices: updatePrices,
-                update_stock: updateStock,
-                auto_margin: autoMargin,
-                margin_percent: marginPercent
-            });
-            setImportResult(result);
+            for (let i = 0; i < totalItems; i += CHUNK_SIZE) {
+                const chunk = data.slice(i, i + CHUNK_SIZE);
+                const result = await api.importPrices(chunk, {
+                    update_costs: updateCosts,
+                    update_prices: updatePrices,
+                    update_stock: updateStock,
+                    stock_action: stockAction,
+                    auto_margin: autoMargin,
+                    margin_percent: marginPercent
+                });
+
+                aggregatedResult.updated += result.updated;
+                aggregatedResult.created += result.created;
+                aggregatedResult.errors = [...aggregatedResult.errors, ...result.errors];
+                
+                setImportProgress({ current: Math.min(i + CHUNK_SIZE, totalItems), total: totalItems });
+            }
+
+            setImportResult(aggregatedResult);
             setStep('result');
         } catch (error: any) {
             console.error('[IMPORT] Error:', error);
@@ -179,6 +198,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             showAlert({ title: 'Error', message: 'Error al importar: ' + errorMessage, variant: 'error' });
         } finally {
             setIsLoading(false);
+            setImportProgress({ current: 0, total: 0 });
         }
     };
 
@@ -515,100 +535,141 @@ Símbolos:
                                 </button>
                                 <button
                                     className="btn btn-primary"
-                                    onClick={() => setStep('options')}
+                                    onClick={() => setStep('confirm')}
                                 >
                                     Continuar
                                 </button>
                             </div>
                         </div>
                     )}
-
-                    {/* STEP 3: OPTIONS */}
-                    {step === 'options' && (
-                        <div className="import-step">
-                            <h3 className="text-h3 mb-4">Configuración de Carga</h3>
-
-                            <div className="import-options">
-                                <div className="option-group">
-                                    <h4 className="text-h4 mb-3">¿Qué datos querés procesar?</h4>
-                                    <p className="text-micro text-muted mb-4">
-                                        Si el producto ya existe, se aplicarán estas reglas de actualización. 
-                                        Si es nuevo, se creará con todos los datos proporcionados.
-                                    </p>
-                                    
-                                    <label className="option-checkbox">
-                                        <input
-                                            type="checkbox"
-                                            checked={updateCosts}
-                                            onChange={(e) => setUpdateCosts(e.target.checked)}
-                                        />
-                                        <span>Actualizar Costos</span>
-                                    </label>
-
-                                    <label className="option-checkbox">
-                                        <input
-                                            type="checkbox"
-                                            checked={updatePrices}
-                                            onChange={(e) => setUpdatePrices(e.target.checked)}
-                                        />
-                                        <span>Actualizar Precios</span>
-                                    </label>
-
-                                    <label className="option-checkbox">
-                                        <input
-                                            type="checkbox"
-                                            checked={updateStock}
-                                            onChange={(e) => setUpdateStock(e.target.checked)}
-                                        />
-                                        <span>Actualizar Stock</span>
-                                    </label>
+                    
+                    {/* STEP 3: CONFIRM (Summary) */}
+                    {step === 'confirm' && parsedData && (
+                        <div className="import-step animate-fade-in">
+                            <div className="flex items-center gap-3 mb-6 bg-primary/10 p-4 rounded-xl border border-primary/20">
+                                <CheckCircle2 size={32} className="text-primary" />
+                                <div>
+                                    <h3 className="text-h3 font-bold">Resumen de Importación</h3>
+                                    <p className="text-small text-muted">Confirmá los datos y la configuración antes de procesar.</p>
                                 </div>
+                            </div>
 
-                                <div className="option-group">
-                                    <h4 className="text-h4 mb-3 flex items-center gap-2">
-                                        <Settings size={18} />
-                                        Configuración de Precios
+                            <div className="grid grid-cols-2 gap-4 mb-8">
+                                <div className="summary-card p-6 bg-slate-800/40 border border-slate-700/50 rounded-2xl flex flex-col items-center justify-center text-center">
+                                    <p className="text-micro uppercase tracking-wider text-muted mb-1 font-bold">Total de Productos</p>
+                                    <p className="text-h1 font-black text-primary leading-none">{parsedData.total_rows}</p>
+                                </div>
+                                <div className="summary-card p-6 bg-slate-800/40 border border-slate-700/50 rounded-2xl flex flex-col items-center justify-center text-center">
+                                    <p className="text-micro uppercase tracking-wider text-muted mb-1 font-bold">Archivo/Origen</p>
+                                    <p className="text-body font-bold truncate max-w-full text-white">{parsedData.filename || 'Pasted Text'}</p>
+                                </div>
+                            </div>
+
+                            <div className="import-options space-y-6">
+                                <div className="option-group bg-slate-800/20 p-5 rounded-2xl border border-slate-700/30">
+                                    <h4 className="text-body font-bold mb-4 flex items-center gap-2">
+                                        <Layers size={18} className="text-primary" />
+                                        ¿Qué datos querés actualizar?
                                     </h4>
                                     
-                                    <label className="option-checkbox">
-                                        <input
-                                            type="checkbox"
-                                            checked={autoMargin}
-                                            onChange={(e) => setAutoMargin(e.target.checked)}
-                                        />
-                                        <span>Calcular precio automáticamente con margen</span>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <label className={`option-selector ${updateCosts ? 'active' : ''}`}>
+                                            <input type="checkbox" checked={updateCosts} onChange={(e) => setUpdateCosts(e.target.checked)} />
+                                            <div className="selector-content">
+                                                <strong>Costos</strong>
+                                                <span>Actualizar costo unitario</span>
+                                            </div>
+                                        </label>
+
+                                        <label className={`option-selector ${updatePrices ? 'active' : ''}`}>
+                                            <input type="checkbox" checked={updatePrices} onChange={(e) => setUpdatePrices(e.target.checked)} />
+                                            <div className="selector-content">
+                                                <strong>Precios</strong>
+                                                <span>Actualizar precio de venta</span>
+                                            </div>
+                                        </label>
+
+                                        <label className={`option-selector ${updateStock ? 'active' : ''}`}>
+                                            <input type="checkbox" checked={updateStock} onChange={(e) => setUpdateStock(e.target.checked)} />
+                                            <div className="selector-content">
+                                                <strong>Stock</strong>
+                                                <span>Actualizar unidades disponibles</span>
+                                            </div>
+                                        </label>
+
+                                        {updateStock && (
+                                            <div className="stock-mode-selector col-span-full mt-2 bg-slate-900/50 p-2 rounded-xl flex">
+                                                <button 
+                                                    className={`flex-1 py-2 text-small font-bold rounded-lg transition-all ${stockAction === 'add' ? 'bg-primary text-white shadow-lg' : 'text-muted hover:text-white'}`}
+                                                    onClick={() => setStockAction('add')}
+                                                >
+                                                    Sumar al Stock actual
+                                                </button>
+                                                <button 
+                                                    className={`flex-1 py-2 text-small font-bold rounded-lg transition-all ${stockAction === 'set' ? 'bg-primary text-white shadow-lg' : 'text-muted hover:text-white'}`}
+                                                    onClick={() => setStockAction('set')}
+                                                >
+                                                    Sobreescribir Stock
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="option-group bg-slate-800/20 p-5 rounded-2xl border border-slate-700/30">
+                                    <h4 className="text-body font-bold mb-4 flex items-center gap-2">
+                                        <Settings size={18} className="text-primary" />
+                                        Automatización
+                                    </h4>
+                                    
+                                    <label className={`option-selector ${autoMargin ? 'active' : ''}`}>
+                                        <input type="checkbox" checked={autoMargin} onChange={(e) => setAutoMargin(e.target.checked)} />
+                                        <div className="selector-content">
+                                            <strong>Margen Automático</strong>
+                                            <span>Calcular precios basándose en costos + {marginPercent}%</span>
+                                        </div>
                                     </label>
 
                                     {autoMargin && (
-                                        <div className="margin-input ml-6 mt-2">
-                                            <label className="form-label">Margen (%):</label>
+                                        <div className="mt-4 px-4">
                                             <input
-                                                type="number"
-                                                className="form-input"
-                                                value={marginPercent}
-                                                onChange={(e) => setMarginPercent(Number(e.target.value))}
+                                                type="range"
                                                 min="0"
                                                 max="200"
-                                                style={{ width: '100px' }}
+                                                step="5"
+                                                value={marginPercent}
+                                                onChange={(e) => setMarginPercent(Number(e.target.value))}
+                                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary"
                                             />
-                                            <p className="text-micro text-muted mt-1">
-                                                Precio = Costo × (1 + {marginPercent}%)
-                                            </p>
+                                            <div className="flex justify-between text-micro text-muted mt-2">
+                                                <span>0%</span>
+                                                <span className="text-primary font-bold">{marginPercent}% Margen</span>
+                                                <span>200%</span>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="import-actions">
-                                <button className="btn btn-secondary" onClick={() => setStep('preview')}>
+                            <div className="import-actions mt-8">
+                                <button className="btn btn-secondary btn-lg px-8" onClick={() => setStep('preview')}>
                                     Volver
                                 </button>
                                 <button 
-                                    className="btn btn-primary" 
+                                    className="btn btn-primary btn-lg px-12 flex-1 relative overflow-hidden group" 
                                     onClick={handleImport}
                                     disabled={isLoading}
                                 >
-                                    {isLoading ? 'Importando...' : 'Importar Datos'}
+                                    <span className="relative z-10">
+                                        {isLoading ? (
+                                            <div className="flex items-center gap-3">
+                                                <div className="loader-small" />
+                                                Procesando {importProgress.current}/{importProgress.total}...
+                                            </div>
+                                        ) : (
+                                            'CONFIRMAR E IMPORTAR AHORA'
+                                        )}
+                                    </span>
                                 </button>
                             </div>
                         </div>
@@ -641,13 +702,22 @@ Símbolos:
                                 </div>
 
                                 {importResult.errors.length > 0 && (
-                                    <div className="errors-detail mt-4">
-                                        <h4 className="text-h4 mb-2">Errores:</h4>
-                                        {importResult.errors.slice(0, 10).map((error: any, i: number) => (
-                                            <div key={i} className="error-item text-small">
-                                                {error.code}: {error.error}
-                                            </div>
-                                        ))}
+                                    <div className="errors-detail mt-6 bg-danger/5 border border-danger/20 p-4 rounded-xl">
+                                        <h4 className="text-body font-bold mb-3 text-danger flex items-center gap-2">
+                                            <X size={18} />
+                                            Detalle de Errores ({importResult.errors.length}):
+                                        </h4>
+                                        <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2">
+                                            {importResult.errors.map((error: any, i: number) => (
+                                                <div key={i} className="error-item text-small bg-slate-900/50 p-2 rounded border border-slate-700/50 flex justify-between">
+                                                    <span className="font-mono text-muted">{error.code || 'N/A'}:</span>
+                                                    <span className="text-white ml-2 text-right">{error.error}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-micro text-muted mt-3">
+                                            Los productos con error no fueron procesados. Podés corregirlos e intentar de nuevo.
+                                        </p>
                                     </div>
                                 )}
                             </div>

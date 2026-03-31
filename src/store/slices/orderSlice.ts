@@ -64,10 +64,10 @@ export const createOrderSlice: StateCreator<AppState, [], [], OrderSlice> = (set
                 items: orderData.items.map((item: any) => ({
                     product_id: item.isPackage ? undefined : item.id,
                     package_id: item.isPackage ? item.id : undefined,
-                    quantity: item.qty,
-                    unit_price: item.price
+                    quantity: Number(item.qty),
+                    unit_price: Number(item.price)
                 })),
-                advance_payment: orderData.advancePayment
+                advance_payment: Number(orderData.advancePayment || 0)
             };
 
             const newOrder = await api.createOrder(apiData);

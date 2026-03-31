@@ -116,7 +116,8 @@ export const POS = () => {
         customerName: string,
         deliveryDate: string,
         total: number,
-        advancePayment: number
+        advancePayment: number,
+        items: any[]
     } | null>(null);
     const [showTemplatesModal, setShowTemplatesModal] = useState(false);
 
@@ -344,7 +345,7 @@ export const POS = () => {
             const remainingDebt = total - advancePayment;
 
             try {
-                await addOrder({
+                const newId = await addOrder({
                     id: orderId,
                     customerName: isGuest ? guestName : (customerObj ? customerObj.name : 'Desconocido'),
                     customerId: isGuest ? 'guest' : selectedCustomer,
@@ -383,11 +384,12 @@ export const POS = () => {
                 }
 
                 setLastOrderData({
-                    id: orderId,
-                    customerName: customerObj ? customerObj.name : 'Desconocido',
+                    id: newId,
+                    customerName: isGuest ? guestName : (customerObj ? customerObj.name : 'Desconocido'),
                     deliveryDate: deliveryDate,
                     total: total,
-                    advancePayment: advancePayment
+                    advancePayment: advancePayment,
+                    items: [...cart]
                 });
 
                 // Show success notification or modal
@@ -1494,14 +1496,26 @@ export const POS = () => {
                             </div>
                             <div className="order-success-row">
                                 <span className="order-success-label">Total</span>
-                                <span className="order-success-value">${(lastOrderData?.total || 0).toLocaleString()}</span>
+                                <span className="order-success-value font-bold">${(lastOrderData?.total || 0).toLocaleString()}</span>
                             </div>
                             {lastOrderData && lastOrderData.advancePayment > 0 && (
                                 <div className="order-success-row">
                                     <span className="order-success-label">Seña</span>
-                                    <span className="order-success-value">${(lastOrderData.advancePayment || 0).toLocaleString()}</span>
+                                    <span className="order-success-value text-success font-bold">${(lastOrderData.advancePayment || 0).toLocaleString()}</span>
                                 </div>
                             )}
+                            
+                            <div className="order-success-items mt-3 pt-3 border-t border-border">
+                                <span className="text-micro font-bold uppercase text-muted mb-2 block">Productos</span>
+                                <div className="space-y-1">
+                                    {lastOrderData?.items.map((item, i) => (
+                                        <div key={i} className="flex justify-between text-small">
+                                            <span>{item.qty}x {item.name}</span>
+                                            <span className="text-muted">${(item.price * item.qty).toLocaleString()}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                         <div className="order-success-actions">
                             <button

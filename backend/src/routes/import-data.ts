@@ -76,6 +76,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
         update_costs: z.boolean().default(true),
         update_prices: z.boolean().default(true),
         update_stock: z.boolean().default(false),
+        stock_action: z.enum(['set', 'add']).default('set'),
         auto_margin: z.boolean().default(false),
         margin_percent: z.number().default(50)
       }).parse(request.body);
@@ -84,31 +85,77 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
         await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
         const stats = { updated: 0, created: 0, errors: [] as any[] };
 
+        // Optimization: Fetch all existing products in this batch at once
+        const codes = body.data.map(r => r.code).filter(Boolean);
+        const existingProducts = codes.length > 0 
+          ? await trx.selectFrom('products')
+              .select(['id', 'code', 'cost', 'price', 'stock_quantity'])
+              .where('code', 'in', codes)
+              .where('deleted_at', 'is', null)
+              .execute()
+          : [];
+        
+        const existingMap = new Map(existingProducts.map(p => [p.code, p]));
+
         for (const row of body.data) {
           try {
-            const product = await trx.selectFrom('products').select(['id', 'cost', 'price', 'stock_quantity']).where('code', '=', row.code).where('deleted_at', 'is', null)
-              .executeTakeFirst();
+            const product = existingMap.get(row.code);
 
             if (product) {
               const updateData: any = { updated_at: new Date() };
-              if (body.update_costs && row.cost !== undefined) updateData.cost = row.cost;
-              if (body.update_prices && row.price !== undefined) updateData.price = row.price;
-              else if (body.auto_margin && row.cost !== undefined) updateData.price = row.cost * (1 + body.margin_percent / 100);
-              if (body.update_stock && row.stock !== undefined) updateData.stock_quantity = row.stock;
+              let hasChanges = false;
+
+              if (body.update_costs && row.cost !== undefined && row.cost !== product.cost) {
+                updateData.cost = row.cost;
+                hasChanges = true;
+              }
+              
+              if (body.update_prices) {
+                if (row.price !== undefined && row.price !== product.price) {
+                  updateData.price = row.price;
+                  hasChanges = true;
+                } else if (body.auto_margin && row.cost !== undefined) {
+                  const newPrice = row.cost * (1 + body.margin_percent / 100);
+                  if (newPrice !== product.price) {
+                    updateData.price = newPrice;
+                    hasChanges = true;
+                  }
+                }
+              }
+
+              if (body.update_stock && row.stock !== undefined) {
+                const newStock = body.stock_action === 'add' 
+                  ? (product.stock_quantity || 0) + row.stock
+                  : row.stock;
+                
+                if (newStock !== product.stock_quantity) {
+                  updateData.stock_quantity = newStock;
+                  hasChanges = true;
+                }
+              }
+
               if (row.category_id !== undefined) updateData.category_id = row.category_id;
 
-              await trx.updateTable('products').set(updateData).where('id', '=', product.id).execute();
+              if (hasChanges || row.category_id !== undefined) {
+                await trx.updateTable('products').set(updateData).where('id', '=', product.id).execute();
 
-              if ((body.update_costs && row.cost !== undefined) || (body.update_prices && row.price !== undefined)) {
-                await trx.insertInto('price_history').values({
-                  id: randomUUID(), business_id: user.business_id, product_id: product.id,
-                  old_cost: product.cost, old_price: product.price,
-                  new_cost: body.update_costs && row.cost !== undefined ? row.cost : typeof product.cost === 'string' ? parseFloat(product.cost) : product.cost,
-                  new_price: body.update_prices && row.price !== undefined ? row.price : (body.auto_margin && row.cost !== undefined ? row.cost * (1 + body.margin_percent / 100) : typeof product.price === 'string' ? parseFloat(product.price) : product.price),
-                  changed_by: user.sub, reason: 'Bulk Import', created_at: new Date(), metadata: {}
-                } as any).execute();
+                if (body.update_costs || body.update_prices) {
+                  await trx.insertInto('price_history').values({
+                    id: randomUUID(), 
+                    business_id: user.business_id, 
+                    product_id: product.id,
+                    old_cost: product.cost, 
+                    old_price: product.price,
+                    new_cost: updateData.cost !== undefined ? updateData.cost : typeof product.cost === 'string' ? parseFloat(product.cost) : product.cost,
+                    new_price: updateData.price !== undefined ? updateData.price : typeof product.price === 'string' ? parseFloat(product.price) : product.price,
+                    changed_by: user.sub, 
+                    reason: 'Bulk Import', 
+                    created_at: new Date(), 
+                    metadata: {}
+                  } as any).execute();
+                }
+                stats.updated++;
               }
-              stats.updated++;
             } else if (row.name) {
               await trx.insertInto('products').values({
                 id: randomUUID(), business_id: user.business_id, code: row.code, name: row.name,
@@ -146,14 +193,26 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
             const values = Array.isArray(row.values) ? row.values : [];
             if (rowNumber === 1) {
               values.forEach((val, idx) => {
+                if (!val) return;
                 const s = String(val).toLowerCase();
                 if (s.includes('cod')) headers.code = idx;
-                if (s.includes('nom')) headers.name = idx;
-                if (s.includes('pre')) headers.price = idx;
+                if (s.includes('nom') || s.includes('prod') || s.includes('desc')) headers.name = idx;
+                if (s.includes('pre') || s.includes('venta')) headers.price = idx;
+                if (s.includes('cost')) headers.cost = idx;
+                if (s.includes('stoc') || s.includes('cant')) headers.stock = idx;
               });
               return;
             }
-            parsedData.push({ code: String(values[headers.code || 1]).trim(), name: values[headers.name || 2], price: cleanPrice(values[headers.price || 4]) });
+            const code = String(values[headers.code || 1] || '').trim();
+            if (!code || code === 'undefined' || code === 'null') return;
+
+            parsedData.push({ 
+              code, 
+              name: values[headers.name || 2] || 'Producto sin nombre', 
+              price: cleanPrice(values[headers.price || 4]),
+              cost: cleanPrice(values[headers.cost]),
+              stock: cleanPrice(values[headers.stock])
+            });
           });
         }
       } else {

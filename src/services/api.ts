@@ -381,6 +381,7 @@ class ApiClient {
       update_costs: boolean;
       update_prices: boolean;
       update_stock: boolean;
+      stock_action: 'set' | 'add';
       auto_margin: boolean;
       margin_percent: number;
     }

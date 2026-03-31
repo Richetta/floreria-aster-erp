@@ -420,22 +420,69 @@
     margin-bottom: 1rem;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+
+/* Confirmation Step Styles */
+.option-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.option-selector:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--color-primary);
+}
+
+.option-selector.active {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+}
+
+.option-selector input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--color-primary);
+}
+
+.selector-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.selector-content strong {
+    font-size: 0.95rem;
+    color: var(--color-text-main);
+}
+
+.selector-content span {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.stock-mode-selector {
+    padding: 0.25rem;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.loader-small {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.4s ease-out;
 }

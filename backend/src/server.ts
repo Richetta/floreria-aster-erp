@@ -11,7 +11,8 @@ console.log('--- SERVER INITIALIZING ---');
 const fastify = Fastify({
   logger: {
     level: config.nodeEnv === 'development' ? 'debug' : 'info'
-  }
+  },
+  bodyLimit: 50 * 1024 * 1024 // 50MB limit for large bulk-imports
 });
 
 // Register plugins

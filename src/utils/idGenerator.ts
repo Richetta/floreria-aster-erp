@@ -19,7 +19,8 @@ export const generateId = (): string => {
  * @returns ID con formato: prefix-uuid
  */
 export const generateIdWithPrefix = (prefix: string): string => {
-  return `${prefix}-${uuidv4()}`;
+  // We no longer use prefixes to maintain compatibility with standard UUID fields in DB
+  return uuidv4();
 };
 
 /**

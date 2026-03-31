@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
   // Create order schema
   const createOrderSchema = z.object({
-    customer_id: z.string().uuid().or(z.literal('guest')),
+    customer_id: z.string().or(z.literal('guest')),
     guest_name: z.string().optional(),
     guest_phone: z.string().optional(),
     delivery_date: z.string(),
@@ -24,8 +24,8 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     card_message: z.string().optional().or(z.literal('')),
     notes: z.string().optional().or(z.literal('')),
     items: z.array(z.object({
-      product_id: z.string().uuid().optional(),
-      package_id: z.string().uuid().optional(),
+      product_id: z.string().optional(),
+      package_id: z.string().optional(),
       quantity: z.number().int().positive(),
       unit_price: z.number().positive(),
       product_name: z.string().optional()
@@ -326,7 +326,14 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
           .where('id', '=', finalCustomerId)
           .execute();
 
-        return order;
+        // Fetch newly created items
+        const items = await trx
+          .selectFrom('order_items')
+          .selectAll()
+          .where('order_id', '=', orderId)
+          .execute();
+
+        return { ...order, items };
       });
 
       return reply.status(201).send(result);
