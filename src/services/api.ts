@@ -352,6 +352,13 @@ class ApiClient {
     });
   }
 
+  async bulkAssignSupplier(productIds: string[], supplierId: string): Promise<{ success: boolean; updated: number }> {
+    return this.request<{ success: boolean; updated: number }>('/products/bulk-supplier', {
+      method: 'PUT',
+      body: JSON.stringify({ productIds, supplierId }),
+    });
+  }
+
   async getProductPriceHistory(id: string): Promise<any[]> {
     return this.request<any[]>(`/products/${id}/price-history`);
   }

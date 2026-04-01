@@ -23,6 +23,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
+import { useStore } from '../../store/useStore';
 import './Sidebar.css';
 
 type NavLink = {
@@ -109,7 +110,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const products = useStore(state => state.products);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+
+  const restockItems = products.filter(p => p.stock <= (p.min || 0));
+  const unassignedCount = restockItems.filter(p => !p.supplierId).length;
 
   const handleLogout = () => {
     logout();
@@ -177,7 +182,14 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                       }
                       onClick={onClose}
                     >
-                      <span className="sidebar-sublabel">{child.label}</span>
+                      <span className="sidebar-sublabel flex items-center justify-between w-full">
+                        {child.label}
+                        {child.path === '/reposicion' && restockItems.length > 0 && (
+                           <span className={`px-2 py-0.5 ml-2 text-xs font-bold rounded-full ${unassignedCount > 0 ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'}`}>
+                             {restockItems.length}
+                           </span>
+                        )}
+                      </span>
                     </NavLink>
                   ))}
                 </div>

@@ -427,6 +427,45 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
 
     return reply.send(history);
   });
+
+  // BULK UPDATE SUPPLIER
+  fastify.put('/bulk-supplier', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+    
+    try {
+      const body = z.object({
+        productIds: z.array(z.string().uuid()).min(1),
+        supplierId: z.string().uuid()
+      }).parse(request.body);
+
+      const result = await db.transaction().execute(async (trx) => {
+        return await trx
+          .updateTable('products')
+          .set({
+            supplier_id: body.supplierId,
+            updated_at: new Date()
+          })
+          .where('id', 'in', body.productIds)
+          .returningAll()
+          .execute();
+      });
+
+      return reply.send({ success: true, updated: result.length });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'Validation error', details: error.errors });
+      }
+      throw error;
+    }
+  });
 };
 
 export default productsRoutes;

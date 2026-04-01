@@ -26,8 +26,19 @@
     background: var(--color-surface);
     border-radius: var(--radius-xl);
     padding: 1.5rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--color-border);
+    transition: all 0.2s ease-in-out;
+}
+
+.supplier-restock-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+}
+
+/* Estilos especiales para tarjeta sin asignar */
+.supplier-restock-card.unassigned {
+    border: 1px solid var(--color-warning);
+    background: linear-gradient(to bottom, rgba(254, 243, 199, 0.3), var(--color-surface));
 }
 
 .supplier-card-header {
@@ -36,11 +47,11 @@
     align-items: center;
     border-bottom: 1px solid var(--color-border);
     padding-bottom: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
 }
 
 .whatsapp-btn {
-    background: #25D366; /* WhatsApp Color */
+    background: #25D366;
     border: none;
     display: flex;
     align-items: center;
@@ -63,13 +74,27 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 0;
+    padding: 0.85rem 0.5rem;
     border-bottom: 1px solid var(--color-background);
+    border-radius: var(--radius-md);
+    transition: background-color 0.15s ease;
 }
 
 .restock-item:last-child {
     border-bottom: none;
-    padding-bottom: 0;
+}
+
+/* Item interactions */
+.restock-item.selectable {
+    cursor: pointer;
+}
+
+.restock-item.selectable:hover {
+    background-color: var(--color-background);
+}
+
+.restock-item.selected {
+    background-color: var(--color-primary-light);
 }
 
 .item-info {
@@ -121,6 +146,13 @@
     font-weight: 500;
 }
 
+.bulk-assign-bar {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(226, 232, 240, 0.6);
+}
+
 @media (max-width: 640px) {
     .restock-item {
         flex-direction: column;
@@ -131,5 +163,16 @@
     .item-stock-info {
         width: 100%;
         justify-content: space-between;
+        padding-left: 1.5rem; /* Alinear con el texto si hay checkbox */
+    }
+
+    .bulk-assign-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .bulk-assign-bar > div:last-child {
+        justify-content: space-between;
+        max-width: 100%;
     }
 }
