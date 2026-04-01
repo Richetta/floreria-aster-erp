@@ -18,7 +18,9 @@ import {
     MessageSquare,
     CreditCard,
     DollarSign,
-    ArrowRight
+    ArrowRight,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Order } from '../../store/useStore';
@@ -223,7 +225,108 @@ export const Orders = () => {
         } finally {
             setPaymentLoading(false);
         }
+    };
 
+    const renderCalendar = () => {
+        const year = new Date().getFullYear(); 
+        const month = timeFilter === 'mes-especifico' ? selectedMonth : new Date().getMonth();
+        
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
+        
+        const days: (number | null)[] = [];
+        for (let i = 0; i < firstDay; i++) {
+            days.push(null);
+        }
+        for (let i = 1; i <= daysInMonth; i++) {
+            days.push(i);
+        }
+
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        // Group orders by date for the selected month
+        const ordersByDate: Record<number, Order[]> = {};
+        filteredOrders.forEach(order => {
+            const d = new Date(order.date);
+            if (d.getMonth() === month && d.getFullYear() === year) {
+                const dateKey = d.getDate();
+                if (!ordersByDate[dateKey]) ordersByDate[dateKey] = [];
+                ordersByDate[dateKey].push(order);
+            }
+        });
+
+        return (
+            <div className="flex-1 min-h-[500px] h-full bg-surface rounded-xl border border-border flex flex-col p-4 shadow-sm relative">
+                <div className="flex justify-between items-center mb-4 shrink-0">
+                    <h2 className="text-xl font-bold flex items-center gap-2 text-text-main">
+                        <CalendarDays size={24} className="text-primary" />
+                        {monthNames[month]} {year}
+                    </h2>
+                    <div className="flex bg-background rounded-lg p-1 border border-border items-center">
+                        <button 
+                            className="p-1 px-2 hover:bg-surface rounded-md text-text-muted transition-colors"
+                            onClick={() => {
+                                let newMonth = month - 1;
+                                if (newMonth < 0) newMonth = 0; // Simple limit for now
+                                setTimeFilter('mes-especifico');
+                                setSelectedMonth(newMonth);
+                            }}
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <div className="w-px h-5 bg-border mx-1"></div>
+                        <button 
+                            className="p-1 px-2 hover:bg-surface rounded-md text-text-muted transition-colors"
+                            onClick={() => {
+                                let newMonth = month + 1;
+                                if (newMonth > 11) newMonth = 11; // Simple limit for now
+                                setTimeFilter('mes-especifico');
+                                setSelectedMonth(newMonth);
+                            }}
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-7 gap-x-2 gap-y-2 flex-1 min-h-0 overflow-y-auto pr-1 pb-1 custom-scrollbar">
+                    {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
+                        <div key={day} className="text-center font-bold text-muted py-2 text-xs uppercase tracking-wider bg-background/50 rounded-lg sticky top-0 z-10">{day}</div>
+                    ))}
+                    
+                    {days.map((day, idx) => {
+                        if (!day) return <div key={`empty-${idx}`} className="bg-transparent border border-dashed border-border/40 rounded-xl min-h-[100px]" />;
+                        const dayOrders = ordersByDate[day] || [];
+                        const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
+                        
+                        return (
+                            <div key={`day-${day}`} className={`bg-background rounded-xl border p-1.5 flex flex-col transition-all hover:shadow-md min-h-[120px] ${isToday ? 'border-primary ring-1 ring-primary/20 bg-primary/5' : 'border-border hover:border-primary/40'}`}>
+                                <div className={`text-right text-xs font-bold mb-1.5 px-1.5 py-0.5 self-end rounded-md ${isToday ? 'bg-primary text-white' : 'text-muted'}`}>
+                                    {day}
+                                </div>
+                                <div className="flex-1 overflow-y-auto space-y-1.5 custom-scrollbar" style={{maxHeight: '140px'}}>
+                                    {dayOrders.map(order => (
+                                        <div 
+                                            key={order.id} 
+                                            className={`text-[0.65rem] leading-tight p-1.5 rounded-md cursor-pointer truncate shadow-sm transition-transform hover:scale-[1.02] status-${order.status} border border-white/10`}
+                                            onClick={() => setSelectedOrder(order)}
+                                        >
+                                            <div className="font-extrabold mb-0.5 truncate drop-shadow-sm flex items-center gap-1">
+                                                <span>{order.customerName}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center opacity-90 font-medium text-[0.6rem]">
+                                                <span>{timeSlotLabel(order.deliveryTimeSlot).split(' ')[0]}</span>
+                                                <span className="bg-black/20 px-1 rounded-sm">{order.deliveryMethod === 'delivery' ? 'Env' : 'Ret'}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -298,7 +401,7 @@ export const Orders = () => {
                             </button>
                             <button
                                 className={`segmented-btn ${viewMode === 'calendar' ? 'active' : ''}`}
-                                onClick={() => setViewMode('calendar')}
+                                onClick={() => { setViewMode('calendar'); setTimeFilter('mes-especifico'); }}
                             >
                                 <CalendarDays size={18}/>
                                 <span>Calendario</span>
@@ -363,7 +466,7 @@ export const Orders = () => {
                 </div>
             </div>
 
-            {/* Kanban Board Layout */}
+            {/* Kanban / Calendar Board Layout */}
             {viewMode === 'kanban' ? (
                 <div className="kanban-board-wrapper flex-1 min-h-0 overflow-hidden">
                     <div className="kanban-board">
@@ -389,7 +492,7 @@ export const Orders = () => {
                                         </span>
                                     </div>
 
-                                    <div className="kanban-cards-container p-2 overflow-y-auto flex-1">
+                                    <div className="kanban-cards-container p-2 overflow-y-auto flex-1 custom-scrollbar">
                                         {columnOrders.map(order => (
                                             <div
                                                 key={order.id}
@@ -453,14 +556,7 @@ export const Orders = () => {
                     </div>
                 </div>
             ) : (
-                <div className="flex-1 min-h-0 bg-surface rounded-xl border border-border flex items-center justify-center p-8">
-                    <div className="text-center text-muted">
-                        <CalendarDays size={48} className="mx-auto mb-4 opacity-50" />
-                        <h3 className="text-h3 mb-2">Vista Calendario (Próximamente)</h3>
-                        <p className="max-w-md">La vista de calendario mensual está en desarrollo para futuras actualizaciones.</p>
-                        <button className="btn btn-secondary mt-4" onClick={() => setViewMode('kanban')}>Volver a Kanban</button>
-                    </div>
-                </div>
+                renderCalendar()
             )}
 
             {/* Order Details Modal */}
