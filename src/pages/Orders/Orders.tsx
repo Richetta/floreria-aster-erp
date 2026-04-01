@@ -256,67 +256,66 @@ export const Orders = () => {
         });
 
         return (
-            <div className="flex-1 min-h-[500px] h-full bg-surface rounded-xl border border-border flex flex-col p-4 shadow-sm relative">
-                <div className="flex justify-between items-center mb-4 shrink-0">
-                    <h2 className="text-xl font-bold flex items-center gap-2 text-text-main">
-                        <CalendarDays size={24} className="text-primary" />
+            <div className="calendar-wrapper h-full">
+                <div className="calendar-top-bar shrink-0">
+                    <h2 className="calendar-month-title">
+                        <CalendarDays size={24} />
                         {monthNames[month]} {year}
                     </h2>
-                    <div className="flex bg-background rounded-lg p-1 border border-border items-center">
+                    <div className="calendar-nav-controls">
                         <button 
-                            className="p-1 px-2 hover:bg-surface rounded-md text-text-muted transition-colors"
+                            className="calendar-nav-btn"
                             onClick={() => {
                                 let newMonth = month - 1;
-                                if (newMonth < 0) newMonth = 0; // Simple limit for now
+                                if (newMonth < 0) newMonth = 0;
                                 setTimeFilter('mes-especifico');
                                 setSelectedMonth(newMonth);
                             }}
+                            title="Mes anterior"
                         >
-                            <ChevronLeft size={18} />
+                            <ChevronLeft size={20} />
                         </button>
-                        <div className="w-px h-5 bg-border mx-1"></div>
+                        <div className="calendar-nav-divider"></div>
                         <button 
-                            className="p-1 px-2 hover:bg-surface rounded-md text-text-muted transition-colors"
+                            className="calendar-nav-btn"
                             onClick={() => {
                                 let newMonth = month + 1;
-                                if (newMonth > 11) newMonth = 11; // Simple limit for now
+                                if (newMonth > 11) newMonth = 11;
                                 setTimeFilter('mes-especifico');
                                 setSelectedMonth(newMonth);
                             }}
+                            title="Mes siguiente"
                         >
-                            <ChevronRight size={18} />
+                            <ChevronRight size={20} />
                         </button>
                     </div>
                 </div>
                 
-                <div className="grid grid-cols-7 gap-x-2 gap-y-2 flex-1 min-h-0 overflow-y-auto pr-1 pb-1 custom-scrollbar">
+                <div className="calendar-grid custom-scrollbar">
                     {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
-                        <div key={day} className="text-center font-bold text-muted py-2 text-xs uppercase tracking-wider bg-background/50 rounded-lg sticky top-0 z-10">{day}</div>
+                        <div key={day} className="calendar-header-day">{day}</div>
                     ))}
                     
                     {days.map((day, idx) => {
-                        if (!day) return <div key={`empty-${idx}`} className="bg-transparent border border-dashed border-border/40 rounded-xl min-h-[100px]" />;
+                        if (!day) return <div key={`empty-${idx}`} className="calendar-day-cell is-empty" />;
                         const dayOrders = ordersByDate[day] || [];
                         const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
                         
                         return (
-                            <div key={`day-${day}`} className={`bg-background rounded-xl border p-1.5 flex flex-col transition-all hover:shadow-md min-h-[120px] ${isToday ? 'border-primary ring-1 ring-primary/20 bg-primary/5' : 'border-border hover:border-primary/40'}`}>
-                                <div className={`text-right text-xs font-bold mb-1.5 px-1.5 py-0.5 self-end rounded-md ${isToday ? 'bg-primary text-white' : 'text-muted'}`}>
-                                    {day}
-                                </div>
-                                <div className="flex-1 overflow-y-auto space-y-1.5 custom-scrollbar" style={{maxHeight: '140px'}}>
+                            <div key={`day-${day}`} className={`calendar-day-cell ${isToday ? 'is-today' : ''}`}>
+                                <span className="calendar-day-number">{day}</span>
+                                
+                                <div className="calendar-orders-container custom-scrollbar">
                                     {dayOrders.map(order => (
                                         <div 
                                             key={order.id} 
-                                            className={`text-[0.65rem] leading-tight p-1.5 rounded-md cursor-pointer truncate shadow-sm transition-transform hover:scale-[1.02] status-${order.status} border border-white/10`}
+                                            className={`calendar-order-pill status-${order.status}`}
                                             onClick={() => setSelectedOrder(order)}
                                         >
-                                            <div className="font-extrabold mb-0.5 truncate drop-shadow-sm flex items-center gap-1">
-                                                <span>{order.customerName}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center opacity-90 font-medium text-[0.6rem]">
+                                            <div className="customer-name">{order.customerName}</div>
+                                            <div className="order-meta">
                                                 <span>{timeSlotLabel(order.deliveryTimeSlot).split(' ')[0]}</span>
-                                                <span className="bg-black/20 px-1 rounded-sm">{order.deliveryMethod === 'delivery' ? 'Env' : 'Ret'}</span>
+                                                <span className="meta-badge">{order.deliveryMethod === 'delivery' ? 'Env' : 'Ret'}</span>
                                             </div>
                                         </div>
                                     ))}
