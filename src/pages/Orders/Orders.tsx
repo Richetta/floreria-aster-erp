@@ -14,15 +14,21 @@ import {
     Copy,
     Package,
     Clock9,
-    Check
+    Check,
+    MessageSquare,
+    CreditCard,
+    DollarSign,
+    ArrowRight
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Order } from '../../store/useStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { api } from '../../services/api';
 import './Orders.css';
 
 export const Orders = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const orders = useStore((state) => state.orders);
     const updateOrderStatus = useStore((state) => state.updateOrderStatus);
     const loadOrders = useStore((state) => state.loadOrders);
@@ -45,6 +51,28 @@ export const Orders = () => {
     const [timeFilter, setTimeFilter] = useState<'hoy' | 'esta-semana' | 'este-mes' | 'todos' | 'mes-especifico'>('esta-semana');
     const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+    // Payment panel state
+    const [showPaymentPanel, setShowPaymentPanel] = useState(false);
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash');
+    const [paymentLoading, setPaymentLoading] = useState(false);
+    const [paymentError, setPaymentError] = useState('');
+
+    // Effect to open specific order if orderId is in location state
+    // Waits until orders are loaded
+    useEffect(() => {
+        if (isLoading) return;
+        const state = location.state as { orderId?: string } | null;
+        if (state?.orderId && orders.length > 0) {
+            const order = orders.find(o => o.id === state.orderId);
+            if (order) {
+                setSelectedOrder(order);
+                window.history.replaceState({}, document.title);
+            }
+        }
+    }, [isLoading, orders, location.state]);
+
     const [draggedOrderId, setDraggedOrderId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'kanban' | 'calendar'>('kanban');
 
@@ -137,6 +165,65 @@ export const Orders = () => {
             }
         }
         setDraggedOrderId(null);
+    };
+
+    // Delivery time slot to human-readable
+    const timeSlotLabel = (slot?: string) => {
+        if (slot === 'morning') return 'Mañana (9-13hs)';
+        if (slot === 'afternoon') return 'Tarde (14-18hs)';
+        if (slot === 'evening') return 'Noche (18-21hs)';
+        return 'Todo el día';
+    };
+
+    // Format delivery date correctly (avoid timezone issues)
+    const formatDeliveryDate = (dateStr: string) => {
+        try {
+            const d = new Date(dateStr);
+            return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+        } catch {
+            return dateStr;
+        }
+    };
+
+    // Payment handler
+    const handleRegisterPayment = async () => {
+        if (!selectedOrder) return;
+        const amount = parseFloat(paymentAmount);
+        if (isNaN(amount) || amount <= 0) {
+            setPaymentError('Ingresá un monto válido');
+            return;
+        }
+        const pendingBalance = selectedOrder.total - (selectedOrder.advancePayment || 0);
+        if (amount > pendingBalance) {
+            setPaymentError(`El monto no puede superar el saldo pendiente ($${pendingBalance.toLocaleString()})`);
+            return;
+        }
+        setPaymentLoading(true);
+        setPaymentError('');
+        try {
+            // Use the dedicated order payment endpoint
+            const result = await api.registerOrderPayment(
+                selectedOrder.id, 
+                amount, 
+                paymentMethod, 
+                `Pago sobre pedido #${selectedOrder.id.slice(0, 8)}`
+            );
+
+            // Update local state with new advance_payment from response
+            const newAdvance = Number(result.advance_payment ?? ((selectedOrder.advancePayment || 0) + amount));
+            const updatedOrder = { ...selectedOrder, advancePayment: newAdvance };
+            setSelectedOrder(updatedOrder);
+            // Refresh orders list
+            await loadOrders();
+
+            setPaymentAmount('');
+            setShowPaymentPanel(false);
+        } catch (err: any) {
+            setPaymentError(err.message || 'Error al registrar el pago');
+        } finally {
+            setPaymentLoading(false);
+        }
+
     };
 
     return (
@@ -325,11 +412,11 @@ export const Orders = () => {
                                                 <div className="space-y-1.5 mb-2 bg-white/10 p-2 rounded-lg border border-white/20">
                                                     <div className="flex items-center gap-1.5 text-white font-bold text-micro">
                                                         <CalendarDays size={11} className="text-white" />
-                                                        <span>{timeFilter === 'hoy' ? 'Hoy' : new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: 'short' }).format(new Date(order.date))}</span>
+                                                        <span>{new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: 'short' }).format(new Date(order.date))}</span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5 text-white text-micro font-bold">
                                                         <Clock size={11} className="text-white" />
-                                                        <span>{new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' }).format(new Date(order.date))} hs</span>
+                                                        <span>{timeSlotLabel(order.deliveryTimeSlot)}</span>
                                                     </div>
                                                 </div>
 
@@ -337,6 +424,13 @@ export const Orders = () => {
                                                     <span className="text-micro text-white uppercase font-black tracking-tighter">TOTAL</span>
                                                     <p className="font-black text-base text-white">${order.total.toLocaleString()}</p>
                                                 </div>
+
+                                                {/* Debt indicator */}
+                                                {order.total - (order.advancePayment || 0) > 0 && (
+                                                    <div className="mt-1 text-micro text-white/80 font-semibold text-right">
+                                                        Pendiente: ${(order.total - (order.advancePayment || 0)).toLocaleString()}
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
 
@@ -371,7 +465,7 @@ export const Orders = () => {
 
             {/* Order Details Modal */}
             {selectedOrder && (
-                <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
+                <div className="modal-overlay" onClick={() => { setSelectedOrder(null); setShowPaymentPanel(false); setPaymentAmount(''); setPaymentError(''); }}>
                     <div className="modal-content redesigned-modal" onClick={e => e.stopPropagation()}>
                         
                         {/* Header Section */}
@@ -387,7 +481,6 @@ export const Orders = () => {
                                             title="Copiar ID completo"
                                             onClick={() => {
                                                 navigator.clipboard.writeText(selectedOrder.id);
-                                                // Ideally add a small toast here
                                             }}
                                         >
                                             <Copy size={14} />
@@ -401,7 +494,7 @@ export const Orders = () => {
                                 </div>
                             </div>
 
-                            <button className="modal-close-elegant" onClick={() => setSelectedOrder(null)}>
+                            <button className="modal-close-elegant" onClick={() => { setSelectedOrder(null); setShowPaymentPanel(false); setPaymentAmount(''); setPaymentError(''); }}>
                                 <X size={20} />
                             </button>
                         </header>
@@ -409,7 +502,7 @@ export const Orders = () => {
                         <div className="modal-scroll-area">
                             <div className="modal-grid-v2">
                                 
-                                {/* Section: Logistics & Customer */}
+                                {/* Section: Client & Delivery */}
                                 <div className="grid-column">
                                     <section className="detail-card">
                                         <div className="detail-card-header">
@@ -440,7 +533,7 @@ export const Orders = () => {
                                                     <CalendarDays size={16} className="text-primary" />
                                                     <div className="info-text">
                                                         <span className="label">Fecha Entrega</span>
-                                                        <p className="value">{new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long' }).format(new Date(selectedOrder.date))}</p>
+                                                        <p className="value">{formatDeliveryDate(selectedOrder.date)}</p>
                                                     </div>
                                                 </div>
                                                 <div className="info-pair">
@@ -448,17 +541,14 @@ export const Orders = () => {
                                                     <div className="info-text">
                                                         <span className="label">Horario</span>
                                                         <p className="value">
-                                                            {new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' }).format(new Date(selectedOrder.date))} hs
                                                             <span className="time-slot-tag">
-                                                                {selectedOrder.deliveryTimeSlot === 'morning' ? 'Mañana' : 
-                                                                 selectedOrder.deliveryTimeSlot === 'afternoon' ? 'Tarde' :
-                                                                 selectedOrder.deliveryTimeSlot === 'evening' ? 'Noche' : 'Todo el día'}
+                                                                {timeSlotLabel(selectedOrder.deliveryTimeSlot)}
                                                             </span>
                                                         </p>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className={`method-badge ${selectedOrder.deliveryMethod}`}>
+                                            <div className={`method-badge ${selectedOrder.deliveryMethod || 'pickup'}`}>
                                                 {selectedOrder.deliveryMethod === 'delivery' ? 'Envío a domicilio' : 'Retiro por local'}
                                             </div>
                                             {selectedOrder.deliveryMethod === 'delivery' && selectedOrder.deliveryAddress && (
@@ -478,6 +568,21 @@ export const Orders = () => {
                                             )}
                                         </div>
                                     </section>
+
+                                    {/* Card message section */}
+                                    {(selectedOrder as any).cardMessage && (
+                                        <section className="detail-card mt-4">
+                                            <div className="detail-card-header">
+                                                <MessageSquare size={18} />
+                                                <h3>Texto para Tarjeta</h3>
+                                            </div>
+                                            <div className="detail-card-body">
+                                                <div className="card-message-display">
+                                                    "{(selectedOrder as any).cardMessage}"
+                                                </div>
+                                            </div>
+                                        </section>
+                                    )}
                                 </div>
 
                                 {/* Section: Order Content (Items) */}
@@ -492,12 +597,14 @@ export const Orders = () => {
                                                 {selectedOrder.items && selectedOrder.items.length > 0 ? (
                                                     selectedOrder.items.map((item: any, idx: number) => (
                                                         <div key={idx} className="order-item-row">
-                                                            <div className="item-qty">{item.qty || item.quantity}x</div>
+                                                            <div className="item-qty">{item.qty || item.quantity || 1}x</div>
                                                             <div className="item-main">
-                                                                <span className="item-name">{item.name || item.product_name}</span>
-                                                                {item.isPackage && <span className="package-label">Pack</span>}
+                                                                <span className="item-name">
+                                                                    {item.name || item.product_name || 'Producto'}
+                                                                </span>
+                                                                {(item.isPackage || item.package_id) && <span className="package-label">Pack</span>}
                                                             </div>
-                                                            <div className="item-price">${Number(item.price || item.unit_price).toLocaleString()}</div>
+                                                            <div className="item-price">${Number(item.price || item.unit_price || 0).toLocaleString()}</div>
                                                         </div>
                                                     ))
                                                 ) : (
@@ -505,14 +612,14 @@ export const Orders = () => {
                                                 )}
                                             </div>
                                             <div className="order-summary-row mt-auto pt-4 border-t border-dashed">
-                                                <span className="summary-label">SUBTOTAL</span>
+                                                <span className="summary-label">TOTAL</span>
                                                 <span className="summary-value">${selectedOrder.total.toLocaleString()}</span>
                                             </div>
                                         </div>
                                     </section>
                                 </div>
 
-                                {/* Section: Finances & Notes */}
+                                {/* Section: Finances + Payment + Notes */}
                                 <div className="grid-column">
                                     <section className="detail-card">
                                         <div className="detail-card-header">
@@ -526,7 +633,7 @@ export const Orders = () => {
                                                     <p className="value total">${selectedOrder.total.toLocaleString()}</p>
                                                 </div>
                                                 <div className="stat-box">
-                                                    <span className="label">Seña / Pago</span>
+                                                    <span className="label">Cobrado</span>
                                                     <p className="value paid">${(selectedOrder.advancePayment || 0).toLocaleString()}</p>
                                                 </div>
                                             </div>
@@ -535,7 +642,7 @@ export const Orders = () => {
                                                     <div className="balance-card pending">
                                                         <div className="balance-icon">!</div>
                                                         <div className="balance-info">
-                                                            <span className="label">PENDIENTE</span>
+                                                            <span className="label">SALDO PENDIENTE</span>
                                                             <p className="amount">${(selectedOrder.total - (selectedOrder.advancePayment || 0)).toLocaleString()}</p>
                                                         </div>
                                                     </div>
@@ -549,6 +656,69 @@ export const Orders = () => {
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {/* Register Payment Panel */}
+                                            {selectedOrder.total - (selectedOrder.advancePayment || 0) > 0 && (
+                                                <div className="payment-panel mt-4">
+                                                    {!showPaymentPanel ? (
+                                                        <button
+                                                            className="payment-register-btn"
+                                                            onClick={() => { setShowPaymentPanel(true); setPaymentAmount(String(selectedOrder.total - (selectedOrder.advancePayment || 0))); }}
+                                                        >
+                                                            <DollarSign size={16} />
+                                                            <span>Registrar Pago</span>
+                                                            <ArrowRight size={14} />
+                                                        </button>
+                                                    ) : (
+                                                        <div className="payment-form">
+                                                            <p className="payment-form-title">Registrar pago</p>
+                                                            <input
+                                                                type="number"
+                                                                className="payment-amount-input"
+                                                                placeholder="Monto"
+                                                                value={paymentAmount}
+                                                                onChange={e => { setPaymentAmount(e.target.value); setPaymentError(''); }}
+                                                                min="1"
+                                                                max={selectedOrder.total - (selectedOrder.advancePayment || 0)}
+                                                            />
+                                                            <div className="payment-method-tabs">
+                                                                {(['cash', 'card', 'transfer'] as const).map(m => (
+                                                                    <button
+                                                                        key={m}
+                                                                        className={`payment-method-tab ${paymentMethod === m ? 'active' : ''}`}
+                                                                        onClick={() => setPaymentMethod(m)}
+                                                                    >
+                                                                        {m === 'cash' ? (
+                                                                            <><Banknote size={13} /> Efectivo</>
+                                                                        ) : m === 'card' ? (
+                                                                            <><CreditCard size={13} /> Tarjeta</>
+                                                                        ) : (
+                                                                            <><DollarSign size={13} /> Transferencia</>
+                                                                        )}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            {paymentError && <p className="payment-error">{paymentError}</p>}
+                                                            <div className="payment-form-actions">
+                                                                <button
+                                                                    className="btn-secondary-elegant"
+                                                                    onClick={() => { setShowPaymentPanel(false); setPaymentAmount(''); setPaymentError(''); }}
+                                                                    disabled={paymentLoading}
+                                                                >
+                                                                    Cancelar
+                                                                </button>
+                                                                <button
+                                                                    className="btn-primary-elegant"
+                                                                    onClick={handleRegisterPayment}
+                                                                    disabled={paymentLoading || !paymentAmount}
+                                                                >
+                                                                    {paymentLoading ? 'Guardando...' : 'Confirmar'}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </section>
 
@@ -575,11 +745,10 @@ export const Orders = () => {
                         {/* Footer / Actions */}
                         <footer className="modal-footer-elegant">
                             <p className="footer-creation-date">
-                                Pedido creado el: {new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date())}
-                                {/* Ideally use created_at here if available */}
+                                Entrega: {formatDeliveryDate(selectedOrder.date)} · {timeSlotLabel(selectedOrder.deliveryTimeSlot)}
                             </p>
                             <div className="footer-actions">
-                                <button className="btn-secondary-elegant" onClick={() => setSelectedOrder(null)}>Cerrar</button>
+                                <button className="btn-secondary-elegant" onClick={() => { setSelectedOrder(null); setShowPaymentPanel(false); }}>Cerrar</button>
                                 <button className="btn-primary-elegant" onClick={() => window.print()}>Imprimir Ticket</button>
                             </div>
                         </footer>

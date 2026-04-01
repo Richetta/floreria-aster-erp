@@ -598,6 +598,13 @@ class ApiClient {
     });
   }
 
+  async registerOrderPayment(id: string, amount: number, payment_method: string = 'cash', notes?: string): Promise<any> {
+    return this.request(`/orders/${id}/payment`, {
+      method: 'POST',
+      body: JSON.stringify({ amount, payment_method, notes }),
+    });
+  }
+
   async getDeliveryScheduled(date?: string): Promise<Order[]> {
     const queryString = date ? `?date=${date}` : '';
     return this.request<Order[]>(`/orders/delivery/scheduled${queryString}`);

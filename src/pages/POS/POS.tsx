@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Search,
+
     ShoppingCart,
     Trash2,
     CreditCard,
@@ -48,7 +50,9 @@ export const POS = () => {
     const addOrder = useStore((state) => state.addOrder);
     const addTransaction = useStore((state) => state.addTransaction);
     const categories = useStore((state) => state.categories);
+    const navigate = useNavigate();
     const isMobile = useMediaQuery('(max-width: 768px)');
+
     const addCustomer = useStore((state) => state.addCustomer);
     const tags = useStore((state) => state.tags);
     const loadProducts = useStore((state) => state.loadProducts);
@@ -1528,7 +1532,7 @@ export const POS = () => {
                                 className="btn btn-primary"
                                 onClick={() => {
                                     setShowOrderSuccessModal(false);
-                                    // Could navigate to Orders page here
+                                    navigate('/pedidos', { state: { orderId: lastOrderData?.id } });
                                 }}
                             >
                                 Ver Pedidos

@@ -47,7 +47,8 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     }).optional(),
     contact_phone: z.string().optional(),
     delivery_time_slot: z.enum(['morning', 'afternoon', 'evening', 'allday']).optional(),
-    delivery_method: z.enum(['pickup', 'delivery']).optional()
+    delivery_method: z.enum(['pickup', 'delivery']).optional(),
+    advance_payment: z.number().optional()
   });
 
   // LIST ORDERS
@@ -449,6 +450,95 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       .execute();
 
     return reply.send({ success: true });
+  });
+
+  // REGISTER PAYMENT ON ORDER
+  fastify.post('/:id/payment', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+    const { id } = request.params as { id: string };
+    const { amount, payment_method = 'cash', notes } = request.body as { amount: number; payment_method?: string; notes?: string };
+
+    if (!amount || amount <= 0) {
+      return reply.status(400).send({ error: 'Monto inválido' });
+    }
+
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+
+    const order = await db
+      .selectFrom('orders')
+      .selectAll()
+      .where('id', '=', id)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst();
+
+    if (!order) {
+      return reply.status(404).send({ error: 'Pedido no encontrado' });
+    }
+
+    const currentAdvance = Number(order.advance_payment || 0);
+    const newAdvance = currentAdvance + amount;
+    const totalAmount = Number(order.total_amount || 0);
+
+    if (newAdvance > totalAmount) {
+      return reply.status(400).send({ error: 'El pago supera el total del pedido' });
+    }
+
+    // Update order advance_payment
+    const updatedOrder = await db
+      .updateTable('orders')
+      .set({
+        advance_payment: newAdvance,
+        updated_at: new Date()
+      } as any)
+      .where('id', '=', id)
+      .returningAll()
+      .executeTakeFirst();
+
+    // Log transaction
+    await db
+      .insertInto('transactions')
+      .values({
+        id: randomUUID(),
+        business_id: user.business_id,
+        type: 'payment_received',
+        category: 'Cobro Pedido',
+        amount: amount,
+        payment_method: payment_method,
+        reference_id: id,
+        reference_type: 'order_payment',
+        description: notes || `Pago parcial del pedido #${id.substring(0, 8)}`,
+        created_by: user.sub,
+        created_at: new Date()
+      } as any)
+      .execute();
+
+    // Update customer debt balance
+    if (order.customer_id) {
+      const customer = await db
+        .selectFrom('customers')
+        .select(['debt_balance'])
+        .where('id', '=', order.customer_id)
+        .executeTakeFirst();
+
+      if (customer) {
+        const newDebt = Math.max(0, Number(customer.debt_balance || 0) - amount);
+        await db
+          .updateTable('customers')
+          .set({ debt_balance: newDebt, updated_at: new Date() })
+          .where('id', '=', order.customer_id)
+          .execute();
+      }
+    }
+
+    return reply.send({ ...updatedOrder, message: 'Pago registrado correctamente' });
   });
 
   // GET ORDERS BY DELIVERY DATE (For logistics)
