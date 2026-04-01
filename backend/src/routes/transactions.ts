@@ -482,18 +482,19 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
 
     try {
+      console.log('[PURCHASE] Raw body received:', JSON.stringify(request.body, null, 2));
       const body = z.object({
         supplier_id: z.string().uuid(),
         payment_method: z.enum(['cash', 'transfer']),
         items: z.array(z.object({
           product_id: z.string().uuid(),
-          quantity: z.number().int().positive(),
-          cost: z.number().nonnegative()
+          quantity: z.coerce.number().int().positive(),
+          cost: z.coerce.number().nonnegative()
         })).min(1),
         notes: z.string().optional()
       }).parse(request.body);
 
-      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+      console.log('[PURCHASE] Parsed body:', JSON.stringify(body, null, 2));
 
       const result = await db.transaction().execute(async (trx) => {
         const purchaseTransactionId = randomUUID();
@@ -589,10 +590,11 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(201).send(result);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        console.error('[PURCHASE VALIDATION ERROR]:', error.errors);
+        const readableDetails = error.errors.map(e => `${e.path.join('.')} - ${e.message}`).join('; ');
+        console.error('[PURCHASE VALIDATION ERROR]:', JSON.stringify(error.errors, null, 2));
         return reply.status(400).send({ 
           error: 'Validation error', 
-          message: 'Error de validación en los datos de la compra',
+          message: `Error de validación: ${readableDetails}`,
           details: error.errors 
         });
       }

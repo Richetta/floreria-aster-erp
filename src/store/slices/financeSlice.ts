@@ -65,8 +65,8 @@ export const createFinanceSlice: StateCreator<AppState, [], [], FinanceSlice> = 
                 payment_method: purchase.method,
                 items: purchase.items.map(i => ({
                     product_id: i.productId,
-                    quantity: i.quantity,
-                    cost: i.cost
+                    quantity: Math.max(1, Math.round(Number(i.quantity) || 1)),
+                    cost: Math.max(0, Number(i.cost) || 0)
                 })),
                 notes: purchase.notes
             });
@@ -74,8 +74,9 @@ export const createFinanceSlice: StateCreator<AppState, [], [], FinanceSlice> = 
             get().addNotification('Compra registrada correctamente', 'success');
             return true;
         } catch (error: any) {
-            get().addNotification('Error al registrar la compra', 'error');
-            console.error('Error processing purchase:', error);
+            const msg = error?.message || 'Error al registrar la compra';
+            get().addNotification(msg, 'error');
+            console.error('[PURCHASE]', error);
             return false;
         }
     },

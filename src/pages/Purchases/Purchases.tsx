@@ -110,26 +110,46 @@ export const Purchases = () => {
             return;
         }
 
+        // Validate all items have valid productId (UUID)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const invalidItems = purchaseItems.filter(item => !item.productId || !uuidRegex.test(item.productId));
+        if (invalidItems.length > 0) {
+            showAlert({ 
+                title: 'Producto inválido', 
+                message: `Hay productos sin ID válido: ${invalidItems.map(i => i.productName).join(', ')}`, 
+                variant: 'warning' 
+            });
+            return;
+        }
+
         try {
+            // Sanitize all numeric values before sending
+            const sanitizedItems = purchaseItems.map(item => ({
+                productId: item.productId,
+                quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
+                cost: Math.max(0, Number(item.cost) || 0)
+            }));
+
             const success = await processPurchase({
                 supplierId: selectedSupplier,
-                items: purchaseItems.map(item => ({
-                    productId: item.productId,
-                    quantity: item.quantity,
-                    cost: item.cost
-                })),
+                items: sanitizedItems,
                 method: paymentMethod,
                 notes: `Compra a proveedor registrada desde el panel de Compras.`
             });
 
             if (success) {
-                // Reset form
-                setView('list');
-                setSelectedSupplier('');
-                setPurchaseItems([]);
+                showAlert({ title: '¡Compra registrada!', message: 'El stock fue actualizado y la compra fue registrada en finanzas.', variant: 'success' });
+                setTimeout(() => {
+                    setView('list');
+                    setSelectedSupplier('');
+                    setPurchaseItems([]);
+                    // Reload products to reflect new stock
+                    loadProducts();
+                }, 1500);
             }
         } catch (err) {
             console.error('Purchase failed:', err);
+            showAlert({ title: 'Error', message: 'Ocurrió un error al procesar la compra. Revisá la consola.', variant: 'error' });
         }
     };
 

@@ -232,7 +232,7 @@ class ApiClient {
           window.location.href = '/login';
         }
 
-        throw new Error(error.error || error.message || 'Request failed');
+        throw new Error(error.message || error.error || 'Request failed');
       }
 
       const contentType = response.headers.get('content-type');
