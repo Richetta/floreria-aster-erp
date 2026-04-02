@@ -49,8 +49,26 @@ const navItems: NavItem[] = [
   // ── PRINCIPAL (siempre visible, sin grupo) ──
   { path: '/', icon: LayoutDashboard, label: 'Inicio', desc: 'Resumen del día' },
   { path: '/pos', icon: ShoppingCart, label: 'Vender', desc: 'Nueva venta rápida', highlight: true },
-  { path: '/pedidos', icon: Truck, label: 'Pedidos', desc: 'Entregas y envíos' },
-  { path: '/clientes', icon: Users, label: 'Clientes', desc: 'Base de datos' },
+  {
+    id: 'pedidos',
+    icon: Truck,
+    label: 'Pedidos',
+    desc: 'Entregas y envíos',
+    children: [
+      { path: '/pedidos', label: 'Gestión' },
+      { path: '/logistica', label: 'Logística', icon: Map },
+    ]
+  },
+  {
+    id: 'clientes',
+    icon: Users,
+    label: 'Clientes',
+    desc: 'Base de datos',
+    children: [
+      { path: '/clientes', label: 'Directorio' },
+      { path: '/recordatorios', label: 'Recordatorios', icon: Bell },
+    ]
+  },
 
   // ── GESTIÓN (con submenús colapsables) ──
   {
@@ -95,8 +113,6 @@ const navItems: NavItem[] = [
     desc: 'Configuración',
     children: [
       { path: '/configuracion', label: 'General' },
-      { path: '/logistica', label: 'Logística', icon: Map },
-      { path: '/recordatorios', label: 'Recordatorios', icon: Bell },
     ]
   },
 ];
