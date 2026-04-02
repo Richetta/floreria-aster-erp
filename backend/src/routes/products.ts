@@ -13,6 +13,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     category_id: z.string().uuid().optional(),
     cost: z.number().nonnegative(),
     price: z.number().nonnegative(),
+    barcode: z.string().optional(),
     stock_quantity: z.number().int().default(0), // Added this
     min_stock: z.number().int().positive().default(5),
     max_stock: z.number().int().positive().optional(),
@@ -34,7 +35,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    const { search, category, low_stock, active } = request.query as any;
+    const { search, category, low_stock, active, exact_barcode } = request.query as any;
 
     const products = await db.transaction().execute(async (trx) => {
         // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
@@ -45,6 +46,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
             .select([
                 'products.id',
                 'products.code',
+                'products.barcode',
                 'products.name',
                 'products.description',
                 'products.cost',
@@ -59,10 +61,13 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
             ])
             .where('products.deleted_at', 'is', null);
 
-        if (search) {
+        if (exact_barcode) {
+            query = query.where('products.barcode', '=', exact_barcode);
+        } else if (search) {
             query = query.where((eb) => eb.or([
                 eb('products.name', 'ilike', `%${search}%`),
-                eb('products.code', 'ilike', `%${search}%`)
+                eb('products.code', 'ilike', `%${search}%`),
+                eb('products.barcode', 'ilike', `%${search}%`)
             ]));
         }
 
@@ -149,6 +154,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
             id: productId,
             business_id: user.business_id,
             code: body.code,
+            barcode: body.barcode || null,
             name: body.name,
             description: body.description || null,
             category_id: body.category_id || null,

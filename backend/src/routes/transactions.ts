@@ -284,8 +284,10 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
               .updateTable('products')
               .set({
                 stock_quantity: sql`stock_quantity - ${item.quantity}`,
+                sales_count: sql`COALESCE(sales_count, 0) + ${item.quantity}`,
+                last_sale_date: new Date(),
                 updated_at: new Date()
-              })
+              } as any)
               .where('id', '=', product.id)
               .execute();
 

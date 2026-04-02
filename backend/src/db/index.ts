@@ -82,6 +82,7 @@ interface ProductsTable {
   id: string;
   business_id: string;
   code: string;
+  barcode: string | null;
   name: string;
   description: string | null;
   category_id: string | null;
@@ -96,6 +97,9 @@ interface ProductsTable {
   supplier_id: string | null;
   tags: string[];
   images: string[];
+  // Sales tracking fields (for Recientes and Top tabs in POS)
+  sales_count: number | null;
+  last_sale_date: Date | null;
   created_at: Date;
   updated_at: Date;
   deleted_at: Date | null;

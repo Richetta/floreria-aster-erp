@@ -5,6 +5,7 @@ import type { Product as ApiProduct } from '../../services/api';
 export const mapApiProductToFrontend = (apiProduct: ApiProduct, categoriesData: Category[]): Product => ({
     id: apiProduct.id,
     code: apiProduct.code,
+    barcode: apiProduct.barcode,
     name: apiProduct.name,
     category: apiProduct.category_id 
         ? (categoriesData.find(c => c.id === apiProduct.category_id)?.name || apiProduct.category_name || 'Sin Categoría')
@@ -16,6 +17,9 @@ export const mapApiProductToFrontend = (apiProduct: ApiProduct, categoriesData: 
     min: apiProduct.min_stock,
     tags: apiProduct.tags || [],
     supplierId: apiProduct.supplier_id,
+    // Campos de ventas para tabs Recientes y Top
+    salesCount: (apiProduct as any).sales_count || 0,
+    lastSaleDate: (apiProduct as any).last_sale_date || undefined,
 });
 
 // Map Frontend Product to API Product
@@ -28,6 +32,7 @@ export const mapFrontendToApiProduct = (product: Partial<Product>, categoriesDat
 
     return {
         code: product.code,
+        barcode: product.barcode,
         name: product.name,
         cost: product.cost || 0,
         price: product.price || 0,

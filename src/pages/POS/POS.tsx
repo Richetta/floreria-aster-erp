@@ -32,6 +32,8 @@ import type { TicketData } from '../../components/TicketPrinter/TicketPrinter';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useModal } from '../../hooks/useModal';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
+import { playBeep } from '../../utils/audio';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import './POS.css';
 import './POS.mobile.css';
@@ -107,6 +109,7 @@ export const POS = () => {
 
     // Success Modals
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [quickSaleDiscount, setQuickSaleDiscount] = useState(0);
     const [lastSaleData, setLastSaleData] = useState<{ 
         id: string, 
         total: number, 
@@ -170,19 +173,20 @@ export const POS = () => {
         if (!term) return;
 
         // Try to find product by exact code first (Barcode behavior)
-        const productByCode = products.find(p => p.code === term);
+        const productByCode = products.find(p => p.code === term || p.barcode === term);
         
         if (productByCode) {
             addToCart(productByCode);
             setSearchTerm('');
-            playBeepSound();
+            playBeep('success');
             return;
         }
 
         // If not a code, maybe it's the first search result (Existing behavior)
         const firstMatch = products.find(p =>
             p.name.toLowerCase().includes(term.toLowerCase()) ||
-            p.code.toLowerCase().includes(term.toLowerCase())
+            p.code.toLowerCase().includes(term.toLowerCase()) ||
+            p.barcode?.toLowerCase().includes(term.toLowerCase())
         );
 
         if (firstMatch) {
@@ -191,29 +195,25 @@ export const POS = () => {
         }
     };
 
-    // Sonido beep para escaneo exitoso
-    const playBeepSound = () => {
-        try {
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            oscillator.frequency.value = 800; // 800 Hz beep
-            oscillator.type = 'sine';
-
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.15);
-        } catch (error) {
-            // Si falla el audio, continuar sin sonido
-            console.log('No se pudo reproducir el sonido');
+    // Global Barcode Scanner Hook
+    const handleBarcodeScan = (scannedCode: string) => {
+        const productByBarcode = products.find(p => p.code === scannedCode || p.barcode === scannedCode);
+        if (productByBarcode) {
+            addToCart(productByBarcode);
+            playBeep('success');
+        } else {
+            playBeep('error');
+            showAlert({ 
+                title: 'No encontrado', 
+                message: `El código escaneado (${scannedCode}) no pertenece a ningún producto.`, 
+                variant: 'error' 
+            });
         }
     };
+
+    useBarcodeScanner({ onScan: handleBarcodeScan, isActive: !isLoading });
+
+
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -298,6 +298,7 @@ export const POS = () => {
 
     const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
+    const finalTotalSale = Math.max(0, total - (total * (quickSaleDiscount / 100)));
 
     const handleCheckout = async (method: 'cash' | 'card') => {
         if (cart.length === 0) return;
@@ -436,7 +437,7 @@ export const POS = () => {
 
             console.log('[POS] Iniciando checkout de venta:', {
                 saleId,
-                total,
+                total: finalTotalSale,
                 items: cart,
                 method,
                 customerId: selectedCustomer
@@ -445,7 +446,7 @@ export const POS = () => {
             try {
                 const success = await processSale({
                     id: saleId,
-                    total,
+                    total: finalTotalSale,
                     date: new Date().toISOString(),
                     items: cart,
                     method,
@@ -459,7 +460,7 @@ export const POS = () => {
                     // Show success modal
                     setLastSaleData({
                         id: saleId,
-                        total,
+                        total: finalTotalSale,
                         method: method === 'cash' ? 'Efectivo' : 'Tarjeta/Transferencia',
                         items: [...cart],
                         date: new Date().toISOString()
@@ -470,6 +471,7 @@ export const POS = () => {
                     clearCart();
                     setCheckoutMode('sale');
                     clearPosOrderForm();
+                    setQuickSaleDiscount(0);
                 } else {
                     // processSale returned false - error notification already shown
                     console.warn('[POS] Venta fallida, no se resetea el carrito');
@@ -907,11 +909,31 @@ export const POS = () => {
 
                         {filteredProducts.length === 0 && productView !== 'packages' && (
                             <div className="empty-products-msg">
-                                <Search size={48} className="text-muted mb-4 opacity-30" />
-                                <p className="text-body text-center font-medium">
-                                    No se encontraron productos.<br />
-                                    Intentá con otro filtro o búsqueda.
-                                </p>
+                                {productView === 'recent' ? (
+                                    <>
+                                        <Clock size={48} className="text-muted mb-4 opacity-30" />
+                                        <p className="text-body text-center font-medium">
+                                            Sin ventas recientes.<br />
+                                            <span className="text-small text-muted font-normal">Aparecerán las 20 más recientes.</span>
+                                        </p>
+                                    </>
+                                ) : productView === 'top' ? (
+                                    <>
+                                        <Award size={48} className="text-muted mb-4 opacity-30" />
+                                        <p className="text-body text-center font-medium">
+                                            Aún no hay Top Vendidos.<br />
+                                            <span className="text-small text-muted font-normal">Tus mejores productos aparecerán aquí.</span>
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Search size={48} className="text-muted mb-4 opacity-30" />
+                                        <p className="text-body text-center font-medium">
+                                            No se encontraron productos.<br />
+                                            Intentá con otro filtro o búsqueda.
+                                        </p>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
@@ -1016,8 +1038,8 @@ export const POS = () => {
                                             <span className="section-number">1</span>
                                             <h4 className="section-title">Cliente</h4>
                                         </div>
-                                        {(selectedCustomer || (isGuest && guestName)) && (
-                                            <span className="selected-value">
+                                        {expandedSection !== 1 && (selectedCustomer || (isGuest && guestName)) && (
+                                            <span className="selected-value" style={{ marginLeft: 'auto', marginRight: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
                                                 {isGuest ? (guestName || 'Invitado') : (customers.find(c => c.id === selectedCustomer)?.name)}
                                             </span>
                                         )}
@@ -1150,6 +1172,11 @@ export const POS = () => {
                                             <span className="section-number">2</span>
                                             <h4 className="section-title">Entrega</h4>
                                         </div>
+                                        {expandedSection !== 2 && (
+                                            <span className="selected-value" style={{ marginLeft: 'auto', marginRight: '0.5rem' }}>
+                                                {deliveryMethod === 'pickup' ? 'Retiro' : 'Envio'}
+                                            </span>
+                                        )}
                                         <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 2 ? 'expanded' : ''}`} />
                                     </div>
 
@@ -1251,6 +1278,14 @@ export const POS = () => {
                                             <span className="section-number">3</span>
                                             <h4 className="section-title">Fecha</h4>
                                         </div>
+                                        {expandedSection !== 3 && deliveryDate && (
+                                            <span className="selected-value" style={{ marginLeft: 'auto', marginRight: '0.5rem' }}>
+                                                {(() => {
+                                                    const [y, m, d] = deliveryDate.split('-').map(Number);
+                                                    return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
+                                                })()}
+                                            </span>
+                                        )}
                                         <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 3 ? 'expanded' : ''}`} />
                                     </div>
 
@@ -1380,13 +1415,57 @@ export const POS = () => {
                     {checkoutMode === 'sale' && (
                         <div className="cart-footer">
                             <div className="sale-checkout-compact">
+                                <div className="quick-sale-options mb-3">
+                                    <div className="flex gap-2 mb-2">
+                                        <div className="flex-1 form-group-compact">
+                                            <label className="text-micro mb-1">Cliente (Opcional)</label>
+                                            <select 
+                                                className="form-input"
+                                                value={selectedCustomer}
+                                                onChange={(e) => updatePosOrderForm({ selectedCustomer: e.target.value })}
+                                                style={{ padding: '0.4rem 0.5rem', fontSize: '0.85rem', height: '32px' }}
+                                            >
+                                                <option value="">Consumidor Final (Sin asignar)</option>
+                                                {customers.map(c => (
+                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-group-compact" style={{ width: '80px' }}>
+                                            <label className="text-micro mb-1">Dcto. %</label>
+                                            <input 
+                                                type="number" 
+                                                className="form-input" 
+                                                value={quickSaleDiscount}
+                                                onChange={(e) => setQuickSaleDiscount(Number(e.target.value))}
+                                                min="0" max="100"
+                                                style={{ padding: '0.4rem 0.5rem', fontSize: '0.85rem', height: '32px' }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="form-group-compact">
+                                        <input 
+                                            type="text" 
+                                            className="form-input" 
+                                            placeholder="Notas (opcional, ej: pago exacto)..."
+                                            value={orderNotes}
+                                            onChange={(e) => updatePosOrderForm({ orderNotes: e.target.value })}
+                                            style={{ padding: '0.4rem 0.5rem', fontSize: '0.85rem', height: '32px' }}
+                                        />
+                                    </div>
+                                </div>
                                 <div className="cart-totals-compact">
-                                    <span className="total-label">Total a Pagar</span>
-                                    <span className="total-amount">${(total || 0).toLocaleString()}</span>
+                                    <div className="flex flex-col">
+                                        {quickSaleDiscount > 0 && (
+                                            <span className="text-micro text-muted line-through">${(total || 0).toLocaleString()}</span>
+                                        )}
+                                        <span className="total-label">Total a Pagar</span>
+                                    </div>
+                                    <span className="total-amount">${(finalTotalSale || 0).toLocaleString()}</span>
                                 </div>
 
 
-                                <div className="payment-buttons-compact">
+                                <div className="payment-buttons-compact mt-2">
                                     <button
                                         className="payment-btn-compact payment-cash"
                                         disabled={cart.length === 0}

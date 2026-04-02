@@ -28,6 +28,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
     const [formData, setFormData] = useState<Partial<Product>>({
         code: '',
+        barcode: '',
         name: '',
         category: initialCategory || '',
         price: 0,
@@ -54,6 +55,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         } else {
             setFormData({
                 code: '',
+                barcode: '',
                 name: '',
                 category: initialCategory || (categories && categories.length > 0 ? categories[0] : (formData.category || 'General')),
                 price: 0,
@@ -129,6 +131,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             const newProduct: Product = {
                 id: generateIdWithPrefix('p'),
                 code: formData.code || generateProductCode(),
+                barcode: formData.barcode,
                 name: formData.name!,
                 category: formData.category!,
                 price: validatedPrice!,
@@ -193,10 +196,22 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                 type="text"
                                 className="form-input"
                                 placeholder="E-123"
-                                value={formData.code}
+                                value={formData.code || ''}
                                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                             />
                         </div>
+                    </div>
+
+                    <div className="form-group mb-6">
+                        <label className="form-label">Código de Barras (Opcional)</label>
+                        <input
+                            type="text"
+                            className="form-input"
+                            placeholder="Escaneá el código aquí u opcionalmente escribilo"
+                            value={formData.barcode || ''}
+                            onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                        />
+                        <p className="text-micro text-muted mt-1">Haz clic aquí y escanea el producto para vincularlo automáticamente.</p>
                     </div>
 
                     <div className="form-group mb-6">

@@ -170,9 +170,12 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
     },
 
     trackSale: (id, q) => {
+        const now = new Date().toISOString();
         set(state => ({
             products: state.products.map(p =>
-                p.id === id ? { ...p, stock: p.stock - q, salesCount: (p.salesCount || 0) + q } : p
+                p.id === id 
+                    ? { ...p, stock: p.stock - q, salesCount: (p.salesCount || 0) + q, lastSaleDate: now } 
+                    : p
             )
         }));
     },

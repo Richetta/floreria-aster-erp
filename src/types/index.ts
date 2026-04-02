@@ -10,6 +10,7 @@
 export interface Product {
   id: string;
   code: string;
+  barcode?: string;
   name: string;
   description?: string;
   category_id?: string | null;
@@ -41,6 +42,7 @@ export interface Category {
 
 export interface ProductFormData {
   code?: string;
+  barcode?: string;
   name: string;
   description?: string;
   category?: string;

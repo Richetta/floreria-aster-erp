@@ -96,6 +96,7 @@ CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     code VARCHAR(50) NOT NULL,
+    barcode VARCHAR(255),
     name VARCHAR(255) NOT NULL,
     description TEXT,
     category_id UUID REFERENCES categories(id),
