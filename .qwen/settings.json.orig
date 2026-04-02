@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(floreria-aster-erp.vercel.app)"
+    ]
+  }
+}

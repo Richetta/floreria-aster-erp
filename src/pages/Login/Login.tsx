@@ -27,6 +27,25 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [localError, setLocalError] = useState<string | null>(null);
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+    useEffect(() => {
+        const handler = (e: any) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+        window.addEventListener('beforeinstallprompt', handler);
+        return () => window.removeEventListener('beforeinstallprompt', handler);
+    }, []);
+
+    const handleInstallClick = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setDeferredPrompt(null);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -126,6 +145,15 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
                 <div className="login-error">
                     <AlertCircle size={20} />
                     <span>{displayError}</span>
+                </div>
+            )}
+
+            {/* Install App Button */}
+            {deferredPrompt && (
+                <div className="install-pwa-container mb-6">
+                    <button type="button" className="install-pwa-button" onClick={handleInstallClick}>
+                        <span>⬇️</span> Descargar e Instalar Florería Aster ERP
+                    </button>
                 </div>
             )}
 

@@ -605,6 +605,34 @@ html {
     gap: 0.5rem;
 }
 
+/* Install PWA Button */
+.install-pwa-container {
+    width: 100%;
+}
+
+.install-pwa-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.875rem 1rem !important;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+}
+
+.install-pwa-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(16, 185, 129, 0.45);
+}
+
 /* Google Login */
 .google-login-container { width: 100%; }
 .google-login-wrapper {
