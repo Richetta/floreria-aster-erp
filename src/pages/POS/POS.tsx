@@ -29,12 +29,14 @@ import { useStore } from '../../store/useStore';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
 import { OrderTemplatesModal } from '../../components/OrderTemplates/OrderTemplatesModal';
 import type { TicketData } from '../../components/TicketPrinter/TicketPrinter';
+import type { Product } from '../../store/slices/types';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useModal } from '../../hooks/useModal';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { playBeep } from '../../utils/audio';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
+import { api } from '../../services/api';
 import './POS.css';
 import './POS.mobile.css';
 
@@ -70,7 +72,7 @@ export const POS = () => {
     const removeFromCart = useStore((state) => state.removeFromCart);
     const updateCartQty = useStore((state) => state.updateCartQty);
     const clearCart = useStore((state) => state.clearCart);
-    
+
     const posOrderForm = useStore((state) => state.posOrderForm);
     const updatePosOrderForm = useStore((state) => state.updatePosOrderForm);
     const clearPosOrderForm = useStore((state) => state.clearPosOrderForm);
@@ -95,7 +97,7 @@ export const POS = () => {
     const [isAddingCustomer, setIsAddingCustomer] = useState(false);
     const [newCustomerName, setNewCustomerName] = useState('');
     const [newCustomerPhone, setNewCustomerPhone] = useState('');
-    
+
     // UI states
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string>('Todos');
@@ -106,16 +108,20 @@ export const POS = () => {
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
     const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
     const [showOrderModal, setShowOrderModal] = useState(false);
+    const [isScanningEnabled, setIsScanningEnabled] = useState(true);
+
+    // Historial de escaneos para debugging
+    const scanHistoryRef = useRef<{ code: string, timestamp: number, success: boolean, productName?: string }[]>([]);
 
     // Success Modals
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [quickSaleDiscount, setQuickSaleDiscount] = useState(0);
-    const [lastSaleData, setLastSaleData] = useState<{ 
-        id: string, 
-        total: number, 
-        method: string, 
-        items: any[], 
-        date: string 
+    const [lastSaleData, setLastSaleData] = useState<{
+        id: string,
+        total: number,
+        method: string,
+        items: any[],
+        date: string
     } | null>(null);
     const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
     const [lastOrderData, setLastOrderData] = useState<{
@@ -174,7 +180,7 @@ export const POS = () => {
 
         // Try to find product by exact code first (Barcode behavior)
         const productByCode = products.find(p => p.code === term || p.barcode === term);
-        
+
         if (productByCode) {
             addToCart(productByCode);
             setSearchTerm('');
@@ -195,23 +201,66 @@ export const POS = () => {
         }
     };
 
-    // Global Barcode Scanner Hook
-    const handleBarcodeScan = (scannedCode: string) => {
-        const productByBarcode = products.find(p => p.code === scannedCode || p.barcode === scannedCode);
+    // Global Barcode Scanner Hook con fallback al backend
+    const handleBarcodeScan = async (scannedCode: string) => {
+        // Registrar en historial
+        const scanRecord = {
+            code: scannedCode,
+            timestamp: Date.now(),
+            success: false,
+            productName: undefined as string | undefined
+        };
+
+        // Primero buscar en productos cargados en frontend
+        let productByBarcode = products.find(p => p.code === scannedCode || p.barcode === scannedCode);
+
+        // Si no encuentra en frontend, consultar al backend
+        if (!productByBarcode) {
+            try {
+                const backendProducts = await api.getProducts({ exact_barcode: scannedCode });
+                if (backendProducts && backendProducts.length > 0) {
+                    // Mapear producto del backend al formato del frontend
+                    const backendProduct = backendProducts[0];
+                    productByBarcode = {
+                        id: backendProduct.id,
+                        code: backendProduct.code,
+                        barcode: backendProduct.barcode,
+                        name: backendProduct.name,
+                        category: backendProduct.category_name || '',
+                        category_id: backendProduct.category_id,
+                        price: backendProduct.price,
+                        cost: backendProduct.cost,
+                        stock: backendProduct.stock_quantity,
+                        min: backendProduct.min_stock,
+                        tags: backendProduct.tags || [],
+                        supplierId: backendProduct.supplier_id
+                    } as Product;
+                }
+            } catch (error) {
+                console.error('[BarcodeScanner] Error consultando backend:', error);
+            }
+        }
+
         if (productByBarcode) {
             addToCart(productByBarcode);
             playBeep('success');
+            scanRecord.success = true;
+            scanRecord.productName = productByBarcode.name;
         } else {
             playBeep('error');
-            showAlert({ 
-                title: 'No encontrado', 
-                message: `El código escaneado (${scannedCode}) no pertenece a ningún producto.`, 
-                variant: 'error' 
+            showAlert({
+                title: 'No encontrado',
+                message: `El código escaneado (${scannedCode}) no pertenece a ningún producto.`,
+                variant: 'error'
             });
         }
+
+        // Guardar en historial (últimos 50 escaneos)
+        scanHistoryRef.current = [scanRecord, ...scanHistoryRef.current].slice(0, 50);
+        console.log('[BarcodeScanner] Historial:', scanHistoryRef.current);
     };
 
-    useBarcodeScanner({ onScan: handleBarcodeScan, isActive: !isLoading });
+    const { isScanning } = useBarcodeScanner({ onScan: handleBarcodeScan, isActive: !isLoading && isScanningEnabled });
 
 
 
@@ -235,15 +284,16 @@ export const POS = () => {
                     if (confirmed) clearCart();
                 });
             }
-            // Enter en búsqueda: procesar (barcode o primer match)
-            if (e.key === 'Enter' && searchTerm) {
+            // Enter en búsqueda: procesar solo si NO es un escaneo en progreso
+            // isScanning indica que el hook está procesando un código de barras
+            if (e.key === 'Enter' && searchTerm && !isScanning) {
                 handleSearchSubmit();
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [searchTerm, cart]);
+    }, [searchTerm, cart, isScanning]);
 
     const updateQty = (id: string, delta: number) => {
         updateCartQty(id, delta);
@@ -624,38 +674,52 @@ export const POS = () => {
                     {/* Smart Unified Search & View Toggle */}
                     <div className="pos-actions-bar mb-4">
                         <div className="pos-search" style={{
-                                borderRadius: '50px',
-                                overflow: 'hidden',
-                                border: '2px solid #e2e8f0',
-                                background: '#f1f5f9',
-                                display: 'flex',
-                                alignItems: 'center',
-                                padding: '0 1.5rem',
-                                height: '54px',
-                                width: '100%',
-                                transition: 'all 0.3s ease'
-                            }}>
-                                <Search style={{ color: '#94a3b8', flexShrink: 0 }} size={20} />
-                                <input
-                                    ref={searchInputRef}
-                                    type="text"
-                                    placeholder="Buscar nombre o código... (escanea o escribe)"
-                                    className="search-input"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    autoFocus
-                                    style={{
-                                        border: 'none',
-                                        background: 'transparent',
-                                        boxShadow: 'none',
-                                        flex: 1,
-                                        padding: '0 1rem',
-                                        fontSize: '1rem',
-                                        outline: 'none',
-                                        color: '#0f172a'
-                                    }}
-                                />
-                            {searchTerm && (
+                            borderRadius: '50px',
+                            overflow: 'hidden',
+                            border: isScanning ? '2px solid #22c55e' : '2px solid #e2e8f0',
+                            background: '#f1f5f9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '0 1.5rem',
+                            height: '54px',
+                            width: '100%',
+                            transition: 'all 0.3s ease',
+                            boxShadow: isScanning ? '0 0 0 3px rgba(34, 197, 94, 0.2)' : 'none'
+                        }}>
+                            <Search style={{ color: '#94a3b8', flexShrink: 0 }} size={20} />
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder={isScanning ? "📡 Escaneando código..." : "Buscar nombre o código... (escanea o escribe)"}
+                                className="search-input"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                autoFocus
+                                style={{
+                                    border: 'none',
+                                    background: 'transparent',
+                                    boxShadow: 'none',
+                                    flex: 1,
+                                    padding: '0 1rem',
+                                    fontSize: '1rem',
+                                    outline: 'none',
+                                    color: '#0f172a'
+                                }}
+                            />
+                            {isScanning && (
+                                <span style={{
+                                    color: '#22c55e',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    padding: '0.25rem 0.5rem',
+                                    background: 'rgba(34, 197, 94, 0.1)',
+                                    borderRadius: '4px',
+                                    marginRight: '0.5rem'
+                                }}>
+                                    ESCANEANDO
+                                </span>
+                            )}
+                            {searchTerm && !isScanning && (
                                 <button
                                     className="clear-search-btn"
                                     onClick={() => setSearchTerm('')}
@@ -673,6 +737,29 @@ export const POS = () => {
                             <Filter size={20} />
                             <span>Filtros</span>
                             {(activeCategory !== 'Todos' || activeTag) && <span className="filter-dot"></span>}
+                        </button>
+
+                        <button
+                            onClick={() => setIsScanningEnabled(!isScanningEnabled)}
+                            title={isScanningEnabled ? "Deshabilitar escáner" : "Habilitar escáner"}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                background: isScanningEnabled ? '#f1f5f9' : '#fee2e2',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                color: isScanningEnabled ? '#64748b' : '#dc2626',
+                                fontWeight: '500',
+                                fontSize: '0.875rem'
+                            }}
+                        >
+                            <span style={{ fontSize: '1.25rem' }}>{isScanningEnabled ? '📡' : '🚫'}</span>
+                            <span style={{ display: window.innerWidth > 768 ? 'inline' : 'none' }}>
+                                {isScanningEnabled ? 'Escáner ON' : 'Escáner OFF'}
+                            </span>
                         </button>
                     </div>
 
@@ -871,7 +958,7 @@ export const POS = () => {
                                         <span className={`stock-badge ${item.stock <= 0 ? 'out' : item.stock < item.min ? 'low' : 'in'}`}>
                                             {item.stock <= 0 ? 'Sin stock' : `${item.stock} disponibles`}
                                         </span>
-                                        
+
                                         <div className="catalog-qty-controls">
                                             {cart.find(i => i.id === item.id) ? (
                                                 // Product is in cart - show - [qty] + controls
@@ -939,7 +1026,7 @@ export const POS = () => {
                     </div>
                 </div>
             </div>
-             {/* Right Side: Shopping Cart & Checkout - Solo visible en DESKTOP */}
+            {/* Right Side: Shopping Cart & Checkout - Solo visible en DESKTOP */}
             {!isMobile && (
                 <div className="pos-cart-panel card">
                     {/* Cart Header - FIXED */}
@@ -1419,7 +1506,7 @@ export const POS = () => {
                                     <div className="flex gap-2 mb-2">
                                         <div className="flex-1 form-group-compact">
                                             <label className="text-micro mb-1">Cliente (Opcional)</label>
-                                            <select 
+                                            <select
                                                 className="form-input"
                                                 value={selectedCustomer}
                                                 onChange={(e) => updatePosOrderForm({ selectedCustomer: e.target.value })}
@@ -1433,9 +1520,9 @@ export const POS = () => {
                                         </div>
                                         <div className="form-group-compact" style={{ width: '80px' }}>
                                             <label className="text-micro mb-1">Dcto. %</label>
-                                            <input 
-                                                type="number" 
-                                                className="form-input" 
+                                            <input
+                                                type="number"
+                                                className="form-input"
                                                 value={quickSaleDiscount}
                                                 onChange={(e) => setQuickSaleDiscount(Number(e.target.value))}
                                                 min="0" max="100"
@@ -1444,9 +1531,9 @@ export const POS = () => {
                                         </div>
                                     </div>
                                     <div className="form-group-compact">
-                                        <input 
-                                            type="text" 
-                                            className="form-input" 
+                                        <input
+                                            type="text"
+                                            className="form-input"
                                             placeholder="Notas (opcional, ej: pago exacto)..."
                                             value={orderNotes}
                                             onChange={(e) => updatePosOrderForm({ orderNotes: e.target.value })}
@@ -1519,7 +1606,7 @@ export const POS = () => {
                             >
                                 Cerrar
                             </button>
-                            <button 
+                            <button
                                 className="btn btn-primary"
                                 onClick={() => {
                                     setTicketData({
@@ -1587,7 +1674,7 @@ export const POS = () => {
                                     <span className="order-success-value text-success font-bold">${(lastOrderData.advancePayment || 0).toLocaleString()}</span>
                                 </div>
                             )}
-                            
+
                             <div className="order-success-items mt-3 pt-3 border-t border-border">
                                 <span className="text-micro font-bold uppercase text-muted mb-2 block">Productos</span>
                                 <div className="space-y-1">
