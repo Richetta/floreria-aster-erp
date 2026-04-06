@@ -6,6 +6,8 @@ import { generateIdWithPrefix, generateProductCode } from '../../utils/idGenerat
 import { validatePrice, validateQuantity, clamp } from '../../utils/format';
 import './ProductModal.css';
 
+import { CameraScanner } from '../CameraScanner/CameraScanner';
+
 interface ProductModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -40,6 +42,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     });
 
     const [error, setError] = useState<string | null>(null);
+    const [isScanOpen, setIsScanOpen] = useState(false);
+
+    const handleCameraScan = (scannedCode: string) => {
+        setFormData(prev => ({ ...prev, barcode: scannedCode }));
+        setIsScanOpen(false);
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -204,14 +212,24 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
                     <div className="form-group mb-6">
                         <label className="form-label">Código de Barras (Opcional)</label>
-                        <input
-                            type="text"
-                            className="form-input"
-                            placeholder="Escaneá el código aquí u opcionalmente escribilo"
-                            value={formData.barcode || ''}
-                            onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                        />
-                        <p className="text-micro text-muted mt-1">Haz clic aquí y escanea el producto para vincularlo automáticamente.</p>
+                        <div className="input-with-action">
+                            <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Escaneá o escribí el código"
+                                value={formData.barcode || ''}
+                                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                            />
+                            <button 
+                                type="button" 
+                                className="input-action-btn"
+                                onClick={() => setIsScanOpen(true)}
+                                title="Escanear con cámara"
+                            >
+                                <span className="material-symbols-rounded">photo_camera</span>
+                            </button>
+                        </div>
+                        <p className="text-micro text-muted mt-1">Vincula el producto físico escaneando su código de barras.</p>
                     </div>
 
                     <div className="form-group mb-6">
@@ -330,6 +348,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                         </button>
                     </footer>
                 </form>
+
+                {isScanOpen && (
+                    <CameraScanner 
+                        onScan={handleCameraScan}
+                        onClose={() => setIsScanOpen(false)}
+                    />
+                )}
             </div>
         </div>
     );

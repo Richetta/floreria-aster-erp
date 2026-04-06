@@ -1,0 +1,351 @@
+/* ============================================
+   MOBILE COMPACT OVERRIDES - GLOBAL
+   Reduce TODOS los valores excesivos en mobile
+   ============================================ */
+
+@media (max-width: 768px) {
+
+    /* ============================================
+       HEADERS - Compactar
+       ============================================ */
+    [class*="-mobile-header"],
+    [class*="mobile-header"] {
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
+
+    [class*="-mobile-header"] h2,
+    [class*="mobile-header"] h2 {
+        font-size: 1.15rem !important;
+        line-height: 1.3 !important;
+    }
+
+    /* ============================================
+       CARDS - Reducir padding y radius
+       ============================================ */
+    [class*="-card"],
+    [class*="-box"] {
+        padding: 0.75rem 0.875rem;
+        border-radius: 12px;
+    }
+
+    /* Card variants */
+    .metric-card,
+    .stat-card,
+    .product-card,
+    .customer-card,
+    .sale-card,
+    .purchase-card,
+    .finance-card,
+    .reminder-card,
+    .logistics-card {
+        padding: 0.75rem 0.875rem !important;
+        border-radius: 12px !important;
+        gap: 0.625rem !important;
+    }
+
+    /* ============================================
+       ICONOS - Tamaño uniforme
+       ============================================ */
+    .material-symbols-rounded {
+        font-size: 24px !important;
+    }
+
+    /* Icon containers */
+    [class*="icon-container"],
+    [class*="icon-wrap"],
+    [class*="icon-box"] {
+        width: 44px !important;
+        height: 44px !important;
+    }
+
+    /* FAB icons */
+    [class*="fab"] .material-symbols-rounded,
+    [class*="btn-add"] .material-symbols-rounded {
+        font-size: 26px !important;
+    }
+
+    /* Empty state icons */
+    [class*="empty"] .material-symbols-rounded {
+        font-size: 48px !important;
+    }
+
+    /* ============================================
+       TIPOGRAFÍA - Reducir
+       ============================================ */
+    h2 {
+        font-size: 1.15rem !important;
+    }
+
+    h3 {
+        font-size: 1rem !important;
+    }
+
+    [class*="value"],
+    [class*="amount"],
+    [class*="price"],
+    [class*="total"] {
+        font-size: 1.05rem !important;
+    }
+
+    /* Hero values (excesivamente grandes) */
+    [class*="hero"] [class*="value"] {
+        font-size: 1.65rem !important;
+    }
+
+    /* Labels */
+    [class*="label"],
+    [class*="subtitle"],
+    [class*="micro"],
+    [class*="tiny"] {
+        font-size: 0.7rem !important;
+    }
+
+    /* ============================================
+       ESPACIADO - Compactar
+       ============================================ */
+    [class*="-list"],
+    [class*="-feed"],
+    [class*="-content"],
+    [class*="-grid"] {
+        gap: 0.625rem !important;
+        padding: 0.75rem !important;
+    }
+
+    /* Section gaps */
+    [class*="-section"],
+    [class*="-content"] {
+        gap: 1rem !important;
+    }
+
+    /* ============================================
+       AVATARES - Reducir
+       ============================================ */
+    [class*="avatar"],
+    [class*="initial"],
+    [class*="circle"] {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* ============================================
+       BOTONES - Compactar
+       ============================================ */
+    button[class*="btn"],
+    a[class*="btn"] {
+        padding: 0.625rem 0.875rem !important;
+        font-size: 0.85rem !important;
+        min-height: 44px !important;
+        border-radius: 10px !important;
+    }
+
+    /* Icon buttons */
+    button[class*="icon-btn"],
+    .icon-btn {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
+    }
+
+    /* ============================================
+       SEARCH BARS - Compactar
+       */
+    [class*="search-box"],
+    [class*="search-bar"] {
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 10px !important;
+    }
+
+    [class*="search-box"] input {
+        font-size: 0.875rem !important;
+    }
+
+    /* ============================================
+       FILTER CHIPS/PILLS - Compactar
+       ============================================ */
+    [class*="chip"],
+    [class*="pill"],
+    [class*="filter"] {
+        padding: 0.375rem 0.875rem !important;
+        font-size: 0.75rem !important;
+    }
+
+    /* ============================================
+       BOTTOM SHEETS - Reducir
+       ============================================ */
+    [class*="bottom-sheet"],
+    [class*="modal-content"] {
+        border-radius: 16px 16px 0 0;
+        padding: 0.75rem 0.875rem 1.5rem;
+    }
+
+    /* Sheet handle */
+    [class*="handle-bar"],
+    [class*="handle"] {
+        margin-bottom: 0.75rem !important;
+    }
+
+    /* ============================================
+       EMPTY STATES - Reducir
+       ============================================ */
+    [class*="empty-state"] {
+        padding: 2.5rem 1.25rem !important;
+    }
+
+    [class*="empty-state"] .material-symbols-rounded,
+    [class*="empty-state"] svg {
+        font-size: 48px !important;
+        width: 48px !important;
+        height: 48px !important;
+    }
+
+    [class*="empty-state"] h3 {
+        font-size: 1.05rem !important;
+    }
+
+    [class*="empty-state"] p {
+        font-size: 0.8rem !important;
+    }
+
+    /* ============================================
+       QUICK ACTIONS - Compactar
+       ============================================ */
+    [class*="quick-action"],
+    [class*="action-btn"] {
+        gap: 0.375rem !important;
+    }
+
+    [class*="quick-action"] [class*="icon"],
+    [class*="action-btn"] [class*="icon"] {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 14px !important;
+    }
+
+    [class*="quick-action"] span:not(.material-symbols-rounded) {
+        font-size: 0.65rem !important;
+    }
+
+    /* ============================================
+       METRICS/KPI CARDS - Reducir drasticamente
+       ============================================ */
+    [class*="metric"] {
+        padding: 0.625rem 0.75rem !important;
+        min-height: auto !important;
+        flex: 0 0 130px !important;
+    }
+
+    [class*="metric"] [class*="value"] {
+        font-size: 1.05rem !important;
+        margin: 0.375rem 0 !important;
+    }
+
+    [class*="metric"] [class*="label"] {
+        font-size: 0.65rem !important;
+    }
+
+    /* ============================================
+       STATUS BADGES/PILLS - Compactar
+       ============================================ */
+    [class*="status"],
+    [class*="badge"],
+    [class*="tag"] {
+        padding: 0.2rem 0.5rem !important;
+        font-size: 0.65rem !important;
+        border-radius: 100px !important;
+    }
+
+    /* ============================================
+       FORM INPUTS - Compactar
+       ============================================ */
+    input,
+    select,
+    textarea {
+        padding: 0.625rem 0.75rem !important;
+        font-size: 0.875rem !important;
+        border-radius: 8px !important;
+    }
+
+    /* Form labels */
+    label {
+        font-size: 0.75rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+
+    /* Form groups */
+    [class*="form-group"],
+    [class*="input-group"] {
+        margin-bottom: 0.75rem !important;
+        gap: 0.375rem !important;
+    }
+
+    /* ============================================
+       LIST ITEMS - Compactar
+       ============================================ */
+    [class*="list-item"],
+    [class*="item-row"] {
+        padding: 0.625rem 0.75rem !important;
+        gap: 0.625rem !important;
+        border-radius: 10px !important;
+    }
+
+    [class*="list-item"] [class*="title"] {
+        font-size: 0.875rem !important;
+    }
+
+    [class*="list-item"] [class*="subtitle"] {
+        font-size: 0.7rem !important;
+    }
+
+    /* ============================================
+       SECTION HEADERS - Compactar
+       ============================================ */
+    [class*="section-head"],
+    [class*="section-title"] {
+        margin-bottom: 0.5rem !important;
+    }
+
+    [class*="section-head"] h3 {
+        font-size: 0.95rem !important;
+    }
+
+    /* Eliminadas reglas específicas de .mobile-bottom-nav para permitir ajustes por componente */
+
+    /* ============================================
+       WRAPPERS - Padding bottom para no tapar contenido
+       ============================================ */
+    [class*="-mobile-wrapper"] {
+        padding-bottom: 110px;
+    }
+
+    [class*="-scroll-content"],
+    [class*="-content"],
+    [class*="-list"],
+    [class*="-feed"] {
+        padding-bottom: 16px !important;
+    }
+
+    /* ============================================
+       SCROLLABLE AREAS - Habilitar scroll
+       ============================================ */
+    [class*="-list"],
+    [class*="-feed"],
+    [class*="-content"] {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* Hide scrollbars for cleaner look */
+    [class*="-list"]::-webkit-scrollbar,
+    [class*="-feed"]::-webkit-scrollbar {
+        width: 3px !important;
+    }
+
+    [class*="-list"]::-webkit-scrollbar-thumb,
+    [class*="-feed"]::-webkit-scrollbar-thumb {
+        background: #cbd5e1 !important;
+        border-radius: 2px !important;
+    }
+}

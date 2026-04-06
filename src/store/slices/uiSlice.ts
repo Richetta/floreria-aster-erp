@@ -9,6 +9,7 @@ export interface UiSlice {
     notifications: Toast[];
     teamNotes: TeamNote[];
     shopInfo: ShopInfo;
+    notificationsLastSeenCount: number;
     
     addNotification: (message: string, type: Toast['type']) => void;
     removeNotification: (id: string) => void;
@@ -16,6 +17,7 @@ export interface UiSlice {
     deleteTeamNote: (id: string) => void;
     loadShopInfo: () => Promise<void>;
     updateShopInfo: (info: Partial<ShopInfo>) => Promise<void>;
+    markNotificationsAsSeen: (count: number) => void;
 }
 
 const initialShopInfo: ShopInfo = {
@@ -33,6 +35,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
     notifications: [],
     teamNotes: [],
     shopInfo: initialShopInfo,
+    notificationsLastSeenCount: Number(localStorage.getItem('notifications_last_seen_count')) || 0,
 
     addNotification: (message, type = 'info') => {
         const id = Math.random().toString(36).substring(7);
@@ -100,4 +103,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
             console.error('Error updating shop info:', error);
         }
     },
+
+    markNotificationsAsSeen: (count) => {
+        localStorage.setItem('notifications_last_seen_count', count.toString());
+        set({ notificationsLastSeenCount: count });
+    }
 });

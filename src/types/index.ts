@@ -102,7 +102,7 @@ export interface CustomerFormData {
 // ORDER TYPES
 // ============================================
 
-export type OrderStatus = 'pending' | 'assembling' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
+export type OrderStatus = 'pending' | 'assembling' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'archived';
 export type DeliveryMethod = 'pickup' | 'delivery';
 export type DeliveryTimeSlot = 'morning' | 'afternoon' | 'evening' | 'allday';
 

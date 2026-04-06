@@ -51,7 +51,7 @@ export type Order = {
     customerPhone?: string;
     customerId?: string;
     total: number;
-    status: 'pending' | 'assembling' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
+    status: 'pending' | 'assembling' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'archived';
     date: string;
     items: any[];
     notes?: string;

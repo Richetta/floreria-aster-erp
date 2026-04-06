@@ -76,7 +76,7 @@ export type Order = {
   customer_id: string;
   customer_name: string;
   customer_phone?: string;
-  status: 'pending' | 'assembling' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  status: 'pending' | 'assembling' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'archived';
   total_amount: number;
   advance_payment: number;
   delivery_method: 'pickup' | 'delivery';

@@ -1,0 +1,84 @@
+.logistics-mobile-wrapper {
+    display: flex; flex-direction: column; min-height: 100vh;
+    background: #f8fafc; padding-bottom: 120px;
+}
+
+/* Header */
+.mobile-logistics-header {
+    background: white; padding: 1.25rem 0.75rem; display: flex; flex-direction: column; gap: 0.75rem;
+    position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+}
+
+.mobile-logistics-header h2 { font-size: 1.5rem; font-weight: 800; color: #1e293b; margin: 0; }
+
+.logistics-stats { display: flex; gap: 0.5rem; }
+.stat-pill {
+    display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.85rem;
+    border-radius: 100px; background: #f1f5f9; color: #64748b; font-size: 0.8rem; font-weight: 800;
+}
+
+.stat-pill.active { background: #e0f2fe; color: #0ea5e9; }
+.stat-pill span { font-size: 16px; }
+
+/* Delivery Feed */
+.delivery-feed { padding: 1rem 0.75rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+.delivery-m-card {
+    background: white; border-radius: 20px; padding: 1.25rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 1rem;
+    border-left: 6px solid transparent;
+}
+
+.delivery-m-card.ready { border-left-color: #f59e0b; }
+.delivery-m-card.out_for_delivery { border-left-color: #0ea5e9; }
+
+.d-m-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.d-m-customer h3 { font-size: 1.15rem; font-weight: 800; color: #1e293b; margin: 0; }
+.d-m-id { font-size: 0.75rem; font-weight: 700; color: #94a3b8; }
+
+.d-m-badge {
+    padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800;
+}
+.d-m-badge.ready { background: #fef3c7; color: #d97706; }
+.d-m-badge.out_for_delivery { background: #e0f2fe; color: #0ea5e9; }
+
+.d-m-body { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.d-m-address {
+    background: #f1f5f9; padding: 1rem; border-radius: 16px;
+    display: flex; align-items: center; gap: 0.75rem; transition: 0.2s;
+}
+.d-m-address:active { background: #e2e8f0; }
+
+.addr-text p { font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0; }
+.addr-text span { font-size: 0.75rem; font-weight: 600; color: #64748b; }
+.d-m-address .chevron { margin-left: auto; color: #cbd5e1; }
+
+.d-m-note {
+    display: flex; align-items: center; gap: 0.5rem; color: #64748b;
+    padding: 0 0.5rem;
+}
+.d-m-note span { font-size: 18px; }
+.d-m-note p { font-size: 0.8rem; font-weight: 600; margin: 0; }
+
+.d-m-actions { display: flex; gap: 0.5rem; align-items: center; }
+
+.d-action-btn {
+    width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+}
+.d-action-btn.phone { background: #dcfce7; color: #16a34a; }
+.d-action-btn.whatsapp { background: #e0f2fe; color: #0ea5e9; }
+
+.d-confirm-btn {
+    flex: 1; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    gap: 0.5rem; font-weight: 800; font-size: 0.9rem;
+}
+.d-confirm-btn.start { background: #1e293b; color: white; }
+.d-confirm-btn.finish { background: #22c55e; color: white; }
+
+.empty-deliveries {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding-top: 4rem; color: #cbd5e1;
+}
+.empty-deliveries span { font-size: 64px; }
+.empty-deliveries p { font-weight: 700; margin-top: 1rem; }

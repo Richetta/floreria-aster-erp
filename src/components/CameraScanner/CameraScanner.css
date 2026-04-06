@@ -1,0 +1,144 @@
+.camera-scanner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-start; /* Align to top for the slide down animation */
+    justify-content: center;
+    z-index: 9999;
+    padding-top: 10%; /* Give it some space from the absolute top */
+    animation: fadeInOverlay 0.2s ease-out;
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.camera-scanner-container {
+    background: var(--color-surface);
+    width: 90%;
+    max-width: 500px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideInDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInDown {
+    from { 
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to { 
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.camera-scanner-header {
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.camera-scanner-header .close-btn {
+    padding: 0.5rem;
+    color: var(--color-text-muted);
+    background: #f1f5f9;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.camera-scanner-view {
+    position: relative;
+    width: 80%; /* Más estrecho en pantalla vertical para que al rotar el móvil sea el área de interés */
+    margin: 0 auto;
+    aspect-ratio: 9 / 16; /* Vertical en pantalla, se convierte en horizontal al rotar el móvil */
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+/* Rotación de la cámara para uso horizontal */
+.camera-scanner-view video {
+    transform: rotate(90deg);
+    min-width: 100%;
+    min-height: 100%;
+    object-fit: cover;
+}
+
+.barcode-finder {
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    right: 10%;
+    bottom: 10%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    pointer-events: none;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+}
+
+/* Esquinas destacadas - Adaptadas al formato vertical-que-será-horizontal */
+.barcode-finder::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border: 4px solid var(--color-primary);
+    border-radius: 12px;
+    clip-path: polygon(0 0, 30% 0, 30% 8%, 8% 8%, 8% 30%, 0 30%,
+                       0 70%, 8% 70%, 8% 92%, 30% 92%, 30% 100%, 0 100%,
+                       70% 100%, 70% 92%, 92% 92%, 92% 70%, 100% 70%, 100% 100%,
+                       100% 0, 70% 0, 70% 8%, 92% 8%, 92% 30%, 100% 30%);
+}
+
+.barcode-scan-line {
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: 50%;
+    height: 3px;
+    background: #ff004c;
+    box-shadow: 0 0 15px #ff004c, 0 0 30px #ff004c;
+    animation: scanAnimation 3s infinite ease-in-out;
+}
+
+@keyframes scanAnimation {
+    0%, 100% { top: 20%; opacity: 0.4; }
+    50% { top: 80%; opacity: 1; }
+}
+
+.camera-scanner-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    padding: 2rem;
+    color: white;
+}
+
+.camera-scanner-footer {
+    padding: 1rem;
+    text-align: center;
+    background: var(--color-surface);
+    border-top: 1px solid #f1f5f9;
+}

@@ -1,0 +1,389 @@
+import { useState, useMemo, useEffect } from 'react';
+import { useStore } from '../../store/useStore';
+import { useNavigate } from 'react-router-dom';
+import './OrdersMobile.css';
+
+export const OrdersMobile = () => {
+    const navigate = useNavigate();
+    const orders = useStore((state) => state.orders);
+    const updateOrderStatus = useStore((state) => state.updateOrderStatus);
+    const loadOrders = useStore((state) => state.loadOrders);
+
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('active');
+    const [timeFilter, setTimeFilter] = useState<string>('todos'); // todos, hoy, manana, semana
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+
+    useEffect(() => {
+        loadOrders();
+    }, []);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        await loadOrders();
+        setIsRefreshing(false);
+    };
+
+    const filteredOrders = useMemo(() => {
+        let base = (orders || []).filter(o =>
+            o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            o.id.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        // Filtro de Tiempo
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        
+        const nextWeek = new Date(today);
+        nextWeek.setDate(today.getDate() + 7);
+
+        if (timeFilter === 'hoy') {
+            base = base.filter(o => new Date(o.date).toISOString().split('T')[0] === today.toISOString().split('T')[0]);
+        } else if (timeFilter === 'manana') {
+            base = base.filter(o => new Date(o.date).toISOString().split('T')[0] === tomorrow.toISOString().split('T')[0]);
+        } else if (timeFilter === 'semana') {
+            base = base.filter(o => new Date(o.date) <= nextWeek && new Date(o.date) >= today);
+        }
+
+        // Filtro de Estado
+        if (statusFilter === 'active') {
+            base = base.filter(o => o.status !== 'delivered' && o.status !== 'cancelled' && o.status !== 'archived');
+        } else if (statusFilter !== 'all') {
+            base = base.filter(o => o.status === statusFilter);
+        }
+
+        return base.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }, [orders, searchTerm, statusFilter, timeFilter]);
+
+    const getStatusInfo = (status: string) => {
+        switch (status) {
+            case 'pending': return { label: 'Pte', color: '#ffffff', bg: '#ef4444', icon: 'schedule' };
+            case 'assembling': return { label: 'Armando', color: '#ffffff', bg: '#a855f7', icon: 'auto_fix_high' };
+            case 'ready': return { label: 'Listo', color: '#ffffff', bg: '#3b82f6', icon: 'check_circle' };
+            case 'out_for_delivery': return { label: 'En Camino', color: '#ffffff', bg: '#f59e0b', icon: 'local_shipping' };
+            case 'delivered': return { label: 'Entregado', color: '#ffffff', bg: '#22c55e', icon: 'task_alt' };
+            default: return { label: status, color: '#ffffff', bg: '#64748b', icon: 'help' };
+        }
+    };
+
+    const handleOrderTap = (order: any) => {
+        setSelectedOrder(order);
+        setIsSheetOpen(true);
+    };
+
+    const handleStatusChange = async (orderId: string, newStatus: string) => {
+        await updateOrderStatus(orderId, newStatus as any);
+        setSelectedOrder((prev: any) => prev ? { ...prev, status: newStatus } : null);
+        await loadOrders();
+    };
+
+    const statusFlow = ['pending', 'assembling', 'ready', 'out_for_delivery', 'delivered'];
+
+    return (
+        <div className="orders-mobile-wrapper">
+            <header className="mobile-orders-header">
+                <div className="orders-header-top">
+                    <h2>Pedidos</h2>
+                    <div className="header-actions">
+                        <button 
+                            className={`filter-toggle-btn ${isFiltersOpen ? 'active' : ''}`} 
+                            onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                        >
+                            <span className="material-symbols-rounded">filter_list</span>
+                        </button>
+                        <button className={`refresh-btn ${isRefreshing ? 'spinning' : ''}`} onClick={handleRefresh}>
+                            <span className="material-symbols-rounded">refresh</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="orders-search-box">
+                    <span className="material-symbols-rounded">search</span>
+                    <input
+                        type="text"
+                        placeholder="Buscar cliente o ID..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                    />
+                </div>
+
+                {isFiltersOpen && (
+                    <div className="orders-filter-container retractable">
+                        <div className="orders-filter-scroll time-filters">
+                            {[
+                                { id: 'todos', label: 'Todo' },
+                                { id: 'hoy', label: 'Hoy' },
+                                { id: 'manana', label: 'Mañana' },
+                                { id: 'semana', label: 'Semana' }
+                            ].map(f => (
+                                <button
+                                    key={f.id}
+                                    className={`filter-chip time ${timeFilter === f.id ? 'active' : ''}`}
+                                    onClick={() => setTimeFilter(f.id)}
+                                >
+                                    {f.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="orders-filter-scroll status-filters">
+                            {[
+                                { id: 'active', label: 'Activos' },
+                                { id: 'pending', label: 'Pendientes' },
+                                { id: 'ready', label: 'Listos' },
+                                { id: 'delivered', label: 'Entregados' },
+                                { id: 'all', label: 'Todos' }
+                            ].map(f => (
+                                <button
+                                    key={f.id}
+                                    className={`filter-chip status ${statusFilter === f.id ? 'active' : ''}`}
+                                    onClick={() => setStatusFilter(f.id)}
+                                >
+                                    {f.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </header>
+
+            <div className="orders-feed">
+                {filteredOrders.length === 0 ? (
+                    <div className="empty-orders">
+                        <span className="material-symbols-rounded">receipt_long</span>
+                        <p>No se encontraron pedidos</p>
+                    </div>
+                ) : (
+                    filteredOrders.map(order => {
+                        const s = getStatusInfo(order.status);
+                        const dateObj = new Date(order.date);
+                        const remaining = order.total - (order.advancePayment || 0);
+                        const hasAddress = order.deliveryMethod === 'delivery' && order.deliveryAddress?.street;
+                        const hasItems = order.items && order.items.length > 0;
+
+                        return (
+                            <div
+                                key={order.id}
+                                className={`order-card status-${order.status}`}
+                                onClick={() => handleOrderTap(order)}
+                                style={{ background: s.bg }}
+                            >
+                                <div className="order-card-top">
+                                    <div className="order-main-row">
+                                        <div className="order-left">
+                                            <span className="material-symbols-rounded order-status-icon">{s.icon}</span>
+                                            <div className="order-text-info">
+                                                <div className="order-customer-row">
+                                                    <span className="order-customer">{order.customerName}</span>
+                                                    <span className="order-delivery-date">
+                                                        {dateObj.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="order-total">${order.total.toLocaleString()}</div>
+                                    </div>
+
+                                    {(order.deliveryMethod || remaining > 0) && (
+                                        <div className="order-card-chips">
+                                            {order.deliveryMethod && (
+                                                <span className="order-chip">
+                                                    <span className="material-symbols-rounded">
+                                                        {order.deliveryMethod === 'delivery' ? 'local_shipping' : 'storefront'}
+                                                    </span>
+                                                    {order.deliveryMethod === 'delivery' ? 'Envío' : 'Retiro'}
+                                                </span>
+                                            )}
+                                            {(!isNaN(remaining) && remaining > 1) ? (
+                                                <span className="order-chip debt">Debe ${Math.round(remaining).toLocaleString()}</span>
+                                            ) : (order.total > 0 && remaining <= 1) ? (
+                                                <span className="order-chip paid">Saldado</span>
+                                            ) : null}
+                                            {hasAddress && order.deliveryAddress && (
+                                                <span className="order-chip address">
+                                                    <span className="material-symbols-rounded">location_on</span>
+                                                    {order.deliveryAddress.street!.length > 20
+                                                        ? order.deliveryAddress.street!.slice(0, 20) + '…'
+                                                        : order.deliveryAddress.street
+                                                    }
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {hasItems && (
+                                        <div className="order-mini-items">
+                                            {order.items.slice(0, 2).map((item: any, idx: number) => {
+                                                const itemName = item.name || item.product_name || 'Producto';
+                                                const itemQty = item.qty || item.quantity || 1;
+                                                return (
+                                                    <span key={idx} className="mini-item">
+                                                        {itemQty}x {itemName}
+                                                    </span>
+                                                );
+                                            })}
+                                            {order.items.length > 2 && (
+                                                <span className="mini-more">+{order.items.length - 2} más</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+
+            {/* Bottom Sheet - Order Detail */}
+            <div className={`order-detail-sheet ${isSheetOpen ? 'open' : ''}`}>
+                <div className="sheet-overlay" onClick={() => setIsSheetOpen(false)} />
+                <div className="sheet-container">
+                    <div className="sheet-handle" />
+
+                    {selectedOrder && (() => {
+                        const s = getStatusInfo(selectedOrder.status);
+                        const dateObj = new Date(selectedOrder.date);
+                        const remaining = selectedOrder.total - (selectedOrder.advancePayment || 0);
+
+                        return (
+                            <>
+                                <div className="sheet-order-header">
+                                    <div className="sheet-order-info">
+                                        <div className="sheet-avatar" style={{ background: s.bg, color: s.color }}>
+                                            {selectedOrder.customerName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <h3>{selectedOrder.customerName}</h3>
+                                            <span className="sheet-order-id">#{selectedOrder.id.slice(0, 8)}</span>
+                                        </div>
+                                    </div>
+                                    <button className="sheet-close" onClick={() => setIsSheetOpen(false)}>
+                                        <span className="material-symbols-rounded">close</span>
+                                    </button>
+                                </div>
+
+                                <div className="sheet-order-details">
+                                    <div className="detail-row">
+                                        <span className="material-symbols-rounded">calendar_today</span>
+                                        <div>
+                                            <span className="detail-label">Fecha</span>
+                                            <span className="detail-value">
+                                                {dateObj.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="material-symbols-rounded">schedule</span>
+                                        <div>
+                                            <span className="detail-label">Horario</span>
+                                            <span className="detail-value">{selectedOrder.deliveryTimeSlot?.split(' (')[0] || 'Todo el día'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="material-symbols-rounded">
+                                            {selectedOrder.deliveryMethod === 'delivery' ? 'local_shipping' : 'storefront'}
+                                        </span>
+                                        <div>
+                                            <span className="detail-label">Entrega</span>
+                                            <span className="detail-value">
+                                                {selectedOrder.deliveryMethod === 'delivery' ? 'Envío a domicilio' : 'Retiro en local'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {selectedOrder.deliveryAddress?.street && (
+                                        <div className="detail-row">
+                                            <span className="material-symbols-rounded">location_on</span>
+                                            <div>
+                                                <span className="detail-label">Dirección</span>
+                                                <span className="detail-value">{selectedOrder.deliveryAddress.street}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {selectedOrder.notes && (
+                                        <div className="detail-row notes-row">
+                                            <span className="material-symbols-rounded">note</span>
+                                            <div>
+                                                <span className="detail-label">Notas</span>
+                                                <span className="detail-value">{selectedOrder.notes}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="sheet-order-items">
+                                    <h4>Productos ({selectedOrder.items?.length || 0})</h4>
+                                    <div className="sheet-items-list">
+                                        {(selectedOrder.items || []).map((item: any, idx: number) => {
+                                            const itemName = item.name || item.product_name || 'Producto';
+                                            const itemQty = item.qty || item.quantity || 1;
+                                            const itemPrice = item.price || item.unit_price || 0;
+                                            return (
+                                                <div key={idx} className="sheet-item">
+                                                    <span className="sheet-item-name">{itemQty}x {itemName}</span>
+                                                    <span className="sheet-item-price">${(itemPrice * itemQty).toLocaleString()}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="sheet-order-summary">
+                                    <div className="summary-row">
+                                        <span>Subtotal</span>
+                                        <span>${selectedOrder.total.toLocaleString()}</span>
+                                    </div>
+                                    {selectedOrder.advancePayment > 0 && (
+                                        <div className="summary-row">
+                                            <span>Seña</span>
+                                            <span className="summary-advance">-${selectedOrder.advancePayment.toLocaleString()}</span>
+                                        </div>
+                                    )}
+                                    <div className="summary-row total-row">
+                                        <span>{remaining > 0 ? 'Resta' : 'Total pagado'}</span>
+                                        <span style={{ color: remaining > 0 ? '#ef4444' : '#16a34a' }}>
+                                            ${remaining > 0 ? remaining.toLocaleString() : selectedOrder.total.toLocaleString()}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Status Change Buttons */}
+                                <div className="sheet-status-actions">
+                                    <h4>Cambiar Estado</h4>
+                                    <div className="status-buttons-grid">
+                                        {statusFlow.map(status => {
+                                            const info = getStatusInfo(status);
+                                            const isCurrent = selectedOrder.status === status;
+                                            const isPast = statusFlow.indexOf(status) < statusFlow.indexOf(selectedOrder.status);
+                                            return (
+                                                <button
+                                                    key={status}
+                                                    className={`status-change-btn ${isCurrent ? 'current' : ''} ${isPast ? 'past' : ''}`}
+                                                    style={{ borderColor: info.color, background: isCurrent ? info.bg : 'white' }}
+                                                    onClick={() => !isCurrent && handleStatusChange(selectedOrder.id, status)}
+                                                    disabled={isCurrent}
+                                                >
+                                                    <span className="material-symbols-rounded" style={{ color: info.color }}>{info.icon}</span>
+                                                    <span>{info.label}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </>
+                        );
+                    })()}
+                </div>
+            </div>
+
+            <button className="mobile-fab-add" onClick={() => navigate('/pos')}>
+                <span className="material-symbols-rounded">add</span>
+            </button>
+        </div>
+    );
+};

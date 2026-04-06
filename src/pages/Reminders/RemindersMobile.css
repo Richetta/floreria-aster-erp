@@ -1,0 +1,50 @@
+.reminders-mobile-wrapper {
+    display: flex; flex-direction: column; min-height: 100vh;
+    background: #f8fafc; padding-bottom: 120px;
+}
+
+/* Header */
+.mobile-reminders-header {
+    background: white; padding: 1.25rem 0.75rem; display: flex; flex-direction: column; gap: 0.75rem;
+    position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+}
+
+.mobile-reminders-header h2 { font-size: 1.5rem; font-weight: 800; color: #1e293b; margin: 0; }
+
+.reminders-tabs { display: flex; gap: 0.5rem; }
+.reminders-tabs button {
+    flex: 1; padding: 0.75rem; border-radius: 14px; background: #f1f5f9;
+    color: #64748b; font-size: 0.75rem; font-weight: 800; display: flex;
+    flex-direction: column; align-items: center; gap: 0.25rem; transition: 0.2s;
+}
+
+.reminders-tabs button.active { background: var(--color-primary); color: white; }
+.reminders-tabs button span { font-size: 20px; }
+
+/* Feed */
+.reminders-feed { padding: 1rem 0.75rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+.rem-m-card {
+    background: white; border-radius: 20px; padding: 1.25rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02); display: flex; align-items: center; gap: 1rem;
+}
+
+.rem-m-icon {
+    width: 48px; height: 48px; border-radius: 12px; background: #f1f5f9;
+    display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+}
+
+.rem-m-info { flex: 1; }
+.rem-m-info h3 { font-size: 1rem; font-weight: 800; color: #1e293b; margin: 0; }
+.rem-m-info p { font-size: 0.8rem; font-weight: 600; color: #64748b; margin: 0.25rem 0 0 0; }
+
+.rem-wa-btn {
+    width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: #dcfce7; color: #16a34a; transition: 0.2s;
+}
+
+.rem-wa-btn.urgent { background: #fee2e2; color: #ef4444; }
+.rem-wa-btn:active { transform: scale(0.9); }
+
+.empty-rem { text-align: center; padding-top: 4rem; font-weight: 700; color: #cbd5e1; }
+.loading-reminders { text-align: center; padding: 2rem; font-weight: 700; color: #94a3b8; }

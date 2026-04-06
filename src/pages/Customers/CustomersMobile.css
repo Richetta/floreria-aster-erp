@@ -1,0 +1,120 @@
+.customers-mobile-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: #f8fafc;
+    padding-bottom: 120px;
+}
+
+/* Header */
+.mobile-customers-header {
+    background: white;
+    padding: 1.25rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.customers-header-top { display: flex; justify-content: space-between; align-items: center; }
+.customers-header-top h2 { font-size: 1.5rem; font-weight: 800; color: var(--color-primary); margin: 0; }
+
+.refresh-btn {
+    width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; color: #64748b;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.refresh-btn.spinning { animation: spin 1s infinite linear; }
+
+/* Search box */
+.customers-search-box {
+    display: flex; align-items: center; gap: 0.75rem; background: #f1f5f9; padding: 0.75rem 1rem; border-radius: 12px;
+}
+
+.customers-search-box input { flex: 1; border: none; background: transparent; font-size: 0.95rem; outline: none; }
+.customers-search-box .material-symbols-rounded { font-size: 20px; color: #94a3b8; }
+
+/* Filter Scroll */
+.customers-filter-scroll {
+    display: flex; gap: 0.75rem; overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.customers-filter-scroll::-webkit-scrollbar { display: none; }
+
+.filter-chip {
+    white-space: nowrap; padding: 0.5rem 1.25rem; border-radius: 100px; background: white; border: 1px solid #e2e8f0;
+    font-size: 0.85rem; font-weight: 600; color: #64748b;
+}
+
+.filter-chip.active { background: var(--color-primary-light); color: var(--color-primary); border-color: var(--color-primary); }
+.filter-chip.debt.active { background: #fee2e2; color: #ef4444; border-color: #ef4444; }
+
+/* Feed / List Items */
+.customers-feed-list { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+.customer-item-card {
+    background: white; padding: 1.25rem; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    display: flex; flex-direction: column; gap: 1rem;
+}
+
+.c-item-main { display: flex; align-items: center; gap: 1rem; }
+
+.c-avatar {
+    width: 50px; height: 50px; border-radius: 50%; background: #f1f5f9; color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 800;
+    border: 1px solid #e2e8f0;
+}
+
+.c-item-info { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
+.c-item-name { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin: 0; }
+.c-item-phone { 
+    display: flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; font-weight: 600; color: #94a3b8; 
+}
+.c-item-phone .material-symbols-rounded { font-size: 16px; }
+
+.debt-badge {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+}
+
+.debt-label { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; color: #ef4444; }
+.debt-value { font-size: 0.9rem; font-weight: 900; color: #ef4444; }
+
+.c-item-trailing .material-symbols-rounded.text-success { font-size: 24px; color: #22c55e; }
+
+/* Card Footer Actions */
+.c-item-actions {
+    display: flex; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid #f1f5f9;
+}
+
+.c-action-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    padding: 0.65rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700;
+}
+
+.c-wa { background: #dcfce7; color: #15803d; }
+.c-edit { background: #f1f5f9; color: #64748b; }
+
+.c-action-btn .material-symbols-rounded { font-size: 18px; }
+
+/* FAB */
+.mobile-fab-add {
+    position: fixed; bottom: 100px; right: 1.5rem; width: 60px; height: 60px;
+    background: var(--color-primary); color: white; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 20px rgba(155, 81, 224, 0.4);
+    z-index: 100;
+}
+
+.mobile-fab-add .material-symbols-rounded { font-size: 32px; }
+
+/* Empty state */
+.empty-customers {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem;
+    color: #94a3b8; opacity: 0.6;
+}
+
+.empty-customers .material-symbols-rounded { font-size: 64px; margin-bottom: 1rem; }
+.empty-customers p { font-weight: 600; }

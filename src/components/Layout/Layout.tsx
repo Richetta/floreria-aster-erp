@@ -1,16 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Menu } from 'lucide-react';
 import { Sidebar } from '../Sidebar/Sidebar';
-import { BottomNav } from '../BottomNav/BottomNav';
+import { MobileBottomNav } from '../MobileBottomNav/MobileBottomNav';
+import { NotificationsPanel } from '../Notifications/NotificationsPanel';
 import { useStore } from '../../store/useStore';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { Bell, X } from 'lucide-react';
+import '../../styles/mobile-compact-overrides.css';
 import './Layout.css';
 
 export const Layout = () => {
     const isMobile = useMediaQuery('(max-width: 768px)');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const location = useLocation();
+
+    const customers = useStore(state => state.customers);
+    const products = useStore(state => state.products);
+    const suppliers = useStore(state => state.suppliers);
+    const notificationsLastSeenCount = useStore(state => state.notificationsLastSeenCount);
+    const markNotificationsAsSeen = useStore(state => state.markNotificationsAsSeen);
     const loadShopInfo = useStore(state => state.loadShopInfo);
 
     // Load shop info on mount
@@ -18,15 +27,83 @@ export const Layout = () => {
         loadShopInfo();
     }, [loadShopInfo]);
 
-    // Close sidebar on route change (mobile)
+    // Calculate total notifications count (same logic as NotificationsPanel)
+    const notificationCount = useMemo(() => {
+        let count = 0;
+
+        // Birthdays/Anniversaries (next 7 days)
+        const getDaysDiff = (dateStr: string) => {
+            if (!dateStr) return 999;
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const target = new Date(dateStr); target.setHours(0, 0, 0, 0);
+            const nextTarget = new Date(today.getFullYear(), target.getMonth(), target.getDate());
+            if (nextTarget < today) nextTarget.setFullYear(today.getFullYear() + 1);
+            return Math.ceil((nextTarget.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        };
+
+        customers.forEach(c => {
+            if (c.birthday && getDaysDiff(c.birthday) <= 7) count++;
+            if (c.anniversary && getDaysDiff(c.anniversary) <= 7) count++;
+            if (c.debtBalance > 0) count++;
+        });
+
+        products.forEach(p => { if (p.stock <= p.min) count++; });
+
+        suppliers.forEach(s => {
+            if (s.lastVisit) {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const visitDate = new Date(s.lastVisit); visitDate.setHours(0, 0, 0, 0);
+                const daysUntil = Math.ceil((visitDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                if (daysUntil >= 0 && daysUntil <= 3) count++;
+            }
+        });
+
+        // Solo mostramos si el conteo actual es mayor al último visto
+        return count > notificationsLastSeenCount ? count : 0;
+    }, [customers, products, suppliers, notificationsLastSeenCount]);
+
+    // Close overlays on route change (mobile)
     useEffect(() => {
         setIsSidebarOpen(false);
+        setIsNotificationsOpen(false);
     }, [location.pathname]);
+
+    const handleOpenNotifications = () => {
+        setIsNotificationsOpen(true);
+        // Calculamos el count actual para marcarlo como visto
+        let count = 0;
+        const getDaysDiff = (dateStr: string) => {
+            if (!dateStr) return 999;
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const target = new Date(dateStr); target.setHours(0, 0, 0, 0);
+            const nextTarget = new Date(today.getFullYear(), target.getMonth(), target.getDate());
+            if (nextTarget < today) nextTarget.setFullYear(today.getFullYear() + 1);
+            return Math.ceil((nextTarget.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        };
+        customers.forEach(c => {
+            if (c.birthday && getDaysDiff(c.birthday) <= 7) count++;
+            if (c.anniversary && getDaysDiff(c.anniversary) <= 7) count++;
+            if (c.debtBalance > 0) count++;
+        });
+        products.forEach(p => { if (p.stock <= p.min) count++; });
+        suppliers.forEach(s => {
+            if (s.lastVisit) {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const visitDate = new Date(s.lastVisit); visitDate.setHours(0, 0, 0, 0);
+                const daysUntil = Math.ceil((visitDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                if (daysUntil >= 0 && daysUntil <= 3) count++;
+            }
+        });
+        markNotificationsAsSeen(count);
+    };
 
     // Close sidebar on Escape key
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setIsSidebarOpen(false);
+            if (e.key === 'Escape') {
+                setIsSidebarOpen(false);
+                setIsNotificationsOpen(false);
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
@@ -35,20 +112,32 @@ export const Layout = () => {
 
     return (
         <div className="app-container">
-            {/* Header móvil - Solo visible en < 768px */}
-            {isMobile && (
-                <header className="mobile-header">
-                    <button 
-                        className="hamburger-btn"
-                        onClick={() => setIsSidebarOpen(true)}
+            {/* Botón Flotante de Notificaciones - Solo visible en mobile e Inicio */}
+            {isMobile && (location.pathname === '/' || location.pathname === '/dashboard') && (
+                <>
+                    <button
+                        className="floating-notification-bell"
+                        onClick={handleOpenNotifications}
                     >
-                        <Menu size={24} />
+                        <Bell size={22} />
+                        {notificationCount > 0 && (
+                            <span className="bell-badge">{notificationCount > 9 ? '9+' : notificationCount}</span>
+                        )}
                     </button>
-                    <div className="mobile-brand">
-                        <span className="mobile-brand-icon">🌸</span>
-                        <span>Aster</span>
+
+                    {/* Panel de Notificaciones Desplegable */}
+                    <div className={`global-notifications-overlay ${isNotificationsOpen ? 'open' : ''}`}>
+                        <div className="notifications-overlay-header">
+                            <h3>Notificaciones</h3>
+                            <button className="close-notif-btn" onClick={() => setIsNotificationsOpen(false)}>
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="notifications-overlay-body">
+                            <NotificationsPanel />
+                        </div>
                     </div>
-                </header>
+                </>
             )}
 
             {/* Sidebar Desktop y Mobile */}
@@ -58,7 +147,7 @@ export const Layout = () => {
 
             {/* Overlay para cerrar sidebar en mobile */}
             {isSidebarOpen && (
-                <div 
+                <div
                     className="sidebar-overlay"
                     onClick={() => setIsSidebarOpen(false)}
                 />
@@ -71,7 +160,7 @@ export const Layout = () => {
             </main>
 
             {/* Navegación Inferior - Solo visible en mobile */}
-            {isMobile && <BottomNav />}
+            {isMobile && <MobileBottomNav />}
         </div>
     );
 };

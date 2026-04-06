@@ -9,6 +9,7 @@ export interface OrderSlice {
     loadOrders: () => Promise<void>;
     addOrder: (orderData: any) => Promise<string>;
     updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
+    updateOrder: (id: string, data: Partial<Order>) => Promise<void>;
     deleteOrder: (id: string) => Promise<void>;
 }
 
@@ -95,6 +96,19 @@ export const createOrderSlice: StateCreator<AppState, [], [], OrderSlice> = (set
                 orders: state.orders.map(o => o.id === id ? { ...o, status } : o)
             }));
             get().addNotification('Estado de pedido actualizado', 'success');
+        } catch (error: any) {
+            get().addNotification('Error al actualizar pedido', 'error');
+            console.error('Error updating order:', error);
+        }
+    },
+
+    updateOrder: async (id, data) => {
+        try {
+            await api.updateOrder(id, data);
+            set(state => ({
+                orders: state.orders.map(o => o.id === id ? { ...o, ...data } : o)
+            }));
+            get().addNotification('Pedido actualizado correctamente', 'success');
         } catch (error: any) {
             get().addNotification('Error al actualizar pedido', 'error');
             console.error('Error updating order:', error);

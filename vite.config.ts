@@ -14,6 +14,9 @@ export default defineConfig({
         short_name: 'Aster ERP',
         description: 'Punto de Venta y Gestión de Inventario para Florería Aster',
         theme_color: '#0f172a',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '/',
         icons: [
           {
             src: 'aster-logo.png',

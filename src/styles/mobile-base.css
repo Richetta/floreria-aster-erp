@@ -15,47 +15,64 @@
 }
 
 /* ============================================
-   TYPOGRAPHY MOBILE - TAMAÑOS CÓMODOS
+   TYPOGRAPHY MOBILE - TAMAÑOS COMPACTOS
    ============================================ */
 @media (max-width: 768px) {
     :root {
-        --font-size-base: 16px;
-        --font-size-small: 14px;
-        --font-size-large: 18px;
+        --font-size-base: 14px;
+        --font-size-small: 13px;
+        --font-size-large: 16px;
     }
 
-    .text-h1 { font-size: 24px; }
-    .text-h2 { font-size: 22px; }
-    .text-h3 { font-size: 20px; }
-    .text-body { font-size: 16px; }
-    .text-small { font-size: 14px; }
-    .text-micro { font-size: 13px; }
+    .text-h1 {
+        font-size: 20px;
+    }
+
+    .text-h2 {
+        font-size: 17px;
+    }
+
+    .text-h3 {
+        font-size: 15px;
+    }
+
+    .text-body {
+        font-size: 14px;
+    }
+
+    .text-small {
+        font-size: 13px;
+    }
+
+    .text-micro {
+        font-size: 12px;
+    }
 }
 
 /* ============================================
-   CONTAINER PADDING MOBILE - ESPACIADO
+   CONTAINER PADDING MOBILE - ESPACIADO COMPACTO
    ============================================ */
 .page-container {
-    padding: 1.25rem;
+    padding: 0.75rem; /* Reducido de 1rem a 0.75rem para ganar espacio lateral */
 }
 
 @media (max-width: 768px) {
     .page-container {
-        padding: 0.75rem;
+        padding: 0.75rem; /* Estandarización de 12px */
     }
 }
 
 /* ============================================
-   CARDS MOBILE - ESPACIOSAS
+   CARDS MOBILE - COMPACTAS
    ============================================ */
 .card {
     border-radius: var(--radius-lg);
-    padding: 1.5rem;
+    padding: 1rem;
 }
 
 @media (max-width: 768px) {
     .card {
-        padding: 1rem;
+        padding: 0.75rem;
         border-radius: var(--radius-md);
     }
 }
@@ -111,6 +128,7 @@
    INPUTS MOBILE - TAMAÑO CÓMODO
    ============================================ */
 @media (max-width: 768px) {
+
     .form-input,
     input[type="text"],
     input[type="number"],
@@ -121,7 +139,8 @@
     input[type="search"],
     textarea,
     select {
-        font-size: 16px; /* Prevenir zoom en iOS */
+        font-size: 16px;
+        /* Prevenir zoom en iOS */
         min-height: 48px;
         padding: 0.75rem 1rem;
     }
@@ -139,31 +158,31 @@
     .modal-overlay {
         padding: 0.5rem;
     }
-    
+
     .modal-content {
         max-width: 95%;
         max-height: 95vh;
         margin: 0.5rem;
         border-radius: var(--radius-lg);
     }
-    
+
     .modal-header {
         padding: 1rem;
     }
-    
+
     .modal-body {
         padding: 1rem;
         max-height: calc(95vh - 140px);
         overflow-y: auto;
     }
-    
+
     .modal-footer {
         padding: 1rem;
         flex-direction: column-reverse;
         gap: 0.5rem;
         border-top: 1px solid var(--color-border);
     }
-    
+
     .modal-footer .btn {
         width: 100%;
     }
@@ -200,19 +219,19 @@
         display: flex;
         flex-direction: column;
     }
-    
+
     .flex-mobile-wrap {
         flex-wrap: wrap;
     }
-    
+
     .gap-mobile-sm {
         gap: 0.5rem;
     }
-    
+
     .gap-mobile-md {
         gap: 0.75rem;
     }
-    
+
     .w-full-mobile {
         width: 100%;
     }
@@ -246,7 +265,7 @@
     .hide-mobile {
         display: none !important;
     }
-    
+
     .show-mobile {
         display: block !important;
     }
@@ -256,7 +275,7 @@
     .hide-mobile {
         display: none !important;
     }
-    
+
     .show-mobile {
         display: none !important;
     }
@@ -270,7 +289,7 @@
         width: 40px;
         height: 40px;
     }
-    
+
     .loading-text {
         font-size: 0.875rem;
     }
@@ -295,11 +314,11 @@
         padding-right: max(1rem, env(safe-area-inset-right));
         padding-top: max(0px, env(safe-area-inset-top));
     }
-    
+
     .page-container {
         padding-bottom: max(1rem, env(safe-area-inset-bottom));
     }
-    
+
     .mobile-bottom-nav {
         padding-bottom: max(0px, env(safe-area-inset-bottom));
     }
@@ -309,17 +328,18 @@
    ANIMACIONES PERFORMANCE MOBILE
    ============================================ */
 @media (max-width: 768px) {
+
     /* Reducir duración para mejor performance */
     * {
         animation-duration: 0.2s !important;
         transition-duration: 0.2s !important;
     }
-    
+
     /* Mantener solo animaciones esenciales */
     .btn:active {
         transform: scale(0.98);
     }
-    
+
     /* Prevenir animaciones pesadas */
     .parallax-scroll,
     .complex-animation {
@@ -337,11 +357,11 @@
         gap: 1rem;
         align-items: flex-start;
     }
-    
+
     .page-header h1 {
         font-size: 1.5rem;
     }
-    
+
     .page-actions {
         width: 100%;
         display: flex;
@@ -358,18 +378,18 @@
         flex-direction: column;
         gap: 0.75rem;
     }
-    
+
     .toolbar-search {
         width: 100%;
     }
-    
+
     .toolbar-actions {
         width: 100%;
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
     }
-    
+
     .toolbar-actions .btn {
         width: 100%;
     }
@@ -394,6 +414,7 @@
    CARDS Y LISTAS MOBILE
    ============================================ */
 @media (max-width: 768px) {
+
     .card-grid,
     .grid {
         grid-template-columns: 1fr !important;
@@ -439,6 +460,7 @@
    TOASTS Y ALERTAS MOBILE
    ============================================ */
 @media (max-width: 768px) {
+
     .toast,
     .alert {
         min-width: calc(100vw - 2rem);
@@ -478,9 +500,11 @@
    ACCESIBILIDAD MOBILE
    ============================================ */
 @media (max-width: 768px) {
+
     /* Asegurar contraste mínimo */
     .text-muted {
-        color: #475569 !important; /* Slate 600 - más oscuro para mobile */
+        color: #475569 !important;
+        /* Slate 600 - más oscuro para mobile */
     }
 
     /* Links más visibles */
@@ -500,6 +524,7 @@
    PREVENIR ZOOM EN IOS EN INPUTS
    ============================================ */
 @media (max-width: 768px) and (-webkit-min-device-pixel-ratio: 2) {
+
     input[type="text"],
     input[type="number"],
     input[type="email"],
