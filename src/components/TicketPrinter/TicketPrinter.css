@@ -206,7 +206,25 @@
     margin: 0.25rem 0;
 }
 
-/* Print-specific styles */
+/* Watermark for free plan */
+.ticket-watermark {
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background: #f3f4f6;
+    border: 1px dashed #9ca3af;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.watermark-text {
+    font-size: 9px;
+    color: #9ca3af;
+    margin: 0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 @media print {
     .ticket-printer-overlay {
         position: fixed;
@@ -245,6 +263,7 @@
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -255,6 +274,7 @@
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);

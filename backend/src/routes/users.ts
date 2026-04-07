@@ -5,6 +5,66 @@ import { sql } from 'kysely';
 import { db } from '../db/index.js';
 import { randomUUID } from 'crypto';
 
+// Helper: Check subscription user limit
+async function checkUserLimit(businessId: string, reply: any) {
+  try {
+    // Get subscription limits
+    const subResult = await db.executeQuery(
+      db.selectFrom('subscriptions')
+        .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
+        .select([
+          'subscription_plans.max_users',
+          'subscription_plans.name_short',
+          'subscription_plans.slug'
+        ])
+        .where('subscriptions.business_id', '=', businessId)
+        .where('subscriptions.status', 'in', ['active', 'trial'] as any)
+        .limit(1)
+    );
+
+    // No subscription - apply free tier limit
+    let maxUsers = 1; // Free tier
+    let planName = 'Semilla';
+    let planSlug = 'semilla';
+
+    if (subResult.rows.length > 0) {
+      const sub = subResult.rows[0];
+      maxUsers = sub.max_users || 999999; // NULL = unlimited
+      planName = sub.name_short;
+      planSlug = sub.slug;
+    }
+
+    // Count current users
+    const countResult = await db.executeQuery(
+      db.selectFrom('users')
+        .select(db.fn.count('id').as('count'))
+        .where('business_id', '=', businessId)
+        .where('is_active', '=', true)
+    );
+
+    const currentCount = Number(countResult.rows[0].count);
+
+    if (currentCount >= maxUsers) {
+      reply.code(429).send({
+        error: 'Limit Reached',
+        message: `Has alcanzado el límite de ${maxUsers} usuarios en tu plan ${planName}`,
+        limitReached: true,
+        limit: maxUsers,
+        current: currentCount,
+        resourceType: 'users',
+        suggestedPlan: planSlug === 'semilla' ? 'florecer' : planSlug === 'florecer' ? 'crecimiento' : 'jardin',
+        upgradeUrl: '/subscription/upgrade'
+      });
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error checking user limit:', error);
+    return true; // Fail open
+  }
+}
+
 export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   // Create user schema
   const createUserSchema = z.object({
@@ -92,6 +152,10 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const currentUser = request.user as any;
+
+    // Check subscription user limit
+    const canCreate = await checkUserLimit(currentUser.business_id, reply);
+    if (!canCreate) return;
 
     try {
       const body = createUserSchema.parse(request.body);

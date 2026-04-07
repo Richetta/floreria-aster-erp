@@ -61,19 +61,19 @@ fastify.get('/health', async (request, reply) => {
     const dbStatus = await checkDatabaseConnection();
     const dbUrl = config.databaseUrl || '';
     const maskedDbUrl = dbUrl.replace(/:[^:@]+@/, ':***@').replace(/\/[^/]+$/, '/***');
-    
-    return { 
-      status: dbStatus ? 'ok' : 'error', 
+
+    return {
+      status: dbStatus ? 'ok' : 'error',
       database: dbStatus ? 'connected' : 'disconnected',
       dbHost: dbUrl.split('@')[1]?.split(':')[0],
       timestamp: new Date().toISOString(),
       env: config.nodeEnv
     };
   } catch (error: any) {
-    return { 
-      status: 'error', 
+    return {
+      status: 'error',
       error: error.message,
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString()
     };
   }
 });
@@ -87,6 +87,7 @@ const PUBLIC_ROUTES = [
   '/api/auth/login',
   '/api/auth/google',
   '/api/auth/google/callback',
+  '/api/subscription/webhook/mercadopago', // MercadoPago webhook needs to receive callbacks
   '/api/health',
   '/health', // Support both paths
 ];
@@ -162,6 +163,8 @@ console.log('Loading inventory.js...');
 await fastify.register(import('./routes/inventory.js'), { prefix: '/api/inventory' });
 console.log('Loading diagnostic.js...');
 await fastify.register(import('./routes/diagnostic.js'), { prefix: '/api/admin' });
+console.log('Loading subscription.js...');
+await fastify.register(import('./routes/subscription.js'), { prefix: '/api/subscription' });
 
 // Diagnostic Route — removed for security (was exposing config without auth)
 
@@ -179,7 +182,7 @@ fastify.setNotFoundHandler((request, reply) => {
 fastify.setErrorHandler((error: any, request, reply) => {
   console.error('[SERVER ERROR]:', error);
   fastify.log.error(error);
-  
+
   if (error.validation) {
     return reply.status(400).send({
       error: 'Validation Error',
@@ -201,11 +204,11 @@ fastify.setErrorHandler((error: any, request, reply) => {
 const start = async () => {
   try {
     console.log('--- STARTING SERVER ---');
-    
+
     // Run emergency migrations
     const { runEmergencyMigrations } = await import('./db/migrations.js');
     await runEmergencyMigrations();
-    
+
     console.log(`Starting Fastify on port ${config.port}...`);
     await fastify.listen({ port: config.port, host: '0.0.0.0' });
     console.log(`🚀 Server running at http://localhost:${config.port}`);

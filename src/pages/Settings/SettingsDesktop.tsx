@@ -19,13 +19,22 @@ import {
     Check,
     X,
     Eye,
-    EyeOff
+    EyeOff,
+    CreditCard,
+    ArrowUpRight,
+    AlertTriangle,
+    Star,
+    Zap,
+    Crown,
+    Leaf,
+    Loader2
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
 import { api, type User } from '../../services/api';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
+import { SubscriptionTab } from './SubscriptionTab';
 import './Settings.css';
 
 type UserFormData = {
@@ -42,14 +51,14 @@ export const SettingsDesktop = () => {
 
     const [formData, setFormData] = useState(shopInfo);
     const [isSaved, setIsSaved] = useState(false);
-    const [activeTab, setActiveTab] = useState<'general' | 'data' | 'users'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'data' | 'users' | 'subscription'>('general');
     const [theme, setTheme] = useState('violet');
 
     const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
 
     // Themes Mapping
     const themes = {
-        violet: { primary: '#4F7A5A', name: 'mi jard�n Violet' },
+        violet: { primary: '#4F7A5A', name: 'Mi Jard�n Violet' },
         nature: { primary: '#059669', name: 'Naturaleza' },
         sky: { primary: '#0ea5e9', name: 'Cielo' },
         roses: { primary: '#f43f5e', name: 'Rosas' }
@@ -61,12 +70,12 @@ export const SettingsDesktop = () => {
         const color = themes[newTheme as keyof typeof themes].primary;
         root.style.setProperty('--color-primary', color);
         root.style.setProperty('--color-primary-dark', color); // Simplified for now
-        localStorage.setItem('mi jard�n-theme', newTheme);
+        localStorage.setItem('Mi Jard�n-theme', newTheme);
     };
 
     // Load theme on mount
     useEffect(() => {
-        const savedTheme = localStorage.getItem('mi jard�n-theme');
+        const savedTheme = localStorage.getItem('Mi Jard�n-theme');
         if (savedTheme) handleThemeChange(savedTheme);
     }, []);
 
@@ -85,9 +94,9 @@ export const SettingsDesktop = () => {
 
     // Load users on mount
     useEffect(() => {
-        const savedTheme = localStorage.getItem('mi jard�n-theme');
+        const savedTheme = localStorage.getItem('Mi Jard�n-theme');
         if (savedTheme) handleThemeChange(savedTheme);
-        
+
         if (activeTab === 'users') {
             loadUsers();
         }
@@ -122,7 +131,7 @@ export const SettingsDesktop = () => {
         }));
         const downloadAnchorNode = document.createElement('a');
         downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", `mi jard�n_erp_backup_${new Date().toISOString().split('T')[0]}.json`);
+        downloadAnchorNode.setAttribute("download", `Mi Jard�n_erp_backup_${new Date().toISOString().split('T')[0]}.json`);
         document.body.appendChild(downloadAnchorNode);
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
@@ -138,7 +147,7 @@ export const SettingsDesktop = () => {
                 const data = JSON.parse(event.target?.result as string);
                 // Simple validation
                 if (!data.products && !data.customers) throw new Error('Formato inválido');
-                
+
                 if (await showConfirm({
                     title: '¿Importar datos?',
                     message: 'Esto podría duplicar registros si ya existen.',
@@ -305,6 +314,14 @@ export const SettingsDesktop = () => {
                     <Users size={18} />
                     Usuarios
                 </button>
+                <button
+                    className={`btn ${activeTab === 'subscription' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setActiveTab('subscription')}
+                    style={{ marginLeft: 'auto' }}
+                >
+                    <CreditCard size={18} />
+                    Suscripción
+                </button>
             </div>
 
             {/* Tab: General */}
@@ -391,7 +408,7 @@ export const SettingsDesktop = () => {
                                     </button>
                                     <label className="btn btn-secondary text-micro flex-1 flex items-center justify-center gap-2 cursor-pointer">
                                         <Upload size={14} /> Importar
-                                        <input type="file" accept=".json" onChange={handleImport} style={{display: 'none'}} />
+                                        <input type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
                                     </label>
                                 </div>
                             </div>
@@ -409,32 +426,32 @@ export const SettingsDesktop = () => {
                         </h2>
 
                         <div className="theme-options grid grid-cols-2 gap-3">
-                            <div 
-                                className={`theme-preview ${theme === 'violet' ? 'active' : ''}`} 
+                            <div
+                                className={`theme-preview ${theme === 'violet' ? 'active' : ''}`}
                                 style={{ background: themes.violet.primary }}
                                 onClick={() => handleThemeChange('violet')}
                             >
                                 <div className="preview-dot" />
                                 <span>{themes.violet.name}</span>
                             </div>
-                            <div 
-                                className={`theme-preview ${theme === 'nature' ? 'active' : ''}`} 
+                            <div
+                                className={`theme-preview ${theme === 'nature' ? 'active' : ''}`}
                                 style={{ background: themes.nature.primary }}
                                 onClick={() => handleThemeChange('nature')}
                             >
                                 <div className="preview-dot" />
                                 <span>{themes.nature.name}</span>
                             </div>
-                            <div 
-                                className={`theme-preview ${theme === 'sky' ? 'active' : ''}`} 
+                            <div
+                                className={`theme-preview ${theme === 'sky' ? 'active' : ''}`}
                                 style={{ background: themes.sky.primary }}
                                 onClick={() => handleThemeChange('sky')}
                             >
                                 <div className="preview-dot" />
                                 <span>{themes.sky.name}</span>
                             </div>
-                            <div 
-                                className={`theme-preview ${theme === 'roses' ? 'active' : ''}`} 
+                            <div
+                                className={`theme-preview ${theme === 'roses' ? 'active' : ''}`}
                                 style={{ background: themes.roses.primary }}
                                 onClick={() => handleThemeChange('roses')}
                             >
@@ -557,7 +574,7 @@ export const SettingsDesktop = () => {
                                             type="text"
                                             className="form-input"
                                             value={userForm.name}
-                                            onChange={e => setUserForm({...userForm, name: e.target.value})}
+                                            onChange={e => setUserForm({ ...userForm, name: e.target.value })}
                                             placeholder="Ej: Juan Pérez"
                                             required
                                         />
@@ -569,8 +586,8 @@ export const SettingsDesktop = () => {
                                             type="email"
                                             className="form-input"
                                             value={userForm.email}
-                                            onChange={e => setUserForm({...userForm, email: e.target.value})}
-                                            placeholder="juan@floreriami jard�n.com"
+                                            onChange={e => setUserForm({ ...userForm, email: e.target.value })}
+                                            placeholder="juan@mijardin.com"
                                             required
                                         />
                                     </div>
@@ -580,7 +597,7 @@ export const SettingsDesktop = () => {
                                         <select
                                             className="form-input"
                                             value={userForm.role}
-                                            onChange={e => setUserForm({...userForm, role: e.target.value as any})}
+                                            onChange={e => setUserForm({ ...userForm, role: e.target.value as any })}
                                         >
                                             <option value="admin">Administrador (Acceso completo)</option>
                                             <option value="seller">Vendedor (Ventas, productos, clientes)</option>
@@ -598,7 +615,7 @@ export const SettingsDesktop = () => {
                                                 type={showPassword ? 'text' : 'password'}
                                                 className="form-input"
                                                 value={userForm.password}
-                                                onChange={e => setUserForm({...userForm, password: e.target.value})}
+                                                onChange={e => setUserForm({ ...userForm, password: e.target.value })}
                                                 placeholder={userToEdit ? '••••••••' : 'Mínimo 6 caracteres'}
                                                 required={!userToEdit}
                                             />
@@ -635,8 +652,14 @@ export const SettingsDesktop = () => {
                 </div>
             )}
 
+            {/* Tab: Suscripción */}
+            {activeTab === 'subscription' && (
+                <SubscriptionTab />
+            )}
+
             {alertModal && <AlertModal {...alertModal} />}
             {confirmModal && <ConfirmModal {...confirmModal} />}
         </div>
     );
 };
+

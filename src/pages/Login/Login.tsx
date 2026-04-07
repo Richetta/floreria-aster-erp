@@ -7,10 +7,11 @@ import {
     Package, ShoppingCart, TrendingUp, Truck,
     BarChart3, ChevronDown, CheckCircle2, Zap, Clock,
     ClipboardList, AlertTriangle, BarChart2, ArrowRight,
-    Star, Play
+    Star, Play, Sprout, Leaf
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { api } from '../../services/api';
+import { PricingSection } from './PricingSection';
 import './Login.css';
 
 // ============================================
@@ -134,9 +135,9 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
             {/* Header */}
             <div className="login-header">
                 <div className="login-logo">
-                    <Flower2 size={compact ? 40 : 56} className="logo-icon" />
+                    <Sprout size={compact ? 40 : 56} className="logo-icon" />
                 </div>
-                <h2 className="login-title">mi jardín</h2>
+                <h2 className="login-title">Mi Jardín</h2>
                 <p className="login-subtitle">Sistema de Gestión ERP</p>
             </div>
 
@@ -152,7 +153,7 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
             {deferredPrompt && (
                 <div className="install-pwa-container mb-6">
                     <button type="button" className="install-pwa-button" onClick={handleInstallClick}>
-                        <span>⬇️</span> Descargar e Instalar mi jardín ERP
+                        <span>⬇️</span> Descargar e Instalar Mi Jardín ERP
                     </button>
                 </div>
             )}
@@ -237,7 +238,7 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
 
             {/* Footer */}
             <div className="login-footer">
-                <p className="copyright">© 2026 mi jardín ERP</p>
+                <p className="copyright">© 2026 Mi Jardín ERP</p>
             </div>
         </div>
     );
@@ -324,9 +325,17 @@ export const Login = () => {
     const heroRef = useFadeIn();
     const problemsRef = useFadeIn();
     const solutionRef = useFadeIn();
+    const pricingRef = useFadeIn();
     const demoRef = useFadeIn();
     const benefitsRef = useFadeIn();
     const ctaRef = useFadeIn();
+
+    const handlePlanSelect = (slug: string) => {
+        // Navigate to login form with plan preselected
+        document.getElementById('login-form-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Could store plan selection for post-login upgrade
+        localStorage.setItem('selected_plan', slug);
+    };
 
     const scrollToHero = () => {
         document.getElementById('login-form-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -339,13 +348,14 @@ export const Login = () => {
                 <div className="lp-navbar__inner">
                     <div className="lp-navbar__brand">
                         <div className="lp-navbar__logo">
-                            <Flower2 size={22} />
+                            <Leaf size={22} />
                         </div>
-                        <span className="lp-navbar__name">mi jardín</span>
+                        <span className="lp-navbar__name">Mi Jardín</span>
                         <span className="lp-navbar__badge">ERP</span>
                     </div>
                     <div className="lp-navbar__actions">
                         <a href="#features" className="lp-navbar__link">Funciones</a>
+                        <a href="#pricing" className="lp-navbar__link">Precios</a>
                         <a href="#benefits" className="lp-navbar__link">Beneficios</a>
                         <button className="lp-navbar__cta" onClick={scrollToHero}>
                             Iniciar Sesión
@@ -392,7 +402,7 @@ export const Login = () => {
                         </div>
                         <div className="lp-hero__trust">
                             <CheckCircle2 size={16} className="lp-hero__trust-icon" />
-                            <span>Acceso instantáneo · Sin contratos · Soporte incluido</span>
+                            <span>Plan gratis disponible · Sin contratos · Soporte incluido</span>
                         </div>
                     </div>
 
@@ -436,7 +446,7 @@ export const Login = () => {
                         <p className="lp-section__eyebrow lp-section__eyebrow--light">La solución</p>
                         <h2 className="lp-section__title lp-section__title--light">Todo lo que necesitás, en un solo lugar</h2>
                         <p className="lp-section__subtitle lp-section__subtitle--light">
-                            mi jardín unifica todas las áreas de tu negocio
+                            Mi Jardín unifica todas las áreas de tu negocio
                         </p>
                     </div>
                     <div className="lp-features__grid fade-up">
@@ -450,6 +460,9 @@ export const Login = () => {
                     </div>
                 </div>
             </section>
+
+            {/* ── PRICING ── */}
+            <PricingSection onPlanSelect={handlePlanSelect} />
 
             {/* ── DEMO ── */}
             <section className="lp-section lp-section--gradient" id="demo">
@@ -561,7 +574,7 @@ export const Login = () => {
                 <div className="lp-footer__inner">
                     <div className="lp-footer__brand">
                         <Flower2 size={18} />
-                        <span>mi jardín ERP · © 2026</span>
+                        <span>Mi Jardín ERP · © 2026</span>
                     </div>
                     <p className="lp-footer__tagline">Hecho con 🌿 para tu jardín</p>
                 </div>

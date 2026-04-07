@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Printer, X } from 'lucide-react';
 import './TicketPrinter.css';
@@ -31,6 +31,7 @@ interface TicketPrinterProps {
     shopPhone?: string;
     shopAddress?: string;
     shopCUIT?: string;
+    showWatermark?: boolean; // True for free plan
 }
 
 export const TicketPrinter: React.FC<TicketPrinterProps> = ({
@@ -40,9 +41,20 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
     shopName = 'mi jardín',
     shopPhone = '',
     shopAddress = '',
-    shopCUIT = ''
+    shopCUIT = '',
+    showWatermark = false
 }) => {
     const componentRef = useRef<HTMLDivElement>(null);
+    const [planSlug, setPlanSlug] = useState<string>('');
+
+    // Load plan from localStorage (set during login)
+    useEffect(() => {
+        const stored = localStorage.getItem('subscription_plan_slug');
+        if (stored) setPlanSlug(stored);
+    }, []);
+
+    // Determine if watermark should show
+    const shouldWatermark = showWatermark || planSlug === 'semilla';
 
     const handlePrint = useReactToPrint({
         contentRef: componentRef,
@@ -193,9 +205,9 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
                                 <span className="ticket-label">Pago:</span>
                                 <span className="ticket-value">
                                     {ticketData.paymentMethod === 'cash' ? 'Efectivo' :
-                                     ticketData.paymentMethod === 'card' ? 'Tarjeta' :
-                                     ticketData.paymentMethod === 'transfer' ? 'Transferencia' :
-                                     ticketData.paymentMethod}
+                                        ticketData.paymentMethod === 'card' ? 'Tarjeta' :
+                                            ticketData.paymentMethod === 'transfer' ? 'Transferencia' :
+                                                ticketData.paymentMethod}
                                 </span>
                             </div>
                         )}
@@ -213,6 +225,11 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
                             <p className="ticket-footer-text">¡Gracias por su compra!</p>
                             <p className="ticket-footer-text">{shopName}</p>
                             <p className="ticket-footer-text-small">Este ticket es un comprobante válido</p>
+                            {shouldWatermark && (
+                                <div className="ticket-watermark">
+                                    <p className="watermark-text">Powered by Mi Jardín ERP - Plan Gratuito</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 

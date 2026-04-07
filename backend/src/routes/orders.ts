@@ -4,6 +4,71 @@ import { sql } from 'kysely';
 import { db } from '../db/index.js';
 import { randomUUID } from 'crypto';
 
+// Helper: Check subscription order limit
+async function checkOrderLimit(businessId: string, reply: any) {
+  try {
+    // Get subscription limits
+    const subResult = await db.executeQuery(
+      db.selectFrom('subscriptions')
+        .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
+        .select([
+          'subscription_plans.max_orders_per_month',
+          'subscription_plans.name_short',
+          'subscription_plans.slug'
+        ])
+        .where('subscriptions.business_id', '=', businessId)
+        .where('subscriptions.status', 'in', ['active', 'trial'] as any)
+        .limit(1)
+    );
+
+    // No subscription - apply free tier limit
+    let maxOrders = 30; // Free tier
+    let planName = 'Semilla';
+    let planSlug = 'semilla';
+
+    if (subResult.rows.length > 0) {
+      const sub = subResult.rows[0];
+      maxOrders = sub.max_orders_per_month || 999999; // NULL = unlimited
+      planName = sub.name_short;
+      planSlug = sub.slug;
+    }
+
+    // Count orders this month
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const countResult = await db.executeQuery(
+      db.selectFrom('orders')
+        .select(db.fn.count('id').as('count'))
+        .where('business_id', '=', businessId)
+        .where('created_at', '>=', monthStart.toISOString())
+        .where('status', '!=', 'cancelled')
+    );
+
+    const currentCount = Number(countResult.rows[0].count);
+
+    if (currentCount >= maxOrders) {
+      reply.code(429).send({
+        error: 'Limit Reached',
+        message: `Has alcanzado el límite de ${maxOrders} pedidos este mes en tu plan ${planName}`,
+        limitReached: true,
+        limit: maxOrders,
+        current: currentCount,
+        resourceType: 'orders',
+        suggestedPlan: planSlug === 'semilla' ? 'florecer' : planSlug === 'florecer' ? 'crecimiento' : 'jardin',
+        upgradeUrl: '/subscription/upgrade'
+      });
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error checking order limit:', error);
+    return true; // Fail open
+  }
+}
+
 export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
   // Create order schema
   const createOrderSchema = z.object({
@@ -65,13 +130,13 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
-    const { 
-      status, 
-      customer_id, 
-      from_date, 
-      to_date, 
+    const {
+      status,
+      customer_id,
+      from_date,
+      to_date,
       delivery_method,
-      limit = '100' 
+      limit = '100'
     } = request.query as any;
 
     let query = db
@@ -113,7 +178,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
         .selectAll()
         .where('order_id', 'in', orderIds)
         .execute();
-      
+
       const ordersWithItems = orders.map(o => ({
         ...o,
         items: allItems.filter(item => item.order_id === o.id)
@@ -172,6 +237,10 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
+    // Check subscription order limit
+    const canCreate = await checkOrderLimit(user.business_id, reply);
+    if (!canCreate) return;
+
     try {
       const body = createOrderSchema.parse(request.body);
 
@@ -180,7 +249,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       const result = await db.transaction().execute(async (trx) => {
         // Calculate total
         const totalAmount = body.items.reduce(
-          (sum, item) => sum + (item.unit_price * item.quantity), 
+          (sum, item) => sum + (item.unit_price * item.quantity),
           0
         );
 
@@ -191,7 +260,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
           .where('business_id', '=', user.business_id)
           .orderBy('order_number', 'desc')
           .executeTakeFirst();
-        
+
         const nextOrderNumber = (lastOrder?.order_number || 0) + 1;
 
         let finalCustomerId = body.customer_id;
@@ -199,43 +268,43 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
         let finalCustomerPhone = body.contact_phone || null;
 
         if (body.customer_id === 'guest') {
-            // Find or create "Consumidor Final"
-            let genericCustomer = await trx
-                .selectFrom('customers')
-                .select(['id', 'name'])
-                .where('business_id', '=', user.business_id)
-                .where('name', '=', 'Consumidor Final')
-                .executeTakeFirst();
-            
-            if (!genericCustomer) {
-                genericCustomer = await trx
-                    .insertInto('customers')
-                    .values({
-                        id: randomUUID(),
-                        business_id: user.business_id,
-                        name: 'Consumidor Final',
-                        phone: '0000',
-                        is_active: true,
-                        created_at: new Date(),
-                        updated_at: new Date()
-                    } as any)
-                    .returning(['id', 'name'])
-                    .executeTakeFirst();
-            }
-            
-            finalCustomerId = genericCustomer!.id;
-            finalCustomerName = body.guest_name || 'Consumidor Final';
-            finalCustomerPhone = body.guest_phone || null;
+          // Find or create "Consumidor Final"
+          let genericCustomer = await trx
+            .selectFrom('customers')
+            .select(['id', 'name'])
+            .where('business_id', '=', user.business_id)
+            .where('name', '=', 'Consumidor Final')
+            .executeTakeFirst();
+
+          if (!genericCustomer) {
+            genericCustomer = await trx
+              .insertInto('customers')
+              .values({
+                id: randomUUID(),
+                business_id: user.business_id,
+                name: 'Consumidor Final',
+                phone: '0000',
+                is_active: true,
+                created_at: new Date(),
+                updated_at: new Date()
+              } as any)
+              .returning(['id', 'name'])
+              .executeTakeFirst();
+          }
+
+          finalCustomerId = genericCustomer!.id;
+          finalCustomerName = body.guest_name || 'Consumidor Final';
+          finalCustomerPhone = body.guest_phone || null;
         } else {
-            // Get customer name for denormalization
-            const customerData = await trx
-                .selectFrom('customers')
-                .select(['name', 'phone'])
-                .where('id', '=', body.customer_id)
-                .executeTakeFirst();
-            
-            finalCustomerName = customerData?.name || 'Unknown';
-            finalCustomerPhone = body.contact_phone || customerData?.phone || null;
+          // Get customer name for denormalization
+          const customerData = await trx
+            .selectFrom('customers')
+            .select(['name', 'phone'])
+            .where('id', '=', body.customer_id)
+            .executeTakeFirst();
+
+          finalCustomerName = customerData?.name || 'Unknown';
+          finalCustomerPhone = body.contact_phone || customerData?.phone || null;
         }
 
         // Create order
@@ -300,7 +369,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
               payment_method: 'cash',
               reference_id: orderId,
               reference_type: 'order_advance',
-              description: `Seña para pedido #${orderId.substring(0,8)}`,
+              description: `Seña para pedido #${orderId.substring(0, 8)}`,
               created_by: user.sub,
               created_at: new Date()
             } as any)
@@ -309,16 +378,16 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
 
         // Update customer statistics
         const customer = await trx
-            .selectFrom('customers')
-            .select(['total_orders', 'debt_balance'])
-            .where('id', '=', finalCustomerId)
-            .executeTakeFirst();
+          .selectFrom('customers')
+          .select(['total_orders', 'debt_balance'])
+          .where('id', '=', finalCustomerId)
+          .executeTakeFirst();
 
         const remainingBalance = totalAmount - body.advance_payment;
-        
+
         await trx
           .updateTable('customers')
-          .set({ 
+          .set({
             total_orders: (customer?.total_orders || 0) + 1,
             debt_balance: Number(customer?.debt_balance || 0) + remainingBalance,
             last_order_date: new Date(),
@@ -411,7 +480,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
 
     const result = await db
       .updateTable('orders')
-      .set({ 
+      .set({
         status,
         updated_at: new Date()
       } as any)
@@ -568,7 +637,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       startDate.setHours(0, 0, 0, 0);
       const endDate = new Date(date);
       endDate.setHours(23, 59, 59, 999);
-      
+
       query = query
         .where('delivery_date', '>=', startDate)
         .where('delivery_date', '<=', endDate);

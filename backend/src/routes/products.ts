@@ -4,6 +4,67 @@ import { sql } from 'kysely';
 import { randomUUID } from 'crypto';
 import { db } from '../db/index.js';
 
+// Helper: Check subscription product limit
+async function checkProductLimit(businessId: string, reply: any) {
+  try {
+    // Get subscription limits
+    const subResult = await db.executeQuery(
+      db.selectFrom('subscriptions')
+        .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
+        .select([
+          'subscription_plans.max_products',
+          'subscription_plans.name_short',
+          'subscription_plans.slug',
+          'subscriptions.status'
+        ])
+        .where('subscriptions.business_id', '=', businessId)
+        .where('subscriptions.status', 'in', ['active', 'trial'] as any)
+        .limit(1)
+    );
+
+    // No subscription - apply free tier limit
+    let maxProducts = 50; // Free tier
+    let planName = 'Semilla';
+    let planSlug = 'semilla';
+
+    if (subResult.rows.length > 0) {
+      const sub = subResult.rows[0];
+      maxProducts = sub.max_products || 999999; // NULL = unlimited
+      planName = sub.name_short;
+      planSlug = sub.slug;
+    }
+
+    // Count current products
+    const countResult = await db.executeQuery(
+      db.selectFrom('products')
+        .select(db.fn.count('id').as('count'))
+        .where('business_id', '=', businessId)
+        .where('is_active', '=', true)
+    );
+
+    const currentCount = Number(countResult.rows[0].count);
+
+    if (currentCount >= maxProducts) {
+      reply.code(429).send({
+        error: 'Limit Reached',
+        message: `Has alcanzado el límite de ${maxProducts} productos en tu plan ${planName}`,
+        limitReached: true,
+        limit: maxProducts,
+        current: currentCount,
+        resourceType: 'products',
+        suggestedPlan: planSlug === 'semilla' ? 'florecer' : planSlug === 'florecer' ? 'crecimiento' : 'jardin',
+        upgradeUrl: '/subscription/upgrade'
+      });
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error checking product limit:', error);
+    return true; // Fail open
+  }
+}
+
 export const productsRoutes: FastifyPluginAsync = async (fastify) => {
   // Create product schema
   const createProductSchema = z.object({
@@ -38,57 +99,57 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     const { search, category, low_stock, active, exact_barcode } = request.query as any;
 
     const products = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        let query = trx
-            .selectFrom('products')
-            .leftJoin('categories', 'categories.id', 'products.category_id')
-            .select([
-                'products.id',
-                'products.code',
-                'products.barcode',
-                'products.name',
-                'products.description',
-                'products.cost',
-                'products.price',
-                'products.stock_quantity',
-                'products.min_stock',
-                'products.is_active',
-                'products.is_barcode',
-                'products.tags',
-                'products.category_id',
-                'categories.name as category_name'
-            ])
-            .where('products.deleted_at', 'is', null);
+      let query = trx
+        .selectFrom('products')
+        .leftJoin('categories', 'categories.id', 'products.category_id')
+        .select([
+          'products.id',
+          'products.code',
+          'products.barcode',
+          'products.name',
+          'products.description',
+          'products.cost',
+          'products.price',
+          'products.stock_quantity',
+          'products.min_stock',
+          'products.is_active',
+          'products.is_barcode',
+          'products.tags',
+          'products.category_id',
+          'categories.name as category_name'
+        ])
+        .where('products.deleted_at', 'is', null);
 
-        if (exact_barcode) {
-            query = query.where('products.barcode', '=', exact_barcode);
-        } else if (search) {
-            query = query.where((eb) => eb.or([
-                eb('products.name', 'ilike', `%${search}%`),
-                eb('products.code', 'ilike', `%${search}%`),
-                eb('products.barcode', 'ilike', `%${search}%`)
-            ]));
-        }
+      if (exact_barcode) {
+        query = query.where('products.barcode', '=', exact_barcode);
+      } else if (search) {
+        query = query.where((eb) => eb.or([
+          eb('products.name', 'ilike', `%${search}%`),
+          eb('products.code', 'ilike', `%${search}%`),
+          eb('products.barcode', 'ilike', `%${search}%`)
+        ]));
+      }
 
-        if (category && category !== 'Todos') {
-            query = query.where('products.category_id', '=', category);
-        }
+      if (category && category !== 'Todos') {
+        query = query.where('products.category_id', '=', category);
+      }
 
-        if (active !== undefined) {
-            query = query.where('is_active', '=', active === 'true');
-        }
+      if (active !== undefined) {
+        query = query.where('is_active', '=', active === 'true');
+      }
 
-        const results = await query
-          .orderBy('name', 'asc')
-          .limit(1000)
-          .execute();
+      const results = await query
+        .orderBy('name', 'asc')
+        .limit(1000)
+        .execute();
 
-        if (low_stock === 'true') {
-            return results.filter(p => (p.stock_quantity || 0) <= (p.min_stock || 5));
-        }
+      if (low_stock === 'true') {
+        return results.filter(p => (p.stock_quantity || 0) <= (p.min_stock || 5));
+      }
 
-        return results;
+      return results;
     });
 
     return reply.send(products);
@@ -108,13 +169,13 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const product = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
-        return await trx
-            .selectFrom('products')
-            .selectAll()
-            .where('id', '=', id)
-            .where('deleted_at', 'is', null)
-            .executeTakeFirst();
+      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      return await trx
+        .selectFrom('products')
+        .selectAll()
+        .where('id', '=', id)
+        .where('deleted_at', 'is', null)
+        .executeTakeFirst();
     });
 
     if (!product) {
@@ -134,15 +195,19 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    
+
+    // Check subscription product limit
+    const canCreate = await checkProductLimit(user.business_id, reply);
+    if (!canCreate) return;
+
     try {
       const body = createProductSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
         // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        const margin = body.cost > 0 
-          ? ((body.price - body.cost) / body.cost * 100) 
+        const margin = body.cost > 0
+          ? ((body.price - body.cost) / body.cost * 100)
           : null;
 
         const productId = randomUUID();
@@ -205,8 +270,8 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(400).send({ error: 'Validation error', details: error.errors });
       }
       console.error('Error creating product:', error);
-      return reply.status(500).send({ 
-        error: 'Database error while creating product', 
+      return reply.status(500).send({
+        error: 'Database error while creating product',
         message: error.message,
         hint: 'Check if the database connection is active and business_id is correct'
       });
@@ -225,7 +290,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
-    
+
     try {
       const body = updateProductSchema.parse(request.body);
 
@@ -244,7 +309,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
         if (body.cost !== undefined || body.price !== undefined) {
           const newCost = body.cost ?? currentProduct.cost;
           const newPrice = body.price ?? currentProduct.price;
-          
+
           if (currentProduct.cost !== newCost || currentProduct.price !== newPrice) {
             await trx
               .insertInto('price_history')
@@ -290,9 +355,9 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
             .execute();
         }
 
-        const margin = body.cost 
-          ? ((body.price ?? currentProduct.price) - body.cost) / body.cost * 100 
-          : body.price 
+        const margin = body.cost
+          ? ((body.price ?? currentProduct.price) - body.cost) / body.cost * 100
+          : body.price
             ? ((body.price - (currentProduct.cost)) / currentProduct.cost * 100)
             : null;
 
@@ -331,15 +396,15 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
-        await trx
-            .updateTable('products')
-            .set({ 
-                deleted_at: new Date(),
-                is_active: false
-            })
-            .where('id', '=', id)
-            .execute();
+      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await trx
+        .updateTable('products')
+        .set({
+          deleted_at: new Date(),
+          is_active: false
+        })
+        .where('id', '=', id)
+        .execute();
     });
 
     return reply.send({ success: true });
@@ -357,51 +422,51 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
-    const { quantity, reason, type } = request.body as { 
-      quantity: number; 
+    const { quantity, reason, type } = request.body as {
+      quantity: number;
       reason?: string;
       type: 'adjustment' | 'purchase' | 'waste'
     };
 
     const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        const product = await trx
-            .selectFrom('products')
-            .select(['stock_quantity', 'name'])
-            .where('id', '=', id)
-            .forUpdate()
-            .executeTakeFirst();
+      const product = await trx
+        .selectFrom('products')
+        .select(['stock_quantity', 'name'])
+        .where('id', '=', id)
+        .forUpdate()
+        .executeTakeFirst();
 
-        if (!product) throw new Error('Product not found');
+      if (!product) throw new Error('Product not found');
 
-        const newStock = Number(product.stock_quantity) + quantity;
-        if (newStock < 0) throw new Error('Insufficient stock');
+      const newStock = Number(product.stock_quantity) + quantity;
+      if (newStock < 0) throw new Error('Insufficient stock');
 
-        await trx
-            .updateTable('products')
-            .set({ stock_quantity: newStock })
-            .where('id', '=', id)
-            .execute();
+      await trx
+        .updateTable('products')
+        .set({ stock_quantity: newStock })
+        .where('id', '=', id)
+        .execute();
 
-        return await trx
-            .insertInto('stock_movements')
-            .values({
-                id: randomUUID(),
-                business_id: user.business_id,
-                product_id: id,
-                movement_type: type as any,
-                quantity: quantity,
-                balance_after: newStock,
-                reference_type: 'manual_adjustment',
-                reference_id: 'manual',
-                user_id: user.sub,
-                notes: reason || null,
-                metadata: {},
-                created_at: new Date()
-            } as any)
-            .returningAll()
-            .executeTakeFirst();
+      return await trx
+        .insertInto('stock_movements')
+        .values({
+          id: randomUUID(),
+          business_id: user.business_id,
+          product_id: id,
+          movement_type: type as any,
+          quantity: quantity,
+          balance_after: newStock,
+          reference_type: 'manual_adjustment',
+          reference_id: 'manual',
+          user_id: user.sub,
+          notes: reason || null,
+          metadata: {},
+          created_at: new Date()
+        } as any)
+        .returningAll()
+        .executeTakeFirst();
     });
 
     return reply.send(result);
@@ -421,14 +486,14 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const history = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
-        return await trx
-            .selectFrom('price_history')
-            .selectAll()
-            .where('product_id', '=', id)
-            .orderBy('created_at', 'desc')
-            .limit(100)
-            .execute();
+      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      return await trx
+        .selectFrom('price_history')
+        .selectAll()
+        .where('product_id', '=', id)
+        .orderBy('created_at', 'desc')
+        .limit(100)
+        .execute();
     });
 
     return reply.send(history);
@@ -445,7 +510,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    
+
     try {
       const body = z.object({
         productIds: z.array(z.string().uuid()).min(1),

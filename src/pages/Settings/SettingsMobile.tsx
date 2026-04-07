@@ -11,11 +11,11 @@ export const SettingsMobile = () => {
     const shopInfo = useStore(state => state.shopInfo);
     const { user, logout } = useAuth();
 
-    const [theme, setTheme] = useState(localStorage.getItem('mi jardÌn-theme') || 'violet');
+    const [theme, setTheme] = useState(localStorage.getItem('Mi JardÔøΩn-theme') || 'violet');
     const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
 
     const themes = [
-        { id: 'violet', color: '#4F7A5A', name: 'mi jardÌn Violet' },
+        { id: 'violet', color: '#4F7A5A', name: 'Mi JardÔøΩn Violet' },
         { id: 'nature', color: '#059669', name: 'Naturaleza' },
         { id: 'sky', color: '#0ea5e9', name: 'Cielo' },
         { id: 'roses', color: '#f43f5e', name: 'Rosas' }
@@ -26,7 +26,7 @@ export const SettingsMobile = () => {
         const themeObj = themes.find(t => t.id === id);
         if (themeObj) {
             document.documentElement.style.setProperty('--color-primary', themeObj.color);
-            localStorage.setItem('mi jardÌn-theme', id);
+            localStorage.setItem('Mi JardÔøΩn-theme', id);
             showAlert({ title: 'Tema actualizado', message: `Se aplic√≥ el estilo ${themeObj.name}`, variant: 'success' });
         }
     };
@@ -100,13 +100,13 @@ export const SettingsMobile = () => {
                     <h3 className="section-title">Sistema</h3>
                     <div className="settings-menu-list">
                         <div className="menu-item-row" onClick={() => {
-                            // TODO: Navigate to user management when route exists
-                            console.log('Navigate to user management');
+                            // TODO: Navigate to subscription when mobile view exists
+                            console.log('Navigate to subscription');
                         }}>
-                            <span className="material-symbols-rounded m-icon">group</span>
+                            <span className="material-symbols-rounded m-icon">credit_card</span>
                             <div className="m-text">
-                                <span className="m-title">Gestionar Usuarios</span>
-                                <span className="m-sub">Admin, Vendedores, Repartidores</span>
+                                <span className="m-title">Suscripci√≥n y Plan</span>
+                                <span className="m-sub">Ver l√≠mites y cambiar plan</span>
                             </div>
                             <span className="material-symbols-rounded m-arrow">chevron_right</span>
                         </div>
@@ -130,7 +130,7 @@ export const SettingsMobile = () => {
                         <span className="material-symbols-rounded">logout</span>
                         Cerrar Sesi√≥n
                     </button>
-                    <p className="app-version">Florer√≠a mi jardÌn ERP v2.5.0</p>
+                    <p className="app-version">Florer√≠a Mi JardÔøΩn ERP v2.5.0</p>
                 </section>
             </div>
 
