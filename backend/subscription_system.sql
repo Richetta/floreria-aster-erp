@@ -1,76 +1,56 @@
 -- ============================================
 -- SUBSCRIPTION SYSTEM - Mi Jardín ERP
 -- ============================================
--- Agrega tablas para gestión de suscripciones
--- con planes basados en features existentes
+-- Compatible con Supabase
+-- Verifica tablas existentes antes de crear FK
 -- ============================================
+
+-- Enable UUID extension (Supabase ya lo tiene, pero por si acaso)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================
 -- ENUMS
 -- ============================================
 
-CREATE TYPE subscription_status AS ENUM ('trial', 'active', 'past_due', 'cancelled', 'expired');
-CREATE TYPE billing_cycle AS ENUM ('monthly', 'annually');
-CREATE TYPE support_level AS ENUM ('email', 'whatsapp', '247');
+-- Solo crear enums si no existen
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'subscription_status') THEN
+        CREATE TYPE subscription_status AS ENUM ('trial', 'active', 'past_due', 'cancelled', 'expired');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'billing_cycle') THEN
+        CREATE TYPE billing_cycle AS ENUM ('monthly', 'annually');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'support_level') THEN
+        CREATE TYPE support_level AS ENUM ('email', 'whatsapp', '247');
+    END IF;
+END $$;
 
 -- ============================================
 -- SUBSCRIPTION PLANS
 -- ============================================
 
-CREATE TABLE subscription_plans (
+CREATE TABLE IF NOT EXISTS subscription_plans (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    slug VARCHAR(50) UNIQUE NOT NULL, -- 'semilla', 'florecer', 'crecimiento', 'jardin'
+    slug VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
-    name_short VARCHAR(50), -- 'Semilla', 'Profesional', 'Business', 'Enterprise'
+    name_short VARCHAR(50),
     description TEXT,
     price_monthly DECIMAL(10,2) NOT NULL DEFAULT 0,
     price_annually DECIMAL(10,2) NOT NULL DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     sort_order INT DEFAULT 0,
-    badge_text VARCHAR(50), -- '⭐ MÁS POPULAR', '🏆 Precio Fundador'
+    badge_text VARCHAR(50),
     badge_color VARCHAR(20) DEFAULT '#4F7A5A',
-    
-    -- Límites por plan
-    max_users INT, -- NULL = ilimitado
-    max_products INT, -- NULL = ilimitado
-    max_orders_per_month INT, -- NULL = ilimitado
-    max_categories INT, -- NULL = ilimitado
-    max_afip_invoices INT, -- NULL = ilimitado
-    max_branches INT DEFAULT 1, -- NULL = ilimitado
-    
-    -- Features (JSONB para flexibilidad)
+    max_users INT,
+    max_products INT,
+    max_orders_per_month INT,
+    max_categories INT,
+    max_afip_invoices INT,
+    max_branches INT DEFAULT 1,
     features JSONB NOT NULL DEFAULT '{}',
-    /*
-    Estructura de features:
-    {
-      "pos": true,
-      "dashboard": "basic" | "full",
-      "kanban": true,
-      "calendar_view": boolean,
-      "reports": boolean, -- 4 tabs completos
-      "cash_register": boolean,
-      "waste_management": boolean,
-      "barcode": boolean,
-      "logistics": false | "basic" | "full",
-      "reminders": boolean,
-      "ocr_pricing": boolean,
-      "packages": boolean,
-      "supplier_purchases": boolean,
-      "auto_restock": boolean,
-      "crm_full": boolean,
-      "stock_movements": boolean,
-      "export_csv": boolean,
-      "import_csv": boolean,
-      "afip_integration": boolean,
-      "mercadopago_integration": boolean,
-      "multi_branch": boolean,
-      "api_access": boolean,
-      "white_label": boolean,
-      "support_level": "email" | "whatsapp" | "247",
-      "watermark_tickets": boolean
-    }
-    */
-    
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -78,106 +58,183 @@ CREATE TABLE subscription_plans (
 -- ============================================
 -- SUBSCRIPTIONS
 -- ============================================
-
-CREATE TABLE subscriptions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-    plan_id UUID NOT NULL REFERENCES subscription_plans(id),
-    status subscription_status DEFAULT 'trial',
-    billing_cycle billing_cycle DEFAULT 'monthly',
-    
-    -- Período actual
-    current_period_start DATE,
-    current_period_end DATE,
-    trial_ends_at DATE, -- NULL si no hay trial
-    cancel_at_period_end BOOLEAN DEFAULT FALSE,
-    cancelled_at TIMESTAMP WITH TIME ZONE,
-    cancellation_reason TEXT,
-    
-    -- Precio congelado (para founders/early adopters)
-    locked_price_monthly DECIMAL(10,2), -- NULL = precio normal del plan
-    locked_price_annually DECIMAL(10,2), -- NULL = precio normal del plan
-    locked_until DATE, -- NULL = sin lock
-    
-    -- MercadoPago integration
-    mp_subscription_id VARCHAR(255),
-    mp_customer_id VARCHAR(255),
-    mp_preapproval_id VARCHAR(255),
-    last_mp_payment_id VARCHAR(255),
-    
-    -- Tracking de uso
-    orders_this_month INT DEFAULT 0,
-    last_order_count_reset DATE,
-    
-    -- Notas internas
-    admin_notes TEXT,
-    
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    -- Constraints
-    UNIQUE(business_id),
-    CHECK (current_period_start <= current_period_end)
-);
-
--- Índice para queries frecuentes
-CREATE INDEX idx_subscriptions_business_id ON subscriptions(business_id);
-CREATE INDEX idx_subscriptions_status ON subscriptions(status);
-CREATE INDEX idx_subscriptions_plan_id ON subscriptions(plan_id);
-CREATE INDEX idx_subscriptions_period_end ON subscriptions(current_period_end);
-
--- ============================================
--- USAGE LOGS (para analytics)
+-- Nota: business_id UUID sin FK si businesses no existe
 -- ============================================
 
-CREATE TABLE subscription_usage_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-    month DATE NOT NULL, -- Primer día del mes (2025-04-01)
-    users_count INT DEFAULT 0,
-    products_count INT DEFAULT 0,
-    orders_count INT DEFAULT 0,
-    categories_count INT DEFAULT 0,
-    afip_invoices_count INT DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+DO $$ 
+DECLARE
+    has_businesses BOOLEAN;
+BEGIN
+    has_businesses := EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'businesses');
     
-    -- Un log por negocio por mes
-    UNIQUE(business_id, month)
-);
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'subscriptions') THEN
+        IF has_businesses THEN
+            -- Con foreign key
+            EXECUTE '
+            CREATE TABLE subscriptions (
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+                plan_id UUID NOT NULL REFERENCES subscription_plans(id),
+                status subscription_status DEFAULT ''trial'',
+                billing_cycle billing_cycle DEFAULT ''monthly'',
+                current_period_start DATE,
+                current_period_end DATE,
+                trial_ends_at DATE,
+                cancel_at_period_end BOOLEAN DEFAULT FALSE,
+                cancelled_at TIMESTAMP WITH TIME ZONE,
+                cancellation_reason TEXT,
+                locked_price_monthly DECIMAL(10,2),
+                locked_price_annually DECIMAL(10,2),
+                locked_until DATE,
+                mp_subscription_id VARCHAR(255),
+                mp_customer_id VARCHAR(255),
+                mp_preapproval_id VARCHAR(255),
+                last_mp_payment_id VARCHAR(255),
+                orders_this_month INT DEFAULT 0,
+                last_order_count_reset DATE,
+                admin_notes TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                UNIQUE(business_id),
+                CHECK (current_period_start <= current_period_end)
+            )';
+        ELSE
+            -- Sin foreign key (Supabase sin schema principal)
+            EXECUTE '
+            CREATE TABLE subscriptions (
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                business_id UUID NOT NULL,
+                plan_id UUID NOT NULL REFERENCES subscription_plans(id),
+                status subscription_status DEFAULT ''trial'',
+                billing_cycle billing_cycle DEFAULT ''monthly'',
+                current_period_start DATE,
+                current_period_end DATE,
+                trial_ends_at DATE,
+                cancel_at_period_end BOOLEAN DEFAULT FALSE,
+                cancelled_at TIMESTAMP WITH TIME ZONE,
+                cancellation_reason TEXT,
+                locked_price_monthly DECIMAL(10,2),
+                locked_price_annually DECIMAL(10,2),
+                locked_until DATE,
+                mp_subscription_id VARCHAR(255),
+                mp_customer_id VARCHAR(255),
+                mp_preapproval_id VARCHAR(255),
+                last_mp_payment_id VARCHAR(255),
+                orders_this_month INT DEFAULT 0,
+                last_order_count_reset DATE,
+                admin_notes TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                UNIQUE(business_id),
+                CHECK (current_period_start <= current_period_end)
+            )';
+        END IF;
+        
+        RAISE NOTICE 'Tabla subscriptions creada correctamente';
+    ELSE
+        RAISE NOTICE 'Tabla subscriptions ya existe - saltando';
+    END IF;
+END $$;
 
--- Índice para queries de analytics
-CREATE INDEX idx_usage_logs_business_month ON subscription_usage_logs(business_id, month DESC);
+-- Índices para subscriptions
+CREATE INDEX IF NOT EXISTS idx_subscriptions_business_id ON subscriptions(business_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_plan_id ON subscriptions(plan_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_period_end ON subscriptions(current_period_end);
 
 -- ============================================
--- SUBSCRIPTION EVENTS LOG (audit trail)
+-- USAGE LOGS
 -- ============================================
 
-CREATE TABLE subscription_events (
+DO $$ 
+DECLARE
+    has_businesses BOOLEAN;
+BEGIN
+    has_businesses := EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'businesses');
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'subscription_usage_logs') THEN
+        IF has_businesses THEN
+            EXECUTE '
+            CREATE TABLE subscription_usage_logs (
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+                month DATE NOT NULL,
+                users_count INT DEFAULT 0,
+                products_count INT DEFAULT 0,
+                orders_count INT DEFAULT 0,
+                categories_count INT DEFAULT 0,
+                afip_invoices_count INT DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                UNIQUE(business_id, month)
+            )';
+        ELSE
+            EXECUTE '
+            CREATE TABLE subscription_usage_logs (
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                business_id UUID NOT NULL,
+                month DATE NOT NULL,
+                users_count INT DEFAULT 0,
+                products_count INT DEFAULT 0,
+                orders_count INT DEFAULT 0,
+                categories_count INT DEFAULT 0,
+                afip_invoices_count INT DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                UNIQUE(business_id, month)
+            )';
+        END IF;
+        
+        RAISE NOTICE 'Tabla subscription_usage_logs creada correctamente';
+    ELSE
+        RAISE NOTICE 'Tabla subscription_usage_logs ya existe - saltando';
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_usage_logs_business_month ON subscription_usage_logs(business_id, month DESC);
+
+-- ============================================
+-- SUBSCRIPTION EVENTS
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS subscription_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     subscription_id UUID NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
-    event_type VARCHAR(50) NOT NULL, -- 'created', 'upgraded', 'downgraded', 'cancelled', 'reactivated', 'payment_success', 'payment_failed', 'trial_ended'
+    event_type VARCHAR(50) NOT NULL,
     old_plan_id UUID REFERENCES subscription_plans(id),
     new_plan_id UUID REFERENCES subscription_plans(id),
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Índice para tracking de eventos
-CREATE INDEX idx_subscription_events_subscription ON subscription_events(subscription_id);
-CREATE INDEX idx_subscription_events_type ON subscription_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_subscription_events_subscription ON subscription_events(subscription_id);
+CREATE INDEX IF NOT EXISTS idx_subscription_events_type ON subscription_events(event_type);
 
 -- ============================================
--- AGREGAR COLUMNAS A BUSINESS PARA FEATURES
+-- AGREGAR COLUMNAS A BUSINESS (si existe)
 -- ============================================
 
--- Agregamos una referencia rápida al plan actual para no hacer joins constantes
-ALTER TABLE businesses 
-ADD COLUMN current_plan_slug VARCHAR(50),
-ADD COLUMN subscription_status subscription_status DEFAULT 'trial',
-ADD COLUMN subscription_features JSONB DEFAULT '{}';
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'businesses') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'businesses' AND column_name = 'current_plan_slug') THEN
+            ALTER TABLE businesses ADD COLUMN current_plan_slug VARCHAR(50);
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'businesses' AND column_name = 'subscription_status') THEN
+            ALTER TABLE businesses ADD COLUMN subscription_status subscription_status DEFAULT 'trial';
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'businesses' AND column_name = 'subscription_features') THEN
+            ALTER TABLE businesses ADD COLUMN subscription_features JSONB DEFAULT '{}';
+        END IF;
+        
+        RAISE NOTICE 'Columnas de suscripción agregadas a businesses';
+    ELSE
+        RAISE NOTICE 'Tabla businesses no encontrada - saltando alteración de columnas (esto es normal si usás Supabase sin schema local)';
+    END IF;
+END $$;
 
 -- ============================================
--- INSERTAR PLANES INICIALES
+-- INSERTAR PLANES INICIALES (idempotente)
 -- ============================================
 
 INSERT INTO subscription_plans (
@@ -196,70 +253,18 @@ INSERT INTO subscription_plans (
     1, 50, 30, 1, 0, 1,
     NULL,
     1,
-    '{
-      "pos": true,
-      "dashboard": "basic",
-      "kanban": true,
-      "calendar_view": false,
-      "reports": false,
-      "cash_register": false,
-      "waste_management": false,
-      "barcode": false,
-      "logistics": false,
-      "reminders": false,
-      "ocr_pricing": false,
-      "packages": false,
-      "supplier_purchases": false,
-      "auto_restock": false,
-      "crm_full": false,
-      "stock_movements": false,
-      "export_csv": false,
-      "import_csv": false,
-      "afip_integration": false,
-      "mercadopago_integration": false,
-      "multi_branch": false,
-      "api_access": false,
-      "white_label": false,
-      "support_level": "email",
-      "watermark_tickets": true
-    }'::jsonb
+    '{"pos":true,"dashboard":"basic","kanban":true,"calendar_view":false,"reports":false,"cash_register":false,"waste_management":false,"barcode":false,"logistics":false,"reminders":false,"ocr_pricing":false,"packages":false,"supplier_purchases":false,"auto_restock":false,"crm_full":false,"stock_movements":false,"export_csv":false,"import_csv":false,"afip_integration":false,"mercadopago_integration":false,"multi_branch":false,"api_access":false,"white_label":false,"support_level":"email","watermark_tickets":true}'::jsonb
 ),
 (
     'florecer',
     'Florecer - Plan Profesional',
     'Profesional',
-    'El más elegido. Todo lo que necesités para manejar tu florería como corresponde.',
+    'El más elegido. Todo lo que necesitás para manejar tu florería como corresponde.',
     18000, 180000,
     5, 500, 200, 10, 0, 1,
     '⭐ MÁS POPULAR',
     2,
-    '{
-      "pos": true,
-      "dashboard": "full",
-      "kanban": true,
-      "calendar_view": true,
-      "reports": true,
-      "cash_register": true,
-      "waste_management": true,
-      "barcode": true,
-      "logistics": "basic",
-      "reminders": true,
-      "ocr_pricing": false,
-      "packages": false,
-      "supplier_purchases": false,
-      "auto_restock": false,
-      "crm_full": false,
-      "stock_movements": false,
-      "export_csv": true,
-      "import_csv": true,
-      "afip_integration": false,
-      "mercadopago_integration": false,
-      "multi_branch": false,
-      "api_access": false,
-      "white_label": false,
-      "support_level": "email",
-      "watermark_tickets": false
-    }'::jsonb
+    '{"pos":true,"dashboard":"full","kanban":true,"calendar_view":true,"reports":true,"cash_register":true,"waste_management":true,"barcode":true,"logistics":"basic","reminders":true,"ocr_pricing":false,"packages":false,"supplier_purchases":false,"auto_restock":false,"crm_full":false,"stock_movements":false,"export_csv":true,"import_csv":true,"afip_integration":false,"mercadopago_integration":false,"multi_branch":false,"api_access":false,"white_label":false,"support_level":"email","watermark_tickets":false}'::jsonb
 ),
 (
     'crecimiento',
@@ -270,33 +275,7 @@ INSERT INTO subscription_plans (
     15, 2000, NULL, NULL, 500, 1,
     NULL,
     3,
-    '{
-      "pos": true,
-      "dashboard": "full",
-      "kanban": true,
-      "calendar_view": true,
-      "reports": true,
-      "cash_register": true,
-      "waste_management": true,
-      "barcode": true,
-      "logistics": "full",
-      "reminders": true,
-      "ocr_pricing": true,
-      "packages": true,
-      "supplier_purchases": true,
-      "auto_restock": true,
-      "crm_full": true,
-      "stock_movements": true,
-      "export_csv": true,
-      "import_csv": true,
-      "afip_integration": true,
-      "mercadopago_integration": true,
-      "multi_branch": false,
-      "api_access": false,
-      "white_label": false,
-      "support_level": "whatsapp",
-      "watermark_tickets": false
-    }'::jsonb
+    '{"pos":true,"dashboard":"full","kanban":true,"calendar_view":true,"reports":true,"cash_register":true,"waste_management":true,"barcode":true,"logistics":"full","reminders":true,"ocr_pricing":true,"packages":true,"supplier_purchases":true,"auto_restock":true,"crm_full":true,"stock_movements":true,"export_csv":true,"import_csv":true,"afip_integration":true,"mercadopago_integration":true,"multi_branch":false,"api_access":false,"white_label":false,"support_level":"whatsapp","watermark_tickets":false}'::jsonb
 ),
 (
     'jardin',
@@ -307,34 +286,21 @@ INSERT INTO subscription_plans (
     NULL, NULL, NULL, NULL, NULL, NULL,
     NULL,
     4,
-    '{
-      "pos": true,
-      "dashboard": "full",
-      "kanban": true,
-      "calendar_view": true,
-      "reports": true,
-      "cash_register": true,
-      "waste_management": true,
-      "barcode": true,
-      "logistics": "full",
-      "reminders": true,
-      "ocr_pricing": true,
-      "packages": true,
-      "supplier_purchases": true,
-      "auto_restock": true,
-      "crm_full": true,
-      "stock_movements": true,
-      "export_csv": true,
-      "import_csv": true,
-      "afip_integration": true,
-      "mercadopago_integration": true,
-      "multi_branch": true,
-      "api_access": true,
-      "white_label": true,
-      "support_level": "247",
-      "watermark_tickets": false
-    }'::jsonb
-);
+    '{"pos":true,"dashboard":"full","kanban":true,"calendar_view":true,"reports":true,"cash_register":true,"waste_management":true,"barcode":true,"logistics":"full","reminders":true,"ocr_pricing":true,"packages":true,"supplier_purchases":true,"auto_restock":true,"crm_full":true,"stock_movements":true,"export_csv":true,"import_csv":true,"afip_integration":true,"mercadopago_integration":true,"multi_branch":true,"api_access":true,"white_label":true,"support_level":"247","watermark_tickets":false}'::jsonb
+)
+ON CONFLICT (slug) DO UPDATE SET
+    name = EXCLUDED.name,
+    name_short = EXCLUDED.name_short,
+    description = EXCLUDED.description,
+    price_monthly = EXCLUDED.price_monthly,
+    price_annually = EXCLUDED.price_annually,
+    max_users = EXCLUDED.max_users,
+    max_products = EXCLUDED.max_products,
+    max_orders_per_month = EXCLUDED.max_orders_per_month,
+    max_categories = EXCLUDED.max_categories,
+    features = EXCLUDED.features,
+    badge_text = EXCLUDED.badge_text,
+    updated_at = NOW();
 
 -- ============================================
 -- FUNCTIONS & TRIGGERS
@@ -349,16 +315,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Triggers para actualizar updated_at
-CREATE TRIGGER update_subscription_plans_updated_at
-    BEFORE UPDATE ON subscription_plans
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_subscriptions_updated_at
-    BEFORE UPDATE ON subscriptions
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+-- Triggers (solo si las tablas existen)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'subscription_plans') THEN
+        DROP TRIGGER IF EXISTS update_subscription_plans_updated_at ON subscription_plans;
+        CREATE TRIGGER update_subscription_plans_updated_at
+            BEFORE UPDATE ON subscription_plans
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'subscriptions') THEN
+        DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON subscriptions;
+        CREATE TRIGGER update_subscriptions_updated_at
+            BEFORE UPDATE ON subscriptions
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- Función para resetear contador de pedidos mensual
 CREATE OR REPLACE FUNCTION reset_monthly_order_counts()
@@ -373,7 +348,7 @@ BEGIN
         orders_this_month = 0,
         last_order_count_reset = current_month_start
     WHERE 
-        status = 'active'
+        status IN ('active', 'trial')
         AND (last_order_count_reset IS NULL OR last_order_count_reset < current_month_start);
 END;
 $$ LANGUAGE plpgsql;
@@ -390,11 +365,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
--- VISTAS ÚTILES
+-- VISTAS
 -- ============================================
 
 -- Vista: suscripciones activas con info del plan
-CREATE VIEW v_active_subscriptions AS
+CREATE OR REPLACE VIEW v_active_subscriptions AS
 SELECT 
     s.id,
     s.business_id,
@@ -419,12 +394,12 @@ SELECT
         ELSE 'valid'
     END AS validity_status
 FROM subscriptions s
-JOIN businesses b ON s.business_id = b.id
+LEFT JOIN businesses b ON s.business_id = b.id
 JOIN subscription_plans p ON s.plan_id = p.id
 WHERE s.status IN ('active', 'trial');
 
 -- Vista: métricas de uso por plan
-CREATE VIEW v_subscription_metrics AS
+CREATE OR REPLACE VIEW v_subscription_metrics AS
 SELECT 
     p.slug AS plan_slug,
     p.name_short AS plan_name,
@@ -443,20 +418,6 @@ WHERE p.is_active = TRUE
 GROUP BY p.slug, p.name_short;
 
 -- ============================================
--- COMENTARIOS
--- ============================================
-
-COMMENT ON TABLE subscription_plans IS 'Define los planes de suscripción con sus límites y features';
-COMMENT ON TABLE subscriptions IS 'Suscripción activa de cada negocio';
-COMMENT ON TABLE subscription_usage_logs IS 'Histórico de uso por mes para analytics';
-COMMENT ON TABLE subscription_events IS 'Audit trail de eventos de suscripción';
-
-COMMENT ON COLUMN subscription_plans.features IS 'JSON con flags de features habilitadas';
-COMMENT ON COLUMN subscriptions.locked_price_monthly IS 'Precio congelado para founders/promos';
-COMMENT ON COLUMN subscriptions.orders_this_month IS 'Contador actual de pedidos este mes';
-
--- ============================================
 -- LISTO!
 -- ============================================
--- Ejecutar: psql -d tu_database -f subscription_system.sql
 -- Verificar: SELECT * FROM subscription_plans ORDER BY sort_order;
