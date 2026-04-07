@@ -64,9 +64,10 @@
 
 .camera-scanner-view {
     position: relative;
-    width: 80%; /* Más estrecho en pantalla vertical para que al rotar el móvil sea el área de interés */
+    width: 90%; 
+    max-width: 400px;
     margin: 0 auto;
-    aspect-ratio: 9 / 16; /* Vertical en pantalla, se convierte en horizontal al rotar el móvil */
+    aspect-ratio: 1 / 1; 
     background: #000;
     display: flex;
     align-items: center;
@@ -75,12 +76,11 @@
     border-radius: 12px;
 }
 
-/* Rotación de la cámara para uso horizontal */
+/* Vista normal de la cámara sin rotación forzada */
 .camera-scanner-view video {
-    transform: rotate(90deg);
-    min-width: 100%;
-    min-height: 100%;
-    object-fit: cover;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
 }
 
 .barcode-finder {

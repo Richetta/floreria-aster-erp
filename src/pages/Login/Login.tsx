@@ -188,7 +188,7 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
                         <input
                             type="text"
                             className="form-input"
-                            placeholder="admin o email..."
+                            placeholder="Email o usuario..."
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             disabled={isLoading}
@@ -234,18 +234,6 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
                 </button>
             </form>
 
-            {/* Demo Credentials */}
-            <div className="demo-credentials">
-                <p className="demo-title">🔑 Acceso rápido de desarrollo:</p>
-                <div className="demo-info">
-                    <span className="demo-label">Usuario:</span>
-                    <code>admin</code>
-                </div>
-                <div className="demo-info">
-                    <span className="demo-label">Password:</span>
-                    <code>admin</code>
-                </div>
-            </div>
 
             {/* Footer */}
             <div className="login-footer">
