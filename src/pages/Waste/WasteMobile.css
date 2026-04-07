@@ -4,9 +4,9 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: #f8fafc;
+    background: #F6F4EF;
     padding-bottom: 120px;
-    color: #1e293b;
+    color: #3A3A3A;
 }
 
 /* Header */
@@ -16,7 +16,7 @@
     align-items: flex-start;
     padding: 0.875rem 1rem;
     background: white;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #D1CDBF;
 }
 
 .header-left h2 {
@@ -34,14 +34,14 @@
 }
 
 .icon-btn-export {
-    background: #f1f5f9;
+    background: #F6F4EF;
     width: 38px;
     height: 38px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #64748b;
+    color: #6B6B6B;
     border: none;
     flex-shrink: 0;
 }
@@ -57,7 +57,7 @@
     padding: 0.75rem 1rem;
     overflow-x: auto;
     background: white;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #D1CDBF;
 }
 
 .waste-date-filters::-webkit-scrollbar {
@@ -68,11 +68,11 @@
     white-space: nowrap;
     padding: 0.5rem 0.875rem;
     border-radius: 100px;
-    background: #f1f5f9;
+    background: #F6F4EF;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #64748b;
-    border: 1px solid #e2e8f0;
+    color: #6B6B6B;
+    border: 1px solid #D1CDBF;
 }
 
 .date-chip.active {
@@ -94,7 +94,7 @@
 .spinner-waste {
     width: 32px;
     height: 32px;
-    border: 3px solid #e2e8f0;
+    border: 3px solid #D1CDBF;
     border-top-color: #ef4444;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
@@ -106,7 +106,7 @@
 
 .waste-loading p {
     font-size: 0.875rem;
-    color: #64748b;
+    color: #6B6B6B;
 }
 
 /* Content */
@@ -180,7 +180,7 @@
     font-size: 0.875rem;
     font-weight: 700;
     margin: 0 0 0.75rem 0;
-    color: #1e293b;
+    color: #3A3A3A;
 }
 
 .waste-chart {
@@ -199,7 +199,7 @@
     font-size: 0.875rem;
     font-weight: 700;
     margin: 0 0 0.75rem 0;
-    color: #1e293b;
+    color: #3A3A3A;
 }
 
 /* Top Products List */
@@ -214,9 +214,9 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem;
-    background: #f8fafc;
+    background: #F6F4EF;
     border-radius: 12px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #D1CDBF;
 }
 
 .rank-circle {
@@ -241,7 +241,7 @@
 .top-product-name {
     font-size: 0.875rem;
     font-weight: 700;
-    color: #1e293b;
+    color: #3A3A3A;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -267,8 +267,8 @@
     align-items: center;
     gap: 0.625rem;
     padding: 0.75rem 1rem;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    background: #F6F4EF;
+    border-bottom: 1px solid #D1CDBF;
 }
 
 .waste-search-box .material-symbols-rounded {
@@ -304,7 +304,7 @@
     justify-content: space-between;
     align-items: flex-start;
     padding: 0.875rem 1rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid #F6F4EF;
 }
 
 .history-item:last-child {
@@ -320,7 +320,7 @@
 .history-title {
     font-size: 0.875rem;
     font-weight: 700;
-    color: #1e293b;
+    color: #3A3A3A;
     margin-bottom: 4px;
     line-height: 1.3;
 }

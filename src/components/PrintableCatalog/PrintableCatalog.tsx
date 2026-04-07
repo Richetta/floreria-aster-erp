@@ -22,7 +22,7 @@ export const PrintableCatalog = React.forwardRef<HTMLDivElement, PrintableCatalo
     <div ref={ref} className="printable-catalog">
       <div className="print-header">
         <div className="brand">
-          <h1>Florería Aster</h1>
+          <h1>mi jardín</h1>
           <p>Catálogo de Productos</p>
         </div>
         <div className="info">
@@ -53,7 +53,7 @@ export const PrintableCatalog = React.forwardRef<HTMLDivElement, PrintableCatalo
       </table>
 
       <div className="print-footer">
-        <p>Florería Aster ERP - Documento generado automáticamente</p>
+        <p>mi jardín ERP - Documento generado automáticamente</p>
       </div>
     </div>
   );

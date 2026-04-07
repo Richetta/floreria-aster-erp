@@ -1,5 +1,4 @@
--- ============================================
--- ASTER ERP - SUPABASE SCHEMA
+-- mi jardín ERP - SUPABASE SCHEMA
 -- ============================================
 -- Ejecutar en: https://supabase.com/dashboard/project/lddrseslgkdaetsidyrv → SQL Editor
 -- ============================================
@@ -375,13 +374,12 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
 -- ============================================
 
 -- Create default business
-INSERT INTO businesses (id, name, tax_id, phone, email, currency) VALUES
-    ('00000000-0000-0000-0000-000000000001', 'Florería Aster', '20-12345678-9', '11-1234-5678', 'contacto@floreriaaster.com', 'ARS')
+    ('00000000-0000-0000-0000-000000000001', 'mi jardín', '20-12345678-9', '11-1234-5678', 'contacto@mijardin.com', 'ARS')
 ON CONFLICT (id) DO NOTHING;
 
 -- Create admin user (password: admin123)
 INSERT INTO users (business_id, name, email, password_hash, role) VALUES
-    ('00000000-0000-0000-0000-000000000001', 'Administrador', 'admin@floreriaaster.com', '$2b$10$rH0zGzJvzJvzJvzJvzJvzOYvzJvzJvzJvzJvzJvzJvzJvzJvzJvz', 'admin')
+    ('00000000-0000-0000-0000-000000000001', 'Administrador', 'admin@mijardin.com', '$2b$10$rH0zGzJvzJvzJvzJvzJvzOYvzJvzJvzJvzJvzJvzJvzJvzJvzJvz', 'admin')
 ON CONFLICT (business_id, email) DO NOTHING;
 
 -- Create default categories

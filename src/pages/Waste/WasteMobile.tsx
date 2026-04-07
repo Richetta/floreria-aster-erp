@@ -171,7 +171,7 @@ export const WasteMobile = () => {
                                                 <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D1CDBF" />
                                         <XAxis dataKey="date" tick={{fontSize: 9}} dy={5} />
                                         <YAxis tick={{fontSize: 9}} tickFormatter={(val) => `$${val}`} />
                                         <Tooltip formatter={(value: any) => [`$${Number(value || 0).toLocaleString()}`, 'Pérdida']} />

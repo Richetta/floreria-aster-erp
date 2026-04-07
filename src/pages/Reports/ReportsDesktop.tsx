@@ -109,7 +109,7 @@ export const ReportsDesktop = () => {
         }
     };
 
-    const COLORS = ['#9b51e0', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6'];
+    const COLORS = ['#4F7A5A', '#3b82f6', '#4F7A5A', '#f59e0b', '#ef4444', '#ec4899', '#608d6d'];
 
     return (
         <div className="reports-page">
@@ -218,7 +218,7 @@ export const ReportsDesktop = () => {
                         width: 50,
                         height: 50,
                         border: '4px solid #e5e7eb',
-                        borderTopColor: '#9b51e0',
+                        borderTopColor: '#4F7A5A',
                         borderRadius: '50%',
                         animation: 'spin 1s linear infinite',
                         margin: '0 auto 1rem'
@@ -280,7 +280,7 @@ export const ReportsDesktop = () => {
                                             <XAxis dataKey="period" />
                                             <YAxis />
                                             <Tooltip />
-                                            <Line type="monotone" dataKey="total_amount" stroke="#9b51e0" strokeWidth={3} />
+                                            <Line type="monotone" dataKey="total_amount" stroke="#4F7A5A" strokeWidth={3} />
                                         </LineChart>
                                     </ResponsiveContainer>
                                 </div>

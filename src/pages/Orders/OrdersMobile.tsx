@@ -75,7 +75,7 @@ export const OrdersMobile = () => {
             case 'ready': return { label: 'Listo', color: '#ffffff', bg: '#3b82f6', icon: 'check_circle' };
             case 'out_for_delivery': return { label: 'En Camino', color: '#ffffff', bg: '#f59e0b', icon: 'local_shipping' };
             case 'delivered': return { label: 'Entregado', color: '#ffffff', bg: '#22c55e', icon: 'task_alt' };
-            default: return { label: status, color: '#ffffff', bg: '#64748b', icon: 'help' };
+            default: return { label: status, color: '#ffffff', bg: '#6B6B6B', icon: 'help' };
         }
     };
 

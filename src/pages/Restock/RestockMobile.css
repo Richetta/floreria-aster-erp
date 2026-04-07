@@ -4,9 +4,9 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: #f8fafc;
+    background: #F6F4EF;
     padding-bottom: 120px;
-    color: #1e293b;
+    color: #3A3A3A;
 }
 
 /* Loading */
@@ -22,8 +22,8 @@
 .spinner-restock {
     width: 36px;
     height: 36px;
-    border: 3px solid #e2e8f0;
-    border-top-color: #10b981;
+    border: 3px solid #D1CDBF;
+    border-top-color: #4F7A5A;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -34,7 +34,7 @@
 
 .restock-loading p {
     font-size: 0.875rem;
-    color: #64748b;
+    color: #6B6B6B;
 }
 
 /* Header */
@@ -44,14 +44,14 @@
     align-items: center;
     padding: 0.875rem 1rem;
     background: white;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #D1CDBF;
 }
 
 .header-info h2 {
     font-size: 1.1rem;
     font-weight: 700;
     margin: 0;
-    color: #10b981;
+    color: #4F7A5A;
 }
 
 .header-count {
@@ -90,25 +90,25 @@
 
 .restock-empty .material-symbols-rounded {
     font-size: 56px;
-    color: #10b981;
+    color: #4F7A5A;
 }
 
 .restock-empty h3 {
     font-size: 1.1rem;
     font-weight: 700;
     margin: 0;
-    color: #1e293b;
+    color: #3A3A3A;
 }
 
 .restock-empty p {
     font-size: 0.875rem;
-    color: #64748b;
+    color: #6B6B6B;
     margin: 0;
 }
 
 .btn-back-dashboard {
     margin-top: 0.75rem;
-    background: #10b981;
+    background: #4F7A5A;
     color: white;
     padding: 0.875rem 1.5rem;
     border-radius: 100px;
@@ -151,7 +151,7 @@
     padding: 0.875rem 1rem;
     cursor: pointer;
     background: white;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid #F6F4EF;
 }
 
 .supplier-info {
@@ -162,7 +162,7 @@
 
 .supplier-info .material-symbols-rounded {
     font-size: 24px;
-    color: #10b981;
+    color: #4F7A5A;
 }
 
 .supplier-card-mobile.unassigned .supplier-info .material-symbols-rounded {
@@ -173,7 +173,7 @@
     font-size: 0.95rem;
     font-weight: 700;
     margin: 0;
-    color: #1e293b;
+    color: #3A3A3A;
 }
 
 .supplier-count {
@@ -239,7 +239,7 @@
     padding: 0.75rem;
     border-radius: 10px;
     margin-bottom: 0.5rem;
-    background: #f8fafc;
+    background: #F6F4EF;
 }
 
 .restock-item-mobile.selectable {
@@ -271,7 +271,7 @@
 .item-name-sm {
     font-size: 0.875rem;
     font-weight: 700;
-    color: #1e293b;
+    color: #3A3A3A;
 }
 
 .item-stock-info {
@@ -302,7 +302,7 @@
     gap: 0.625rem;
     padding: 0.75rem;
     margin-top: 0.625rem;
-    background: #f8fafc;
+    background: #F6F4EF;
     border-radius: 10px;
 }
 
@@ -321,7 +321,7 @@
 }
 
 .btn-generate-purchase {
-    background: #10b981;
+    background: #4F7A5A;
     color: white;
 }
 

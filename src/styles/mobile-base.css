@@ -578,7 +578,7 @@
         left: 0;
         right: 0;
         height: 32px;
-        background: linear-gradient(to top, #f8fafc 0%, transparent 100%);
+        background: linear-gradient(to top, #F6F4EF 0%, transparent 100%);
         pointer-events: none;
         z-index: 499;
     }

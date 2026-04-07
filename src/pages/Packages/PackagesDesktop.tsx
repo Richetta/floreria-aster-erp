@@ -105,12 +105,12 @@ export const PackagesDesktop = () => {
                             width: 50,
                             height: 50,
                             border: '4px solid #e5e7eb',
-                            borderTopColor: '#9b51e0',
+                            borderTopColor: '#4F7A5A',
                             borderRadius: '50%',
                             animation: 'spin 1s linear infinite',
                             margin: '0 auto 1rem'
                         }}></div>
-                        <p style={{ color: '#64748b', fontWeight: 500 }}>Cargando paquetes...</p>
+                        <p style={{ color: '#6B6B6B', fontWeight: 500 }}>Cargando paquetes...</p>
                     </div>
                 </div>
             )}

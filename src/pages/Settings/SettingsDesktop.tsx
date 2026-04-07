@@ -49,7 +49,7 @@ export const SettingsDesktop = () => {
 
     // Themes Mapping
     const themes = {
-        violet: { primary: '#9b51e0', name: 'Aster Violet' },
+        violet: { primary: '#4F7A5A', name: 'Aster Violet' },
         nature: { primary: '#059669', name: 'Naturaleza' },
         sky: { primary: '#0ea5e9', name: 'Cielo' },
         roses: { primary: '#f43f5e', name: 'Rosas' }
@@ -471,7 +471,7 @@ export const SettingsDesktop = () => {
                                 width: 40,
                                 height: 40,
                                 border: '4px solid #e5e7eb',
-                                borderTopColor: '#9b51e0',
+                                borderTopColor: '#4F7A5A',
                                 borderRadius: '50%',
                                 animation: 'spin 1s linear infinite',
                                 margin: '0 auto 1rem'

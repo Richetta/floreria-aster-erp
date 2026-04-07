@@ -105,8 +105,8 @@
 
     .page-header {
         padding: var(--space-xl) var(--space-lg);
-        background: white;
-        border-bottom: 1px solid #e2e8f0;
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border);
     }
 
     .page-header h1 {
@@ -124,10 +124,10 @@
    ============================================ */
 @media (max-width: 768px) {
     .card {
-        background: white;
+        background: var(--color-surface);
         border-radius: var(--radius-lg);
         padding: var(--space-lg);
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--color-border);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -174,19 +174,19 @@
     }
 
     .btn-primary {
-        background: linear-gradient(135deg, #9b51e0 0%, #8b5cf6 100%);
+        background: linear-gradient(135deg, #4F7A5A 0%, #608d6d 100%);
         color: white;
-        box-shadow: 0 4px 12px rgba(155, 81, 224, 0.3);
+        box-shadow: 0 4px 12px rgba(79, 122, 90, 0.3);
     }
 
     .btn-primary:active {
-        box-shadow: 0 2px 8px rgba(155, 81, 224, 0.2);
+        box-shadow: 0 2px 8px rgba(79, 122, 90, 0.2);
     }
 
     .btn-secondary {
-        background: #f8fafc;
-        color: #0f172a;
-        border: 2px solid #e2e8f0;
+        background: var(--color-background);
+        color: var(--color-text-main);
+        border: 2px solid var(--color-border);
     }
 
     .btn-danger {
@@ -214,7 +214,7 @@
     }
 
     .btn-icon:active {
-        background: #f1f5f9;
+        background: #F6F4EF;
     }
 
     .btn-block {
@@ -250,9 +250,9 @@
         /* Previene zoom en iOS */
         min-height: var(--touch-button);
         padding: var(--space-lg);
-        border: 2px solid #e2e8f0;
+        border: 2px solid var(--color-border);
         border-radius: var(--radius-md);
-        background: white;
+        background: var(--color-surface);
         transition: all 0.2s;
     }
 
@@ -261,8 +261,8 @@
     textarea:focus,
     select:focus {
         outline: none;
-        border-color: #9b51e0;
-        box-shadow: 0 0 0 4px rgba(155, 81, 224, 0.1);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 4px rgba(79, 122, 90, 0.1);
     }
 
     .form-input::placeholder {
@@ -283,7 +283,7 @@
 
     .form-helper {
         font-size: var(--text-tiny);
-        color: #64748b;
+        color: #6B6B6B;
         margin-top: var(--space-xs);
     }
 
@@ -308,14 +308,14 @@
         align-items: center;
         gap: var(--space-md);
         padding: var(--space-lg);
-        background: white;
+        background: var(--color-surface);
         border-radius: var(--radius-md);
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--color-border);
         transition: all 0.2s;
     }
 
     .list-item:active {
-        background: #f8fafc;
+        background: #F6F4EF;
     }
 
     .list-item-icon {
@@ -336,7 +336,7 @@
     .list-item-title {
         font-size: var(--text-body);
         font-weight: 600;
-        color: #0f172a;
+        color: #3A3A3A;
         margin: 0 0 var(--space-xs) 0;
         white-space: nowrap;
         overflow: hidden;
@@ -345,7 +345,7 @@
 
     .list-item-subtitle {
         font-size: var(--text-small);
-        color: #64748b;
+        color: #6B6B6B;
         margin: 0;
     }
 
@@ -371,14 +371,14 @@
     }
 
     .chip-default {
-        background: #f1f5f9;
+        background: #F6F4EF;
         color: #475569;
     }
 
     .chip-primary {
-        background: #f3e8ff;
-        color: #9b51e0;
-        border-color: #e9d5ff;
+        background: #edf2ef;
+        color: #4F7A5A;
+        border-color: #A8C3A0;
     }
 
     .chip-success {
@@ -424,7 +424,7 @@
 
     .modal-header {
         padding: var(--space-xl);
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--color-border);
     }
 
     .modal-body {
@@ -435,7 +435,7 @@
 
     .modal-footer {
         padding: var(--space-xl);
-        border-top: 1px solid #e2e8f0;
+        border-top: 1px solid var(--color-border);
         display: flex;
         flex-direction: column;
         gap: var(--space-md);
@@ -447,7 +447,7 @@
         bottom: 0;
         left: 0;
         right: 0;
-        background: white;
+        background: var(--color-surface);
         border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
         box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.15);
         max-height: 85vh;
@@ -477,9 +477,9 @@
 @media (max-width: 768px) {
     .skeleton {
         background: linear-gradient(90deg,
-                #f1f5f9 0%,
-                #e2e8f0 50%,
-                #f1f5f9 100%);
+                #F6F4EF 0%,
+                var(--color-border) 50%,
+                #F6F4EF 100%);
         background-size: 200% 100%;
         animation: skeleton-loading 1.5s infinite;
         border-radius: var(--radius-sm);

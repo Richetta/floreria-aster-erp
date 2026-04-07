@@ -204,12 +204,12 @@ export const FinancesDesktop = () => {
                             width: 60,
                             height: 60,
                             border: '5px solid #f3f4f6',
-                            borderTopColor: '#9b51e0',
+                            borderTopColor: '#4F7A5A',
                             borderRadius: '50%',
                             animation: 'spin 1s linear infinite',
                             margin: '0 auto 1.5rem'
                         }}></div>
-                        <p style={{ color: '#64748b', fontWeight: 600, fontSize: '1.1rem' }}>Sincronizando finanzas...</p>
+                        <p style={{ color: '#6B6B6B', fontWeight: 600, fontSize: '1.1rem' }}>Sincronizando finanzas...</p>
                     </div>
                 </div>
             )}

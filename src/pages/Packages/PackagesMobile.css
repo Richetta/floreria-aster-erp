@@ -4,9 +4,9 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: #f8fafc;
+    background: #F6F4EF;
     padding-bottom: 120px;
-    color: #1e293b;
+    color: #3A3A3A;
 }
 
 /* Loading */
@@ -22,8 +22,8 @@
 .spinner-packages {
     width: 36px;
     height: 36px;
-    border: 3px solid #e2e8f0;
-    border-top-color: #9b51e0;
+    border: 3px solid #D1CDBF;
+    border-top-color: #4F7A5A;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -34,7 +34,7 @@
 
 .packages-loading p {
     font-size: 0.875rem;
-    color: #64748b;
+    color: #6B6B6B;
 }
 
 /* Header */
@@ -44,18 +44,18 @@
     align-items: center;
     padding: 0.875rem 1rem;
     background: white;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #D1CDBF;
 }
 
 .packages-mobile-header h2 {
     font-size: 1.1rem;
     font-weight: 700;
     margin: 0;
-    color: #9b51e0;
+    color: #4F7A5A;
 }
 
 .icon-btn-primary {
-    background: linear-gradient(135deg, #9b51e0 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #4F7A5A 0%, #608d6d 100%);
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -78,7 +78,7 @@
     gap: 0.625rem;
     padding: 0.75rem 1rem;
     background: white;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #D1CDBF;
 }
 
 .packages-search-box .material-symbols-rounded {
@@ -101,7 +101,7 @@
     padding: 0.75rem 1rem;
     overflow-x: auto;
     background: white;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #D1CDBF;
 }
 
 .packages-section-scroll::-webkit-scrollbar {
@@ -112,17 +112,17 @@
     white-space: nowrap;
     padding: 0.5rem 0.875rem;
     border-radius: 100px;
-    background: #f1f5f9;
+    background: #F6F4EF;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #64748b;
-    border: 1px solid #e2e8f0;
+    color: #6B6B6B;
+    border: 1px solid #D1CDBF;
 }
 
 .section-chip.active {
-    background: #f3e8ff;
-    color: #9b51e0;
-    border-color: #9b51e0;
+    background: #edf2ef;
+    color: #4F7A5A;
+    border-color: #4F7A5A;
 }
 
 /* Content */
@@ -150,18 +150,18 @@
     font-size: 1.1rem;
     font-weight: 700;
     margin: 0;
-    color: #1e293b;
+    color: #3A3A3A;
 }
 
 .empty-packages p {
     font-size: 0.875rem;
-    color: #64748b;
+    color: #6B6B6B;
     margin: 0;
 }
 
 .btn-create-first {
     margin-top: 0.75rem;
-    background: linear-gradient(135deg, #9b51e0 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #4F7A5A 0%, #608d6d 100%);
     color: white;
     padding: 0.875rem 1.5rem;
     border-radius: 100px;
@@ -206,8 +206,8 @@
     display: inline-block;
     font-size: 0.65rem;
     font-weight: 700;
-    color: #9b51e0;
-    background: #f3e8ff;
+    color: #4F7A5A;
+    background: #edf2ef;
     padding: 0.25rem 0.625rem;
     border-radius: 100px;
     margin-bottom: 0.375rem;
@@ -217,7 +217,7 @@
     font-size: 0.95rem;
     font-weight: 700;
     margin: 0;
-    color: #1e293b;
+    color: #3A3A3A;
 }
 
 .package-actions {
@@ -232,8 +232,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f1f5f9;
-    color: #64748b;
+    background: #F6F4EF;
+    color: #6B6B6B;
     border: none;
 }
 
@@ -248,14 +248,14 @@
 
 .package-description {
     font-size: 0.75rem;
-    color: #64748b;
+    color: #6B6B6B;
     margin: 0;
     line-height: 1.4;
 }
 
 /* Recipe Mini */
 .package-recipe-mini {
-    background: #f8fafc;
+    background: #F6F4EF;
     border-radius: 10px;
     padding: 0.625rem;
 }
@@ -266,7 +266,7 @@
     gap: 0.375rem;
     font-size: 0.7rem;
     font-weight: 600;
-    color: #64748b;
+    color: #6B6B6B;
     margin-bottom: 0.5rem;
 }
 
@@ -282,7 +282,7 @@
 
 .recipe-mini-item {
     font-size: 0.7rem;
-    color: #1e293b;
+    color: #3A3A3A;
     padding: 0.25rem 0;
 }
 
@@ -299,7 +299,7 @@
     justify-content: space-between;
     align-items: center;
     padding-top: 0.625rem;
-    border-top: 1px dashed #e2e8f0;
+    border-top: 1px dashed #D1CDBF;
 }
 
 .package-cost, .package-price {
@@ -318,15 +318,15 @@
 .cost-value {
     font-size: 0.875rem;
     font-weight: 700;
-    color: #64748b;
+    color: #6B6B6B;
 }
 
 .price-label {
-    color: #9b51e0;
+    color: #4F7A5A;
 }
 
 .price-value {
     font-size: 1.05rem;
     font-weight: 800;
-    color: #9b51e0;
+    color: #4F7A5A;
 }

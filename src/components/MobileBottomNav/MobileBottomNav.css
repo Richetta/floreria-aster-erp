@@ -85,22 +85,22 @@
    ESTADO ACTIVO
    ============================================ */
 .nav-btn.active {
-    color: #9b51e0;
+    color: #4F7A5A;
 }
 
 .nav-btn.active .icon-container {
-    background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+    background: linear-gradient(135deg, #edf2ef 0%, #e9d5ff 100%);
     box-shadow: 0 2px 8px rgba(155, 81, 224, 0.15);
 }
 
 .nav-btn.active .material-symbols-rounded {
     font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
-    color: #9b51e0;
+    color: #4F7A5A;
 }
 
 .nav-btn.active .nav-label {
     font-weight: 700;
-    color: #9b51e0;
+    color: #4F7A5A;
 }
 
 /* ============================================
@@ -116,7 +116,7 @@
 .icon-center-wrapper {
     width: 50px;
     height: 50px;
-    background: linear-gradient(135deg, #9b51e0 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #4F7A5A 0%, #608d6d 100%);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -140,13 +140,13 @@
 
 .nav-btn.btn-center .nav-label {
     margin-top: 3px;
-    color: #9b51e0;
+    color: #4F7A5A;
     font-weight: 700;
 }
 
 /* Cuando Vender está activo (gradiente más intenso) */
 .nav-btn.btn-center.active .icon-center-wrapper {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #608d6d 0%, #7c3aed 100%);
     box-shadow: 0 6px 20px rgba(155, 81, 224, 0.5),
         0 0 0 3px rgba(255, 255, 255, 0.95);
 }

@@ -629,12 +629,12 @@ export const POSDesktop = () => {
                             width: 50,
                             height: 50,
                             border: '4px solid #e5e7eb',
-                            borderTopColor: '#9b51e0',
+                            borderTopColor: '#4F7A5A',
                             borderRadius: '50%',
                             animation: 'spin 1s linear infinite',
                             margin: '0 auto 1rem'
                         }}></div>
-                        <p style={{ color: '#64748b', fontWeight: 500 }}>Cargando productos...</p>
+                        <p style={{ color: '#6B6B6B', fontWeight: 500 }}>Cargando productos...</p>
                     </div>
                 </div>
             )}
@@ -676,8 +676,8 @@ export const POSDesktop = () => {
                         <div className="pos-search" style={{
                             borderRadius: '50px',
                             overflow: 'hidden',
-                            border: isScanning ? '2px solid #22c55e' : '2px solid #e2e8f0',
-                            background: '#f1f5f9',
+                            border: isScanning ? '2px solid #22c55e' : '2px solid #D1CDBF',
+                            background: '#F6F4EF',
                             display: 'flex',
                             alignItems: 'center',
                             padding: '0 1.5rem',
@@ -703,7 +703,7 @@ export const POSDesktop = () => {
                                     padding: '0 1rem',
                                     fontSize: '1rem',
                                     outline: 'none',
-                                    color: '#0f172a'
+                                    color: '#3A3A3A'
                                 }}
                             />
                             {isScanning && (
@@ -744,14 +744,14 @@ export const POSDesktop = () => {
                             title={isScanningEnabled ? "Deshabilitar escáner" : "Habilitar escáner"}
                             style={{
                                 padding: '0.5rem 1rem',
-                                background: isScanningEnabled ? '#f1f5f9' : '#fee2e2',
-                                border: '1px solid #e2e8f0',
+                                background: isScanningEnabled ? '#F6F4EF' : '#fee2e2',
+                                border: '1px solid #D1CDBF',
                                 borderRadius: '8px',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
-                                color: isScanningEnabled ? '#64748b' : '#dc2626',
+                                color: isScanningEnabled ? '#6B6B6B' : '#dc2626',
                                 fontWeight: '500',
                                 fontSize: '0.875rem'
                             }}

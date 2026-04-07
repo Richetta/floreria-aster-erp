@@ -15,7 +15,7 @@ export const SettingsMobile = () => {
     const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
 
     const themes = [
-        { id: 'violet', color: '#9b51e0', name: 'Aster Violet' },
+        { id: 'violet', color: '#4F7A5A', name: 'Aster Violet' },
         { id: 'nature', color: '#059669', name: 'Naturaleza' },
         { id: 'sky', color: '#0ea5e9', name: 'Cielo' },
         { id: 'roses', color: '#f43f5e', name: 'Rosas' }

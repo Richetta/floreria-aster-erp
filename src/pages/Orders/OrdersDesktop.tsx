@@ -96,7 +96,7 @@ export const OrdersDesktop = () => {
         { id: 'out_for_delivery', label: 'En Camino', icon: Truck, color: '#eab308' },
         { id: 'delivered', label: 'Entregado', icon: Check, color: '#22c55e' },
         { id: 'cancelled', label: 'Cancelado', icon: X, color: '#ef4444' },
-        { id: 'archived', label: 'Archivado', icon: Package, color: '#64748b' }
+        { id: 'archived', label: 'Archivado', icon: Package, color: '#6B6B6B' }
     ], []);
 
     const filteredOrders = useMemo(() => {
@@ -430,12 +430,12 @@ export const OrdersDesktop = () => {
                             width: 50,
                             height: 50,
                             border: '4px solid #e5e7eb',
-                            borderTopColor: '#9b51e0',
+                            borderTopColor: '#4F7A5A',
                             borderRadius: '50%',
                             animation: 'spin 1s linear infinite',
                             margin: '0 auto 1rem'
                         }}></div>
-                        <p style={{ color: '#64748b', fontWeight: 500 }}>Cargando pedidos...</p>
+                        <p style={{ color: '#6B6B6B', fontWeight: 500 }}>Cargando pedidos...</p>
                     </div>
                 </div>
             )}

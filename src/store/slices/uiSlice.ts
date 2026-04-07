@@ -21,7 +21,7 @@ export interface UiSlice {
 }
 
 const initialShopInfo: ShopInfo = {
-    name: 'Florería Aster',
+    name: 'mi jardín',
     logo: undefined,
     phone: '',
     address: '',

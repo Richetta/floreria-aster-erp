@@ -1,5 +1,4 @@
--- ============================================
--- ASTER ERP - DATABASE SCHEMA (PRODUCTION)
+-- mi jardín ERP - DATABASE SCHEMA (PRODUCTION)
 -- ============================================
 -- Diseñado para: PostgreSQL 16
 -- Multi-tenant con Row Level Security
@@ -501,11 +500,11 @@ CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders
 
 -- Create default business
 INSERT INTO businesses (id, name, tax_id, phone, email, currency) VALUES 
-    ('00000000-0000-0000-0000-000000000001', 'Florería Aster', '20-12345678-9', '11-1234-5678', 'contacto@floreriaaster.com', 'ARS');
+    ('00000000-0000-0000-0000-000000000001', 'mi jardín', '20-12345678-9', '11-1234-5678', 'contacto@mijardin.com', 'ARS');
 
 -- Create admin user (password: admin123)
 INSERT INTO users (business_id, name, email, password_hash, role) VALUES 
-    ('00000000-0000-0000-0000-000000000001', 'Administrador', 'admin@floreriaaster.com', '$2b$10$rH0zGzJvzJvzJvzJvzJvzOYvzJvzJvzJvzJvzJvzJvzJvzJvzJvz', 'admin');
+    ('00000000-0000-0000-0000-000000000001', 'Administrador', 'admin@mijardin.com', '$2b$10$rH0zGzJvzJvzJvzJvzJvzOYvzJvzJvzJvzJvzJvzJvzJvzJvzJvz', 'admin');
 
 -- Create default categories
 INSERT INTO categories (business_id, name) VALUES 

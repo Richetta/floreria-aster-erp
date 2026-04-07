@@ -30,7 +30,7 @@
     }
 
     .floating-notification-bell:active {
-        background: #f1f5f9;
+        background: #F6F4EF;
         transform: scale(0.92);
     }
 

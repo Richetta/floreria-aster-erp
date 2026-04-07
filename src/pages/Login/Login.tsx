@@ -136,7 +136,7 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
                 <div className="login-logo">
                     <Flower2 size={compact ? 40 : 56} className="logo-icon" />
                 </div>
-                <h2 className="login-title">Florería Aster</h2>
+                <h2 className="login-title">mi jardín</h2>
                 <p className="login-subtitle">Sistema de Gestión ERP</p>
             </div>
 
@@ -152,7 +152,7 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
             {deferredPrompt && (
                 <div className="install-pwa-container mb-6">
                     <button type="button" className="install-pwa-button" onClick={handleInstallClick}>
-                        <span>⬇️</span> Descargar e Instalar Florería Aster ERP
+                        <span>⬇️</span> Descargar e Instalar mi jardín ERP
                     </button>
                 </div>
             )}
@@ -237,7 +237,7 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
 
             {/* Footer */}
             <div className="login-footer">
-                <p className="copyright">© 2026 Florería Aster ERP</p>
+                <p className="copyright">© 2026 mi jardín ERP</p>
             </div>
         </div>
     );
@@ -341,7 +341,7 @@ export const Login = () => {
                         <div className="lp-navbar__logo">
                             <Flower2 size={22} />
                         </div>
-                        <span className="lp-navbar__name">Florería Aster</span>
+                        <span className="lp-navbar__name">mi jardín</span>
                         <span className="lp-navbar__badge">ERP</span>
                     </div>
                     <div className="lp-navbar__actions">
@@ -436,7 +436,7 @@ export const Login = () => {
                         <p className="lp-section__eyebrow lp-section__eyebrow--light">La solución</p>
                         <h2 className="lp-section__title lp-section__title--light">Todo lo que necesitás, en un solo lugar</h2>
                         <p className="lp-section__subtitle lp-section__subtitle--light">
-                            Florería Aster ERP unifica todas las áreas de tu negocio
+                            mi jardín unifica todas las áreas de tu negocio
                         </p>
                     </div>
                     <div className="lp-features__grid fade-up">
@@ -467,7 +467,7 @@ export const Login = () => {
                                 <span className="lp-demo__dot lp-demo__dot--red"></span>
                                 <span className="lp-demo__dot lp-demo__dot--yellow"></span>
                                 <span className="lp-demo__dot lp-demo__dot--green"></span>
-                                <span className="lp-demo__url">floreria-aster-erp.vercel.app</span>
+                                <span className="lp-demo__url">mijardin-erp.vercel.app</span>
                             </div>
                             <div className="lp-demo__screen">
                                 {!demoPlaying ? (
@@ -521,7 +521,7 @@ export const Login = () => {
                 <div className="lp-container" ref={benefitsRef}>
                     <div className="lp-section__header fade-up">
                         <p className="lp-section__eyebrow">Resultados reales</p>
-                        <h2 className="lp-section__title">Lo que ganás al usar Florería Aster</h2>
+                        <h2 className="lp-section__title">Lo que ganás al usar mi jardín</h2>
                     </div>
                     <div className="lp-benefits__grid fade-up">
                         {benefits.map((b, i) => (
@@ -561,9 +561,9 @@ export const Login = () => {
                 <div className="lp-footer__inner">
                     <div className="lp-footer__brand">
                         <Flower2 size={18} />
-                        <span>Florería Aster ERP · © 2026</span>
+                        <span>mi jardín ERP · © 2026</span>
                     </div>
-                    <p className="lp-footer__tagline">Hecho con 💜 para florerías</p>
+                    <p className="lp-footer__tagline">Hecho con 🌿 para tu jardín</p>
                 </div>
             </footer>
         </div>

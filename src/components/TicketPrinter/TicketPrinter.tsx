@@ -37,7 +37,7 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
     ticketData,
     isOpen,
     onClose,
-    shopName = 'Florería Aster',
+    shopName = 'mi jardín',
     shopPhone = '',
     shopAddress = '',
     shopCUIT = ''

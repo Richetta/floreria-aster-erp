@@ -78,7 +78,7 @@ export const ReportsMobile = () => {
         }
     };
 
-    const COLORS = ['#9b51e0', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6'];
+    const COLORS = ['#4F7A5A', '#3b82f6', '#4F7A5A', '#f59e0b', '#ef4444', '#ec4899', '#608d6d'];
 
     return (
         <div className="reports-mobile-wrapper">
@@ -164,11 +164,11 @@ export const ReportsMobile = () => {
                                     <div className="chart-container-small">
                                         <ResponsiveContainer width="100%" height={180}>
                                             <LineChart data={salesByPeriod}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D1CDBF" />
                                                 <XAxis dataKey="period" tick={{fontSize: 10}} />
                                                 <YAxis tick={{fontSize: 10}} />
                                                 <Tooltip />
-                                                <Line type="monotone" dataKey="total_amount" stroke="#9b51e0" strokeWidth={2} dot={false} />
+                                                <Line type="monotone" dataKey="total_amount" stroke="#4F7A5A" strokeWidth={2} dot={false} />
                                             </LineChart>
                                         </ResponsiveContainer>
                                     </div>

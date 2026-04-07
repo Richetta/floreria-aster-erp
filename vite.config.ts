@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'aster-logo.png'],
       manifest: {
-        name: 'Florería Aster ERP',
+        name: 'mi jardín',
         short_name: 'Aster ERP',
-        description: 'Punto de Venta y Gestión de Inventario para Florería Aster',
+        description: 'Gestión Natural para tu Negocio',
         theme_color: '#0f172a',
         background_color: '#ffffff',
         display: 'standalone',

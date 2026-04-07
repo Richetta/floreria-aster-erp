@@ -1,8 +1,8 @@
 {
-  "name": "aster-erp-backend",
+  "name": "mijardin-erp-backend",
   "version": "1.0.0",
   "type": "module",
-  "description": "Backend para Florería Aster ERP",
+  "description": "Backend para mi jardín ERP",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

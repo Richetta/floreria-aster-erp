@@ -1,6 +1,6 @@
 .reminders-mobile-wrapper {
     display: flex; flex-direction: column; min-height: 100vh;
-    background: #f8fafc; padding-bottom: 120px;
+    background: #F6F4EF; padding-bottom: 120px;
 }
 
 /* Header */
@@ -9,12 +9,12 @@
     position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.03);
 }
 
-.mobile-reminders-header h2 { font-size: 1.5rem; font-weight: 800; color: #1e293b; margin: 0; }
+.mobile-reminders-header h2 { font-size: 1.5rem; font-weight: 800; color: #3A3A3A; margin: 0; }
 
 .reminders-tabs { display: flex; gap: 0.5rem; }
 .reminders-tabs button {
-    flex: 1; padding: 0.75rem; border-radius: 14px; background: #f1f5f9;
-    color: #64748b; font-size: 0.75rem; font-weight: 800; display: flex;
+    flex: 1; padding: 0.75rem; border-radius: 14px; background: #F6F4EF;
+    color: #6B6B6B; font-size: 0.75rem; font-weight: 800; display: flex;
     flex-direction: column; align-items: center; gap: 0.25rem; transition: 0.2s;
 }
 
@@ -30,13 +30,13 @@
 }
 
 .rem-m-icon {
-    width: 48px; height: 48px; border-radius: 12px; background: #f1f5f9;
+    width: 48px; height: 48px; border-radius: 12px; background: #F6F4EF;
     display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
 }
 
 .rem-m-info { flex: 1; }
-.rem-m-info h3 { font-size: 1rem; font-weight: 800; color: #1e293b; margin: 0; }
-.rem-m-info p { font-size: 0.8rem; font-weight: 600; color: #64748b; margin: 0.25rem 0 0 0; }
+.rem-m-info h3 { font-size: 1rem; font-weight: 800; color: #3A3A3A; margin: 0; }
+.rem-m-info p { font-size: 0.8rem; font-weight: 600; color: #6B6B6B; margin: 0.25rem 0 0 0; }
 
 .rem-wa-btn {
     width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;

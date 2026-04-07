@@ -7,28 +7,32 @@
 @import './styles/mobile-ux-system.css';
 
 :root {
-  /* Florería Aster - Color Palette */
-  --color-primary: #9b51e0;
-  /* Vibrant Purple */
-  --color-primary-hover: #b87cf8;
-  --color-primary-light: #f3e8ff;
+  /* mi jardín - Color Palette */
+  --color-primary: #4F7A5A;
+  /* Natural Green */
+  --color-primary-hover: #3d5e45;
+  --color-primary-light: #edf2ef;
 
-  --color-secondary: #ff6b6b;
-  /* Soft Coral / Rose */
-  --color-success: #10b981;
-  /* Emerald Green */
-  --color-warning: #f59e0b;
-  /* Amber */
-  --color-danger: #ef4444;
-  /* Red */
+  --color-secondary: #A8C3A0;
+  /* Soft Sage */
+  --color-success: #4F7A5A;
+  /* Same as primary for consistency */
+  --color-warning: #E6C97A;
+  /* Soft Alert - Amberish */
+  --color-danger: #C47A5A;
+  /* Accent - Terracotta */
 
-  --color-background: #f8fafc;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f1f5f9;
+  --color-background: #F6F4EF;
+  /* Bone/Beige */
+  --color-surface: #FFFEFC;
+  /* Off White */
+  --color-surface-hover: #F0EDE4;
 
-  --color-text-main: #0f172a;
-  --color-text-muted: #64748b;
-  --color-border: #e2e8f0;
+  --color-text-main: #3A3A3A;
+  --color-text-muted: #6B6B6B;
+  --color-border: #D1CDBF;
+  --color-accent: #C47A5A;
+  --color-soft-alert: #E6C97A;
 
   /* Typography - Aumentado para Alejandra (vista cansada) */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -176,7 +180,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4F7A5A 0%, #A8C3A0 100%);
 }
 
 .loading-content {
@@ -464,10 +468,7 @@ textarea {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: linear-gradient(135deg, var(--color-success) 0%, #059669 100%);
-  color: white;
-  border-radius: var(--radius-lg);
-  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #3d5e45 100%);
   transition: var(--transition);
 }
 

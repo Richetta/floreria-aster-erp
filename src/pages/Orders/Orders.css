@@ -164,7 +164,7 @@
 /* Payment chips in cards */
 .order-debt-chip {
     background: white;
-    color: #1e293b;
+    color: #3A3A3A;
     border: 1px solid #ef4444;
     font-size: 0.65rem;
     font-weight: 800;
@@ -395,7 +395,7 @@
 
 /* Redesigned Modal Styles - Premium Look */
 .redesigned-modal {
-    background: #f8fafc !important;
+    background: #F6F4EF !important;
     max-width: 1000px !important;
     box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.3) !important;
 }
@@ -531,7 +531,7 @@
 
 .detail-card-header {
     padding: 1rem 1.25rem;
-    background: #f8fafc;
+    background: #F6F4EF;
     border-bottom: 1px solid var(--color-border);
     display: flex;
     align-items: center;
@@ -634,14 +634,14 @@
     display: flex;
     gap: 0.75rem;
     padding: 1rem;
-    background: #f1f5f9;
+    background: #F6F4EF;
     border-radius: 0.75rem;
     border: 1px dashed #cbd5e1;
 }
 
-.address-box svg { color: #64748b; }
+.address-box svg { color: #6B6B6B; }
 .address-content .street { font-size: 0.9rem; font-weight: 700; color: #334155; }
-.address-content .city { font-size: 0.8rem; color: #64748b; }
+.address-content .city { font-size: 0.8rem; color: #6B6B6B; }
 .address-content .reference { font-size: 0.75rem; color: #94a3b8; font-style: italic; margin-top: 0.25rem; }
 
 /* Items List Modern */
@@ -654,7 +654,7 @@
     display: flex;
     align-items: center;
     padding: 0.85rem 1.25rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid #F6F4EF;
     gap: 1rem;
 }
 
@@ -711,13 +711,13 @@
 }
 
 .stat-box {
-    background: #f8fafc;
+    background: #F6F4EF;
     padding: 0.75rem;
     border-radius: 0.75rem;
     border: 1px solid var(--color-border);
 }
 
-.stat-box .label { font-size: 0.65rem; color: #64748b; font-weight: 700; }
+.stat-box .label { font-size: 0.65rem; color: #6B6B6B; font-weight: 700; }
 .stat-box .value { font-size: 1.1rem; font-weight: 800; }
 .stat-box .value.total { color: var(--color-success); }
 .stat-box .value.paid { color: #3b82f6; }
@@ -783,7 +783,7 @@
 
 .btn-secondary-elegant {
     padding: 0.75rem 1.5rem;
-    background: #f1f5f9;
+    background: #F6F4EF;
     border: none;
     border-radius: 0.75rem;
     font-weight: 700;
@@ -792,7 +792,7 @@
     transition: all 0.2s;
 }
 
-.btn-secondary-elegant:hover { background: #e2e8f0; color: #1e293b; }
+.btn-secondary-elegant:hover { background: #D1CDBF; color: #3A3A3A; }
 
 .btn-primary-elegant {
     padding: 0.75rem 1.5rem;
@@ -948,7 +948,7 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #4F7A5A, #059669);
     color: white;
     border: none;
     border-radius: 0.75rem;
@@ -1016,7 +1016,7 @@
     border-radius: 0.5rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #64748b;
+    color: #6B6B6B;
     background: white;
     cursor: pointer;
     transition: all 0.15s;
@@ -1088,7 +1088,7 @@
 .calendar-wrapper {
     background: white;
     border-radius: 1rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #D1CDBF;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
@@ -1099,13 +1099,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem 1.25rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid #F6F4EF;
 }
 
 .calendar-month-title {
     font-size: 1.25rem;
     font-weight: 800;
-    color: #1e293b;
+    color: #3A3A3A;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -1118,8 +1118,8 @@
 .calendar-nav-controls {
     display: flex;
     align-items: center;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: #F6F4EF;
+    border: 1px solid #D1CDBF;
     border-radius: 0.5rem;
     padding: 0.25rem;
 }
@@ -1127,13 +1127,13 @@
 .calendar-nav-btn {
     padding: 0.25rem 0.5rem;
     border-radius: 0.375rem;
-    color: #64748b;
+    color: #6B6B6B;
     transition: all 0.2s;
 }
 
 .calendar-nav-btn:hover {
-    background: #e2e8f0;
-    color: #0f172a;
+    background: #D1CDBF;
+    color: #3A3A3A;
 }
 
 .calendar-nav-divider {
@@ -1155,7 +1155,7 @@
 .calendar-header-day {
     text-align: center;
     font-weight: 800;
-    color: #64748b;
+    color: #6B6B6B;
     padding: 0.5rem 0;
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -1167,9 +1167,9 @@
 }
 
 .calendar-day-cell {
-    background: #f8fafc;
+    background: #F6F4EF;
     border-radius: 0.75rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #D1CDBF;
     padding: 0.375rem;
     display: flex;
     flex-direction: column;

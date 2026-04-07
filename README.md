@@ -1,4 +1,4 @@
-# 🌼 Florería Aster ERP - Sistema de Gestión
+# 🌿 mi jardín ERP - Sistema de Gestión Natural
 
 **Versión:** 1.0.0  
 **Estado:** ✅ Listo para Producción  
@@ -8,7 +8,7 @@
 
 ## 📋 DESCRIPCIÓN
 
-Sistema ERP completo para la gestión de Florería Aster. Incluye:
+Sistema ERP completo para la gestión de mi jardín. Incluye:
 
 - ✅ **Inventario y Stock** - Productos, categorías, control de stock
 - ✅ **Ventas y POS** - Punto de venta con código de barras
@@ -39,8 +39,8 @@ Sistema ERP completo para la gestión de Florería Aster. Incluye:
 
 | Servicio | URL |
 |----------|-----|
-| **Frontend** | https://floreria-aster.vercel.app |
-| **Backend API** | https://aster-erp-production.up.railway.app |
+| **Frontend** | https://mijardin-erp.vercel.app |
+| **Backend API** | https://mijardin-api.up.railway.app |
 | **Database** | https://lddrseslgkdaetsidyrv.supabase.co |
 
 ---
@@ -51,7 +51,7 @@ Sistema ERP completo para la gestión de Florería Aster. Incluye:
 
 ```bash
 # 1. Clonar repositorio
-git clone https://github.com/Richetta/floreria-aster-erp.git
+git clone https://github.com/Richetta/mijardin-erp.git
 cd floreria-aster-erp
 
 # 2. Instalar dependencias del Frontend
@@ -121,7 +121,7 @@ npm run db:init  # Inicializar base de datos
 ## 📦 ESTRUCTURA DEL PROYECTO
 
 ```
-floreria-aster-erp/
+mijardin-erp/
 ├── src/                    # Frontend React
 │   ├── components/         # Componentes reutilizables
 │   ├── pages/              # Páginas de la aplicación
@@ -221,7 +221,7 @@ GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
 ## 📞 SOPORTE
 
 - **GitHub Issues:** https://github.com/Richetta/floreria-aster-erp/issues
-- **Email:** contacto@floreriaaster.com
+- **Email:** contacto@mijardin.com
 
 ---
 
@@ -242,4 +242,4 @@ Propietario - Todos los derechos reservados
 
 ---
 
-**Hecho con ❤️ para Florería Aster**
+**Hecho con 🌿 para mi jardín**
