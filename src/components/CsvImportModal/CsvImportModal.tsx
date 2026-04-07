@@ -209,7 +209,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'productos_aster.csv';
+            a.download = 'productos_mi jardín.csv';
             a.click();
         } catch (error) {
             showAlert({ title: 'Error', message: 'Error al descargar plantilla', variant: 'error' });

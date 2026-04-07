@@ -1,5 +1,5 @@
 /**
- * OCR Service for Florería Aster
+ * OCR Service for Florería mi jard�n
  * Uses Tesseract.js via CDN for text extraction from images (boletas/receipts)
  */
 

@@ -92,7 +92,7 @@ export const RemindersDesktop = () => {
             return;
         }
 
-        const template = customMessage || 'Hola {{name}}! Te escribimos de Florería Aster para saludarte en tu día especial. 🌸';
+        const template = customMessage || 'Hola {{name}}! Te escribimos de Florería mi jard�n para saludarte en tu día especial. 🌸';
         
         try {
             const result = await api.sendBulkReminders(selectedCustomers, template, 'whatsapp');
@@ -126,21 +126,21 @@ export const RemindersDesktop = () => {
         const templates = {
             birthday: `🎂 ¡Feliz Cumpleaños ${customerName}!
 
-De parte de todo el equipo de Florería Aster te deseamos un día maravilloso.
+De parte de todo el equipo de Florería mi jard�n te deseamos un día maravilloso.
 
 🌸 ¿Querés celebrar con un ramo especial? Tenés un 10% de descuento esta semana.
 
 ¡Te esperamos!`,
             anniversary: `💍 ¡Feliz Aniversario ${customerName}!
 
-En Florería Aster recordamos tu día especial.
+En Florería mi jard�n recordamos tu día especial.
 
 🌹 Celebrá el amor con nuestras arreglos exclusivos.
 
 ¡Gracias por confiar en nosotros!`,
             debt: `Hola ${customerName},
 
-Te recordamos que tenés un saldo pendiente de $${extra?.debt_amount || 0} en Florería Aster.
+Te recordamos que tenés un saldo pendiente de $${extra?.debt_amount || 0} en Florería mi jard�n.
 
 💳 Podés abonar en nuestro local o por transferencia.
 
@@ -149,7 +149,7 @@ Te recordamos que tenés un saldo pendiente de $${extra?.debt_amount || 0} en Fl
 
 Recordamos que hoy es ${extra?.event_name || 'tu día especial'}.
 
-🌸 En Florería Aster tenemos algo especial para vos.
+🌸 En Florería mi jard�n tenemos algo especial para vos.
 
 ¡Te esperamos!`
         };

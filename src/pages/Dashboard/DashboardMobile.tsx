@@ -93,7 +93,7 @@ export const DashboardMobile = () => {
     const sendWhatsAppReminder = (customer: any) => {
         const phone = customer.phone.replace(/\D/g, '');
         const debt = Number(customer.debtBalance) || 0;
-        const message = `Hola ${customer.name}! Te recordamos que tenés una deuda de $${debt.toLocaleString()} en Florería Aster. ¿Podés pasar a abonar? ¡Gracias!`;
+        const message = `Hola ${customer.name}! Te recordamos que tenés una deuda de $${debt.toLocaleString()} en mi jardín. ¿Podés pasar a abonar? ¡Gracias!`;
         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
     };
 

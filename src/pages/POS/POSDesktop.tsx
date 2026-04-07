@@ -1717,7 +1717,7 @@ export const POSDesktop = () => {
                         setShowTicketPrinter(false);
                         setTicketData(null);
                     }}
-                    shopName="Florería Aster"
+                    shopName="Florería mi jard�n"
                     shopPhone="11-1234-5678"
                     shopAddress="Calle de las Rosas 789"
                 />

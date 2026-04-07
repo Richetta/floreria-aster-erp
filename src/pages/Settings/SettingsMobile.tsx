@@ -11,11 +11,11 @@ export const SettingsMobile = () => {
     const shopInfo = useStore(state => state.shopInfo);
     const { user, logout } = useAuth();
 
-    const [theme, setTheme] = useState(localStorage.getItem('aster-theme') || 'violet');
+    const [theme, setTheme] = useState(localStorage.getItem('mi jardÌn-theme') || 'violet');
     const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
 
     const themes = [
-        { id: 'violet', color: '#4F7A5A', name: 'Aster Violet' },
+        { id: 'violet', color: '#4F7A5A', name: 'mi jardÌn Violet' },
         { id: 'nature', color: '#059669', name: 'Naturaleza' },
         { id: 'sky', color: '#0ea5e9', name: 'Cielo' },
         { id: 'roses', color: '#f43f5e', name: 'Rosas' }
@@ -26,7 +26,7 @@ export const SettingsMobile = () => {
         const themeObj = themes.find(t => t.id === id);
         if (themeObj) {
             document.documentElement.style.setProperty('--color-primary', themeObj.color);
-            localStorage.setItem('aster-theme', id);
+            localStorage.setItem('mi jardÌn-theme', id);
             showAlert({ title: 'Tema actualizado', message: `Se aplic√≥ el estilo ${themeObj.name}`, variant: 'success' });
         }
     };
@@ -130,7 +130,7 @@ export const SettingsMobile = () => {
                         <span className="material-symbols-rounded">logout</span>
                         Cerrar Sesi√≥n
                     </button>
-                    <p className="app-version">Florer√≠a Aster ERP v2.5.0</p>
+                    <p className="app-version">Florer√≠a mi jardÌn ERP v2.5.0</p>
                 </section>
             </div>
 

@@ -49,7 +49,7 @@ export const SettingsDesktop = () => {
 
     // Themes Mapping
     const themes = {
-        violet: { primary: '#4F7A5A', name: 'Aster Violet' },
+        violet: { primary: '#4F7A5A', name: 'mi jardín Violet' },
         nature: { primary: '#059669', name: 'Naturaleza' },
         sky: { primary: '#0ea5e9', name: 'Cielo' },
         roses: { primary: '#f43f5e', name: 'Rosas' }
@@ -61,12 +61,12 @@ export const SettingsDesktop = () => {
         const color = themes[newTheme as keyof typeof themes].primary;
         root.style.setProperty('--color-primary', color);
         root.style.setProperty('--color-primary-dark', color); // Simplified for now
-        localStorage.setItem('aster-theme', newTheme);
+        localStorage.setItem('mi jardín-theme', newTheme);
     };
 
     // Load theme on mount
     useEffect(() => {
-        const savedTheme = localStorage.getItem('aster-theme');
+        const savedTheme = localStorage.getItem('mi jardín-theme');
         if (savedTheme) handleThemeChange(savedTheme);
     }, []);
 
@@ -85,7 +85,7 @@ export const SettingsDesktop = () => {
 
     // Load users on mount
     useEffect(() => {
-        const savedTheme = localStorage.getItem('aster-theme');
+        const savedTheme = localStorage.getItem('mi jardín-theme');
         if (savedTheme) handleThemeChange(savedTheme);
         
         if (activeTab === 'users') {
@@ -122,7 +122,7 @@ export const SettingsDesktop = () => {
         }));
         const downloadAnchorNode = document.createElement('a');
         downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", `aster_erp_backup_${new Date().toISOString().split('T')[0]}.json`);
+        downloadAnchorNode.setAttribute("download", `mi jardín_erp_backup_${new Date().toISOString().split('T')[0]}.json`);
         document.body.appendChild(downloadAnchorNode);
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
@@ -570,7 +570,7 @@ export const SettingsDesktop = () => {
                                             className="form-input"
                                             value={userForm.email}
                                             onChange={e => setUserForm({...userForm, email: e.target.value})}
-                                            placeholder="juan@floreriaaster.com"
+                                            placeholder="juan@floreriami jardín.com"
                                             required
                                         />
                                     </div>

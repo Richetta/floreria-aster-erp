@@ -1,5 +1,5 @@
 // ============================================
-// API CLIENT - Florería Aster ERP
+// API CLIENT - Florería mi jard�n ERP
 // ============================================
 
 import { logger } from '../utils/logger';

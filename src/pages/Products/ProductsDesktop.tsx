@@ -57,7 +57,7 @@ export const ProductsDesktop = () => {
     const printRef = useRef<HTMLDivElement>(null);
     const handlePrint = useReactToPrint({
         contentRef: printRef,
-        documentTitle: `Catalogo_Aster_${activeCategory}`,
+        documentTitle: `Catalogo_mi jardín_${activeCategory}`,
     });
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [productToEdit, setProductToEdit] = useState<Product | null>(null);
