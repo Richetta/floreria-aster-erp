@@ -369,36 +369,77 @@ $$ LANGUAGE plpgsql;
 -- ============================================
 
 -- Vista: suscripciones activas con info del plan
-CREATE OR REPLACE VIEW v_active_subscriptions AS
-SELECT 
-    s.id,
-    s.business_id,
-    b.name AS business_name,
-    s.plan_id,
-    p.slug AS plan_slug,
-    p.name_short AS plan_name,
-    s.status,
-    s.billing_cycle,
-    s.current_period_start,
-    s.current_period_end,
-    s.trial_ends_at,
-    s.cancel_at_period_end,
-    s.locked_price_monthly,
-    s.locked_price_annually,
-    s.orders_this_month,
-    p.max_orders_per_month,
-    p.features,
-    CASE 
-        WHEN s.trial_ends_at IS NOT NULL AND s.trial_ends_at < CURRENT_DATE THEN 'expired_trial'
-        WHEN s.current_period_end < CURRENT_DATE THEN 'expired'
-        ELSE 'valid'
-    END AS validity_status
-FROM subscriptions s
-LEFT JOIN businesses b ON s.business_id = b.id
-JOIN subscription_plans p ON s.plan_id = p.id
-WHERE s.status IN ('active', 'trial');
+-- Versión compatible si businesses no existe
+DO $$ 
+DECLARE
+    has_businesses BOOLEAN;
+BEGIN
+    has_businesses := EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'businesses');
+    
+    IF has_businesses THEN
+        CREATE OR REPLACE VIEW v_active_subscriptions AS
+        SELECT 
+            s.id,
+            s.business_id,
+            b.name AS business_name,
+            s.plan_id,
+            p.slug AS plan_slug,
+            p.name_short AS plan_name,
+            s.status,
+            s.billing_cycle,
+            s.current_period_start,
+            s.current_period_end,
+            s.trial_ends_at,
+            s.cancel_at_period_end,
+            s.locked_price_monthly,
+            s.locked_price_annually,
+            s.orders_this_month,
+            p.max_orders_per_month,
+            p.features,
+            CASE 
+                WHEN s.trial_ends_at IS NOT NULL AND s.trial_ends_at < CURRENT_DATE THEN 'expired_trial'
+                WHEN s.current_period_end < CURRENT_DATE THEN 'expired'
+                ELSE 'valid'
+            END AS validity_status
+        FROM subscriptions s
+        LEFT JOIN businesses b ON s.business_id = b.id
+        JOIN subscription_plans p ON s.plan_id = p.id
+        WHERE s.status IN ('active', 'trial');
+    ELSE
+        -- Sin tabla businesses
+        CREATE OR REPLACE VIEW v_active_subscriptions AS
+        SELECT 
+            s.id,
+            s.business_id,
+            'Unknown' AS business_name,
+            s.plan_id,
+            p.slug AS plan_slug,
+            p.name_short AS plan_name,
+            s.status,
+            s.billing_cycle,
+            s.current_period_start,
+            s.current_period_end,
+            s.trial_ends_at,
+            s.cancel_at_period_end,
+            s.locked_price_monthly,
+            s.locked_price_annually,
+            s.orders_this_month,
+            p.max_orders_per_month,
+            p.features,
+            CASE 
+                WHEN s.trial_ends_at IS NOT NULL AND s.trial_ends_at < CURRENT_DATE THEN 'expired_trial'
+                WHEN s.current_period_end < CURRENT_DATE THEN 'expired'
+                ELSE 'valid'
+            END AS validity_status
+        FROM subscriptions s
+        JOIN subscription_plans p ON s.plan_id = p.id
+        WHERE s.status IN ('active', 'trial');
+    END IF;
+    
+    RAISE NOTICE 'Vista v_active_subscriptions creada correctamente';
+END $$;
 
--- Vista: métricas de uso por plan
+-- Vista: métricas de uso por plan (no depende de businesses)
 CREATE OR REPLACE VIEW v_subscription_metrics AS
 SELECT 
     p.slug AS plan_slug,
