@@ -16,7 +16,7 @@ export const ProductsMobile = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string>('Todos');
     const [isRefreshing, setIsRefreshing] = useState(false);
-    
+
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [productToEdit, setProductToEdit] = useState<Product | null>(null);
@@ -126,7 +126,10 @@ export const ProductsMobile = () => {
                                 </div>
                             </div>
                             <div className="p-item-footer">
-                                <span className="p-item-price">${product.price.toLocaleString('es-AR')}</span>
+                                <div className="p-item-pricing">
+                                    <span className="p-item-cost">Costo: ${(product.cost || 0).toLocaleString('es-AR')}</span>
+                                    <span className="p-item-price">${product.price.toLocaleString('es-AR')}</span>
+                                </div>
                                 <div className="p-item-actions">
                                     <button className="p-edit-mini" onClick={(e) => {
                                         e.stopPropagation();

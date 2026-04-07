@@ -7,9 +7,11 @@ import './PurchasesMobile.css';
 export const PurchasesMobile = () => {
     const suppliers = useStore(state => state.suppliers);
     const products = useStore(state => state.products);
+    const transactions = useStore(state => state.transactions);
     const processPurchase = useStore(state => state.processPurchase);
     const loadSuppliers = useStore(state => state.loadSuppliers);
     const loadProducts = useStore(state => state.loadProducts);
+    const loadTransactions = useStore(state => state.loadTransactions);
 
     const [view, setView] = useState<'history' | 'new'>('history');
     const [selectedSupplier, setSelectedSupplier] = useState('');
@@ -21,7 +23,14 @@ export const PurchasesMobile = () => {
     useEffect(() => {
         loadSuppliers();
         loadProducts();
+        loadTransactions();
     }, []);
+
+    // Filtrar compras (transactions de tipo expense relacionadas con compras a proveedores)
+    const purchaseHistory = (transactions || [])
+        .filter(t => t.type === 'expense' && t.category === 'inventory')
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 30);
 
     const handleAddProduct = (product: any) => {
         const existing = purchaseItems.find(item => item.productId === product.id);
@@ -49,6 +58,7 @@ export const PurchasesMobile = () => {
                 setView('history');
                 setPurchaseItems([]);
                 setSelectedSupplier('');
+                await loadTransactions();
             }
         } catch (err) {
             showAlert({ title: 'Error', message: 'Error al procesar la compra', variant: 'error' });
@@ -56,6 +66,12 @@ export const PurchasesMobile = () => {
     };
 
     const totalAmount = purchaseItems.reduce((sum, i) => sum + (i.cost * i.quantity), 0);
+
+    const getSupplierName = (supplierId?: string) => {
+        if (!supplierId) return 'Sin asignar';
+        const supplier = suppliers?.find(s => s.id === supplierId);
+        return supplier ? supplier.name : 'Proveedor eliminado';
+    };
 
     return (
         <div className="purchases-mobile-wrapper">
@@ -72,13 +88,40 @@ export const PurchasesMobile = () => {
             <div className="purchases-scroll-content">
                 {view === 'history' ? (
                     <div className="p-history-list">
-                        <div className="p-history-card">
-                            <span className="material-symbols-rounded icon">history</span>
-                            <div className="p-h-info">
-                                <h3>Historial Reciente</h3>
-                                <p>Próximamente: Lista detallada de compras pasadas.</p>
+                        {purchaseHistory.length === 0 ? (
+                            <div className="p-history-empty">
+                                <span className="material-symbols-rounded icon">shopping_bag</span>
+                                <div className="p-h-empty-info">
+                                    <h3>Sin compras registradas</h3>
+                                    <p>Las compras que realices aparecerán aquí.</p>
+                                    <button className="p-first-purchase-btn" onClick={() => setView('new')}>
+                                        <span className="material-symbols-rounded">add</span>
+                                        Hacer mi primera compra
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            purchaseHistory.map(tx => (
+                                <div key={tx.id} className="p-history-card">
+                                    <div className="p-h-icon expense-icon">
+                                        <span className="material-symbols-rounded">receipt_long</span>
+                                    </div>
+                                    <div className="p-h-info">
+                                        <div className="p-h-row">
+                                            <h3>{tx.description || 'Compra a proveedor'}</h3>
+                                            <span className="p-h-amount">-${Number(tx.amount).toLocaleString()}</span>
+                                        </div>
+                                        <div className="p-h-row">
+                                            <span className="p-h-supplier">{getSupplierName(tx.relatedId)}</span>
+                                            <span className="p-h-date">
+                                                {new Date(tx.date).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            </span>
+                                        </div>
+                                        <div className="p-h-method-badge">{tx.method === 'cash' ? 'Efectivo' : 'Transferencia'}</div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 ) : (
                     <div className="p-new-form">
@@ -109,13 +152,13 @@ export const PurchasesMobile = () => {
                                         <div className="p-i-main">
                                             <span className="p-i-name">{item.productName}</span>
                                             <div className="p-i-qty">
-                                                <button onClick={() => setPurchaseItems(items => items.map(i => i.productId === item.productId ? {...i, quantity: Math.max(1, i.quantity - 1)} : i))}>-</button>
+                                                <button onClick={() => setPurchaseItems(items => items.map(i => i.productId === item.productId ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i))}>-</button>
                                                 <span>{item.quantity}</span>
-                                                <button onClick={() => setPurchaseItems(items => items.map(i => i.productId === item.productId ? {...i, quantity: i.quantity + 1} : i))}>+</button>
+                                                <button onClick={() => setPurchaseItems(items => items.map(i => i.productId === item.productId ? { ...i, quantity: i.quantity + 1 } : i))}>+</button>
                                             </div>
                                         </div>
                                         <div className="p-i-cost">
-                                            <input type="number" value={item.cost} onChange={e => setPurchaseItems(items => items.map(i => i.productId === item.productId ? {...i, cost: parseFloat(e.target.value) || 0} : i))} />
+                                            <input type="number" value={item.cost} onChange={e => setPurchaseItems(items => items.map(i => i.productId === item.productId ? { ...i, cost: parseFloat(e.target.value) || 0 } : i))} />
                                         </div>
                                     </div>
                                 ))}
