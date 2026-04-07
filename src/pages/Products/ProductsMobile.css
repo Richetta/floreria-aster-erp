@@ -109,7 +109,7 @@
 .product-item-card {
     background: white;
     padding: 0.85rem 1rem;
-    border-radius: 16px;
+    border-radius: 14px;
     border: 1px solid #e2e8f0;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
     display: flex;

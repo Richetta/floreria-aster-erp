@@ -3,10 +3,10 @@
     bottom: 0;
     left: 0;
     width: 100vw;
-    background: rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
     display: flex;
     justify-content: space-around;
     align-items: center;
@@ -14,7 +14,18 @@
     padding-bottom: calc(0.25rem + env(safe-area-inset-bottom, 0px));
     z-index: 500;
     height: auto !important;
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08), 0 -2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Divisor visual: línea sutil sobre la barra */
+.mobile-bottom-nav::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(155, 81, 224, 0.15) 50%, transparent 100%);
 }
 
 /* ============================================
@@ -97,7 +108,8 @@
    ============================================ */
 .nav-btn.btn-center {
     position: relative;
-    top: -15px; /* Subir un poco más el botón central al achicar la barra */
+    top: -15px;
+    /* Subir un poco más el botón central al achicar la barra */
     flex: 1.15;
 }
 

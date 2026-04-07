@@ -110,6 +110,8 @@ CREATE TABLE products (
     is_barcode BOOLEAN DEFAULT FALSE,
     tags TEXT[] DEFAULT '{}',
     images TEXT[] DEFAULT '{}',
+    sales_count INTEGER DEFAULT 0,
+    last_sale_date TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     deleted_at TIMESTAMP WITH TIME ZONE,

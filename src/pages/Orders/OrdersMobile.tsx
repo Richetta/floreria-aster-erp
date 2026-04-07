@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../../services/api';
 import './OrdersMobile.css';
+import './OrdersMobilePayments.css';
 
 export const OrdersMobile = () => {
     const navigate = useNavigate();
@@ -16,6 +18,11 @@ export const OrdersMobile = () => {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+    const [showPaymentPanel, setShowPaymentPanel] = useState(false);
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash');
+    const [paymentLoading, setPaymentLoading] = useState(false);
+    const [paymentError, setPaymentError] = useState('');
 
     useEffect(() => {
         loadOrders();
@@ -81,6 +88,42 @@ export const OrdersMobile = () => {
         await updateOrderStatus(orderId, newStatus as any);
         setSelectedOrder((prev: any) => prev ? { ...prev, status: newStatus } : null);
         await loadOrders();
+    };
+
+    const handleRegisterPayment = async () => {
+        if (!selectedOrder) return;
+        const amount = parseFloat(paymentAmount);
+        if (isNaN(amount) || amount <= 0) {
+            setPaymentError('Ingresá un monto válido');
+            return;
+        }
+        const pendingBalance = selectedOrder.total - (selectedOrder.advancePayment || 0);
+        if (amount > pendingBalance) {
+            setPaymentError(`El monto no puede superar el saldo pendiente ($${pendingBalance.toLocaleString()})`);
+            return;
+        }
+        setPaymentLoading(true);
+        setPaymentError('');
+        try {
+            const result = await api.registerOrderPayment(
+                selectedOrder.id,
+                amount,
+                paymentMethod,
+                `Pago móvil #${selectedOrder.id.slice(0, 8)}`
+            );
+
+            const newAdvance = Number(result.advance_payment ?? ((selectedOrder.advancePayment || 0) + amount));
+            const updatedOrder = { ...selectedOrder, advancePayment: newAdvance };
+            setSelectedOrder(updatedOrder);
+            await loadOrders();
+
+            setPaymentAmount('');
+            setShowPaymentPanel(false);
+        } catch (err: any) {
+            setPaymentError(err.message || 'Error al registrar el pago');
+        } finally {
+            setPaymentLoading(false);
+        }
     };
 
     const statusFlow = ['pending', 'assembling', 'ready', 'out_for_delivery', 'delivered'];
@@ -176,21 +219,16 @@ export const OrdersMobile = () => {
                             >
                                 <div className="order-card-top">
                                     <div className="order-main-row">
-                                        <div className="order-left">
-                                            <span className="material-symbols-rounded order-status-icon">{s.icon}</span>
-                                            <div className="order-text-info">
-                                                <div className="order-customer-row">
-                                                    <span className="order-customer">{order.customerName}</span>
-                                                    <span className="order-delivery-date">
-                                                        {dateObj.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-                                                    </span>
-                                                </div>
-                                            </div>
+                                        <div className="order-customer-row">
+                                            <span className="order-customer">{order.customerName}</span>
+                                            <span className="order-delivery-date">
+                                                {dateObj.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                                            </span>
                                         </div>
                                         <div className="order-total">${order.total.toLocaleString()}</div>
                                     </div>
 
-                                    {(order.deliveryMethod || remaining > 0) && (
+                                    <div className="order-chips-payment-row">
                                         <div className="order-card-chips">
                                             {order.deliveryMethod && (
                                                 <span className="order-chip">
@@ -200,11 +238,6 @@ export const OrdersMobile = () => {
                                                     {order.deliveryMethod === 'delivery' ? 'Envío' : 'Retiro'}
                                                 </span>
                                             )}
-                                            {(!isNaN(remaining) && remaining > 1) ? (
-                                                <span className="order-chip debt">Debe ${Math.round(remaining).toLocaleString()}</span>
-                                            ) : (order.total > 0 && remaining <= 1) ? (
-                                                <span className="order-chip paid">Saldado</span>
-                                            ) : null}
                                             {hasAddress && order.deliveryAddress && (
                                                 <span className="order-chip address">
                                                     <span className="material-symbols-rounded">location_on</span>
@@ -215,7 +248,14 @@ export const OrdersMobile = () => {
                                                 </span>
                                             )}
                                         </div>
-                                    )}
+                                        <div className="order-payment-status">
+                                            {(!isNaN(remaining) && remaining > 1) ? (
+                                                <span className="order-chip debt">Debe ${Math.round(remaining).toLocaleString()}</span>
+                                            ) : (order.total > 0 && remaining <= 1) ? (
+                                                <span className="order-chip paid">Saldado</span>
+                                            ) : null}
+                                        </div>
+                                    </div>
 
                                     {hasItems && (
                                         <div className="order-mini-items">
@@ -350,6 +390,59 @@ export const OrdersMobile = () => {
                                             ${remaining > 0 ? remaining.toLocaleString() : selectedOrder.total.toLocaleString()}
                                         </span>
                                     </div>
+
+                                    {/* Register Payment Panel Mobile */}
+                                    {remaining > 0 && (
+                                        <div className="mobile-payment-section mt-4 pt-4 border-t border-dashed border-gray-200">
+                                            {!showPaymentPanel ? (
+                                                <button
+                                                    className="mobile-payment-trigger"
+                                                    onClick={() => { setShowPaymentPanel(true); setPaymentAmount(String(Math.round(remaining))); }}
+                                                >
+                                                    <span className="material-symbols-rounded">payments</span>
+                                                    Registrar Pago
+                                                </button>
+                                            ) : (
+                                                <div className="mobile-payment-form">
+                                                    <div className="payment-input-group">
+                                                        <input
+                                                            type="number"
+                                                            placeholder="Monto"
+                                                            value={paymentAmount}
+                                                            onChange={e => { setPaymentAmount(e.target.value); setPaymentError(''); }}
+                                                        />
+                                                    </div>
+                                                    <div className="payment-methods-grid">
+                                                        {(['cash', 'card', 'transfer'] as const).map(m => (
+                                                            <button
+                                                                key={m}
+                                                                className={`pay-method-btn ${paymentMethod === m ? 'active' : ''}`}
+                                                                onClick={() => setPaymentMethod(m)}
+                                                            >
+                                                                {m === 'cash' ? 'Efectivo' : m === 'card' ? 'Tarjeta' : 'Transf.'}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    {paymentError && <p className="pay-error-msj">{paymentError}</p>}
+                                                    <div className="pay-form-actions">
+                                                        <button 
+                                                            className="pay-cancel" 
+                                                            onClick={() => { setShowPaymentPanel(false); setPaymentError(''); }}
+                                                        >
+                                                            Cancelar
+                                                        </button>
+                                                        <button 
+                                                            className="pay-confirm"
+                                                            onClick={handleRegisterPayment}
+                                                            disabled={paymentLoading || !paymentAmount}
+                                                        >
+                                                            {paymentLoading ? '...' : 'Confirmar'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Status Change Buttons */}

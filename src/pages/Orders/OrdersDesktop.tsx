@@ -461,7 +461,7 @@ export const OrdersDesktop = () => {
                     {/* Primera fila: Búsqueda + Vistas */}
                     <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
                         <div className="search-wrapper flex-1 relative">
-                            <div className="search-bar bg-gradient-to-r from-background to-background border border-border rounded-xl px-4 py-3">
+                            <div className="search-bar bg-gradient-to-r from-background to-background border border-border rounded-xl px-4 py-2">
                                 <Search className="text-muted flex-shrink-0" size={20} />
                                 <input
                                     type="text"
@@ -600,10 +600,7 @@ export const OrdersDesktop = () => {
                                                 onDragEnd={() => handleDragEnd(order.id)}
                                             >
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <span className="text-micro font-black bg-white/20 px-1.5 py-0.5 rounded text-white tracking-widest uppercase">ID: #{order.id.split('-')[0]}</span>
-                                                    <div className="p-1 bg-white/20 rounded shadow-sm">
-                                                        {order.deliveryMethod === 'delivery' ? <Truck size={12} className="text-white" /> : <MapPin size={12} className="text-white" />}
-                                                    </div>
+                                                    <span className="text-micro font-black bg-white/20 px-1.5 py-0.5 rounded text-white tracking-widest uppercase">#{order.id.split('-')[0]}</span>
                                                 </div>
 
                                                 <h4 className="font-extrabold text-small leading-tight mb-2 tracking-tight text-white">{order.customerName}</h4>
@@ -619,17 +616,21 @@ export const OrdersDesktop = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="mt-2 pt-2 border-t border-white/30 flex justify-between items-center">
-                                                    <span className="text-micro text-white uppercase font-black tracking-tighter">TOTAL</span>
-                                                    <p className="font-black text-base text-white">${order.total.toLocaleString()}</p>
-                                                </div>
-
-                                                {/* Debt indicator */}
-                                                {order.total - (order.advancePayment || 0) > 0 && (
-                                                    <div className="mt-1 text-micro text-white/80 font-semibold text-right">
-                                                        Pendiente: ${(order.total - (order.advancePayment || 0)).toLocaleString()}
+                                                <div className="mt-2 pt-2 border-t border-white/30 flex justify-between items-end">
+                                                    <div className="order-price-box">
+                                                        <span className="text-micro text-white/70 uppercase font-black tracking-tighter block">TOTAL</span>
+                                                        <p className="font-black text-base text-white">${order.total.toLocaleString()}</p>
                                                     </div>
-                                                )}
+                                                    
+                                                    {/* Debt indicator as a chip at bottom-right */}
+                                                    {order.total - (order.advancePayment || 0) > 1 ? (
+                                                        <div className="order-debt-chip pulse">
+                                                            Debe ${(order.total - (order.advancePayment || 0)).toLocaleString()}
+                                                        </div>
+                                                    ) : (order.total > 0 && order.total - (order.advancePayment || 0) <= 1) ? (
+                                                        <div className="order-paid-chip">Saldado</div>
+                                                    ) : null}
+                                                </div>
                                             </div>
                                         ))}
 

@@ -317,7 +317,7 @@
        WRAPPERS - Padding bottom para no tapar contenido
        ============================================ */
     [class*="-mobile-wrapper"] {
-        padding-bottom: 110px;
+        padding-bottom: 120px;
     }
 
     [class*="-scroll-content"],

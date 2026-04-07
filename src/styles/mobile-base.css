@@ -53,12 +53,14 @@
    CONTAINER PADDING MOBILE - ESPACIADO COMPACTO
    ============================================ */
 .page-container {
-    padding: 0.75rem; /* Reducido de 1rem a 0.75rem para ganar espacio lateral */
+    padding: 0.75rem;
+    /* Reducido de 1rem a 0.75rem para ganar espacio lateral */
 }
 
 @media (max-width: 768px) {
     .page-container {
-        padding: 0.75rem; /* Estandarización de 12px */
+        padding: 0.75rem;
+        /* Estandarización de 12px */
     }
 }
 
@@ -558,5 +560,26 @@
 
     ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
+    }
+}
+
+/* ============================================
+   BOTTOM NAV FADE-OUT GRADIENT
+   Crea un degradado sutil que separa el contenido
+   de la barra de navegación inferior
+   ============================================ */
+@media (max-width: 768px) {
+
+    [class*="-mobile-wrapper"]::after,
+    [class*="-scroll-content"]::after {
+        content: '';
+        position: fixed;
+        bottom: 56px;
+        left: 0;
+        right: 0;
+        height: 32px;
+        background: linear-gradient(to top, #f8fafc 0%, transparent 100%);
+        pointer-events: none;
+        z-index: 499;
     }
 }

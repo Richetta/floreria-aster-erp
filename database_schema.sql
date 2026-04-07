@@ -16,6 +16,9 @@ CREATE TABLE customers (
     phone VARCHAR(50),
     email VARCHAR(255),
     debt_balance DECIMAL(10,2) DEFAULT 0.00,
+    total_orders INTEGER DEFAULT 0,
+    total_spent DECIMAL(10,2) DEFAULT 0.00,
+    last_order_date TIMESTAMP WITH TIME ZONE,
     birthday DATE,
     anniversary DATE,
     notes TEXT,
@@ -52,6 +55,8 @@ CREATE TABLE products (
     category_id UUID REFERENCES categories(id),
     tags TEXT[] DEFAULT '{}', -- NUEVO: Arreglo de tags visuales (Filtros: San Valentín, Oferta, etc.)
     is_active BOOLEAN DEFAULT TRUE,
+    sales_count INTEGER DEFAULT 0,
+    last_sale_date TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
