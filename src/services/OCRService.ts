@@ -1,5 +1,5 @@
 /**
- * OCR Service for FlorerÃ­a mi jardín
+ * OCR Service for FlorerÃ­a Mi Jardín
  * Uses Tesseract.js via CDN for text extraction from images (boletas/receipts)
  */
 

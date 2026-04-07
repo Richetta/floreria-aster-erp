@@ -488,7 +488,8 @@
 /* Floating Cart Bar - Compacto */
 .mobile-floating-cart {
     position: fixed;
-    bottom: 75px;
+    /* iOS safe area: account for bottom nav + home indicator */
+    bottom: calc(75px + max(0px, env(safe-area-inset-bottom, 0px)));
     left: 0.75rem;
     right: 0.75rem;
     background: var(--color-primary);

@@ -8,28 +8,28 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'aster-logo.png'],
+      includeAssets: ['favicon.ico', 'mi-jardin-logo.png'],
       manifest: {
-        name: 'mi jardín',
-        short_name: 'Aster ERP',
+        name: 'Mi Jardín',
+        short_name: 'Mi Jardín',
         description: 'Gestión Natural para tu Negocio',
-        theme_color: '#0f172a',
+        theme_color: '#4F7A5A',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',
         icons: [
           {
-            src: 'aster-logo.png',
+            src: 'mi-jardin-logo.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'aster-logo.png',
+            src: 'mi-jardin-logo.png',
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'aster-logo.png',
+            src: 'mi-jardin-logo.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'

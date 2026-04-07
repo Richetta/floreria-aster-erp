@@ -88,7 +88,7 @@ export const Menu = () => {
             </div>
 
             <div className="menu-footer text-center mt-4">
-                <p className="text-micro text-muted">mi jardín ERP v1.0.0</p>
+                <p className="text-micro text-muted">Mi Jardín ERP v1.0.0</p>
             </div>
         </div>
     );

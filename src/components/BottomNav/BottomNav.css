@@ -14,7 +14,8 @@
     background: white;
     border-top: 1px solid #D1CDBF;
     z-index: 1000;
-    padding-bottom: env(safe-area-inset-bottom);
+    /* iOS safe area: use max() to ensure adequate padding on devices with home indicator */
+    padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
     align-items: center;
     justify-content: space-around;
@@ -44,16 +45,19 @@
     }
 
     .main-content {
-        padding-bottom: 68px !important;
+        /* iOS safe area: dynamic padding to account for bottom nav + home indicator */
+        padding-bottom: calc(68px + max(0px, env(safe-area-inset-bottom, 0px))) !important;
     }
 
     .pos-container {
-        padding-bottom: 68px !important;
+        /* iOS safe area: dynamic padding to account for bottom nav + home indicator */
+        padding-bottom: calc(68px + max(0px, env(safe-area-inset-bottom, 0px))) !important;
     }
 }
 
 /* DESKTOP: Asegurar que esté oculto en pantallas > 768px */
 @media (min-width: 768px) {
+
     .bottom-nav,
     .bottom-nav-item,
     .bottom-nav-action,
@@ -185,6 +189,7 @@
         transform: translateY(100%);
         opacity: 0;
     }
+
     to {
         transform: translateY(0);
         opacity: 1;

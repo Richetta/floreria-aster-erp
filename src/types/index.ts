@@ -312,13 +312,13 @@ export interface AuthResponse {
 // WASTE TYPES
 // ============================================
 
-export type Wmi jardíneason = 'Deterioro natural' | 'Rotura de proveedor' | 'Rotura en local' | 'Vencimiento' | 'Robo/ExtravÃ­o' | 'Otro';
+export type WMi Jardíneason = 'Deterioro natural' | 'Rotura de proveedor' | 'Rotura en local' | 'Vencimiento' | 'Robo/ExtravÃ­o' | 'Otro';
 
 export interface WasteLog {
   id: string;
   product_id: string;
   quantity: number;
-  reason: Wmi jardíneason;
+  reason: WMi Jardíneason;
   notes?: string;
   reported_by?: string;
   created_at: string;
@@ -328,7 +328,7 @@ export interface WasteLog {
 export interface WasteFormData {
   product_id: string;
   quantity: number;
-  reason: Wmi jardíneason;
+  reason: WMi Jardíneason;
   notes?: string;
 }
 

@@ -1,6 +1,6 @@
 /* ============================================
    MOBILE BASE UTILITIES
-   Adaptación Mobile-First para Florería mi jard�n ERP
+   Adaptación Mobile-First para Florería Mi Jard�n ERP
    ============================================ */
 
 /* ============================================
@@ -321,9 +321,7 @@
         padding-bottom: max(1rem, env(safe-area-inset-bottom));
     }
 
-    .mobile-bottom-nav {
-        padding-bottom: max(0px, env(safe-area-inset-bottom));
-    }
+    /* Note: .mobile-bottom-nav safe-area is now handled directly in MobileBottomNav.css */
 }
 
 /* ============================================
@@ -574,12 +572,30 @@
     [class*="-scroll-content"]::after {
         content: '';
         position: fixed;
-        bottom: 56px;
+        /* iOS safe area: position gradient above bottom nav */
+        bottom: calc(56px + max(0px, env(safe-area-inset-bottom, 0px)));
         left: 0;
         right: 0;
         height: 32px;
         background: linear-gradient(to top, #F6F4EF 0%, transparent 100%);
         pointer-events: none;
         z-index: 499;
+    }
+}
+
+/* ============================================
+   iOS SAFE AREA GLOBAL FALLBACK
+   Asegura que todos los elementos fixed-bottom
+   respeten el home indicator de iPhone
+   ============================================ */
+@supports (padding: max(0px)) {
+    @media (max-width: 768px) {
+
+        /* Cualquier elemento fixed en bottom debe respetar safe area */
+        [class*="float"][class*="bottom"],
+        [class*="fixed"][class*="bottom"],
+        [class*="bottom"][class*="fixed"] {
+            bottom: calc(var(--bottom-offset, 0px) + max(0px, env(safe-area-inset-bottom, 0px))) !important;
+        }
     }
 }

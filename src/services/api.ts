@@ -1,5 +1,5 @@
 // ============================================
-// API CLIENT - FlorerÃ­a mi jardín ERP
+// API CLIENT - FlorerÃ­a Mi Jardín ERP
 // ============================================
 
 import { logger } from '../utils/logger';

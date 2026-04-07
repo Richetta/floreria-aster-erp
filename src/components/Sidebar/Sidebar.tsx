@@ -164,7 +164,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
       <div className="sidebar-brand">
         <span className="brand-icon">🌿</span>
-        <h1 className="brand-text">mi jardín</h1>
+        <h1 className="brand-text">Mi Jardín</h1>
       </div>
 
       <nav className="sidebar-nav">

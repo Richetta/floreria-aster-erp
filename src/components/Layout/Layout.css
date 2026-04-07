@@ -261,8 +261,8 @@
     .main-content {
         padding-top: 60px;
         /* offset for fixed mobile header */
-        padding-bottom: 68px;
-        /* offset for bottom nav */
+        /* iOS safe area: dynamic padding to account for bottom nav + home indicator */
+        padding-bottom: calc(68px + max(0px, env(safe-area-inset-bottom, 0px)));
     }
 }
 

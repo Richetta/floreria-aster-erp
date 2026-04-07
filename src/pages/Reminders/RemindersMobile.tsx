@@ -52,8 +52,8 @@ export const RemindersMobile = () => {
     };
 
     const getTemplate = (type: ReminderType, name: string, extra?: any) => {
-        if (type === 'debt') return `Hola ${name}, te recordamos un saldo pendiente de $${extra?.debt || 0} en Florería mi jard�n.`;
-        if (type === 'birthday') return `¡Feliz Cumpleaños ${name}! 🎂 Te deseamos un gran día desde Florería mi jard�n. 🌸`;
+        if (type === 'debt') return `Hola ${name}, te recordamos un saldo pendiente de $${extra?.debt || 0} en Florería Mi Jard�n.`;
+        if (type === 'birthday') return `¡Feliz Cumpleaños ${name}! 🎂 Te deseamos un gran día desde Florería Mi Jard�n. 🌸`;
         return `Hola ${name}, ¡feliz día especial! 🌸`;
     };
 

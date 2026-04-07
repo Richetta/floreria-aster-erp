@@ -309,7 +309,7 @@ export const DashboardDesktop = () => {
                                         </span>
                                         <a
                                             href={`https://wa.me/${customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                                                `Hola ${customer.name}! Te recordamos que tenés una deuda de $${customer.debtBalance.toLocaleString()} en mi jardín. ¿Podés pasar a abonar? ¡Gracias!`
+                                                `Hola ${customer.name}! Te recordamos que tenés una deuda de $${customer.debtBalance.toLocaleString()} en Mi Jardín. ¿Podés pasar a abonar? ¡Gracias!`
                                             )}`}
                                             target="_blank"
                                             rel="noopener noreferrer"

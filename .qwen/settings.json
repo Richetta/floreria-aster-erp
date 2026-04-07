@@ -7,7 +7,11 @@
       "Bash(git commit *)",
       "Bash(git push)",
       "Bash(ren *)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(florist-toolbox.com)",
+      "WebFetch(www.onlyiris.com)",
+      "WebFetch(www.hanafloristpos.com)",
+      "WebFetch(www.unkoa.com)"
     ]
   },
   "$version": 3
