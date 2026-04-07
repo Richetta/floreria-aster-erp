@@ -2,7 +2,7 @@
     display: flex;
     flex-direction: column;
     height: calc(100vh - 2rem);
-    padding: 0 1rem;
+    /* USES GLOBAL MARGINS FROM .page-container */
 }
 
 .kanban-board {
@@ -161,6 +161,32 @@
     border-top-color: rgba(255, 255, 255, 0.2) !important;
 }
 
+/* Payment chips in cards */
+.order-debt-chip {
+    background: white;
+    color: #1e293b;
+    border: 1px solid #ef4444;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.order-paid-chip {
+    background: #22c55e;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4rem;
+}
+
+.order-price-box p {
+    line-height: 1;
+    margin: 0;
+}
+
 /* Specific icon styling inside card bubbles */
 .order-card .bg-white\/20 svg {
     stroke-width: 2.5px;
@@ -203,9 +229,10 @@
 .search-bar {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
     transition: all 0.2s ease;
     background: linear-gradient(135deg, var(--color-background) 0%, var(--color-surface) 100%);
+    padding: 0.4rem 0.75rem !important;
 }
 
 .search-bar:hover {

@@ -179,10 +179,9 @@
 }
 
 /* Fix symmetric main content padding */
+/* Page container uses global styles from index.css for consistent breathing room */
 .page-container {
-    padding: 0 0.5rem;
-    /* Ajuste para quitar aire y asegurar simetría */
-    max-width: 100%;
+    width: 100%;
 }
 
 
