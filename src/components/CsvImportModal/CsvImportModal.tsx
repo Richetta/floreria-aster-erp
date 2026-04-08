@@ -42,6 +42,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose }) => {
     formData.append('file', file);
 
     try {
+      // First parse the file
       const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/import-data/parse-file`, {
         method: 'POST',
         headers: {
@@ -57,6 +58,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose }) => {
 
       const parsedData = await response.json();
 
+      // Then bulk import
       const importResponse = await api.request<any>('/import-data/bulk-import', {
         method: 'POST',
         body: JSON.stringify({
