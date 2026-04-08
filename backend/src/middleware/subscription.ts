@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { FastifyRequest, FastifyReply } from 'fastify';
 
 // ============================================
@@ -8,40 +7,10 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 // subscription-based access control
 // ============================================
 
-// Helper: Get active subscription for a business
-async function getActiveSubscription(businessId: string) {
-  const query = `
-    SELECT 
-      s.*,
-      p.slug as plan_slug,
-      p.name_short as plan_name,
-      p.features,
-      p.max_users,
-      p.max_products,
-      p.max_orders_per_month,
-      p.max_categories,
-      p.max_afip_invoices,
-      p.max_branches
-    FROM subscriptions s
-    JOIN subscription_plans p ON s.plan_id = p.id
-    WHERE s.business_id = $1
-    AND s.status IN ('active', 'trial')
-    LIMIT 1
-  `;
-
-  // @ts-ignore - Fastify instance type
-  const result = await this?.query?.(query, [businessId]) ||
-    // Fallback if this is not bound correctly
-    await (global as any).db?.query(query, [businessId]);
-
-  return result?.rows?.[0] || null;
-}
-
 // Helper: Get current count for a resource
-async function getCurrentCount(businessId: string, resourceType: string) {
+async function getCurrentCount(businessId: string, resourceType: string, db: any) {
   let query = '';
-  const params: any[] = [businessId];
-
+  
   switch (resourceType) {
     case 'users':
       query = 'SELECT COUNT(*)::int FROM users WHERE business_id = $1 AND is_active = true';
@@ -66,7 +35,7 @@ async function getCurrentCount(businessId: string, resourceType: string) {
       return 0;
   }
 
-  const result = await (global as any).db?.query(query, params);
+  const result = await db.executeQuery(query, [businessId]);
   return result?.rows?.[0]?.count || 0;
 }
 
@@ -124,28 +93,19 @@ function getSuggestedPlanForLimit(limitType: string, currentLimit: number): stri
   const limits = limitPlanMap[limitType];
   if (!limits) return 'florecer';
 
-  // Find the next tier up
   for (const limit of limits) {
     if (currentLimit <= limit.current) {
       return limit.suggest;
     }
   }
 
-  return 'jardin'; // Default to highest
+  return 'jardin'; 
 }
 
 // ============================================
 // MIDDLEWARE: REQUIRE FEATURE
 // ============================================
 
-/**
- * Check if the business has access to a specific feature.
- * 
- * Usage:
- *   preHandler: [authenticate, requireFeature('reports')]
- * 
- * Returns 403 if feature not available
- */
 export function requireFeature(feature: string) {
   return async function (request: FastifyRequest, reply: FastifyReply) {
     try {
@@ -159,22 +119,17 @@ export function requireFeature(feature: string) {
         });
       }
 
-      // Get subscription
-      const subQuery = `
-        SELECT s.*, p.slug as plan_slug, p.features
-        FROM subscriptions s
-        JOIN subscription_plans p ON s.plan_id = p.id
-        WHERE s.business_id = $1
-        AND s.status IN ('active', 'trial')
-        LIMIT 1
-      `;
+      const db = (request.server as any).db;
+      if (!db) return;
 
-      const result = await (request.server as any).db?.query(subQuery, [businessId]);
-      const subscription = result?.rows?.[0];
+      const subscription = await db.selectFrom('subscriptions')
+        .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
+        .select(['subscription_plans.features', 'subscription_plans.name_short', 'subscription_plans.slug'])
+        .where('subscriptions.business_id', '=', businessId)
+        .where('subscriptions.status', 'in', ['active', 'trial'])
+        .executeTakeFirst();
 
-      // No subscription? Only basic features
       if (!subscription) {
-        // Check if feature is basic (available in free plan)
         const basicFeatures = ['pos', 'kanban'];
         if (!basicFeatures.includes(feature)) {
           return reply.code(402).send({
@@ -185,39 +140,28 @@ export function requireFeature(feature: string) {
             upgradeUrl: '/subscription/upgrade'
           });
         }
-        return; // Basic feature, allow
+        return;
       }
 
-      // Check if feature is enabled
       const features = subscription.features as Record<string, any>;
-      const hasFeature = features[feature] === true ||
-        (typeof features[feature] === 'string' && features[feature] !== 'false');
+      const hasFeature = features[feature] === true || (typeof features[feature] === 'string' && features[feature] !== 'false');
 
       if (!hasFeature) {
         const suggestedPlan = getSuggestedPlanForFeature(feature);
 
         return reply.code(403).send({
           error: 'Feature Not Available',
-          message: `The feature "${feature}" is not available in your current plan (${subscription.plan_name})`,
+          message: `The feature "${feature}" is not available in your current plan (${subscription.name_short})`,
           requiresUpgrade: true,
-          currentPlan: subscription.plan_slug,
-          currentPlanName: subscription.plan_name,
+          currentPlan: subscription.slug,
+          currentPlanName: subscription.name_short,
           requestedFeature: feature,
           suggestedPlan,
-          upgradeUrl: '/subscription/upgrade',
-          plans: {
-            semilla: 'Plan Gratuito',
-            florecer: 'Plan Profesional',
-            crecimiento: 'Plan Business',
-            jardin: 'Plan Enterprise'
-          }
+          upgradeUrl: '/subscription/upgrade'
         });
       }
-
-      // Feature available, continue
     } catch (error) {
       console.error('Error in requireFeature middleware:', error);
-      // On error, allow request (fail open) but log
       return;
     }
   };
@@ -227,14 +171,6 @@ export function requireFeature(feature: string) {
 // MIDDLEWARE: CHECK LIMIT
 // ============================================
 
-/**
- * Check if the business has reached a resource limit.
- * 
- * Usage:
- *   preHandler: [authenticate, checkLimit('products')]
- * 
- * Returns 429 if limit reached
- */
 export function checkLimit(limitType: 'users' | 'products' | 'orders' | 'categories') {
   return async function (request: FastifyRequest, reply: FastifyReply) {
     try {
@@ -248,21 +184,23 @@ export function checkLimit(limitType: 'users' | 'products' | 'orders' | 'categor
         });
       }
 
-      // Get subscription limits
-      const subQuery = `
-        SELECT s.*, p.slug as plan_slug, p.name_short as plan_name,
-               p.max_users, p.max_products, p.max_orders_per_month, p.max_categories
-        FROM subscriptions s
-        JOIN subscription_plans p ON s.plan_id = p.id
-        WHERE s.business_id = $1
-        AND s.status IN ('active', 'trial')
-        LIMIT 1
-      `;
+      const db = (request.server as any).db;
+      if (!db) return;
 
-      const result = await (request.server as any).db?.query(subQuery, [businessId]);
-      const subscription = result?.rows?.[0];
+      const subscription = await db.selectFrom('subscriptions')
+        .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
+        .select([
+          'subscription_plans.max_users', 
+          'subscription_plans.max_products', 
+          'subscription_plans.max_orders_per_month', 
+          'subscription_plans.max_categories',
+          'subscription_plans.slug',
+          'subscription_plans.name_short'
+        ])
+        .where('subscriptions.business_id', '=', businessId)
+        .where('subscriptions.status', 'in', ['active', 'trial'])
+        .executeTakeFirst();
 
-      // No subscription? Apply free tier limits
       if (!subscription) {
         const freeLimits: Record<string, number> = {
           'users': 1,
@@ -272,7 +210,7 @@ export function checkLimit(limitType: 'users' | 'products' | 'orders' | 'categor
         };
 
         const limit = freeLimits[limitType] || 0;
-        const current = await getCurrentCount(businessId, limitType);
+        const current = await getCurrentCount(businessId, limitType, db);
 
         if (current >= limit) {
           return reply.code(429).send({
@@ -289,17 +227,14 @@ export function checkLimit(limitType: 'users' | 'products' | 'orders' | 'categor
         return;
       }
 
-      // Check limit
       const limitField = `max_${limitType}` as keyof typeof subscription;
       const limit = subscription[limitField] as number | null;
 
-      // NULL = unlimited
       if (limit === null || limit === undefined) {
         return;
       }
 
-      // Get current count
-      const current = await getCurrentCount(businessId, limitType);
+      const current = await getCurrentCount(businessId, limitType, db);
 
       if (current >= limit) {
         const suggestedPlan = getSuggestedPlanForLimit(limitType, limit);
@@ -311,17 +246,14 @@ export function checkLimit(limitType: 'users' | 'products' | 'orders' | 'categor
           limit,
           current,
           resourceType: limitType,
-          currentPlan: subscription.plan_slug,
-          currentPlanName: subscription.plan_name,
+          currentPlan: subscription.slug,
+          currentPlanName: subscription.name_short,
           suggestedPlan,
           upgradeUrl: '/subscription/upgrade'
         });
       }
-
-      // Within limit, continue
     } catch (error) {
       console.error('Error in checkLimit middleware:', error);
-      // On error, allow request (fail open)
       return;
     }
   };
@@ -331,12 +263,6 @@ export function checkLimit(limitType: 'users' | 'products' | 'orders' | 'categor
 // MIDDLEWARE: REQUIRE ACTIVE SUBSCRIPTION
 // ============================================
 
-/**
- * Require ANY active subscription (not just a feature).
- * 
- * Usage:
- *   preHandler: [authenticate, requireActiveSubscription()]
- */
 export function requireActiveSubscription() {
   return async function (request: FastifyRequest, reply: FastifyReply) {
     try {
@@ -350,18 +276,15 @@ export function requireActiveSubscription() {
         });
       }
 
-      const query = `
-        SELECT s.id, p.slug as plan_slug, p.name_short as plan_name, 
-               s.current_period_end, s.trial_ends_at
-        FROM subscriptions s
-        JOIN subscription_plans p ON s.plan_id = p.id
-        WHERE s.business_id = $1
-        AND s.status IN ('active', 'trial')
-        LIMIT 1
-      `;
+      const db = (request.server as any).db;
+      if (!db) return;
 
-      const result = await (request.server as any).db?.query(query, [businessId]);
-      const subscription = result?.rows?.[0];
+      const subscription = await db.selectFrom('subscriptions')
+        .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
+        .select(['subscriptions.id', 'subscription_plans.slug', 'subscription_plans.name_short', 'subscriptions.current_period_end', 'subscriptions.trial_ends_at'])
+        .where('subscriptions.business_id', '=', businessId)
+        .where('subscriptions.status', 'in', ['active', 'trial'])
+        .executeTakeFirst();
 
       if (!subscription) {
         return reply.code(402).send({
@@ -373,20 +296,18 @@ export function requireActiveSubscription() {
         });
       }
 
-      // Check if expired
       const now = new Date();
       if (subscription.current_period_end && new Date(subscription.current_period_end) < now) {
         return reply.code(402).send({
           error: 'Subscription Expired',
           message: 'Your subscription has expired. Please renew to continue.',
           subscriptionExpired: true,
-          currentPlan: subscription.plan_slug,
+          currentPlan: subscription.slug,
           expiredAt: subscription.current_period_end,
           renewUrl: '/subscription/renew'
         });
       }
 
-      // Check if trial expired
       if (subscription.trial_ends_at && new Date(subscription.trial_ends_at) < now) {
         return reply.code(402).send({
           error: 'Trial Expired',
@@ -396,7 +317,6 @@ export function requireActiveSubscription() {
           plansUrl: '/subscription/plans'
         });
       }
-
     } catch (error) {
       console.error('Error in requireActiveSubscription middleware:', error);
       return;
@@ -408,31 +328,30 @@ export function requireActiveSubscription() {
 // MIDDLEWARE: INCREMENT ORDER COUNT
 // ============================================
 
-/**
- * Increment the order count for the business (call after order creation).
- * 
- * Usage:
- *   preHandler: [authenticate, incrementOrderCount()]
- */
 export function incrementOrderCount() {
   return async function (request: FastifyRequest, reply: FastifyReply) {
-    // This runs AFTER the route handler via onRequest vs onSend
-    // We'll use a hook on the response
-    reply.hook('onSend', async () => {
+    reply.raw.on('finish', async () => {
       try {
-        const user = request.user as any;
-        const businessId = user.business_id;
+        if (reply.statusCode >= 200 && reply.statusCode < 300) {
+          const user = request.user as any;
+          const businessId = user.business_id;
 
-        if (!businessId) return;
+          if (!businessId) return;
 
-        await (request.server as any).db?.query(
-          'UPDATE subscriptions SET orders_this_month = orders_this_month + 1 WHERE business_id = $1',
-          [businessId]
-        );
+          const db = (request.server as any).db;
+          if (db) {
+            await db.updateTable('subscriptions')
+              .set({ orders_this_month: (eb: any) => eb('orders_this_month', '+', 1) })
+              .where('business_id', '=', businessId)
+              .execute();
+          }
+        }
       } catch (error) {
         console.error('Error incrementing order count:', error);
       }
     });
+
+    return;
   };
 }
 
@@ -440,48 +359,40 @@ export function incrementOrderCount() {
 // HELPER: GET SUBSCRIPTION INFO
 // ============================================
 
-/**
- * Get full subscription info for a business.
- * Use this in route handlers, not as middleware.
- */
 export async function getSubscriptionInfo(businessId: string, db: any) {
   try {
-    const query = `
-      SELECT 
-        s.id,
-        s.status,
-        s.billing_cycle,
-        s.current_period_start,
-        s.current_period_end,
-        s.trial_ends_at,
-        s.cancel_at_period_end,
-        s.locked_price_monthly,
-        s.locked_price_annually,
-        s.orders_this_month,
-        p.slug as plan_slug,
-        p.name_short as plan_name,
-        p.name as plan_full_name,
-        p.price_monthly,
-        p.price_annually,
-        p.max_users,
-        p.max_products,
-        p.max_orders_per_month,
-        p.max_categories,
-        p.features,
-        p.badge_text,
-        -- Current usage
-        (SELECT COUNT(*)::int FROM users WHERE business_id = $1 AND is_active = true) as current_users,
-        (SELECT COUNT(*)::int FROM products WHERE business_id = $1 AND is_active = true) as current_products,
-        (SELECT COUNT(*)::int FROM categories WHERE business_id = $1 AND is_active = true) as current_categories
-      FROM subscriptions s
-      JOIN subscription_plans p ON s.plan_id = p.id
-      WHERE s.business_id = $1
-      AND s.status IN ('active', 'trial')
-      LIMIT 1
-    `;
+    const subscription = await db.selectFrom('subscriptions')
+      .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
+      .selectAll('subscriptions')
+      .select([
+        'subscription_plans.slug as plan_slug',
+        'subscription_plans.name_short as plan_name',
+        'subscription_plans.name as plan_full_name',
+        'subscription_plans.price_monthly',
+        'subscription_plans.price_annually',
+        'subscription_plans.max_users',
+        'subscription_plans.max_products',
+        'subscription_plans.max_orders_per_month',
+        'subscription_plans.max_categories',
+        'subscription_plans.features',
+        'subscription_plans.badge_text'
+      ])
+      .where('subscriptions.business_id', '=', businessId)
+      .where('subscriptions.status', 'in', ['active', 'trial'])
+      .executeTakeFirst();
 
-    const result = await db.query(query, [businessId]);
-    return result.rows[0] || null;
+    if (!subscription) return null;
+
+    const current_users = await getCurrentCount(businessId, 'users', db);
+    const current_products = await getCurrentCount(businessId, 'products', db);
+    const current_categories = await getCurrentCount(businessId, 'categories', db);
+
+    return {
+      ...subscription,
+      current_users,
+      current_products,
+      current_categories
+    };
   } catch (error) {
     console.error('Error getting subscription info:', error);
     return null;

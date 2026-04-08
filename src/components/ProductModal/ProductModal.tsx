@@ -23,7 +23,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 }) => {
     const addProduct = useStore((state) => state.addProduct);
     const updateProduct = useStore((state) => state.updateProduct);
-    const categories = useStore((state) => state.categories);
+    const categoriesData = useStore((state) => state.categoriesData);
     const brands = useStore((state) => state.brands);
     const loadBrands = useStore((state) => state.loadBrands);
     const addBrand = useStore((state) => state.addBrand);
@@ -65,7 +65,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     code: productToEdit.code || '',
                     barcode: productToEdit.barcode || '',
                     name: productToEdit.name || '',
-                    category: productToEdit.category || (categories && categories.length > 0 ? categories[0] : 'General'),
+                    category: productToEdit.category || (categoriesData && categoriesData.length > 0 ? categoriesData[0].name : 'General'),
                     brand_id: productToEdit.brand_id || '',
                     price: productToEdit.price || 0,
                     cost: productToEdit.cost || 0,
@@ -79,7 +79,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     code: '',
                     barcode: '',
                     name: '',
-                    category: initialCategory || (categories && categories.length > 0 ? categories[0] : (formData.category || 'General')),
+                    category: initialCategory || (categoriesData && categoriesData.length > 0 ? categoriesData[0].name : (formData.category || 'General')),
                     brand_id: '',
                     price: 0,
                     cost: 0,
@@ -226,9 +226,19 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                     required
                                 >
-                                    {(categories || []).map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
-                                    ))}
+                                    {(categoriesData || []).map(cat => {
+                                        // Recursive function to get full path
+                                        const getPath = (c: Category, all: Category[]): string => {
+                                            if (!c.parent_id) return c.name;
+                                            const parent = all.find(p => p.id === c.parent_id);
+                                            return parent ? `${getPath(parent, all)} > ${c.name}` : c.name;
+                                        };
+                                        return (
+                                            <option key={cat.id} value={cat.name}>
+                                                {getPath(cat, categoriesData)}
+                                            </option>
+                                        );
+                                    })}
                                 </select>
                             </div>
 

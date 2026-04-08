@@ -8,8 +8,7 @@ import { db } from '../db/index.js';
 async function checkProductLimit(businessId: string, reply: any) {
   try {
     // Get subscription limits
-    const subResult = await db.executeQuery(
-      (db as any).selectFrom('subscriptions')
+    const subResult = await db.selectFrom('subscriptions')
         .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
         .select([
           'subscription_plans.max_products',
@@ -20,18 +19,18 @@ async function checkProductLimit(businessId: string, reply: any) {
         .where('subscriptions.business_id', '=', businessId)
         .where('subscriptions.status', 'in', ['active', 'trial'])
         .limit(1)
-    );
+        .executeTakeFirst();
 
     // No subscription - apply free tier limit
     let maxProducts = 50; // Free tier
     let planName = 'Semilla';
     let planSlug = 'semilla';
 
-    if (subResult.rows.length > 0) {
-      const sub = subResult.rows[0] as any;
-      maxProducts = sub.max_products || 999999; // NULL = unlimited
-      planName = sub.name_short;
-      planSlug = sub.slug;
+    if (subResult) {
+      const subscriptionInfo = subResult;
+      maxProducts = subscriptionInfo.max_products || 999999; // NULL = unlimited
+      planName = subscriptionInfo.name_short || 'Semilla';
+      planSlug = subscriptionInfo.slug;
     }
 
     // Count current products

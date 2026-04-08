@@ -30,6 +30,10 @@ export interface Database {
   audit_logs: AuditLogsTable;
   user_activity: UserActivityTable;
   app_settings: AppSettingsTable;
+  subscription_plans: SubscriptionPlansTable;
+  subscriptions: SubscriptionsTable;
+  subscription_usage_logs: SubscriptionUsageLogsTable;
+  subscription_events: SubscriptionEventsTable;
 }
 
 // ============================================
@@ -383,6 +387,81 @@ interface UserActivityTable {
   details: string | Record<string, any> | null;
   ip_address: string | null;
   user_agent: string | null;
+  created_at: Date;
+}
+
+// ============================================
+// SUBSCRIPTION SYSTEM TABLES
+// ============================================
+
+interface SubscriptionPlansTable {
+  id: string;
+  slug: string;
+  name: string;
+  name_short: string | null;
+  description: string | null;
+  price_monthly: number;
+  price_annually: number;
+  is_active: boolean;
+  sort_order: number;
+  badge_text: string | null;
+  badge_color: string;
+  max_users: number | null;
+  max_products: number | null;
+  max_orders_per_month: number | null;
+  max_categories: number | null;
+  max_afip_invoices: number | null;
+  max_branches: number;
+  features: Record<string, any>;
+  created_at: Date;
+  updated_at: Date;
+}
+
+interface SubscriptionsTable {
+  id: string;
+  business_id: string;
+  plan_id: string;
+  status: 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired';
+  billing_cycle: 'monthly' | 'annually';
+  current_period_start: Date | null;
+  current_period_end: Date | null;
+  trial_ends_at: Date | null;
+  cancel_at_period_end: boolean;
+  cancelled_at: Date | null;
+  cancellation_reason: string | null;
+  locked_price_monthly: number | null;
+  locked_price_annually: number | null;
+  locked_until: Date | null;
+  mp_subscription_id: string | null;
+  mp_customer_id: string | null;
+  mp_preapproval_id: string | null;
+  last_mp_payment_id: string | null;
+  orders_this_month: number;
+  last_order_count_reset: Date | null;
+  admin_notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+interface SubscriptionUsageLogsTable {
+  id: string;
+  business_id: string;
+  month: Date;
+  users_count: number;
+  products_count: number;
+  orders_count: number;
+  categories_count: number;
+  afip_invoices_count: number;
+  created_at: Date;
+}
+
+interface SubscriptionEventsTable {
+  id: string;
+  subscription_id: string;
+  event_type: string;
+  old_plan_id: string | null;
+  new_plan_id: string | null;
+  metadata: Record<string, any>;
   created_at: Date;
 }
 
