@@ -11,6 +11,8 @@ export const mapApiProductToFrontend = (apiProduct: ApiProduct, categoriesData: 
         ? (categoriesData.find(c => c.id === apiProduct.category_id)?.name || apiProduct.category_name || 'Sin Categoría')
         : (apiProduct.category_name || 'Sin Categoría'),
     category_id: apiProduct.category_id,
+    brand_id: apiProduct.brand_id,
+    brand_name: apiProduct.brand_name,
     price: apiProduct.price,
     cost: apiProduct.cost,
     stock: apiProduct.stock_quantity,
@@ -42,6 +44,7 @@ export const mapFrontendToApiProduct = (product: Partial<Product>, categoriesDat
         is_barcode: false,
         is_active: true,
         category_id: categoryId,
+        brand_id: product.brand_id,
         supplier_id: product.supplierId,
     };
 };

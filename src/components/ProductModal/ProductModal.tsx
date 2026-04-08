@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, AlertCircle, TrendingUp } from 'lucide-react';
+import { X, Save, AlertCircle, TrendingUp, Plus, Check } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Product } from '../../store/useStore';
 import { generateIdWithPrefix, generateProductCode } from '../../utils/idGenerator';
@@ -24,15 +24,19 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     const addProduct = useStore((state) => state.addProduct);
     const updateProduct = useStore((state) => state.updateProduct);
     const categories = useStore((state) => state.categories);
+    const brands = useStore((state) => state.brands);
+    const loadBrands = useStore((state) => state.loadBrands);
+    const addBrand = useStore((state) => state.addBrand);
     const loadProducts = useStore((state) => state.loadProducts);
     const suppliers = useStore((state) => state.suppliers);
     const loadSuppliers = useStore((state) => state.loadSuppliers);
 
-    const [formData, setFormData] = useState<Partial<Product>>({
+    const [formData, setFormData] = useState<any>({
         code: '',
         barcode: '',
         name: '',
         category: initialCategory || '',
+        brand_id: '',
         price: 0,
         cost: 0,
         stock: 0,
@@ -40,6 +44,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         supplierId: '',
         tags: []
     });
+
+    const [isAddingBrand, setIsAddingBrand] = useState(false);
+    const [newBrandName, setNewBrandName] = useState('');
 
     const [error, setError] = useState<string | null>(null);
     const [isScanOpen, setIsScanOpen] = useState(false);
@@ -52,27 +59,36 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     useEffect(() => {
         if (isOpen) {
             loadSuppliers();
-        }
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (!isOpen) return;
-
-        if (productToEdit) {
-            setFormData(productToEdit);
-        } else {
-            setFormData({
-                code: '',
-                barcode: '',
-                name: '',
-                category: initialCategory || (categories && categories.length > 0 ? categories[0] : (formData.category || 'General')),
-                price: 0,
-                cost: 0,
-                stock: 0,
-                min: 5,
-                supplierId: '',
-                tags: []
-            });
+            loadBrands();
+            if (productToEdit) {
+                setFormData({
+                    code: productToEdit.code || '',
+                    barcode: productToEdit.barcode || '',
+                    name: productToEdit.name || '',
+                    category: productToEdit.category || (categories && categories.length > 0 ? categories[0] : 'General'),
+                    brand_id: productToEdit.brand_id || '',
+                    price: productToEdit.price || 0,
+                    cost: productToEdit.cost || 0,
+                    stock: productToEdit.stock || 0,
+                    min: productToEdit.min || 5,
+                    supplierId: productToEdit.supplierId || '',
+                    tags: productToEdit.tags || []
+                });
+            } else {
+                setFormData({
+                    code: '',
+                    barcode: '',
+                    name: '',
+                    category: initialCategory || (categories && categories.length > 0 ? categories[0] : (formData.category || 'General')),
+                    brand_id: '',
+                    price: 0,
+                    cost: 0,
+                    stock: 0,
+                    min: 5,
+                    supplierId: '',
+                    tags: []
+                });
+            }
         }
     }, [isOpen, productToEdit, initialCategory]);
 
@@ -87,6 +103,20 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     };
 
     const margin = calculateMargin();
+
+    const handleQuickAddBrand = async () => {
+        if (!newBrandName.trim()) return;
+        try {
+            const brand = await addBrand(newBrandName.trim());
+            if (brand) {
+                setFormData((prev: any) => ({ ...prev, brand_id: brand.id }));
+                setNewBrandName('');
+                setIsAddingBrand(false);
+            }
+        } catch (error) {
+            console.error('Error adding brand:', error);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -142,6 +172,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 barcode: formData.barcode,
                 name: formData.name!,
                 category: formData.category!,
+                brand_id: formData.brand_id,
                 price: validatedPrice!,
                 cost: validatedCost!,
                 stock: validatedStock!,
@@ -186,17 +217,76 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     </div>
 
                     <div className="grid grid-2 gap-4 mb-4">
-                        <div className="form-group">
-                            <label className="form-label">Carpeta / Categoría *</label>
-                            <select
-                                className="form-input"
-                                value={formData.category}
-                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            >
-                                {(categories || []).map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                            </select>
+                        <div className="form-group grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="form-label">Carpeta / Categoría *</label>
+                                <select 
+                                    className="form-select"
+                                    value={formData.category}
+                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                    required
+                                >
+                                    {(categories || []).map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="form-label">Marca</label>
+                                <div className="flex gap-2">
+                                    {!isAddingBrand ? (
+                                        <>
+                                            <select 
+                                                className="form-select flex-1"
+                                                value={formData.brand_id}
+                                                onChange={(e) => setFormData({ ...formData, brand_id: e.target.value })}
+                                            >
+                                                <option value="">Sin Marca</option>
+                                                {(brands || []).map(brand => (
+                                                    <option key={brand.id} value={brand.id}>{brand.name}</option>
+                                                ))}
+                                            </select>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setIsAddingBrand(true)}
+                                                className="btn btn-secondary p-2"
+                                                title="Nueva Marca"
+                                            >
+                                                <Plus size={20} />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <input 
+                                                type="text"
+                                                className="form-input flex-1"
+                                                placeholder="Nombre de marca"
+                                                value={newBrandName}
+                                                onChange={(e) => setNewBrandName(e.target.value)}
+                                                autoFocus
+                                            />
+                                            <button 
+                                                type="button"
+                                                onClick={handleQuickAddBrand}
+                                                className="btn btn-primary p-2"
+                                            >
+                                                <Check size={20} />
+                                            </button>
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsAddingBrand(false);
+                                                    setNewBrandName('');
+                                                }}
+                                                className="btn btn-secondary p-2"
+                                            >
+                                                <X size={20} />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                         <div className="form-group">
                             <label className="form-label">Código (Opcional)</label>

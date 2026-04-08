@@ -20,8 +20,14 @@ async function diagnose() {
         `);
         console.table(locks.rows);
 
-        console.log("\n--- Checking Table Schemas ---");
-        const tables = ['transactions', 'stock_movements', 'products', 'customers'];
+        console.log("\n--- Checking All Tables ---");
+        const tablesResult = await pool.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
+        `);
+        const tables = tablesResult.rows.map(r => r.table_name);
+        console.log("Found tables:", tables.join(', '));
         for (const table of tables) {
             const schema = await pool.query(`
                 SELECT column_name, data_type, is_nullable 

@@ -11,7 +11,9 @@
       "WebFetch(florist-toolbox.com)",
       "WebFetch(www.onlyiris.com)",
       "WebFetch(www.hanafloristpos.com)",
-      "WebFetch(www.unkoa.com)"
+      "WebFetch(www.unkoa.com)",
+      "Bash(git checkout *)",
+      "Bash(findstr *)"
     ]
   },
   "$version": 3

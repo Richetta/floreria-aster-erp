@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Upload, Download, X, Check, AlertCircle, Search } from 'lucide-react';
+import { Upload, Download, X, Check, Search, TrendingUp, Percent, FileText, Edit3 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import { useModal } from '../../hooks/useModal';
@@ -18,6 +18,7 @@ interface PriceChange {
     newPrice: number;
     change: number;
     changePercent: number;
+    basePrice?: number; // Cost price if margin mode
 }
 
 export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalProps) => {
@@ -30,10 +31,11 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [percentageIncrease, setPercentageIncrease] = useState<number>(0);
+    const [profitMargin, setProfitMargin] = useState<number>(30); // Default 30% margin
     const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
     const [previewChanges, setPreviewChanges] = useState<PriceChange[]>([]);
     const [csvData, setCsvData] = useState<any[]>([]);
-    const [importMode, setImportMode] = useState<'percentage' | 'csv' | 'manual'>('percentage');
+    const [importMode, setImportMode] = useState<'percentage' | 'margin' | 'csv' | 'manual'>('percentage');
 
     // New states for selection and search
     const [searchTerm, setSearchTerm] = useState('');
@@ -46,7 +48,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
     const visibleProducts = useMemo(() => products.filter(p => {
         const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
         const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              p.code.toLowerCase().includes(searchTerm.toLowerCase());
+                              (p.code || '').toLowerCase().includes(searchTerm.toLowerCase());
         return matchesCategory && matchesSearch;
     }), [products, selectedCategory, searchTerm]);
 
@@ -81,6 +83,23 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                     newPrice: Math.round(newPrice),
                     change: Math.round(newPrice - oldPrice),
                     changePercent: percentageIncrease
+                });
+            });
+        } else if (importMode === 'margin') {
+            products.forEach(product => {
+                if (!selectedProductIds.has(product.id)) return;
+                const basePrice = product.cost || 0;
+                if (basePrice <= 0) return; // Skip products without cost
+                const oldPrice = product.price;
+                const newPrice = basePrice * (1 + profitMargin / 100);
+                changes.push({
+                    productId: product.id,
+                    productName: product.name,
+                    oldPrice,
+                    newPrice: Math.round(newPrice),
+                    change: Math.round(newPrice - oldPrice),
+                    changePercent: Math.round(((newPrice - oldPrice) / oldPrice) * 100),
+                    basePrice
                 });
             });
         } else if (importMode === 'manual') {
@@ -120,7 +139,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         }
 
         setPreviewChanges(changes);
-    }, [products, percentageIncrease, customPrices, csvData, importMode, selectedProductIds]);
+    }, [products, percentageIncrease, profitMargin, customPrices, csvData, importMode, selectedProductIds]);
 
     // Calcular cambios automáticamente
     useEffect(() => {
@@ -135,7 +154,6 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         setIsLoading(true);
         try {
             const result = await api.parseFile(file);
-            // Mapear los datos de la API al formato esperado por el modal
             const mappedData = result.data.map((item: any) => ({
                 codigo: item.code,
                 nombre: item.name,
@@ -175,7 +193,6 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
     const applyChanges = async () => {
         setIsLoading(true);
         try {
-            // Apply updates sequentially to avoid overwhelming the server
             let count = 0;
             for (const change of previewChanges) {
                 await updateProduct(change.productId, { 
@@ -191,6 +208,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
             });
             setStep(1);
             setPercentageIncrease(0);
+            setProfitMargin(30);
             setCustomPrices({});
             setCsvData([]);
             onClose();
@@ -212,13 +230,15 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         <div className="modal-overlay" onClick={onClose}>
             <div className="bulk-price-modal" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2 className="text-h2">📊 Actualización Masiva de Precios</h2>
+                    <h2 className="text-h2 flex items-center gap-2">
+                        <TrendingUp size={24} className="text-primary" />
+                        Actualización Masiva
+                    </h2>
                     <button className="modal-close-btn" onClick={onClose}>
                         <X size={20} />
                     </button>
                 </div>
 
-                {/* Progress Steps */}
                 <div className="progress-steps">
                     <div className={`step ${step >= 1 ? 'active' : ''}`}>
                         <div className="step-number">1</div>
@@ -235,7 +255,6 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                 </div>
 
                 <div className="modal-body">
-                    {/* STEP 1: Configurar */}
                     {step === 1 && (
                         <div className="step-content">
                             <h3 className="section-title">Método de Actualización</h3>
@@ -245,274 +264,243 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                     className={`method-card ${importMode === 'percentage' ? 'active' : ''}`}
                                     onClick={() => setImportMode('percentage')}
                                 >
-                                    <div className="method-icon">%</div>
-                                    <h4>Por Porcentaje</h4>
-                                    <p>Aumentar/disminuir % en toda una categoría</p>
+                                    <div className="method-icon"><Percent size={20} /></div>
+                                    <h4>Aumento %</h4>
+                                    <p>Sobre el precio de venta actual</p>
+                                </button>
+
+                                <button
+                                    className={`method-card ${importMode === 'margin' ? 'active' : ''}`}
+                                    onClick={() => setImportMode('margin')}
+                                >
+                                    <div className="method-icon"><TrendingUp size={20} /></div>
+                                    <h4>Margen de Ganancia</h4>
+                                    <p>Margen % sobre el precio de costo</p>
                                 </button>
                                 
                                 <button
                                     className={`method-card ${importMode === 'csv' ? 'active' : ''}`}
                                     onClick={() => setImportMode('csv')}
                                 >
-                                    <div className="method-icon">📄</div>
-                                    <h4>Desde CSV/Excel</h4>
-                                    <p>Importar lista de precios del proveedor</p>
+                                    <div className="method-icon"><FileText size={20} /></div>
+                                    <h4>Importar Excel</h4>
+                                    <p>Desde lista del proveedor</p>
                                 </button>
                                 
                                 <button
                                     className={`method-card ${importMode === 'manual' ? 'active' : ''}`}
                                     onClick={() => setImportMode('manual')}
                                 >
-                                    <div className="method-icon">✏️</div>
+                                    <div className="method-icon"><Edit3 size={20} /></div>
                                     <h4>Manual</h4>
-                                    <p>Editar precios uno por uno</p>
+                                    <p>Editar uno por uno</p>
                                 </button>
                             </div>
 
-                            {/* Porcentaje / Manual Mode with Checkboxes */}
-                            {(importMode === 'percentage' || importMode === 'manual') && (
-                                <div className="config-section">
-                                    {importMode === 'percentage' && (
-                                        <div className="form-group mb-4">
-                                            <label className="form-label">
-                                                Porcentaje de {percentageIncrease > 0 ? 'Aumento' : 'Descuento'}
-                                            </label>
-                                            <div className="percentage-input">
-                                                <input
-                                                    type="number"
-                                                    className="form-input"
-                                                    value={percentageIncrease}
-                                                    onChange={(e) => setPercentageIncrease(parseFloat(e.target.value) || 0)}
-                                                    min="-100"
-                                                    max="1000"
-                                                    step="0.1"
-                                                />
-                                                <span className="percentage-symbol">%</span>
-                                            </div>
+                            <div className="config-section card bg-surface p-4 mt-6">
+                                {importMode === 'percentage' && (
+                                    <div className="form-group mb-6">
+                                        <label className="form-label">Porcentaje de Aumento/Descuento</label>
+                                        <div className="percentage-input-wrapper">
+                                            <input
+                                                type="number"
+                                                className="form-input"
+                                                value={percentageIncrease}
+                                                onChange={(e) => setPercentageIncrease(parseFloat(e.target.value) || 0)}
+                                            />
+                                            <span className="percentage-symbol">%</span>
                                         </div>
-                                    )}
+                                    </div>
+                                )}
 
+                                {importMode === 'margin' && (
+                                    <div className="form-group mb-6">
+                                        <label className="form-label">Deseo ganar un...</label>
+                                        <div className="percentage-input-wrapper">
+                                            <input
+                                                type="number"
+                                                className="form-input"
+                                                value={profitMargin}
+                                                onChange={(e) => setProfitMargin(parseFloat(e.target.value) || 0)}
+                                            />
+                                            <span className="percentage-symbol">%</span>
+                                        </div>
+                                        <p className="text-micro text-muted mt-2">
+                                            * Se aplicará sobre el <strong>Precio de Costo</strong> de cada producto.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {(importMode === 'percentage' || importMode === 'margin' || importMode === 'manual') && (
                                     <div className="selection-area">
-                                        <h4 className="text-body font-bold mb-3">Seleccionar Productos ({selectedProductIds.size})</h4>
-                                        <div className="filters-row flex gap-2 mb-3">
-                                            <div className="search-box flex-1 relative">
-                                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                                        <h4 className="flex justify-between items-center mb-4">
+                                            <span>Seleccionar Productos</span>
+                                            <span className="badge">{selectedProductIds.size} seleccionados</span>
+                                        </h4>
+                                        <div className="filters-row flex gap-2 mb-4">
+                                            <div className="search-box-pill flex-1">
+                                                <Search size={18} />
                                                 <input
                                                     type="text"
-                                                    className="form-input pl-9"
-                                                    placeholder="Buscar flor o artículo..."
+                                                    placeholder="Buscar por nombre o código..."
                                                     value={searchTerm}
                                                     onChange={(e) => setSearchTerm(e.target.value)}
                                                 />
                                             </div>
                                             <select
-                                                className="form-input w-auto min-w-[200px]"
+                                                className="form-input w-auto min-w-[180px]"
                                                 value={selectedCategory}
                                                 onChange={(e) => setSelectedCategory(e.target.value)}
                                             >
                                                 {categories.map(cat => (
                                                     <option key={cat} value={cat}>
-                                                        {cat === 'all' ? 'Todas las categorías' : cat}
+                                                        {cat === 'all' ? 'Todas las carpetas' : cat}
                                                     </option>
                                                 ))}
                                             </select>
                                         </div>
                                         
-                                        <div className="product-list-container border border-border rounded-lg overflow-hidden">
-                                            <div className="list-header bg-surface-hover p-3 flex items-center justify-between border-b border-border">
-                                                <label className="flex items-center gap-2 cursor-pointer font-medium text-small">
+                                        <div className="product-selection-list">
+                                            <div className="list-header">
+                                                <div className="flex items-center gap-2">
                                                     <input 
                                                         type="checkbox" 
                                                         checked={visibleProducts.length > 0 && selectedProductIds.size === visibleProducts.length}
                                                         onChange={handleToggleAll}
-                                                        className="checkbox-custom"
+                                                        id="select-all"
                                                     />
-                                                    Seleccionar todos los filtrados
-                                                </label>
-                                                <span className="text-small text-muted">
-                                                    {visibleProducts.length} resultados
-                                                </span>
+                                                    <label htmlFor="select-all">Seleccionar {visibleProducts.length} filtrados</label>
+                                                </div>
                                             </div>
-                                            <div className="list-body max-h-[250px] overflow-y-auto p-2">
-                                                {visibleProducts.length === 0 ? (
-                                                    <p className="text-center text-muted py-4 text-small">No se encontraron productos.</p>
-                                                ) : (
-                                                    visibleProducts.map(p => (
-                                                        <label key={p.id} className="list-item flex items-center justify-between p-2 hover:bg-surface-hover rounded cursor-pointer transition-colors">
-                                                            <div className="flex items-center gap-3">
-                                                                <input 
-                                                                    type="checkbox" 
-                                                                    checked={selectedProductIds.has(p.id)}
-                                                                    onChange={() => handleToggleProduct(p.id)}
-                                                                    className="checkbox-custom"
-                                                                />
-                                                                <div>
-                                                                    <p className="text-body font-medium leading-none">{p.name}</p>
-                                                                    <span className="text-micro text-muted font-mono">{p.code}</span>
-                                                                </div>
+                                            <div className="list-body">
+                                                {visibleProducts.map(p => (
+                                                    <div key={p.id} className="list-row" onClick={() => handleToggleProduct(p.id)}>
+                                                        <div className="flex items-center gap-3">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={selectedProductIds.has(p.id)}
+                                                                readOnly 
+                                                            />
+                                                            <div>
+                                                                <p className="font-bold m-0">{p.name}</p>
+                                                                <span className="text-micro text-muted">{p.code} • Costo: ${p.cost?.toLocaleString() || '0'}</span>
                                                             </div>
-                                                            <span className="text-small font-bold text-primary">${p.price.toLocaleString()}</span>
-                                                        </label>
-                                                    ))
-                                                )}
+                                                        </div>
+                                                        <span className="font-bold text-primary">${p.price.toLocaleString()}</span>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {/* CSV Mode */}
-                            {importMode === 'csv' && (
-                                <div className="config-section">
-                                    <div className="csv-upload">
-                                        <button 
-                                            className="btn btn-secondary"
-                                            onClick={downloadTemplate}
-                                        >
-                                            <Download size={18} />
-                                            Descargar Plantilla
-                                        </button>
-                                        
-                                        <div className="upload-area">
-                                            <input
-                                                type="file"
-                                                accept=".csv,.xlsx,.xls"
-                                                onChange={handleFileUpload}
-                                                id="csv-upload"
-                                                disabled={isLoading}
-                                            />
-                                            <label htmlFor="csv-upload" className="upload-label">
-                                                {isLoading ? (
-                                                    <div className="spinner-small" />
-                                                ) : (
-                                                    <Upload size={32} />
-                                                )}
-                                                <p>{isLoading ? 'Procesando archivo...' : 'Arrastrá tu archivo CSV o Excel'}</p>
-                                                <p className="text-muted text-small">o hacé click para seleccionar</p>
-                                            </label>
+                                {importMode === 'csv' && (
+                                    <div className="csv-upload-section">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="m-0">Importar Archivo</h4>
+                                            <button className="btn btn-secondary btn-sm" onClick={downloadTemplate}>
+                                                <Download size={14} className="mr-1" /> Plantilla
+                                            </button>
                                         </div>
-                                        
+                                        <div className="upload-dropzone">
+                                            <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} />
+                                            <Upload size={32} className="mb-2 text-muted" />
+                                            <p className="m-0">Subí tu Excel o CSV aquí</p>
+                                        </div>
                                         {csvData.length > 0 && (
-                                            <div className="upload-success">
-                                                <Check size={20} className="text-success" />
-                                                <span>{csvData.length} filas cargadas</span>
+                                            <div className="alert alert-success mt-4">
+                                                <Check size={18} /> Se cargaron {csvData.length} productos
                                             </div>
                                         )}
-                                    </div>
-                                </div>
-                            )}
-
-
-
-                            <div className="step-actions">
-                                <button className="btn btn-secondary" onClick={onClose}>
-                                    Cancelar
-                                </button>
-                                <button 
-                                    className="btn btn-primary"
-                                    onClick={() => setStep(2)}
-                                    disabled={
-                                        (importMode === 'percentage' && (selectedProductIds.size === 0 || percentageIncrease === 0)) ||
-                                        (importMode === 'manual' && selectedProductIds.size === 0) ||
-                                        (importMode === 'csv' && csvData.length === 0)
-                                    }
-                                >
-                                    Continuar
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 2: Revisar */}
-                    {step === 2 && (
-                        <div className="step-content">
-                            <h3 className="section-title">
-                                Vista Previa de Cambios ({previewChanges.length} productos)
-                            </h3>
-
-                            <div className="changes-preview">
-                                <div className="preview-header">
-                                    <span>Producto</span>
-                                    <span>Precio Anterior</span>
-                                    <span>Precio Nuevo</span>
-                                    <span>Cambio</span>
-                                </div>
-                                
-                                <div className="preview-list">
-                                    {previewChanges.slice(0, 10).map((change, idx) => (
-                                        <div key={idx} className="preview-item">
-                                            <span className="product-name">{change.productName}</span>
-                                            <span className="old-price">${change.oldPrice.toLocaleString()}</span>
-                                            <span className="new-price">${change.newPrice.toLocaleString()}</span>
-                                            <span className={`change ${change.change > 0 ? 'positive' : 'negative'}`}>
-                                                {change.change > 0 ? '+' : ''}${change.change.toLocaleString()} ({change.changePercent > 0 ? '+' : ''}{change.changePercent}%)
-                                            </span>
-                                        </div>
-                                    ))}
-                                    
-                                    {previewChanges.length > 10 && (
-                                        <p className="text-muted text-center mt-4">
-                                            ... y {previewChanges.length - 10} productos más
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {previewChanges.length === 0 && (
-                                <div className="empty-state">
-                                    <AlertCircle size={48} className="text-muted opacity-20" />
-                                    <p>No hay cambios para mostrar</p>
-                                </div>
-                            )}
-
-                            <div className="step-actions">
-                                <button className="btn btn-secondary" onClick={() => setStep(1)}>
-                                    Volver
-                                </button>
-                                <button 
-                                    className="btn btn-success"
-                                    onClick={() => setStep(3)}
-                                    disabled={previewChanges.length === 0}
-                                >
-                                    Confirmar Cambios
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 3: Aplicar */}
-                    {step === 3 && (
-                        <div className="step-content text-center">
-                            <div className="confirmation-icon">
-                                <Check size={64} />
-                            </div>
-                            
-                            <h3 className="text-h3 mb-4">¿Estás seguro de aplicar estos cambios?</h3>
-                            
-                            <div className="summary-box">
-                                <div className="summary-row">
-                                    <span>Productos a actualizar:</span>
-                                    <strong>{previewChanges.length}</strong>
-                                </div>
-                                <div className="summary-row">
-                                    <span>Categoría:</span>
-                                    <strong>{selectedCategory === 'all' ? 'Todas' : selectedCategory}</strong>
-                                </div>
-                                {importMode === 'percentage' && (
-                                    <div className="summary-row">
-                                        <span>Porcentaje:</span>
-                                        <strong>{percentageIncrease > 0 ? '+' : ''}{percentageIncrease}%</strong>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="step-actions">
-                                <button className="btn btn-secondary" onClick={() => setStep(2)}>
-                                    Volver
+                            <div className="modal-footer mt-8">
+                                <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+                                <button 
+                                    className="btn btn-primary"
+                                    onClick={() => setStep(2)}
+                                    disabled={selectedProductIds.size === 0 && importMode !== 'csv'}
+                                >
+                                    Continuar a Revisión
                                 </button>
-                                <button className="btn btn-success" onClick={applyChanges}>
-                                    <Check size={18} />
-                                    Sí, Aplicar Cambios
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 2 && (
+                        <div className="step-content">
+                            <h3 className="section-title">Revisar Cambios ({previewChanges.length})</h3>
+                            <div className="preview-table-wrapper card">
+                                <table className="preview-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th className="text-right">Precio Actual</th>
+                                            <th className="text-right">Precio Nuevo</th>
+                                            <th className="text-right">Variación</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {previewChanges.slice(0, 100).map((change, idx) => (
+                                            <tr key={idx}>
+                                                <td>
+                                                    <p className="font-bold m-0">{change.productName}</p>
+                                                    {change.basePrice && <span className="text-micro text-muted">Costo base: ${change.basePrice}</span>}
+                                                </td>
+                                                <td className="text-right text-muted">${change.oldPrice.toLocaleString()}</td>
+                                                <td className="text-right font-bold text-primary">${change.newPrice.toLocaleString()}</td>
+                                                <td className="text-right">
+                                                    <span className={`badge ${change.change >= 0 ? 'bg-success-light text-success' : 'bg-danger-light text-danger'}`}>
+                                                        {change.change >= 0 ? '+' : ''}{change.changePercent}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {previewChanges.length > 100 && (
+                                    <p className="text-muted text-center p-4">... y {previewChanges.length - 100} más</p>
+                                )}
+                            </div>
+
+                            <div className="modal-footer mt-8">
+                                <button className="btn btn-secondary" onClick={() => setStep(1)}>Volver</button>
+                                <button className="btn btn-primary" onClick={() => setStep(3)}>Confirmar</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 3 && (
+                        <div className="step-content text-center py-8">
+                            <div className="confirmation-circle bg-primary-light text-primary mx-auto mb-6">
+                                <TrendingUp size={48} />
+                            </div>
+                            <h2 className="text-h2 mb-2">¿Confirmar Actualización?</h2>
+                            <p className="text-body text-muted mb-8">
+                                Se actualizarán <strong>{previewChanges.length}</strong> productos de forma permanente.
+                            </p>
+                            
+                            <div className="summary-card bg-surface-hover p-4 rounded-xl mb-8">
+                                <div className="summary-row flex justify-between mb-2">
+                                    <span>Método:</span>
+                                    <span className="font-bold">
+                                        {importMode === 'percentage' ? 'Aumento %' : 
+                                         importMode === 'margin' ? 'Margen de Ganancia' : 
+                                         importMode === 'csv' ? 'Excel/CSV' : 'Manual'}
+                                    </span>
+                                </div>
+                                <div className="summary-row flex justify-between">
+                                    <span>Productos:</span>
+                                    <span className="font-bold">{previewChanges.length}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 justify-center">
+                                <button className="btn btn-secondary" onClick={() => setStep(2)}>Revisar de nuevo</button>
+                                <button className="btn btn-primary btn-lg" onClick={applyChanges} disabled={isLoading}>
+                                    {isLoading ? 'Aplicando...' : 'Sí, Actualizar Precios'}
                                 </button>
                             </div>
                         </div>

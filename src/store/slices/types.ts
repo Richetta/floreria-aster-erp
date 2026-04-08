@@ -5,6 +5,8 @@ export type Product = {
     name: string;
     category: string;
     category_id?: string;
+    brand_id?: string;
+    brand_name?: string;
     price: number;
     cost?: number;
     stock: number;
@@ -19,7 +21,13 @@ export type Product = {
 export type Category = {
     id: string;
     name: string;
-    parent_id?: string;
+    parent_id?: string | null;
+    children?: Category[];
+};
+
+export type Brand = {
+    id: string;
+    name: string;
 };
 
 export type Customer = {

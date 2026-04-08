@@ -1,5 +1,5 @@
 // ============================================
-// API CLIENT - Florería Mi Jard�n ERP
+// API CLIENT - FlorerÃ­a Mi Jardín ERP
 // ============================================
 
 import { logger } from '../utils/logger';
@@ -35,6 +35,8 @@ export type Product = {
   description?: string;
   category_id?: string;
   category_name?: string;
+  brand_id?: string;
+  brand_name?: string;
   cost: number;
   price: number;
   margin_percent?: number;
@@ -167,8 +169,17 @@ export type Category = {
   id: string;
   business_id: string;
   name: string;
-  parent_id?: string;
+  parent_id?: string | null;
+  children?: Category[];
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Brand = {
+  id: string;
+  business_id: string;
+  name: string;
   created_at: string;
   updated_at: string;
 };
@@ -406,7 +417,7 @@ class ApiClient {
   }
 
   /**
-   * Descarga el catálogo actual como CSV desde el backend.
+   * Descarga el catÃ¡logo actual como CSV desde el backend.
    * Retorna el texto CSV listo para descargar.
    */
   async exportProductsTemplate(): Promise<string> {
@@ -491,8 +502,9 @@ class ApiClient {
   // CATEGORIES ENDPOINTS
   // ============================================
 
-  async getCategories(): Promise<Category[]> {
-    return this.request<Category[]>('/categories');
+  async getCategories(includeHierarchy: boolean = false): Promise<Category[]> {
+    const url = `/categories${includeHierarchy ? '?hierarchy=true' : ''}`;
+    return this.request<Category[]>(url);
   }
 
   async createCategory(category: any): Promise<Category> {
@@ -565,6 +577,31 @@ class ApiClient {
       body: JSON.stringify({ amount, notes, order_id }),
     });
   }
+
+  // ============================================
+  // BRAND METHODS
+  // ============================================
+
+  async getBrands(): Promise<Brand[]> {
+    return this.request<Brand[]>('/brands');
+  }
+
+  async createBrand(name: string): Promise<Brand> {
+    return this.request<Brand>('/brands', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async deleteBrand(id: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/brands/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============================================
+  // PRODUCT METHODS
+  // ============================================
 
   // ============================================
   // ORDERS ENDPOINTS

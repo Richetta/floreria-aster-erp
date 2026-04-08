@@ -1,5 +1,5 @@
 import { type StateCreator } from 'zustand';
-import type { Product, Category } from './types';
+import type { Product, Category, Brand } from './types';
 import type { AppState } from '../useStore';
 import { api } from '../../services/api';
 import { mapApiProductToFrontend, mapFrontendToApiProduct } from './mappers';
@@ -8,15 +8,19 @@ export interface ProductSlice {
     products: Product[];
     categories: string[];
     categoriesData: Category[];
+    brands: Brand[];
     tags: string[];
     loadProducts: () => Promise<void>;
-    loadCategories: () => Promise<void>;
+    loadCategories: (includeHierarchy?: boolean) => Promise<void>;
+    loadBrands: () => Promise<void>;
     addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
     updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
     deleteProduct: (id: string) => Promise<void>;
-    addCategory: (category: string) => Promise<void>;
+    addCategory: (category: string, parentId?: string) => Promise<void>;
     renameCategory: (oldName: string, newName: string) => Promise<void>;
     deleteCategory: (name: string) => void;
+    addBrand: (name: string) => Promise<Brand | null>;
+    deleteBrand: (id: string) => Promise<void>;
     
     addTag: (tag: string) => void;
     removeTag: (tag: string) => void;
@@ -30,6 +34,7 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
     products: [],
     categories: [],
     categoriesData: [],
+    brands: [],
     tags: [],
 
     getPriceHistory: async (id: string) => {
@@ -52,15 +57,24 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
         }
     },
 
-    loadCategories: async () => {
+    loadCategories: async (includeHierarchy = false) => {
         try {
-            const categoriesData = await api.getCategories();
+            const categoriesData = await api.getCategories(includeHierarchy);
             set({ 
                 categoriesData,
                 categories: categoriesData.map(c => c.name)
-            });
+            } as any);
         } catch (error: any) {
             console.error('Error loading categories:', error);
+        }
+    },
+
+    loadBrands: async () => {
+        try {
+            const brands = await api.getBrands();
+            set({ brands } as any);
+        } catch (error: any) {
+            console.error('Error loading brands:', error);
         }
     },
 
@@ -108,9 +122,9 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
         }
     },
 
-    addCategory: async (name) => {
+    addCategory: async (name, parentId) => {
         try {
-            const newCategory = await api.createCategory({ name });
+            const newCategory = await api.createCategory({ name, parent_id: parentId });
             set(state => ({
                 categories: [...state.categories, name],
                 categoriesData: [...state.categoriesData, newCategory]
@@ -118,6 +132,32 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
             get().addNotification('Categoría añadida', 'success');
         } catch (error: any) {
             get().addNotification('Error al añadir categoría', 'error');
+        }
+    },
+
+    addBrand: async (name) => {
+        try {
+            const newBrand = await api.createBrand(name);
+            set(state => ({
+                brands: [...state.brands, newBrand]
+            }));
+            get().addNotification('Marca añadida', 'success');
+            return newBrand;
+        } catch (error: any) {
+            get().addNotification('Error al añadir marca', 'error');
+            return null;
+        }
+    },
+
+    deleteBrand: async (id) => {
+        try {
+            await api.deleteBrand(id);
+            set(state => ({
+                brands: state.brands.filter(b => b.id !== id)
+            }));
+            get().addNotification('Marca eliminada', 'success');
+        } catch (error: any) {
+            get().addNotification('Error al eliminar marca', 'error');
         }
     },
 

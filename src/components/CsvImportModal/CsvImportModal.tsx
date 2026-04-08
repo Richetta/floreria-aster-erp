@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Upload, FileText, Check, AlertCircle, Loader2, Download } from 'lucide-react';
-import api from '../../services/api';
+import { api } from '../../services/api';
 import './CsvImportModal.css';
 
 interface CsvImportModalProps {
@@ -19,7 +19,6 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose }) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      const validTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
       const validExtensions = ['.csv', '.xlsx', '.xls'];
       const hasValidExtension = validExtensions.some(ext => selectedFile.name.toLowerCase().endsWith(ext));
 
@@ -80,7 +79,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleDownloadTemplate = () => {
-    const csvContent = 'Código,Nombre,Precio,Costo,Stock,Categoría\nPROD001,Producto Ejemplo,1000,500,10,Flores';
+    const csvContent = 'Código,Nombre,Precio,Costo,Stock,Categoría,Marca\nPROD001,Producto Ejemplo,1000,500,10,Flores,Mi Jardín';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -120,7 +119,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose }) => {
                   <div className="step-item">
                     <div className="step-number">1</div>
                     <div className="step-text">
-                      <strong>Descarga la plantilla</strong> o prepara tu archivo con las columnas: Código, Nombre, Precio, Costo, Stock
+                      <strong>Descarga la plantilla</strong> o prepara tu archivo con las columnas: Código, Nombre, Precio, Costo, Stock, Categoría, Marca
                     </div>
                   </div>
                   <div className="step-item">

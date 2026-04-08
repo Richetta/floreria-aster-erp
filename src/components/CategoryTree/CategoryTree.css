@@ -1,0 +1,132 @@
+.category-tree-root {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 0;
+}
+
+.category-tree-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    margin: 2px 0;
+}
+
+.category-tree-item:hover {
+    background: var(--bg-surface-hover);
+}
+
+.category-tree-item.active {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.category-tree-item.active .category-name {
+    font-weight: 600;
+}
+
+.category-tree-item.root-item {
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 8px;
+    padding-bottom: 12px;
+    border-radius: 0;
+}
+
+.expand-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.expand-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.expand-placeholder {
+    width: 20px;
+}
+
+.category-name {
+    font-size: 0.95rem;
+    color: var(--text-main);
+}
+
+.category-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.category-tree-item:hover .category-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: var(--bg-surface-hover);
+    color: var(--color-primary);
+}
+
+.action-btn.hover-danger:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.category-children {
+    border-left: 1px dashed var(--border-color);
+    margin-left: 18px;
+    padding-left: 2px;
+}
+
+/* Animations */
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Scrollbar styling for the sidebar container when using this if needed */
+.category-tree-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.category-tree-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.category-tree-list::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 10px;
+}

@@ -135,17 +135,47 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           .executeTakeFirst();
       }
 
-      // Create user if doesn't exist
+      // Create user and business if doesn't exist
       if (!user) {
+        // 1. Create a new unique business for this user
+        const newBusinessId = randomUUID();
+        const businessName = name || email.split('@')[0];
+        
+        await db.insertInto('businesses')
+          .values({
+            id: newBusinessId,
+            name: businessName,
+            currency: 'ARS',
+            created_at: new Date(),
+            updated_at: new Date()
+          } as any)
+          .execute();
+
+        // 2. Seed default categories for the new business
+        const DEFAULT_CATEGORIES = ['Ramos', 'Flores', 'Macetas', 'Regalería', 'Plantas Interior', 'Plantas Exterior', 'Tierra', 'Insumos'];
+        for (const catName of DEFAULT_CATEGORIES) {
+          await db.insertInto('categories')
+            .values({
+              id: randomUUID(),
+              business_id: newBusinessId,
+              name: catName,
+              is_active: true,
+              created_at: new Date(),
+              updated_at: new Date()
+            } as any)
+            .execute();
+        }
+
+        // 3. Create the user assigned to the new business
         user = await db
           .insertInto('users')
           .values({
             id: randomUUID(),
-            business_id: config.defaultBusinessId,
+            business_id: newBusinessId,
             name: name || email.split('@')[0],
             email: email,
             google_id: googleId,
-            role: 'viewer',
+            role: 'admin', // First user of a business is admin
             is_active: true,
             created_at: new Date(),
             updated_at: new Date()
@@ -244,15 +274,45 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       if (!user) {
+        // 1. Create a new unique business for this user
+        const newBusinessId = randomUUID();
+        const businessName = name || email.split('@')[0];
+        
+        await db.insertInto('businesses')
+          .values({
+            id: newBusinessId,
+            name: businessName,
+            currency: 'ARS',
+            created_at: new Date(),
+            updated_at: new Date()
+          } as any)
+          .execute();
+
+        // 2. Seed default categories for the new business
+        const DEFAULT_CATEGORIES = ['Ramos', 'Flores', 'Macetas', 'Regalería', 'Plantas Interior', 'Plantas Exterior', 'Tierra', 'Insumos'];
+        for (const catName of DEFAULT_CATEGORIES) {
+          await db.insertInto('categories')
+            .values({
+              id: randomUUID(),
+              business_id: newBusinessId,
+              name: catName,
+              is_active: true,
+              created_at: new Date(),
+              updated_at: new Date()
+            } as any)
+            .execute();
+        }
+
+        // 3. Create the user assigned to the new business
         user = await db
           .insertInto('users')
           .values({
             id: randomUUID(),
-            business_id: config.defaultBusinessId,
+            business_id: newBusinessId,
             name: name || email.split('@')[0],
             email: email,
             google_id: googleId,
-            role: 'viewer',
+            role: 'admin', // First user of a business is admin
             is_active: true,
             created_at: new Date(),
             updated_at: new Date()

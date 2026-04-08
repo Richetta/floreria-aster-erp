@@ -4,7 +4,7 @@ import jwt from '@fastify/jwt';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import { config } from './config/index.js';
-import { checkDatabaseConnection } from './db/index.js';
+import { checkDatabaseConnection, setBusinessId } from './db/index.js';
 import { authenticate } from './middleware/auth.js';
 
 console.log('--- SERVER INITIALIZING ---');
@@ -105,9 +105,16 @@ fastify.addHook('onRequest', (request, reply, done) => {
     return done();
   }
 
-  // Authenticate all other API routes
+  // Authenticate and set tenant context
   authenticate(request, reply)
-    .then(() => done())
+    .then(async () => {
+      // Set PostgreSQL session variable for RLS
+      const user = request.user as any;
+      if (user && user.business_id) {
+        await setBusinessId(user.business_id);
+      }
+      done();
+    })
     .catch((err) => {
       console.error('[GLOBAL AUTH] Error:', err);
       done(err);

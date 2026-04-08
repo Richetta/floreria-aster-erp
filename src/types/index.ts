@@ -1,6 +1,6 @@
 /**
  * Shared Types
- * Tipos compartidos para toda la aplicaciÃ³n
+ * Tipos compartidos para toda la aplicaciÃƒÂ³n
  */
 
 // ============================================
@@ -15,6 +15,8 @@ export interface Product {
   description?: string;
   category_id?: string | null;
   category_name?: string; // For frontend display
+  brand_id?: string | null;
+  brand_name?: string; // For frontend display
   cost: number;
   price: number;
   margin_percent?: number;
@@ -35,7 +37,16 @@ export interface Category {
   name: string;
   business_id: string;
   parent_id?: string | null;
+  children?: Category[]; // For tree structure
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Brand {
+  id: string;
+  business_id: string;
+  name: string;
   created_at: string;
   updated_at: string;
 }
@@ -46,6 +57,7 @@ export interface ProductFormData {
   name: string;
   description?: string;
   category?: string;
+  brand_id?: string;
   cost: number;
   price: number;
   stock?: number;
@@ -312,13 +324,13 @@ export interface AuthResponse {
 // WASTE TYPES
 // ============================================
 
-export type WMi Jardíneason = 'Deterioro natural' | 'Rotura de proveedor' | 'Rotura en local' | 'Vencimiento' | 'Robo/ExtravÃ­o' | 'Otro';
+export type WasteReason = 'Deterioro natural' | 'Rotura de proveedor' | 'Rotura en local' | 'Vencimiento' | 'Robo/ExtravÃ­o' | 'Otro';
 
 export interface WasteLog {
   id: string;
   product_id: string;
   quantity: number;
-  reason: WMi Jardíneason;
+  reason: WasteReason;
   notes?: string;
   reported_by?: string;
   created_at: string;
@@ -328,7 +340,7 @@ export interface WasteLog {
 export interface WasteFormData {
   product_id: string;
   quantity: number;
-  reason: WMi Jardíneason;
+  reason: WasteReason;
   notes?: string;
 }
 

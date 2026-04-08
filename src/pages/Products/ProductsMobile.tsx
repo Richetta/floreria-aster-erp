@@ -1,20 +1,23 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useStore } from '../../store/useStore';
+import { useStore } from '../../store/useStore'; 
 import type { Product } from '../../store/useStore';
 import { ProductModal } from '../../components/ProductModal/ProductModal';
 import { ConfirmModal } from '../../components/ui/Modals';
-import { useModal } from '../../hooks/useModal';
+import { useModal } from '../../hooks/useModal'; 
 import './ProductsMobile.css';
 
 export const ProductsMobile = () => {
     const products = useStore((state) => state.products);
     const categories = useStore((state) => state.categories);
+    const brands = useStore((state) => state.brands);
     const loadProducts = useStore((state) => state.loadProducts);
     const loadCategories = useStore((state) => state.loadCategories);
+    const loadBrands = useStore((state) => state.loadBrands);
     const deleteProduct = useStore((state) => state.deleteProduct);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string>('Todos');
+    const [activeBrand, setActiveBrand] = useState<string>('Todas');
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Modal states
@@ -25,15 +28,16 @@ export const ProductsMobile = () => {
     useEffect(() => {
         loadProducts();
         loadCategories();
+        loadBrands();
     }, []);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
-        await Promise.allSettled([loadProducts(), loadCategories()]);
+        await Promise.allSettled([loadProducts(), loadCategories(), loadBrands()]);
         setIsRefreshing(false);
     };
 
-    const handleEdit = (product: Product) => {
+    const handleEdit = (product: Product) => {   
         setProductToEdit(product);
         setIsModalOpen(true);
     };
@@ -45,8 +49,8 @@ export const ProductsMobile = () => {
 
     const handleDelete = async (e: React.MouseEvent, product: Product) => {
         e.stopPropagation();
-        const confirmed = await showConfirm({
-            title: '¿Eliminar producto?',
+        const confirmed = await showConfirm({    
+            title: '¿Eliminar producto?',       
             message: `¿Estás seguro de eliminar "${product.name}"? Esta acción no se puede deshacer.`,
             confirmText: 'Eliminar',
             variant: 'danger'
@@ -56,14 +60,15 @@ export const ProductsMobile = () => {
         }
     };
 
-    const filteredProducts = useMemo(() => {
+    const filteredProducts = useMemo(() => {     
         return products.filter(p => {
-            const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.code.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;
-            return matchesSearch && matchesCategory;
+            const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||      
+                (p.code || '').toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;  
+            const matchesBrand = activeBrand === 'Todas' || (p.brand_id === activeBrand || (activeBrand === '' && !p.brand_id));
+            return matchesSearch && matchesCategory && matchesBrand;
         });
-    }, [products, searchTerm, activeCategory]);
+    }, [products, searchTerm, activeCategory, activeBrand]);  
 
     return (
         <div className="products-mobile-wrapper">
@@ -80,32 +85,59 @@ export const ProductsMobile = () => {
                     <input
                         type="text"
                         placeholder="Buscar producto o código..."
-                        value={searchTerm}
+                        value={searchTerm}       
                         onChange={e => setSearchTerm(e.target.value)}
                     />
                 </div>
 
-                <div className="products-categories-scroll">
-                    {['Todos', ...(categories || [])].map(cat => (
+                <div className="products-filters-scroll-group">
+                    <div className="products-categories-scroll">
+                        {['Todos', ...(categories || [])].map(cat => (
+                            <button
+                                key={cat}
+                                className={`cat-pill ${activeCategory === cat ? 'active' : ''}`}      
+                                onClick={() => setActiveCategory(cat)}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="products-brands-scroll" style={{ marginTop: '8px' }}>
+                        {['Todas', ...(brands || []).map(b => b.name)].map(brandName => {
+                            const brandId = brandName === 'Todas' ? 'Todas' : (brands.find(b => b.name === brandName)?.id || '');
+                            return (
+                                <button
+                                    key={brandName}
+                                    className={`brand-pill ${activeBrand === brandId ? 'active' : ''}`}      
+                                    onClick={() => setActiveBrand(brandId)}
+                                >
+                                    {brandName}
+                                </button>
+                            );
+                        })}
                         <button
-                            key={cat}
-                            className={`cat-pill ${activeCategory === cat ? 'active' : ''}`}
-                            onClick={() => setActiveCategory(cat)}
+                            className={`brand-pill ${activeBrand === '' ? 'active' : ''}`}      
+                            onClick={() => setActiveBrand('')}
                         >
-                            {cat}
+                            Sin Marca
                         </button>
-                    ))}
+                    </div>
                 </div>
             </header>
 
-            <div className="products-feed-list">
+            <div className="products-feed-list"> 
                 {filteredProducts.length === 0 ? (
                     <div className="empty-products">
                         <span className="material-symbols-rounded">inventory_2</span>
-                        <p>{searchTerm ? 'No se encontraron coincidencias' : 'No hay productos en esta categoría'}</p>
-                        {searchTerm && (
-                            <button className="clear-search-btn" onClick={() => setSearchTerm('')}>
-                                Limpiar búsqueda
+                        <p>{searchTerm ? 'No se encontraron coincidencias' : 'No hay productos que coincidan con los filtros'}</p>
+                        {(searchTerm || activeCategory !== 'Todos' || activeBrand !== 'Todas') && (
+                            <button className="clear-search-btn" onClick={() => {
+                                setSearchTerm('');
+                                setActiveCategory('Todos');
+                                setActiveBrand('Todas');
+                            }}>
+                                Limpiar filtros
                             </button>
                         )}
                     </div>
@@ -114,15 +146,18 @@ export const ProductsMobile = () => {
                         <div key={product.id} className="product-item-card animate-fade-in" onClick={() => handleEdit(product)}>
                             <div className="p-item-main">
                                 <div className="p-item-info">
-                                    <span className="p-item-cat">{product.category || 'Sin Categoría'}</span>
+                                    <div className="flex flex-col">
+                                        <span className="p-item-cat">{product.category || 'Sin Categoría'}</span>
+                                        {product.brand_name && <span className="p-item-brand">{product.brand_name}</span>}
+                                    </div>
                                     <h4 className="p-item-name">{product.name}</h4>
                                     <span className="p-item-code">#{product.code}</span>
                                 </div>
                                 <div className="p-item-stock-box">
                                     <div className={`stock-status ${product.stock <= product.min ? 'low' : 'ok'}`}>
-                                        <span className="stock-number">{product.stock}</span>
+                                        <span className="stock-number">{product.stock}</span>     
                                         <span className="stock-label">Stock</span>
-                                    </div>
+                                    </div>       
                                 </div>
                             </div>
                             <div className="p-item-footer">
@@ -135,11 +170,11 @@ export const ProductsMobile = () => {
                                         e.stopPropagation();
                                         handleEdit(product);
                                     }}>
-                                        <span className="material-symbols-rounded">edit</span>
-                                    </button>
+                                        <span className="material-symbols-rounded">edit</span>    
+                                    </button>    
                                     <button className="p-delete-mini" onClick={(e) => handleDelete(e, product)}>
-                                        <span className="material-symbols-rounded">delete</span>
-                                    </button>
+                                        <span className="material-symbols-rounded">delete</span>  
+                                    </button>    
                                 </div>
                             </div>
                         </div>
@@ -154,7 +189,7 @@ export const ProductsMobile = () => {
             <ProductModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                productToEdit={productToEdit}
+                productToEdit={productToEdit}    
                 initialCategory={activeCategory !== 'Todos' ? activeCategory : undefined}
             />
 
