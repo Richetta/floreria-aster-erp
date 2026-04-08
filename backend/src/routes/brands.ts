@@ -36,9 +36,9 @@ export const brandsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.send(brands);
     } catch (error: any) {
       console.error('Error fetching brands:', error);
-      return reply.status(500).send({ 
+      return reply.status(500).send({
         error: 'Error al obtener marcas',
-        message: error.message 
+        message: error.message
       });
     }
   });
@@ -73,9 +73,9 @@ export const brandsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.send(brand);
     } catch (error: any) {
       console.error('Error fetching brand:', error);
-      return reply.status(500).send({ 
+      return reply.status(500).send({
         error: 'Error al obtener marca',
-        message: error.message 
+        message: error.message
       });
     }
   });
@@ -106,13 +106,13 @@ export const brandsRoutes: FastifyPluginAsync = async (fastify) => {
         .selectFrom('brands')
         .select('id')
         .where('business_id', '=', user.business_id)
-        .where(db.fn.lower('name'), '=', body.name.toLowerCase())
+        .where('name', 'ilike', body.name)
         .executeTakeFirst();
 
       if (existing) {
-        return reply.status(409).send({ 
+        return reply.status(409).send({
           error: 'Marca duplicada',
-          message: `Ya existe una marca con el nombre "${body.name}"` 
+          message: `Ya existe una marca con el nombre "${body.name}"`
         });
       }
 
@@ -137,24 +137,24 @@ export const brandsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(201).send(brand);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        return reply.status(400).send({ 
-          error: 'Error de validación', 
-          details: error.errors 
+        return reply.status(400).send({
+          error: 'Error de validación',
+          details: error.errors
         });
       }
 
       // Handle unique constraint violation
       if (error.code === '23505') {
-        return reply.status(409).send({ 
+        return reply.status(409).send({
           error: 'Marca duplicada',
-          message: `Ya existe una marca con ese nombre` 
+          message: `Ya existe una marca con ese nombre`
         });
       }
 
       console.error('Error creating brand:', error);
-      return reply.status(500).send({ 
+      return reply.status(500).send({
         error: 'Error al crear marca',
-        message: error.message 
+        message: error.message
       });
     }
   });
@@ -205,23 +205,23 @@ export const brandsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.send(brand);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        return reply.status(400).send({ 
-          error: 'Error de validación', 
-          details: error.errors 
+        return reply.status(400).send({
+          error: 'Error de validación',
+          details: error.errors
         });
       }
 
       if (error.code === '23505') {
-        return reply.status(409).send({ 
+        return reply.status(409).send({
           error: 'Marca duplicada',
-          message: `Ya existe una marca con ese nombre` 
+          message: `Ya existe una marca con ese nombre`
         });
       }
 
       console.error('Error updating brand:', error);
-      return reply.status(500).send({ 
+      return reply.status(500).send({
         error: 'Error al actualizar marca',
-        message: error.message 
+        message: error.message
       });
     }
   });
@@ -251,7 +251,7 @@ export const brandsRoutes: FastifyPluginAsync = async (fastify) => {
         .executeTakeFirst();
 
       if (productCount && Number(productCount.count) > 0) {
-        return reply.status(409).send({ 
+        return reply.status(409).send({
           error: 'No se puede eliminar',
           message: `Esta marca tiene ${productCount.count} producto(s) asociado(s). Reasigna los productos a otra marca antes de eliminar.`,
           productCount: Number(productCount.count)
@@ -272,9 +272,9 @@ export const brandsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.send({ success: true, message: 'Marca eliminada correctamente' });
     } catch (error: any) {
       console.error('Error deleting brand:', error);
-      return reply.status(500).send({ 
+      return reply.status(500).send({
         error: 'Error al eliminar marca',
-        message: error.message 
+        message: error.message
       });
     }
   });
@@ -324,9 +324,9 @@ export const brandsRoutes: FastifyPluginAsync = async (fastify) => {
       });
     } catch (error: any) {
       console.error('Error fetching brand stats:', error);
-      return reply.status(500).send({ 
+      return reply.status(500).send({
         error: 'Error al obtener estadísticas de marca',
-        message: error.message 
+        message: error.message
       });
     }
   });
