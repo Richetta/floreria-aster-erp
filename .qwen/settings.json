@@ -14,7 +14,9 @@
       "WebFetch(www.unkoa.com)",
       "Bash(git checkout *)",
       "Bash(findstr *)",
-      "Bash(npx *)"
+      "Bash(npx *)",
+      "Bash(dir *)",
+      "Bash(type *)"
     ]
   },
   "$version": 3

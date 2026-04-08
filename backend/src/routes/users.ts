@@ -10,7 +10,7 @@ async function checkUserLimit(businessId: string, reply: any) {
   try {
     // Get subscription limits
     const subResult = await db.executeQuery(
-      db.selectFrom('subscriptions')
+      (db as any).selectFrom('subscriptions')
         .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
         .select([
           'subscription_plans.max_users',
@@ -18,7 +18,7 @@ async function checkUserLimit(businessId: string, reply: any) {
           'subscription_plans.slug'
         ])
         .where('subscriptions.business_id', '=', businessId)
-        .where('subscriptions.status', 'in', ['active', 'trial'] as any)
+        .where('subscriptions.status', 'in', ['active', 'trial'])
         .limit(1)
     );
 

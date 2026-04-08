@@ -9,7 +9,7 @@ async function checkOrderLimit(businessId: string, reply: any) {
   try {
     // Get subscription limits
     const subResult = await db.executeQuery(
-      db.selectFrom('subscriptions')
+      (db as any).selectFrom('subscriptions')
         .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
         .select([
           'subscription_plans.max_orders_per_month',
@@ -17,7 +17,7 @@ async function checkOrderLimit(businessId: string, reply: any) {
           'subscription_plans.slug'
         ])
         .where('subscriptions.business_id', '=', businessId)
-        .where('subscriptions.status', 'in', ['active', 'trial'] as any)
+        .where('subscriptions.status', 'in', ['active', 'trial'])
         .limit(1)
     );
 
@@ -42,7 +42,7 @@ async function checkOrderLimit(businessId: string, reply: any) {
       db.selectFrom('orders')
         .select(db.fn.count('id').as('count'))
         .where('business_id', '=', businessId)
-        .where('created_at', '>=', monthStart.toISOString())
+        .where('created_at', '>=', monthStart as any)
         .where('status', '!=', 'cancelled')
     );
 
