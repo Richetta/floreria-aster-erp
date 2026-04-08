@@ -6,8 +6,8 @@ import { logger } from '../utils/logger';
 
 const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 // Use relative path in production for Vercel Proxy, absolute in dev or if explicitly set as absolute
-const API_BASE_URL = import.meta.env.PROD 
-  ? '/api' 
+const API_BASE_URL = import.meta.env.PROD
+  ? '/api'
   : (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\/$/, '')}/api`);
 
 // ============================================
@@ -593,6 +593,13 @@ class ApiClient {
     });
   }
 
+  async updateBrand(id: string, data: { name: string }): Promise<Brand> {
+    return this.request<Brand>(`/brands/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   async deleteBrand(id: string): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>(`/brands/${id}`, {
       method: 'DELETE',
@@ -602,6 +609,28 @@ class ApiClient {
   // ============================================
   // PRODUCT METHODS
   // ============================================
+
+  async bulkPricesUpdate(data: {
+    productIds: string[];
+    mode: 'percentage' | 'margin' | 'fixed';
+    value: number;
+    roundTo?: 'none' | 'up' | 'down' | 'nearest';
+  }): Promise<{ success: boolean; updated: number; details: any[] }> {
+    return this.request('/products/bulk-prices', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async bulkBrandUpdate(data: {
+    productIds: string[];
+    brandId: string | null;
+  }): Promise<{ success: boolean; updated: number }> {
+    return this.request('/products/bulk-brand', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
 
   // ============================================
   // ORDERS ENDPOINTS

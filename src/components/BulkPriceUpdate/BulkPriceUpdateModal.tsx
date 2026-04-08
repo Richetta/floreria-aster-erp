@@ -47,8 +47,8 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
     // Productos filtrados por categoría y búsqueda
     const visibleProducts = useMemo(() => products.filter(p => {
         const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              (p.code || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (p.code || '').toLowerCase().includes(searchTerm.toLowerCase());
         return matchesCategory && matchesSearch;
     }), [products, selectedCategory, searchTerm]);
 
@@ -120,7 +120,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
             });
         } else if (importMode === 'csv' && csvData.length > 0) {
             csvData.forEach((row: any) => {
-                const product = products.find(p => 
+                const product = products.find(p =>
                     p.code === row.codigo || p.name.toLowerCase() === row.nombre?.toLowerCase()
                 );
                 if (product && row.precio) {
@@ -162,10 +162,10 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
             setCsvData(mappedData);
         } catch (error: any) {
             console.error('[BULK-UPDATE] Error reading file:', error);
-            showAlert({ 
-                title: 'Error al leer archivo', 
-                message: error.message || 'No se pudo procesar el archivo. Asegurate de que sea un Excel o CSV válido.', 
-                variant: 'error' 
+            showAlert({
+                title: 'Error al leer archivo',
+                message: error.message || 'No se pudo procesar el archivo. Asegurate de que sea un Excel o CSV válido.',
+                variant: 'error'
             });
         } finally {
             setIsLoading(false);
@@ -175,10 +175,10 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
     // Descargar plantilla CSV
     const downloadTemplate = () => {
         const headers = 'codigo,nombre,precio\n';
-        const rows = products.slice(0, 5).map(p => 
+        const rows = products.slice(0, 5).map(p =>
             `${p.code},${p.name},${p.price}`
         ).join('\n');
-        
+
         const csv = headers + rows;
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -189,35 +189,85 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         URL.revokeObjectURL(url);
     };
 
-    // Aplicar cambios
+    // Aplicar cambios usando el endpoint bulk
     const applyChanges = async () => {
         setIsLoading(true);
         try {
-            let count = 0;
-            for (const change of previewChanges) {
-                await updateProduct(change.productId, { 
-                    price: change.newPrice
+            if (previewChanges.length === 0) {
+                showAlert({
+                    title: 'Sin cambios',
+                    message: 'No hay cambios para aplicar.',
+                    variant: 'warning'
                 });
-                count++;
+                setIsLoading(false);
+                return;
             }
 
-            showAlert({ 
-                title: 'Precios actualizados', 
-                message: `Se actualizaron ${count} productos exitosamente`, 
-                variant: 'success' 
-            });
+            // Determinar el modo y valor para el backend
+            let mode: 'percentage' | 'margin' | 'fixed';
+            let value: number;
+
+            if (importMode === 'percentage') {
+                mode = 'percentage';
+                value = percentageIncrease;
+            } else if (importMode === 'margin') {
+                mode = 'margin';
+                value = profitMargin;
+            } else {
+                // Para manual y CSV, usamos fixed con el primer cambio
+                mode = 'fixed';
+                value = 0; // No se usa realmente para manual
+            }
+
+            // Si es manual o CSV, aplicamos individualmente porque cada precio es diferente
+            if (importMode === 'manual' || importMode === 'csv') {
+                let count = 0;
+                for (const change of previewChanges) {
+                    await api.updateProduct(change.productId, {
+                        price: change.newPrice
+                    } as any);
+                    count++;
+                }
+
+                showAlert({
+                    title: 'Precios actualizados',
+                    message: `Se actualizaron ${count} productos exitosamente`,
+                    variant: 'success'
+                });
+            } else {
+                // Para percentage y margin, usamos el endpoint bulk
+                const productIds = previewChanges.map(c => c.productId);
+
+                const result = await api.bulkPricesUpdate({
+                    productIds,
+                    mode,
+                    value,
+                    roundTo: 'nearest'
+                });
+
+                // Recargar productos desde el store
+                await useStore.getState().loadProducts();
+
+                showAlert({
+                    title: 'Precios actualizados',
+                    message: `Se actualizaron ${result.updated} productos exitosamente`,
+                    variant: 'success'
+                });
+            }
+
             setStep(1);
             setPercentageIncrease(0);
             setProfitMargin(30);
             setCustomPrices({});
             setCsvData([]);
+            setSelectedProductIds(new Set());
             onClose();
         } catch (error: any) {
             console.error('[BULK-UPDATE] Error:', error);
-            showAlert({ 
-                title: 'Error al actualizar', 
-                message: 'Ocurrió un error al aplicar los cambios. Revisá la consola para más detalles.', 
-                variant: 'error' 
+            showAlert({
+                title: 'Error al actualizar',
+                message: error.message || 'Ocurrió un error al aplicar los cambios. Revisá la consola para más detalles.',
+                variant: 'error'
             });
         } finally {
             setIsLoading(false);
@@ -258,7 +308,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                     {step === 1 && (
                         <div className="step-content">
                             <h3 className="section-title">Método de Actualización</h3>
-                            
+
                             <div className="method-selector">
                                 <button
                                     className={`method-card ${importMode === 'percentage' ? 'active' : ''}`}
@@ -277,7 +327,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                     <h4>Margen de Ganancia</h4>
                                     <p>Margen % sobre el precio de costo</p>
                                 </button>
-                                
+
                                 <button
                                     className={`method-card ${importMode === 'csv' ? 'active' : ''}`}
                                     onClick={() => setImportMode('csv')}
@@ -286,7 +336,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                     <h4>Importar Excel</h4>
                                     <p>Desde lista del proveedor</p>
                                 </button>
-                                
+
                                 <button
                                     className={`method-card ${importMode === 'manual' ? 'active' : ''}`}
                                     onClick={() => setImportMode('manual')}
@@ -359,12 +409,12 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                                 ))}
                                             </select>
                                         </div>
-                                        
+
                                         <div className="product-selection-list">
                                             <div className="list-header">
                                                 <div className="flex items-center gap-2">
-                                                    <input 
-                                                        type="checkbox" 
+                                                    <input
+                                                        type="checkbox"
                                                         checked={visibleProducts.length > 0 && selectedProductIds.size === visibleProducts.length}
                                                         onChange={handleToggleAll}
                                                         id="select-all"
@@ -376,10 +426,10 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                                 {visibleProducts.map(p => (
                                                     <div key={p.id} className="list-row" onClick={() => handleToggleProduct(p.id)}>
                                                         <div className="flex items-center gap-3">
-                                                            <input 
-                                                                type="checkbox" 
+                                                            <input
+                                                                type="checkbox"
                                                                 checked={selectedProductIds.has(p.id)}
-                                                                readOnly 
+                                                                readOnly
                                                             />
                                                             <div>
                                                                 <p className="font-bold m-0">{p.name}</p>
@@ -418,7 +468,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
 
                             <div className="modal-footer mt-8">
                                 <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-                                <button 
+                                <button
                                     className="btn btn-primary"
                                     onClick={() => setStep(2)}
                                     disabled={selectedProductIds.size === 0 && importMode !== 'csv'}
@@ -481,14 +531,14 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                             <p className="text-body text-muted mb-8">
                                 Se actualizarán <strong>{previewChanges.length}</strong> productos de forma permanente.
                             </p>
-                            
+
                             <div className="summary-card bg-surface-hover p-4 rounded-xl mb-8">
                                 <div className="summary-row flex justify-between mb-2">
                                     <span>Método:</span>
                                     <span className="font-bold">
-                                        {importMode === 'percentage' ? 'Aumento %' : 
-                                         importMode === 'margin' ? 'Margen de Ganancia' : 
-                                         importMode === 'csv' ? 'Excel/CSV' : 'Manual'}
+                                        {importMode === 'percentage' ? 'Aumento %' :
+                                            importMode === 'margin' ? 'Margen de Ganancia' :
+                                                importMode === 'csv' ? 'Excel/CSV' : 'Manual'}
                                     </span>
                                 </div>
                                 <div className="summary-row flex justify-between">

@@ -13,7 +13,8 @@
       "WebFetch(www.hanafloristpos.com)",
       "WebFetch(www.unkoa.com)",
       "Bash(git checkout *)",
-      "Bash(findstr *)"
+      "Bash(findstr *)",
+      "Bash(npx *)"
     ]
   },
   "$version": 3

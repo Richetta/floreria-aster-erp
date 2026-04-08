@@ -72,6 +72,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     name: z.string().min(2),
     description: z.string().optional(),
     category_id: z.string().uuid().optional(),
+    brand_id: z.string().uuid().optional().nullable(),
     cost: z.number().nonnegative(),
     price: z.number().nonnegative(),
     barcode: z.string().optional(),
@@ -96,14 +97,15 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    const { search, category, low_stock, active, exact_barcode } = request.query as any;
+    const { search, category, brand, low_stock, active, exact_barcode } = request.query as any;
 
     const products = await db.transaction().execute(async (trx) => {
-      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
       let query = trx
         .selectFrom('products')
         .leftJoin('categories', 'categories.id', 'products.category_id')
+        .leftJoin('brands', 'brands.id', 'products.brand_id')
         .select([
           'products.id',
           'products.code',
@@ -118,8 +120,11 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
           'products.is_barcode',
           'products.tags',
           'products.category_id',
-          'categories.name as category_name'
+          'products.brand_id',
+          'categories.name as category_name',
+          'brands.name as brand_name'
         ])
+        .where('products.business_id', '=', user.business_id)
         .where('products.deleted_at', 'is', null);
 
       if (exact_barcode) {
@@ -134,6 +139,10 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (category && category !== 'Todos') {
         query = query.where('products.category_id', '=', category);
+      }
+
+      if (brand) {
+        query = query.where('products.brand_id', '=', brand);
       }
 
       if (active !== undefined) {
@@ -169,11 +178,12 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const product = await db.transaction().execute(async (trx) => {
-      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
       return await trx
         .selectFrom('products')
         .selectAll()
         .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
         .where('deleted_at', 'is', null)
         .executeTakeFirst();
     });
@@ -204,7 +214,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
       const body = createProductSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const margin = body.cost > 0
           ? ((body.price - body.cost) / body.cost * 100)
@@ -223,6 +233,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
             name: body.name,
             description: body.description || null,
             category_id: body.category_id || null,
+            brand_id: body.brand_id || null,
             cost: body.cost,
             price: body.price,
             margin_percent: margin,
@@ -295,7 +306,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
       const body = updateProductSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const currentProduct = await trx
           .selectFrom('products')
@@ -396,7 +407,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     await db.transaction().execute(async (trx) => {
-      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
       await trx
         .updateTable('products')
         .set({
@@ -429,7 +440,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     };
 
     const result = await db.transaction().execute(async (trx) => {
-      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
       const product = await trx
         .selectFrom('products')
@@ -486,7 +497,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const history = await db.transaction().execute(async (trx) => {
-      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
       return await trx
         .selectFrom('price_history')
         .selectAll()
@@ -525,6 +536,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
             updated_at: new Date()
           })
           .where('id', 'in', body.productIds)
+          .where('business_id', '=', user.business_id)
           .returningAll()
           .execute();
       });
@@ -535,6 +547,158 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(400).send({ error: 'Validation error', details: error.errors });
       }
       throw error;
+    }
+  });
+
+  // BULK UPDATE BRAND
+  fastify.put('/bulk-brand', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+
+    try {
+      const body = z.object({
+        productIds: z.array(z.string().uuid()).min(1),
+        brandId: z.string().uuid().nullable()
+      }).parse(request.body);
+
+      const result = await db.transaction().execute(async (trx) => {
+        return await trx
+          .updateTable('products')
+          .set({
+            brand_id: body.brandId,
+            updated_at: new Date()
+          })
+          .where('id', 'in', body.productIds)
+          .where('business_id', '=', user.business_id)
+          .returningAll()
+          .execute();
+      });
+
+      return reply.send({ success: true, updated: result.length });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'Validation error', details: error.errors });
+      }
+      throw error;
+    }
+  });
+
+  // BULK UPDATE PRICES BY PERCENTAGE
+  fastify.put('/bulk-prices', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+
+    try {
+      const body = z.object({
+        productIds: z.array(z.string().uuid()).min(1),
+        mode: z.enum(['percentage', 'margin', 'fixed']),
+        value: z.number(),
+        roundTo: z.enum(['none', 'up', 'down', 'nearest']).optional().default('none')
+      }).parse(request.body);
+
+      const result = await db.transaction().execute(async (trx) => {
+        const products = await trx
+          .selectFrom('products')
+          .select(['id', 'cost', 'price'])
+          .where('id', 'in', body.productIds)
+          .where('business_id', '=', user.business_id)
+          .execute();
+
+        const updates = products.map(product => {
+          let newPrice: number;
+
+          if (body.mode === 'percentage') {
+            // Increase/decrease by percentage
+            newPrice = Number(product.price) * (1 + body.value / 100);
+          } else if (body.mode === 'margin') {
+            // Calculate price based on desired margin: price = cost * (1 + margin%)
+            newPrice = Number(product.cost) * (1 + body.value / 100);
+          } else {
+            // Fixed amount added to current price
+            newPrice = Number(product.price) + body.value;
+          }
+
+          // Apply rounding if requested
+          if (body.roundTo === 'up') {
+            newPrice = Math.ceil(newPrice);
+          } else if (body.roundTo === 'down') {
+            newPrice = Math.floor(newPrice);
+          } else if (body.roundTo === 'nearest') {
+            newPrice = Math.round(newPrice);
+          } else {
+            newPrice = Math.round(newPrice * 100) / 100; // Round to 2 decimals
+          }
+
+          // Calculate new margin
+          const newMargin = Number(product.cost) > 0
+            ? ((newPrice - Number(product.cost)) / Number(product.cost) * 100)
+            : null;
+
+          return { productId: product.id, newPrice, newMargin, oldPrice: Number(product.price) };
+        });
+
+        // Execute updates
+        for (const update of updates) {
+          await trx
+            .updateTable('products')
+            .set({
+              price: update.newPrice,
+              margin_percent: update.newMargin,
+              updated_at: new Date()
+            } as any)
+            .where('id', '=', update.productId)
+            .execute();
+
+          // Record price history
+          await trx
+            .insertInto('price_history')
+            .values({
+              id: randomUUID(),
+              business_id: user.business_id,
+              product_id: update.productId,
+              old_cost: null,
+              old_price: update.oldPrice,
+              new_cost: null,
+              new_price: update.newPrice,
+              changed_by: user.sub,
+              reason: 'bulk_price_update',
+              metadata: { mode: body.mode, value: body.value },
+              created_at: new Date()
+            } as any)
+            .execute();
+        }
+
+        return updates;
+      });
+
+      return reply.send({
+        success: true,
+        updated: result.length,
+        details: result
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'Validation error', details: error.errors });
+      }
+      console.error('Error in bulk price update:', error);
+      return reply.status(500).send({
+        error: 'Error al actualizar precios masivamente',
+        message: error.message
+      });
     }
   });
 };

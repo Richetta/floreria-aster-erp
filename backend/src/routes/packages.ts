@@ -35,48 +35,49 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
     const { section, is_active, search, limit = '100' } = request.query as any;
 
     const packagesWithComponents = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        let query = trx
-            .selectFrom('packages')
+      let query = trx
+        .selectFrom('packages')
+        .selectAll()
+        .where('business_id', '=', user.business_id)
+        .where('deleted_at', 'is', null);
+
+      if (section) {
+        query = query.where('section', '=', section);
+      }
+
+      if (is_active !== undefined) {
+        query = query.where('is_active', '=', is_active === 'true');
+      }
+
+      if (search) {
+        query = query.where((eb) => eb.or([
+          eb('name', 'ilike', `%${search}%`),
+          eb('description', 'ilike', `%${search}%`)
+        ]));
+      }
+
+      const packages = await query
+        .orderBy('name', 'asc')
+        .limit(parseInt(limit))
+        .execute();
+
+      return await Promise.all(
+        packages.map(async (pkg) => {
+          const components = await trx
+            .selectFrom('package_components')
             .selectAll()
-            .where('deleted_at', 'is', null);
-
-        if (section) {
-            query = query.where('section', '=', section);
-        }
-
-        if (is_active !== undefined) {
-            query = query.where('is_active', '=', is_active === 'true');
-        }
-
-        if (search) {
-            query = query.where((eb) => eb.or([
-                eb('name', 'ilike', `%${search}%`),
-                eb('description', 'ilike', `%${search}%`)
-            ]));
-        }
-
-        const packages = await query
-            .orderBy('name', 'asc')
-            .limit(parseInt(limit))
+            .where('package_id', '=', pkg.id)
             .execute();
 
-        return await Promise.all(
-            packages.map(async (pkg) => {
-                const components = await trx
-                    .selectFrom('package_components')
-                    .selectAll()
-                    .where('package_id', '=', pkg.id)
-                    .execute();
-
-                return {
-                    ...pkg,
-                    components,
-                    items: components
-                };
-            })
-        );
+          return {
+            ...pkg,
+            components,
+            items: components
+          };
+        })
+      );
     });
 
     return reply.send(packagesWithComponents);
@@ -96,24 +97,25 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        const pkg = await trx
-            .selectFrom('packages')
-            .selectAll()
-            .where('id', '=', id)
-            .where('deleted_at', 'is', null)
-            .executeTakeFirst();
+      const pkg = await trx
+        .selectFrom('packages')
+        .selectAll()
+        .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
+        .where('deleted_at', 'is', null)
+        .executeTakeFirst();
 
-        if (!pkg) return null;
+      if (!pkg) return null;
 
-        const components = await trx
-            .selectFrom('package_components')
-            .selectAll()
-            .where('package_id', '=', id)
-            .execute();
+      const components = await trx
+        .selectFrom('package_components')
+        .selectAll()
+        .where('package_id', '=', id)
+        .execute();
 
-        return { ...pkg, components, items: components };
+      return { ...pkg, components, items: components };
     });
 
     if (!result) {
@@ -137,35 +139,35 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        const components = await trx
-            .selectFrom('package_components')
-            .innerJoin('products', 'products.id', 'package_components.product_id')
-            .select([
-                'package_components.product_id',
-                'products.name as product_name',
-                'products.stock_quantity',
-                'package_components.quantity as required_quantity'
-            ])
-            .where('package_components.package_id', '=', id)
-            .execute();
+      const components = await trx
+        .selectFrom('package_components')
+        .innerJoin('products', 'products.id', 'package_components.product_id')
+        .select([
+          'package_components.product_id',
+          'products.name as product_name',
+          'products.stock_quantity',
+          'package_components.quantity as required_quantity'
+        ])
+        .where('package_components.package_id', '=', id)
+        .execute();
 
-        const missingComponents = components
-            .filter(c => Number(c.stock_quantity) < Number(c.required_quantity))
-            .map(c => ({
-                product_id: c.product_id,
-                product_name: c.product_name,
-                required: Number(c.required_quantity),
-                available: Number(c.stock_quantity),
-                shortage: Number(c.required_quantity) - Number(c.stock_quantity)
-            }));
+      const missingComponents = components
+        .filter(c => Number(c.stock_quantity) < Number(c.required_quantity))
+        .map(c => ({
+          product_id: c.product_id,
+          product_name: c.product_name,
+          required: Number(c.required_quantity),
+          available: Number(c.stock_quantity),
+          shortage: Number(c.required_quantity) - Number(c.stock_quantity)
+        }));
 
-        return {
-            available: missingComponents.length === 0,
-            missing_components: missingComponents,
-            missingComponents
-        };
+      return {
+        available: missingComponents.length === 0,
+        missing_components: missingComponents,
+        missingComponents
+      };
     });
 
     return reply.send(result);
@@ -187,7 +189,7 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
       const body = createPackageSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const pkg = await trx
           .insertInto('packages')
@@ -252,7 +254,7 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
       const body = updatePackageSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         const pkg = await trx
           .updateTable('packages')
@@ -315,15 +317,16 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
-        await trx
-            .updateTable('packages')
-            .set({
-                deleted_at: new Date(),
-                is_active: false
-            })
-            .where('id', '=', id)
-            .execute();
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await trx
+        .updateTable('packages')
+        .set({
+          deleted_at: new Date(),
+          is_active: false
+        })
+        .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
+        .execute();
     });
 
     return reply.send({ success: true });

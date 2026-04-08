@@ -1,7 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+ï»¿import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
-import { ToMi Jardín } from './components/ToMi Jardín/ToMi Jardín';
+import { ToMi Jardï¿½n } from './components/ToMi Jardï¿½n/ToMi Jardï¿½n';
 import { Layout } from './components/Layout/Layout';
 import { Login } from './pages/Login/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -40,7 +40,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
                     <div className="loading-spinner-large">
                         <div className="spinner"></div>
                     </div>
-                    <p className="loading-text">Cargando FlorerÃ­a Mi Jardín...</p>
+                    <p className="loading-text">Cargando FlorerÃ­a Mi Jardï¿½n...</p>
                 </div>
             </div>
         );
@@ -93,7 +93,7 @@ function App() {
 
     return (
         <ErrorBoundary>
-            <ToMi Jardín />
+            <ToMi Jardï¿½n />
             <BrowserRouter>
                 <Routes>
                     {/* Public Routes */}

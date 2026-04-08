@@ -70,6 +70,16 @@ CREATE TABLE categories (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Brands
+CREATE TABLE brands (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(business_id, name)
+);
+
 -- Products
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -79,6 +89,7 @@ CREATE TABLE products (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     category_id UUID REFERENCES categories(id),
+    brand_id UUID REFERENCES brands(id),
     cost DECIMAL(10,2) NOT NULL DEFAULT 0,
     price DECIMAL(10,2) NOT NULL DEFAULT 0,
     margin_percent DECIMAL(5,2),
@@ -382,6 +393,7 @@ CREATE TABLE app_settings (
 CREATE INDEX idx_products_business ON products(business_id, is_active);
 CREATE INDEX idx_products_code ON products(code);
 CREATE INDEX idx_products_category ON products(category_id);
+CREATE INDEX idx_products_brand ON products(brand_id);
 CREATE INDEX idx_products_stock ON products(stock_quantity);
 CREATE INDEX idx_products_business_stock ON products(business_id, stock_quantity);
 
@@ -424,6 +436,7 @@ CREATE INDEX idx_price_history_business_product_date ON price_history(business_i
 ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stock_movements ENABLE ROW LEVEL SECURITY;
@@ -465,6 +478,11 @@ CREATE POLICY tenant_isolation_customers ON customers
     USING (business_id = get_current_business_id())
     WITH CHECK (business_id = get_current_business_id());
 
+CREATE POLICY tenant_isolation_brands ON brands
+    FOR ALL
+    USING (business_id = get_current_business_id())
+    WITH CHECK (business_id = get_current_business_id());
+
 CREATE POLICY tenant_isolation_orders ON orders
     FOR ALL
     USING (business_id = get_current_business_id())
@@ -486,6 +504,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON products
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_brands_updated_at BEFORE UPDATE ON brands
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_customers_updated_at BEFORE UPDATE ON customers

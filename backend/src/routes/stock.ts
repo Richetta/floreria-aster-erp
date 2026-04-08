@@ -21,7 +21,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { product_id, from_date, to_date, type, limit = '100' } = request.query as any;
 
-    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     let query: any = db
       .selectFrom('stock_movements')
@@ -39,6 +39,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
         'products.name as product_name',
         'products.code as product_code'
       ])
+      .where('stock_movements.business_id', '=', user.business_id)
       .where('stock_movements.deleted_at' as any, 'is', null)
       .orderBy('stock_movements.created_at', 'desc');
 
@@ -92,12 +93,13 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
     const { limit = '50' } = request.query as any;
 
-    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const product = await db
       .selectFrom('products')
       .select(['id', 'name', 'code', 'stock_quantity', 'min_stock'])
       .where('id', '=', id)
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null)
       .executeTakeFirst();
 
@@ -116,6 +118,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
         'notes',
         'created_at'
       ])
+      .where('stock_movements.business_id', '=', user.business_id)
       .where('product_id', '=', id)
       .where('deleted_at', 'is', null)
       .orderBy('created_at', 'desc')
@@ -170,7 +173,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const products = await db
       .selectFrom('products')
@@ -183,6 +186,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
         'category_id',
         'price'
       ])
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null)
       .whereRef('stock_quantity' as any, '<=', 'min_stock' as any)
       .orderBy('stock_quantity', 'asc')
@@ -229,12 +233,13 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const product = await db
         .selectFrom('products')
         .select(['stock_quantity', 'name'])
         .where('id', '=', body.product_id)
+        .where('business_id', '=', user.business_id)
         .where('deleted_at', 'is', null)
         .executeTakeFirst();
 
@@ -309,7 +314,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const totals = await db
       .selectFrom('products')
@@ -319,12 +324,14 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
         db.fn.sum(sql`stock_quantity * cost`).as('total_value_cost'),
         db.fn.sum(sql`stock_quantity * price`).as('total_value_price')
       ])
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null)
       .executeTakeFirst();
 
     const lowStockCount = await db
       .selectFrom('products')
       .select(db.fn.count('id').as('count'))
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null)
       .whereRef('stock_quantity' as any, '<=', 'min_stock' as any)
       .executeTakeFirst();
@@ -332,6 +339,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     const outOfStockCount = await db
       .selectFrom('products')
       .select(db.fn.count('id').as('count'))
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null)
       .where('stock_quantity', '=', 0)
       .executeTakeFirst();
@@ -342,6 +350,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     const movementsToday = await db
       .selectFrom('stock_movements')
       .select(db.fn.count('id').as('count'))
+      .where('business_id', '=', user.business_id)
       .where('created_at', '>=', today)
       .executeTakeFirst();
 

@@ -10,6 +10,7 @@ export interface Database {
   businesses: BusinessesTable;
   users: UsersTable;
   categories: CategoriesTable;
+  brands: BrandsTable;
   products: ProductsTable;
   price_history: PriceHistoryTable;
   stock_movements: StockMovementsTable;
@@ -78,6 +79,14 @@ interface CategoriesTable {
   updated_at: Date;
 }
 
+interface BrandsTable {
+  id: string;
+  business_id: string;
+  name: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
 interface ProductsTable {
   id: string;
   business_id: string;
@@ -86,6 +95,7 @@ interface ProductsTable {
   name: string;
   description: string | null;
   category_id: string | null;
+  brand_id: string | null;
   cost: number;
   price: number;
   margin_percent: number | null;

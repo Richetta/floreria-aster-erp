@@ -40,29 +40,30 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     const { search, has_debt, limit = '100' } = request.query as any;
 
     const customers = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        let query = trx
-            .selectFrom('customers')
-            .selectAll()
-            .where('deleted_at', 'is', null);
+      let query = trx
+        .selectFrom('customers')
+        .selectAll()
+        .where('business_id', '=', user.business_id)
+        .where('deleted_at', 'is', null);
 
-        if (search) {
-            query = query.where((eb) => eb.or([
-                eb('name', 'ilike', `%${search}%`),
-                eb('phone', 'ilike', `%${search}%`),
-                eb('email', 'ilike', `%${search}%`)
-            ]));
-        }
+      if (search) {
+        query = query.where((eb) => eb.or([
+          eb('name', 'ilike', `%${search}%`),
+          eb('phone', 'ilike', `%${search}%`),
+          eb('email', 'ilike', `%${search}%`)
+        ]));
+      }
 
-        if (has_debt === 'true') {
-            query = query.where('debt_balance', '>', 0);
-        }
+      if (has_debt === 'true') {
+        query = query.where('debt_balance', '>', 0);
+      }
 
-        return await query
-            .orderBy('name', 'asc')
-            .limit(parseInt(limit))
-            .execute();
+      return await query
+        .orderBy('name', 'asc')
+        .limit(parseInt(limit))
+        .execute();
     });
 
     return reply.send(customers);
@@ -82,13 +83,14 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const customer = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
-        return await trx
-            .selectFrom('customers')
-            .selectAll()
-            .where('id', '=', id)
-            .where('deleted_at', 'is', null)
-            .executeTakeFirst();
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      return await trx
+        .selectFrom('customers')
+        .selectAll()
+        .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
+        .where('deleted_at', 'is', null)
+        .executeTakeFirst();
     });
 
     if (!customer) {
@@ -112,33 +114,34 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        const customer = await trx
-            .selectFrom('customers')
-            .selectAll()
-            .where('id', '=', id)
-            .where('deleted_at', 'is', null)
-            .executeTakeFirst();
+      const customer = await trx
+        .selectFrom('customers')
+        .selectAll()
+        .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
+        .where('deleted_at', 'is', null)
+        .executeTakeFirst();
 
-        if (!customer) return null;
+      if (!customer) return null;
 
-        const orders = await trx
-            .selectFrom('orders')
-            .selectAll()
-            .where('customer_id', '=', id)
-            .orderBy('created_at', 'desc')
-            .limit(50)
-            .execute();
+      const orders = await trx
+        .selectFrom('orders')
+        .selectAll()
+        .where('customer_id', '=', id)
+        .orderBy('created_at', 'desc')
+        .limit(50)
+        .execute();
 
-        const totalSpent = orders.reduce((sum, order) => sum + Number(order.total_amount), 0);
+      const totalSpent = orders.reduce((sum, order) => sum + Number(order.total_amount), 0);
 
-        return {
-            ...customer,
-            orders,
-            total_orders: orders.length,
-            total_spent: totalSpent
-        };
+      return {
+        ...customer,
+        orders,
+        total_orders: orders.length,
+        total_spent: totalSpent
+      };
     });
 
     if (!result) {
@@ -164,7 +167,7 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
       const body = createCustomerSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         return await trx
           .insertInto('customers')
@@ -221,7 +224,7 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
       const body = updateCustomerSchema.parse(request.body);
 
       const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
         return await trx
           .updateTable('customers')
@@ -264,15 +267,16 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
 
     await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
-        await trx
-            .updateTable('customers')
-            .set({
-                deleted_at: new Date(),
-                is_active: false
-            })
-            .where('id', '=', id)
-            .execute();
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await trx
+        .updateTable('customers')
+        .set({
+          deleted_at: new Date(),
+          is_active: false
+        })
+        .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
+        .execute();
     });
 
     return reply.send({ success: true });
@@ -301,48 +305,49 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        const customer = await trx
-            .selectFrom('customers')
-            .select(['debt_balance', 'name'])
-            .where('id', '=', id)
-            .forUpdate()
-            .executeTakeFirst();
+      const customer = await trx
+        .selectFrom('customers')
+        .select(['debt_balance', 'name'])
+        .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
+        .forUpdate()
+        .executeTakeFirst();
 
-        if (!customer) throw new Error('Customer not found');
+      if (!customer) throw new Error('Customer not found');
 
-        const newDebt = Math.max(0, Number(customer.debt_balance) - amount);
+      const newDebt = Math.max(0, Number(customer.debt_balance) - amount);
 
-        await trx
-            .updateTable('customers')
-            .set({ 
-                debt_balance: newDebt,
-                updated_at: new Date()
-            })
-            .where('id', '=', id)
-            .execute();
+      await trx
+        .updateTable('customers')
+        .set({
+          debt_balance: newDebt,
+          updated_at: new Date()
+        })
+        .where('id', '=', id)
+        .execute();
 
-        const transaction = await trx
-            .insertInto('transactions')
-            .values({
-                id: randomUUID(),
-                business_id: user.business_id,
-                type: 'payment_received',
-                category: 'income',
-                amount: amount,
-                payment_method: payment_method,
-                reference_id: id,
-                reference_type: 'customer_payment',
-                description: `Pago de deuda - ${customer.name}`,
-                notes: notes || null,
-                created_by: user.sub,
-                created_at: new Date()
-            } as any)
-            .returningAll()
-            .executeTakeFirst();
+      const transaction = await trx
+        .insertInto('transactions')
+        .values({
+          id: randomUUID(),
+          business_id: user.business_id,
+          type: 'payment_received',
+          category: 'income',
+          amount: amount,
+          payment_method: payment_method,
+          reference_id: id,
+          reference_type: 'customer_payment',
+          description: `Pago de deuda - ${customer.name}`,
+          notes: notes || null,
+          created_by: user.sub,
+          created_at: new Date()
+        } as any)
+        .returningAll()
+        .executeTakeFirst();
 
-        return { customer: { ...customer, debt_balance: newDebt }, transaction };
+      return { customer: { ...customer, debt_balance: newDebt }, transaction };
     });
 
     return reply.send(result);
@@ -370,29 +375,30 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const result = await db.transaction().execute(async (trx) => {
-        // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        const customer = await trx
-            .selectFrom('customers')
-            .select(['debt_balance', 'name'])
-            .where('id', '=', id)
-            .forUpdate()
-            .executeTakeFirst();
+      const customer = await trx
+        .selectFrom('customers')
+        .select(['debt_balance', 'name'])
+        .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
+        .forUpdate()
+        .executeTakeFirst();
 
-        if (!customer) throw new Error('Customer not found');
+      if (!customer) throw new Error('Customer not found');
 
-        const newDebt = Number(customer.debt_balance) + amount;
+      const newDebt = Number(customer.debt_balance) + amount;
 
-        await trx
-            .updateTable('customers')
-            .set({ 
-                debt_balance: newDebt,
-                updated_at: new Date()
-            })
-            .where('id', '=', id)
-            .execute();
+      await trx
+        .updateTable('customers')
+        .set({
+          debt_balance: newDebt,
+          updated_at: new Date()
+        })
+        .where('id', '=', id)
+        .execute();
 
-        return { customer: { ...customer, debt_balance: newDebt } };
+      return { customer: { ...customer, debt_balance: newDebt } };
     });
 
     return reply.send(result);

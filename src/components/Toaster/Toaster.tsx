@@ -1,8 +1,8 @@
-import { useStore } from '../../store/useStore';
+ï»¿import { useStore } from '../../store/useStore';
 import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from 'lucide-react';
-import './ToMi Jardín.css';
+import './ToMi Jardï¿½n.css';
 
-export const ToMi Jardín = () => {
+export const ToMi Jardï¿½n = () => {
     const notifications = useStore(state => state.notifications);
     const removeNotification = useStore(state => state.removeNotification);
 
@@ -19,7 +19,7 @@ export const ToMi Jardín = () => {
     };
 
     return (
-        <div className="toMi Jardín-container">
+        <div className="toMi Jardï¿½n-container">
             {notifications.map(notification => (
                 <div key={notification.id} className={`toast-item ${notification.type}`}>
                     <div className="toast-content">

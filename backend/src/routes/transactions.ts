@@ -30,20 +30,21 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
-    const { 
-      type, 
+    const {
+      type,
       category,
-      from_date, 
-      to_date, 
+      from_date,
+      to_date,
       payment_method,
-      limit = '200' 
+      limit = '200'
     } = request.query as any;
 
     let query = db
       .selectFrom('transactions')
       .selectAll()
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null);
 
     // Filters
@@ -88,12 +89,13 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const transaction = await db
       .selectFrom('transactions')
       .selectAll()
       .where('id', '=', id)
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null)
       .executeTakeFirst();
 
@@ -117,12 +119,13 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { from_date, to_date } = request.query as { from_date?: string, to_date?: string };
 
-    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     let query = db
       .selectFrom('transactions')
       .select(['type', 'payment_method'])
       .select(db.fn.sum('amount').as('total_amount'))
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null);
 
     if (from_date) {
@@ -189,7 +192,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createTransactionSchema.parse(request.body);
 
-      // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const result = await db
         .insertInto('transactions')
@@ -380,7 +383,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
                   user_id: user.sub,
                   notes: `Venta Ramo - Componente: ${comp.name}`,
                   created_at: new Date(),
-                  metadata: { 
+                  metadata: {
                     package_id: item.package_id,
                     client_ip: request.ip,
                     unit_cost: comp.cost
@@ -501,7 +504,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       const result = await db.transaction().execute(async (trx) => {
         const purchaseTransactionId = randomUUID();
         let totalAmount = 0;
-        
+
         // 1. Update stock and record movements
         for (const item of body.items) {
           const product = await trx
@@ -521,7 +524,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
           // Update stock and cost using relative updates
           await trx
             .updateTable('products')
-            .set({ 
+            .set({
               stock_quantity: sql`stock_quantity + ${item.quantity}`,
               cost: item.cost,
               updated_at: new Date()
@@ -549,11 +552,11 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
               quantity: item.quantity,
               balance_after: newStock,
               reference_type: 'purchase',
-              reference_id: purchaseTransactionId, 
+              reference_id: purchaseTransactionId,
               user_id: user.sub,
               notes: `Compra a proveedor - ${product.name}`,
               created_at: new Date(),
-              metadata: { 
+              metadata: {
                 supplier_id: body.supplier_id,
                 client_ip: request.ip
               }
@@ -594,16 +597,16 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       if (error instanceof z.ZodError) {
         const readableDetails = error.errors.map(e => `${e.path.join('.')} - ${e.message}`).join('; ');
         console.error('[PURCHASE VALIDATION ERROR]:', JSON.stringify(error.errors, null, 2));
-        return reply.status(400).send({ 
-          error: 'Validation error', 
+        return reply.status(400).send({
+          error: 'Validation error',
           message: `Error de validación: ${readableDetails}`,
-          details: error.errors 
+          details: error.errors
         });
       }
       console.error('[PURCHASE ERROR]:', error);
-      return reply.status(500).send({ 
-        error: 'Internal server error', 
-        message: error.message 
+      return reply.status(500).send({
+        error: 'Internal server error',
+        message: error.message
       });
     }
   });
@@ -628,7 +631,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       notes: z.string().optional()
     }).parse(request.body);
 
-    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const result = await db
       .insertInto('transactions')
@@ -663,7 +666,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    // await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     await db
       .updateTable('transactions')
@@ -671,6 +674,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
         deleted_at: new Date()
       })
       .where('id', '=', id)
+      .where('business_id', '=', user.business_id)
       .execute();
 
     return reply.send({ success: true });

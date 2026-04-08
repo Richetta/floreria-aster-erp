@@ -7,7 +7,7 @@ import { db } from './index.js';
  */
 export async function runEmergencyMigrations() {
   console.log('--- STARTING EMERGENCY MIGRATIONS ---');
-  
+
   try {
     // 1. Ensure supplier_products table exists
     await sql`
@@ -33,6 +33,121 @@ export async function runEmergencyMigrations() {
     } catch (err) {
       // Column might already exist, which is fine
       console.log('ℹ Column supplier_id in products table (already exists or error handled)');
+    }
+
+    // 3. Ensure brand_id exists in products table and brands table exists
+    try {
+      await sql`
+        CREATE TABLE IF NOT EXISTS brands (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+          name VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          UNIQUE(business_id, name)
+        )
+      `.execute(db);
+      console.log('✔ Table brands verified/created');
+
+      await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS brand_id UUID REFERENCES brands(id)`.execute(db);
+      console.log('✔ Column brand_id added to products table');
+
+      // Enable RLS on brands
+      await sql`ALTER TABLE brands ENABLE ROW LEVEL SECURITY`.execute(db);
+
+      // Create RLS policy for brands (drop first if exists to avoid error)
+      try {
+        await sql`DROP POLICY IF EXISTS tenant_isolation_brands ON brands`.execute(db);
+      } catch (e) {
+        // Policy might not exist
+      }
+
+      await sql`
+        CREATE POLICY tenant_isolation_brands ON brands
+        FOR ALL
+        USING (business_id = get_current_business_id())
+        WITH CHECK (business_id = get_current_business_id())
+      `.execute(db);
+      console.log('✔ RLS policy for brands verified/created');
+
+      // Create index
+      await sql`CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand_id)`.execute(db);
+      console.log('✔ Index idx_products_brand verified/created');
+
+      // Create trigger for updated_at
+      try {
+        await sql`
+          CREATE TRIGGER update_brands_updated_at 
+          BEFORE UPDATE ON brands
+          FOR EACH ROW 
+          EXECUTE FUNCTION update_updated_at_column()
+        `.execute(db);
+        console.log('✔ Trigger update_brands_updated_at verified/created');
+      } catch (e) {
+        // Trigger might already exist
+      }
+    } catch (err) {
+      console.log('ℹ Brands migration (already exists or error handled)');
+    }
+
+    // 4. Ensure RLS (Row Level Security) is enabled and configured
+    // This is CRITICAL for multi-tenant data isolation
+    await sql`
+      CREATE OR REPLACE FUNCTION get_current_business_id()
+      RETURNS UUID AS $$
+      BEGIN
+          RETURN NULLIF(current_setting('app.current_business_id', true), '')::UUID;
+      END;
+      $$ LANGUAGE plpgsql SECURITY DEFINER;
+    `.execute(db);
+    console.log('✔ RLS helper function get_current_business_id() verified/created');
+
+    // Enable RLS on all multi-tenant tables
+    const tablesToEnableRls = [
+      'users', 'categories', 'brands', 'customers', 'price_history', 'stock_movements',
+      'stock_reservations', 'orders', 'packages', 'suppliers', 'package_components',
+      'waste_logs', 'app_settings', 'transactions', 'user_activity', 'order_items',
+      'products', 'businesses'
+    ];
+
+    for (const table of tablesToEnableRls) {
+      try {
+        await sql`ALTER TABLE ${sql.id(table)} ENABLE ROW LEVEL SECURITY`.execute(db);
+        console.log(`✔ RLS enabled on ${table}`);
+      } catch (err) {
+        console.log(`ℹ RLS already enabled or table ${table} not found`);
+      }
+    }
+
+    // Create/update RLS policies for critical tables
+    const policyDefinitions = [
+      { table: 'products', name: 'tenant_isolation_products' },
+      { table: 'customers', name: 'tenant_isolation_customers' },
+      { table: 'brands', name: 'tenant_isolation_brands' },
+      { table: 'transactions', name: 'tenant_isolation_transactions' },
+      { table: 'suppliers', name: 'tenant_isolation_suppliers' },
+      { table: 'stock_movements', name: 'tenant_isolation_stock_movements' },
+      { table: 'packages', name: 'tenant_isolation_packages' },
+      { table: 'package_components', name: 'tenant_isolation_package_components' },
+      { table: 'orders', name: 'tenant_isolation_orders' },
+      { table: 'order_items', name: 'tenant_isolation_order_items' },
+      { table: 'categories', name: 'tenant_isolation_categories' },
+      { table: 'users', name: 'tenant_isolation_users' },
+    ];
+
+    for (const { table, name } of policyDefinitions) {
+      try {
+        await sql`
+          DROP POLICY IF EXISTS ${sql.raw(name)} ON ${sql.id(table)};
+          CREATE POLICY ${sql.raw(name)} ON ${sql.id(table)}
+            FOR ALL
+            USING (business_id = get_current_business_id())
+            WITH CHECK (business_id = get_current_business_id());
+        `.execute(db);
+        console.log(`✔ RLS policy ${name} created on ${table}`);
+      } catch (err) {
+        console.log(`ℹ RLS policy ${name} on ${table} - skipped (table may not exist or policy exists)`);
+      }
     }
 
     console.log('--- EMERGENCY MIGRATIONS COMPLETED ---');
