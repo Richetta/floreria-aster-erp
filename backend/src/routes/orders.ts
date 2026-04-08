@@ -27,7 +27,7 @@ async function checkOrderLimit(businessId: string, reply: any) {
     let planSlug = 'semilla';
 
     if (subResult.rows.length > 0) {
-      const sub = subResult.rows[0];
+      const sub = subResult.rows[0] as any;
       maxOrders = sub.max_orders_per_month || 999999; // NULL = unlimited
       planName = sub.name_short;
       planSlug = sub.slug;

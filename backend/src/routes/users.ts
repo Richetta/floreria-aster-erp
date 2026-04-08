@@ -28,7 +28,7 @@ async function checkUserLimit(businessId: string, reply: any) {
     let planSlug = 'semilla';
 
     if (subResult.rows.length > 0) {
-      const sub = subResult.rows[0];
+      const sub = subResult.rows[0] as any;
       maxUsers = sub.max_users || 999999; // NULL = unlimited
       planName = sub.name_short;
       planSlug = sub.slug;
