@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, AlertCircle, TrendingUp, Plus, Check } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import type { Product } from '../../store/useStore';
+import type { Product, Category } from '../../store/slices/types';
 import { generateIdWithPrefix, generateProductCode } from '../../utils/idGenerator';
 import { validatePrice, validateQuantity, clamp } from '../../utils/format';
 import './ProductModal.css';
@@ -52,7 +52,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     const [isScanOpen, setIsScanOpen] = useState(false);
 
     const handleCameraScan = (scannedCode: string) => {
-        setFormData(prev => ({ ...prev, barcode: scannedCode }));
+        setFormData((prev: any) => ({ ...prev, barcode: scannedCode }));
         setIsScanOpen(false);
     };
 
