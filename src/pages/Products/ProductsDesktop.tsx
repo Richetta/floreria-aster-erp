@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Search, Upload, FileDown, Folder, Tag, Grid3x3, List, MoreVertical, Edit2, Barcode } from 'lucide-react';
+import { Plus, Search, Upload, FileDown, Folder, Tag, Grid3x3, List, MoreVertical, Edit2, Barcode, Trash2, Settings, X, CheckSquare, Square } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { useStore } from '../../store/useStore';
 import type { Product } from '../../store/useStore';
@@ -30,6 +30,7 @@ export const ProductsDesktop = () => {
     const addCategory = useStore((state) => state.addCategory);
     const renameCategory = useStore((state) => state.renameCategory);
     const deleteCategory = useStore((state) => state.deleteCategory);
+    const deleteProduct = useStore((state) => state.deleteProduct);
     
 
     // Loading state
@@ -58,8 +59,15 @@ export const ProductsDesktop = () => {
     // State
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
-    const [activeCategory, setActiveCategory] = useState<string>('Todos');
-    const [activeBrand, setActiveBrand] = useState<string>('Todas');
+    const [activeCategories, setActiveCategories] = useState<string[]>([]);
+    const [activeBrands, setActiveBrands] = useState<string[]>([]);
+
+    // Modals visibility
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+    
+    // Dropdown visibility
+    const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+    const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
 
     // UI State
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -80,7 +88,7 @@ export const ProductsDesktop = () => {
     const printRef = useRef<HTMLDivElement>(null);
     const handlePrint = useReactToPrint({
         contentRef: printRef,
-        documentTitle: `Catalogo_Mi Jardín_${activeCategory}`,
+        documentTitle: `Catalogo_Mi Jardín_${activeCategories.join('_') || 'Todos'}`,
     });
 
     // Custom modal hook
@@ -90,8 +98,8 @@ export const ProductsDesktop = () => {
     const filteredProducts = useMemo(() => {
         if (!products) return [];
         let result = products.filter(p => {
-            const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;
-            const matchesBrand = activeBrand === 'Todas' || (p.brand_id === activeBrand || (activeBrand === '' && !p.brand_id));
+            const matchesCategory = activeCategories.length === 0 || activeCategories.includes(p.category) || (activeCategories.includes('Sin Categoría') && !p.category);
+            const matchesBrand = activeBrands.length === 0 || (p.brand_id && activeBrands.includes(p.brand_id)) || (activeBrands.includes('Sin Marca') && !p.brand_id);
             const matchesSearch = p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
                 (p.code || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase());
             return matchesCategory && matchesBrand && matchesSearch;
@@ -109,7 +117,7 @@ export const ProductsDesktop = () => {
         });
         
         return result;
-    }, [products, activeCategory, activeBrand, debouncedSearchTerm, sortBy, sortOrder]);
+    }, [products, activeCategories, activeBrands, debouncedSearchTerm, sortBy, sortOrder]);
 
     // Handlers
     const handleAddSubCategory = (parentId: string) => {
@@ -136,7 +144,19 @@ export const ProductsDesktop = () => {
         });
         if (confirmed) {
             deleteCategory(cat.name);
-            if (activeCategory === cat.name) setActiveCategory('Todos');
+            setActiveCategories(prev => prev.filter(c => c !== cat.name));
+        }
+    };
+
+    const handleDeleteProduct = async (product: Product) => {
+        const confirmed = await showConfirm({
+            title: '¿Eliminar producto?',
+            message: `Vas a eliminar "${product.name}". Esta acción no se puede deshacer.`,
+            confirmText: 'Eliminar',
+            variant: 'danger'
+        });
+        if (confirmed) {
+            await deleteProduct(product.id);
         }
     };
 
@@ -150,31 +170,7 @@ export const ProductsDesktop = () => {
                     </div>
                 </div>
             )}
-
             <div className="products-layout">
-                {/* Sidebar with Category Tree */}
-                <aside className="products-sidebar card">
-                    <div className="sidebar-header">
-                        <h3 className="text-h3 font-bold m-0 flex items-center gap-2">
-                            <Folder size={20} className="text-primary" />
-                            Carpetas
-                        </h3>
-                        <button className="btn-icon hover-primary" onClick={handleCreateRootCategory}>
-                            <Plus size={20} />
-                        </button>
-                    </div>
-                    <div className="sidebar-content">
-                        <CategoryTree 
-                            categories={categoriesData}
-                            activeCategory={activeCategory}
-                            onSelect={setActiveCategory}
-                            onAddSub={handleAddSubCategory}
-                            onRename={handleRenameCategoryAction}
-                            onDelete={handleDeleteCategoryAction}
-                        />
-                    </div>
-                </aside>
-
                 {/* Main Content */}
                 <main className="products-main">
                     <div className="unified-toolbar card mb-4">
@@ -234,20 +230,88 @@ export const ProductsDesktop = () => {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-3">
-                                {/* Brand Filter Dropdown */}
-                                <div className="category-select-group flex items-center gap-2 px-3 py-1 bg-surface-hover rounded-xl border border-border">
-                                    <Tag size={16} className="text-muted" />
-                                    <select
-                                        className="form-input border-none bg-transparent font-medium py-1 m-0 h-8 focus:ring-0"
-                                        value={activeBrand}
-                                        onChange={(e) => setActiveBrand(e.target.value)}
+                                {/* Category Filter Dropdown */}
+                                <div className="relative">
+                                    <button 
+                                        className="category-select-group flex items-center gap-2 px-3 py-1 bg-surface-hover rounded-xl border border-border"
+                                        onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
                                     >
-                                        <option value="Todas">Todas las marcas</option>
-                                        {brands.map(brand => (
-                                            <option key={brand.id} value={brand.id}>{brand.name}</option>
-                                        ))}
-                                        <option value="">Sin Marca</option>
-                                    </select>
+                                        <Folder size={16} className="text-muted" />
+                                        <span className="font-medium text-small text-main">
+                                            {activeCategories.length === 0 ? 'Todas las carpetas' : `${activeCategories.length} carpetas`}
+                                        </span>
+                                    </button>
+                                    {isCategoryDropdownOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-[98]" onClick={() => setIsCategoryDropdownOpen(false)} />
+                                            <div className="absolute top-full mt-2 left-0 w-64 bg-white border border-border rounded-xl shadow-lg z-[99] p-2 max-h-[300px] overflow-y-auto">
+                                                {categoriesData.map(c => (
+                                                    <label key={c.id} className="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+                                                        {activeCategories.includes(c.name) ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} className="text-muted" />}
+                                                        <span className={activeCategories.includes(c.name) ? 'font-bold' : ''}>{c.name}</span>
+                                                        <input type="checkbox" className="hidden" checked={activeCategories.includes(c.name)} onChange={(e) => {
+                                                            if (e.target.checked) setActiveCategories([...activeCategories, c.name]);
+                                                            else setActiveCategories(activeCategories.filter(a => a !== c.name));
+                                                        }} />
+                                                    </label>
+                                                ))}
+                                                <label className="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+                                                    {activeCategories.includes('Sin Categoría') ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} className="text-muted" />}
+                                                    <span className={activeCategories.includes('Sin Categoría') ? 'font-bold' : ''}>Sin Categoría</span>
+                                                    <input type="checkbox" className="hidden" checked={activeCategories.includes('Sin Categoría')} onChange={(e) => {
+                                                        if (e.target.checked) setActiveCategories([...activeCategories, 'Sin Categoría']);
+                                                        else setActiveCategories(activeCategories.filter(a => a !== 'Sin Categoría'));
+                                                    }} />
+                                                </label>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                <button 
+                                    className="btn-icon bg-surface-hover border border-border rounded-xl px-3 py-1 flex items-center gap-2 text-small font-medium hover:text-primary transition-colors"
+                                    onClick={() => setIsCategoryModalOpen(true)}
+                                    title="Administrar Carpetas"
+                                >
+                                    <Settings size={16} /> <span className="hidden-mobile">Carpetas</span>
+                                </button>
+                                
+                                {/* Brand Filter Dropdown */}
+                                <div className="relative">
+                                    <button 
+                                        className="category-select-group flex items-center gap-2 px-3 py-1 bg-surface-hover rounded-xl border border-border"
+                                        onClick={() => setIsBrandDropdownOpen(!isBrandDropdownOpen)}
+                                    >
+                                        <Tag size={16} className="text-muted" />
+                                        <span className="font-medium text-small text-main">
+                                            {activeBrands.length === 0 ? 'Todas las marcas' : `${activeBrands.length} marcas`}
+                                        </span>
+                                    </button>
+                                    {isBrandDropdownOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-[98]" onClick={() => setIsBrandDropdownOpen(false)} />
+                                            <div className="absolute top-full mt-2 left-0 w-64 bg-white border border-border rounded-xl shadow-lg z-[99] p-2 max-h-[300px] overflow-y-auto">
+                                                {brands.map(b => (
+                                                    <label key={b.id} className="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+                                                        {activeBrands.includes(b.id) ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} className="text-muted" />}
+                                                        <span className={activeBrands.includes(b.id) ? 'font-bold' : ''}>{b.name}</span>
+                                                        <input type="checkbox" className="hidden" checked={activeBrands.includes(b.id)} onChange={(e) => {
+                                                            if (e.target.checked) setActiveBrands([...activeBrands, b.id]);
+                                                            else setActiveBrands(activeBrands.filter(a => a !== b.id));
+                                                        }} />
+                                                    </label>
+                                                ))}
+                                                <label className="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+                                                    {activeBrands.includes('Sin Marca') ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} className="text-muted" />}
+                                                    <span className={activeBrands.includes('Sin Marca') ? 'font-bold' : ''}>Sin Marca</span>
+                                                    <input type="checkbox" className="hidden" checked={activeBrands.includes('Sin Marca')} onChange={(e) => {
+                                                        if (e.target.checked) setActiveBrands([...activeBrands, 'Sin Marca']);
+                                                        else setActiveBrands(activeBrands.filter(a => a !== 'Sin Marca'));
+                                                    }} />
+                                                </label>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div className="sort-controls flex items-center gap-1 bg-surface-hover border border-border rounded-xl px-2 py-1">
@@ -328,6 +392,9 @@ export const ProductsDesktop = () => {
                                                     </td>
                                                     <td className="text-right">
                                                         <div className="flex justify-end gap-2">
+                                                            <button className="btn-icon text-muted hover:text-danger" onClick={() => handleDeleteProduct(p)} title="Eliminar Producto">
+                                                                <Trash2 size={18} />
+                                                            </button>
                                                             <button className="btn-icon text-muted hover:text-primary" onClick={() => { setProductForBarcode(p); setShowBarcodePrinter(true); }} title="Imprimir Código de Barras">
                                                                 <Barcode size={18} />
                                                             </button>
@@ -353,6 +420,9 @@ export const ProductsDesktop = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2 ml-4">
+                                                    <button className="btn-icon text-muted hover:text-danger bg-surface" onClick={() => handleDeleteProduct(p)} title="Eliminar Producto">
+                                                        <Trash2 size={18} />
+                                                    </button>
                                                     <button className="btn-icon text-muted hover:text-primary bg-surface" onClick={() => { setProductForBarcode(p); setShowBarcodePrinter(true); }} title="Imprimir Código de Barras">
                                                         <Barcode size={18} />
                                                     </button>
@@ -375,7 +445,7 @@ export const ProductsDesktop = () => {
                 isOpen={isModalOpen} 
                 onClose={() => setIsModalOpen(false)} 
                 productToEdit={productToEdit}
-                initialCategory={activeCategory !== 'Todos' ? activeCategory : undefined}
+                initialCategory={activeCategories.length === 1 ? activeCategories[0] : undefined}
             />
             {isBulkUpdateOpen && <BulkPriceUpdateModal isOpen={isBulkUpdateOpen} onClose={() => setIsBulkUpdateOpen(false)} />}
             {isPriceHistoryOpen && <PriceHistoryModal isOpen={isPriceHistoryOpen} onClose={() => setIsPriceHistoryOpen(false)} />}
@@ -395,9 +465,46 @@ export const ProductsDesktop = () => {
                 <PrintableCatalog 
                     ref={printRef} 
                     products={filteredProducts} 
-                    categoryName={activeCategory} 
+                    categoryName={activeCategories.join(', ') || 'Todos'} 
                 />
             </div>
+
+            {isCategoryModalOpen && (
+                <div className="modal-overlay" onClick={() => setIsCategoryModalOpen(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+                        <div className="modal-header">
+                            <h2 className="text-h2 font-bold m-0 text-main flex items-center gap-2">
+                                <Folder size={24} className="text-primary"/> Administrar Carpetas
+                            </h2>
+                            <button className="modal-close-btn" onClick={() => setIsCategoryModalOpen(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="modal-body p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <p className="text-muted m-0">Organiza y modifica tus carpetas de productos.</p>
+                                <button className="btn btn-primary" onClick={handleCreateRootCategory}>
+                                    <Plus size={20} className="mr-2" />
+                                    Nueva Carpeta
+                                </button>
+                            </div>
+                            <div className="bg-surface rounded-xl border border-border p-4">
+                                <CategoryTree 
+                                    categories={categoriesData}
+                                    activeCategory={activeCategories.length === 1 ? activeCategories[0] : 'Todos'}
+                                    onSelect={(cat) => {
+                                        if (cat === 'Todos') setActiveCategories([]);
+                                        else setActiveCategories([cat]);
+                                    }}
+                                    onAddSub={handleAddSubCategory}
+                                    onRename={handleRenameCategoryAction}
+                                    onDelete={handleDeleteCategoryAction}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
