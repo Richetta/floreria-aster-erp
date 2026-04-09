@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import React from 'react';
 import {
-    Check, X, ArrowUpRight, CreditCard, Calendar, Shield,
+    X, ArrowUpRight, CreditCard, Calendar, Shield,
     AlertTriangle, Loader2, Star, Zap, Crown, Leaf
 } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
@@ -12,13 +12,7 @@ import './SubscriptionTab.css';
 // TYPES
 // ============================================
 
-interface PlanFeature {
-    feature: string;
-    semilla: boolean | string;
-    florecer: boolean | string;
-    crecimiento: boolean | string;
-    jardin: boolean | string;
-}
+
 
 interface Plan {
     slug: string;
@@ -215,11 +209,7 @@ export const SubscriptionTab = () => {
         }).format(price);
     };
 
-    // Format usage percentage
-    const usagePercent = (current: number, max: number | null) => {
-        if (!max) return 100;
-        return Math.min((current / max) * 100, 100);
-    };
+
 
     if (loading) {
         return (
@@ -242,7 +232,7 @@ export const SubscriptionTab = () => {
 
     const isTrial = subscription.status === 'trial';
     const isCancelled = subscription.cancel_at_period_end;
-    const currentPlan = plans.find(p => p.slug === subscription.plan_slug);
+
 
     return (
         <div className="subscription-tab">
