@@ -245,17 +245,17 @@ export const ProductsDesktop = () => {
                                             <div className="dropdown-overlay" onClick={() => setShowMoreMenu(false)} />
                                             <div className="dropdown-menu">
                                                 <button className="dropdown-item" onClick={() => { setIsPriceHistoryOpen(true); setShowMoreMenu(false); }}>
-                                                    <TrendingUp size={18} /> Historial de Precios
+                                                    <TrendingUp size={18} /> Ver Historial de Precios
                                                 </button>
                                                 <button className="dropdown-item" onClick={() => { setShowImportModal(true); setShowMoreMenu(false); }}>
-                                                    <Upload size={18} /> Importar CSV
+                                                    <Upload size={18} /> Importar Productos
                                                 </button>
                                                 <div className="dropdown-divider"></div>
                                                 <button className="dropdown-item" onClick={() => { setIsBulkUpdateOpen(true); setShowMoreMenu(false); }}>
-                                                    <Tag size={18} /> Actualizar Precios
+                                                    <Tag size={18} /> Actualizar Precios Masivamente
                                                 </button>
                                                 <button className="dropdown-item" onClick={() => { handlePrint(); setShowMoreMenu(false); }}>
-                                                    <FileDown size={18} /> Exportar PDF
+                                                    <FileDown size={18} /> Descargar Catálogo PDF
                                                 </button>
                                             </div>
                                         </>
