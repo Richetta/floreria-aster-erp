@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Upload, Download, X, Check, Search, TrendingUp, Percent, FileText, Edit3 } from 'lucide-react';
+import {
+    Upload, Download, X, Check, Search, TrendingUp, Percent,
+    FileText, Edit3, DollarSign, AlertCircle, RefreshCw
+} from 'lucide-react';
 import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import { useModal } from '../../hooks/useModal';
@@ -18,39 +21,40 @@ interface PriceChange {
     newPrice: number;
     change: number;
     changePercent: number;
-    basePrice?: number; // Cost price if margin mode
+    basePrice?: number;
 }
 
 export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalProps) => {
     const products = useStore(state => state.products);
-    // Removed unused updateProduct for TS compliance
-
     const [isLoading, setIsLoading] = useState(false);
     const { alertModal, showAlert } = useModal();
 
     const [step, setStep] = useState<1 | 2 | 3>(1);
+    const [importMode, setImportMode] = useState<'percentage' | 'margin' | 'csv' | 'manual'>('percentage');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
-    const [percentageIncrease, setPercentageIncrease] = useState<number>(0);
-    const [profitMargin, setProfitMargin] = useState<number>(30); // Default 30% margin
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+    const [percentageIncrease, setPercentageIncrease] = useState<number>(10);
+    const [profitMargin, setProfitMargin] = useState<number>(30);
     const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
     const [previewChanges, setPreviewChanges] = useState<PriceChange[]>([]);
     const [csvData, setCsvData] = useState<any[]>([]);
-    const [importMode, setImportMode] = useState<'percentage' | 'margin' | 'csv' | 'manual'>('percentage');
+    const [isDragOver, setIsDragOver] = useState(false);
 
-    // New states for selection and search
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+    const categories = useMemo(() =>
+        ['all', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))],
+        [products]
+    );
 
-    // Categorías disponibles
-    const categories = useMemo(() => ['all', ...Array.from(new Set(products.map(p => p.category)))], [products]);
-
-    // Productos filtrados por categoría y búsqueda
-    const visibleProducts = useMemo(() => products.filter(p => {
-        const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (p.code || '').toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesCategory && matchesSearch;
-    }), [products, selectedCategory, searchTerm]);
+    const visibleProducts = useMemo(() =>
+        products.filter(p => {
+            const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+            const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (p.code || '').toLowerCase().includes(searchTerm.toLowerCase());
+            return matchesCategory && matchesSearch;
+        }),
+        [products, selectedCategory, searchTerm]
+    );
 
     const handleToggleAll = () => {
         if (selectedProductIds.size === visibleProducts.length && visibleProducts.length > 0) {
@@ -67,7 +71,6 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         setSelectedProductIds(newSet);
     };
 
-    // Calcular cambios cuando cambian los inputs
     const calculateChanges = useCallback(() => {
         const changes: PriceChange[] = [];
 
@@ -89,7 +92,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
             products.forEach(product => {
                 if (!selectedProductIds.has(product.id)) return;
                 const basePrice = product.cost || 0;
-                if (basePrice <= 0) return; // Skip products without cost
+                if (basePrice <= 0) return;
                 const oldPrice = product.price;
                 const newPrice = basePrice * (1 + profitMargin / 100);
                 changes.push({
@@ -141,12 +144,10 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         setPreviewChanges(changes);
     }, [products, percentageIncrease, profitMargin, customPrices, csvData, importMode, selectedProductIds]);
 
-    // Calcular cambios automáticamente
     useEffect(() => {
         calculateChanges();
     }, [calculateChanges]);
 
-    // Manejar archivo (CSV/Excel) usando la API de parseo inteligente
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -161,10 +162,9 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
             }));
             setCsvData(mappedData);
         } catch (error: any) {
-            console.error('[BULK-UPDATE] Error reading file:', error);
             showAlert({
                 title: 'Error al leer archivo',
-                message: error.message || 'No se pudo procesar el archivo. Asegurate de que sea un Excel o CSV válido.',
+                message: error.message || 'No se pudo procesar el archivo.',
                 variant: 'error'
             });
         } finally {
@@ -172,13 +172,47 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         }
     };
 
-    // Descargar plantilla CSV
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(true);
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    }, []);
+
+    const handleDrop = useCallback(async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            setIsLoading(true);
+            try {
+                const result = await api.parseFile(file);
+                const mappedData = result.data.map((item: any) => ({
+                    codigo: item.code,
+                    nombre: item.name,
+                    precio: item.price
+                }));
+                setCsvData(mappedData);
+            } catch (error: any) {
+                showAlert({
+                    title: 'Error',
+                    message: 'No se pudo procesar el archivo.',
+                    variant: 'error'
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    }, []);
+
     const downloadTemplate = () => {
         const headers = 'codigo,nombre,precio\n';
         const rows = products.slice(0, 5).map(p =>
             `${p.code},${p.name},${p.price}`
         ).join('\n');
-
         const csv = headers + rows;
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -189,7 +223,6 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         URL.revokeObjectURL(url);
     };
 
-    // Aplicar cambios usando el endpoint bulk
     const applyChanges = async () => {
         setIsLoading(true);
         try {
@@ -203,7 +236,6 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                 return;
             }
 
-            // Determinar el modo y valor para el backend
             let mode: 'percentage' | 'margin' | 'fixed';
             let value: number;
 
@@ -214,59 +246,48 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                 mode = 'margin';
                 value = profitMargin;
             } else {
-                // Para manual y CSV, usamos fixed con el primer cambio
                 mode = 'fixed';
-                value = 0; // No se usa realmente para manual
+                value = 0;
             }
 
-            // Si es manual o CSV, aplicamos individualmente porque cada precio es diferente
             if (importMode === 'manual' || importMode === 'csv') {
                 let count = 0;
                 for (const change of previewChanges) {
-                    await api.updateProduct(change.productId, {
-                        price: change.newPrice
-                    } as any);
+                    await api.updateProduct(change.productId, { price: change.newPrice } as any);
                     count++;
                 }
-
                 showAlert({
                     title: 'Precios actualizados',
                     message: `Se actualizaron ${count} productos exitosamente`,
                     variant: 'success'
                 });
             } else {
-                // Para percentage y margin, usamos el endpoint bulk
                 const productIds = previewChanges.map(c => c.productId);
-
                 const result = await api.bulkPricesUpdate({
                     productIds,
                     mode,
                     value,
                     roundTo: 'nearest'
                 });
-
-                // Recargar productos desde el store
                 await useStore.getState().loadProducts();
-
                 showAlert({
                     title: 'Precios actualizados',
-                    message: `Se actualizaron ${result.updated} productos exitosamente`,
+                    message: `Se actualizaron ${result.updated} productos`,
                     variant: 'success'
                 });
             }
 
             setStep(1);
-            setPercentageIncrease(0);
+            setPercentageIncrease(10);
             setProfitMargin(30);
             setCustomPrices({});
             setCsvData([]);
             setSelectedProductIds(new Set());
             onClose();
         } catch (error: any) {
-            console.error('[BULK-UPDATE] Error:', error);
             showAlert({
                 title: 'Error al actualizar',
-                message: error.message || 'Ocurrió un error al aplicar los cambios. Revisá la consola para más detalles.',
+                message: error.message || 'Ocurrió un error al aplicar los cambios.',
                 variant: 'error'
             });
         } finally {
@@ -274,122 +295,163 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         }
     };
 
+    const selectedCount = importMode === 'csv' ? csvData.length : selectedProductIds.size;
+
     if (!isOpen) return null;
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h2 className="text-h2 flex items-center gap-2">
-                        <TrendingUp size={24} className="text-primary" />
-                        Actualización Masiva
-                    </h2>
-                    <button className="modal-close-btn" onClick={onClose}>
+        <div className="bulk-modal-overlay" onClick={onClose}>
+            <div className="bulk-modal-container" onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div className="bulk-modal-header">
+                    <div className="bulk-header-content">
+                        <div className="bulk-header-icon">
+                            <TrendingUp size={28} />
+                        </div>
+                        <div className="bulk-header-text">
+                            <h2>Actualización Masiva de Precios</h2>
+                            <p>Actualiza los precios de múltiples productos a la vez</p>
+                        </div>
+                    </div>
+                    <button className="bulk-close-btn" onClick={onClose}>
                         <X size={20} />
                     </button>
                 </div>
 
-                <div className="progress-steps">
-                    <div className={`step ${step >= 1 ? 'active' : ''}`}>
-                        <div className="step-number">1</div>
-                        <span>Configurar</span>
+                {/* Stepper */}
+                <div className="bulk-stepper">
+                    <div className={`bulk-step ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
+                        <div className="bulk-step-number">
+                            {step > 1 ? <Check size={14} strokeWidth={3} /> : '1'}
+                        </div>
+                        <span className="bulk-step-label">Configurar</span>
                     </div>
-                    <div className={`step ${step >= 2 ? 'active' : ''}`}>
-                        <div className="step-number">2</div>
-                        <span>Revisar</span>
+                    <div className={`bulk-step-line ${step > 1 ? 'completed' : ''}`} />
+                    <div className={`bulk-step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
+                        <div className="bulk-step-number">
+                            {step > 2 ? <Check size={14} strokeWidth={3} /> : '2'}
+                        </div>
+                        <span className="bulk-step-label">Revisar</span>
                     </div>
-                    <div className={`step ${step >= 3 ? 'active' : ''}`}>
-                        <div className="step-number">3</div>
-                        <span>Aplicar</span>
+                    <div className={`bulk-step-line ${step > 2 ? 'completed' : ''}`} />
+                    <div className={`bulk-step ${step >= 3 ? 'active' : ''}`}>
+                        <div className="bulk-step-number">3</div>
+                        <span className="bulk-step-label">Aplicar</span>
                     </div>
                 </div>
 
-                <div className="modal-body">
-                    {step === 1 && (
-                        <div className="step-content">
-                            <h3 className="section-title">Método de Actualización</h3>
+                {/* Body */}
+                <div className="bulk-modal-body">
+                    {alertModal && <AlertModal {...alertModal} />}
 
-                            <div className="method-selector">
+                    {/* Step 1: Configure */}
+                    {step === 1 && (
+                        <div className="bulk-step-content">
+                            {/* Method Selector */}
+                            <div className="bulk-methods-grid">
                                 <button
-                                    className={`method-card ${importMode === 'percentage' ? 'active' : ''}`}
+                                    className={`bulk-method-card ${importMode === 'percentage' ? 'active' : ''}`}
                                     onClick={() => setImportMode('percentage')}
                                 >
-                                    <div className="method-icon"><Percent size={20} /></div>
+                                    <div className={`bulk-method-icon ${importMode === 'percentage' ? 'active' : ''}`}>
+                                        <Percent size={24} />
+                                    </div>
                                     <h4>Aumento %</h4>
-                                    <p>Sobre el precio de venta actual</p>
+                                    <p>Sobre precio de venta</p>
                                 </button>
 
                                 <button
-                                    className={`method-card ${importMode === 'margin' ? 'active' : ''}`}
+                                    className={`bulk-method-card ${importMode === 'margin' ? 'active' : ''}`}
                                     onClick={() => setImportMode('margin')}
                                 >
-                                    <div className="method-icon"><TrendingUp size={20} /></div>
-                                    <h4>Margen de Ganancia</h4>
-                                    <p>Margen % sobre el precio de costo</p>
+                                    <div className={`bulk-method-icon ${importMode === 'margin' ? 'active' : ''}`}>
+                                        <TrendingUp size={24} />
+                                    </div>
+                                    <h4>Margen Ganancia</h4>
+                                    <p>Sobre precio de costo</p>
                                 </button>
 
                                 <button
-                                    className={`method-card ${importMode === 'csv' ? 'active' : ''}`}
+                                    className={`bulk-method-card ${importMode === 'csv' ? 'active' : ''}`}
                                     onClick={() => setImportMode('csv')}
                                 >
-                                    <div className="method-icon"><FileText size={20} /></div>
+                                    <div className={`bulk-method-icon ${importMode === 'csv' ? 'active' : ''}`}>
+                                        <FileText size={24} />
+                                    </div>
                                     <h4>Importar Excel</h4>
-                                    <p>Desde lista del proveedor</p>
+                                    <p>Desde archivo CSV</p>
                                 </button>
 
                                 <button
-                                    className={`method-card ${importMode === 'manual' ? 'active' : ''}`}
+                                    className={`bulk-method-card ${importMode === 'manual' ? 'active' : ''}`}
                                     onClick={() => setImportMode('manual')}
                                 >
-                                    <div className="method-icon"><Edit3 size={20} /></div>
+                                    <div className={`bulk-method-icon ${importMode === 'manual' ? 'active' : ''}`}>
+                                        <Edit3 size={24} />
+                                    </div>
                                     <h4>Manual</h4>
-                                    <p>Editar uno por uno</p>
+                                    <p>Uno por uno</p>
                                 </button>
                             </div>
 
-                            <div className="config-section card bg-surface p-4 mt-6">
+                            {/* Configuration Section */}
+                            <div className="bulk-config-section">
+                                {/* Percentage Mode */}
                                 {importMode === 'percentage' && (
-                                    <div className="form-group mb-6">
-                                        <label className="form-label">Porcentaje de Aumento/Descuento</label>
-                                        <div className="percentage-input-wrapper">
+                                    <div className="bulk-config-block">
+                                        <label className="bulk-config-label">
+                                            Porcentaje de aumento o descuento
+                                        </label>
+                                        <div className="bulk-percentage-input">
                                             <input
                                                 type="number"
-                                                className="form-input"
                                                 value={percentageIncrease}
                                                 onChange={(e) => setPercentageIncrease(parseFloat(e.target.value) || 0)}
+                                                placeholder="10"
                                             />
-                                            <span className="percentage-symbol">%</span>
+                                            <span className="bulk-percent-symbol">%</span>
                                         </div>
-                                    </div>
-                                )}
-
-                                {importMode === 'margin' && (
-                                    <div className="form-group mb-6">
-                                        <label className="form-label">Deseo ganar un...</label>
-                                        <div className="percentage-input-wrapper">
-                                            <input
-                                                type="number"
-                                                className="form-input"
-                                                value={profitMargin}
-                                                onChange={(e) => setProfitMargin(parseFloat(e.target.value) || 0)}
-                                            />
-                                            <span className="percentage-symbol">%</span>
-                                        </div>
-                                        <p className="text-micro text-muted mt-2">
-                                            * Se aplicará sobre el <strong>Precio de Costo</strong> de cada producto.
+                                        <p className="bulk-config-hint">
+                                            Ej: 10 aumenta 10%, -10 reduce 10%
                                         </p>
                                     </div>
                                 )}
 
+                                {/* Margin Mode */}
+                                {importMode === 'margin' && (
+                                    <div className="bulk-config-block">
+                                        <label className="bulk-config-label">
+                                            Margen de ganancia deseado
+                                        </label>
+                                        <div className="bulk-percentage-input">
+                                            <input
+                                                type="number"
+                                                value={profitMargin}
+                                                onChange={(e) => setProfitMargin(parseFloat(e.target.value) || 0)}
+                                                placeholder="30"
+                                            />
+                                            <span className="bulk-percent-symbol">%</span>
+                                        </div>
+                                        <p className="bulk-config-hint">
+                                            Se aplicará sobre el <strong>precio de costo</strong> de cada producto
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Product Selection (for percentage, margin, manual) */}
                                 {(importMode === 'percentage' || importMode === 'margin' || importMode === 'manual') && (
-                                    <div className="selection-area">
-                                        <h4 className="flex justify-between items-center mb-4">
-                                            <span>Seleccionar Productos</span>
-                                            <span className="badge">{selectedProductIds.size} seleccionados</span>
-                                        </h4>
-                                        <div className="filters-row flex gap-2 mb-4">
-                                            <div className="search-box-pill flex-1">
-                                                <Search size={18} />
+                                    <div className="bulk-products-section">
+                                        <div className="bulk-products-header">
+                                            <h3>Seleccionar Productos</h3>
+                                            <span className="bulk-selection-count">
+                                                {selectedProductIds.size} seleccionados
+                                            </span>
+                                        </div>
+
+                                        {/* Filters */}
+                                        <div className="bulk-filters-row">
+                                            <div className="bulk-search-box">
+                                                <Search size={16} className="bulk-search-icon" />
                                                 <input
                                                     type="text"
                                                     placeholder="Buscar por nombre o código..."
@@ -398,111 +460,173 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                                 />
                                             </div>
                                             <select
-                                                className="form-input w-auto min-w-[180px]"
+                                                className="bulk-category-select"
                                                 value={selectedCategory}
                                                 onChange={(e) => setSelectedCategory(e.target.value)}
                                             >
                                                 {categories.map(cat => (
                                                     <option key={cat} value={cat}>
-                                                        {cat === 'all' ? 'Todas las carpetas' : cat}
+                                                        {cat === 'all' ? 'Todas las categorías' : cat}
                                                     </option>
                                                 ))}
                                             </select>
                                         </div>
 
-                                        <div className="product-selection-list">
-                                            <div className="list-header">
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={visibleProducts.length > 0 && selectedProductIds.size === visibleProducts.length}
-                                                        onChange={handleToggleAll}
-                                                        id="select-all"
-                                                    />
-                                                    <label htmlFor="select-all">Seleccionar {visibleProducts.length} filtrados</label>
-                                                </div>
+                                        {/* Product List */}
+                                        <div className="bulk-product-list">
+                                            <div className="bulk-list-header">
+                                                <button onClick={handleToggleAll} className="bulk-select-all-btn">
+                                                    {visibleProducts.length > 0 && selectedProductIds.size === visibleProducts.length ? (
+                                                        <Check size={16} strokeWidth={3} />
+                                                    ) : (
+                                                        <div className="bulk-checkbox" />
+                                                    )}
+                                                </button>
+                                                <span>Seleccionar todos ({visibleProducts.length})</span>
                                             </div>
-                                            <div className="list-body">
+                                            <div className="bulk-list-body">
                                                 {visibleProducts.map(p => (
-                                                    <div key={p.id} className="list-row" onClick={() => handleToggleProduct(p.id)}>
-                                                        <div className="flex items-center gap-3">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedProductIds.has(p.id)}
-                                                                readOnly
-                                                            />
-                                                            <div>
-                                                                <p className="font-bold m-0">{p.name}</p>
-                                                                <span className="text-micro text-muted">{p.code} • Costo: ${p.cost?.toLocaleString() || '0'}</span>
+                                                    <div
+                                                        key={p.id}
+                                                        className={`bulk-list-row ${selectedProductIds.has(p.id) ? 'selected' : ''}`}
+                                                        onClick={() => handleToggleProduct(p.id)}
+                                                    >
+                                                        <div className="bulk-row-checkbox">
+                                                            {selectedProductIds.has(p.id) ? (
+                                                                <Check size={16} strokeWidth={3} className="bulk-checkbox-checked" />
+                                                            ) : (
+                                                                <div className="bulk-checkbox" />
+                                                            )}
+                                                        </div>
+                                                        <div className="bulk-row-content">
+                                                            <div className="bulk-row-main">
+                                                                <span className="bulk-row-name">{p.name}</span>
+                                                                <span className="bulk-row-code">{p.code}</span>
+                                                            </div>
+                                                            <div className="bulk-row-prices">
+                                                                <span className="bulk-row-cost">Costo: ${p.cost?.toLocaleString() || '-'}</span>
+                                                                <span className="bulk-row-price">${p.price.toLocaleString()}</span>
                                                             </div>
                                                         </div>
-                                                        <span className="font-bold text-primary">${p.price.toLocaleString()}</span>
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
-                                    </div>
-                                )}
 
-                                {importMode === 'csv' && (
-                                    <div className="csv-upload-section">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h4 className="m-0">Importar Archivo</h4>
-                                            <button className="btn btn-secondary btn-sm" onClick={downloadTemplate}>
-                                                <Download size={14} className="mr-1" /> Plantilla
-                                            </button>
-                                        </div>
-                                        <div className="upload-dropzone">
-                                            <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} />
-                                            <Upload size={32} className="mb-2 text-muted" />
-                                            <p className="m-0">Subí tu Excel o CSV aquí</p>
-                                        </div>
-                                        {csvData.length > 0 && (
-                                            <div className="alert alert-success mt-4">
-                                                <Check size={18} /> Se cargaron {csvData.length} productos
+                                        {/* Manual Mode: Custom Prices */}
+                                        {importMode === 'manual' && selectedProductIds.size > 0 && (
+                                            <div className="bulk-manual-prices">
+                                                <h4 className="bulk-manual-title">
+                                                    <DollarSign size={16} />
+                                                    Definir precios para seleccionados
+                                                </h4>
+                                                <div className="bulk-manual-list">
+                                                    {products
+                                                        .filter(p => selectedProductIds.has(p.id))
+                                                        .map(p => (
+                                                            <div key={p.id} className="bulk-manual-row">
+                                                                <span className="bulk-manual-name">{p.name}</span>
+                                                                <div className="bulk-manual-input-wrapper">
+                                                                    <DollarSign size={14} className="bulk-manual-icon" />
+                                                                    <input
+                                                                        type="number"
+                                                                        className="bulk-manual-input"
+                                                                        value={customPrices[p.id] || ''}
+                                                                        onChange={(e) => setCustomPrices(prev => ({
+                                                                            ...prev,
+                                                                            [p.id]: parseFloat(e.target.value) || 0
+                                                                        }))}
+                                                                        placeholder="Nuevo precio"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    }
+                                                </div>
                                             </div>
                                         )}
                                     </div>
                                 )}
-                            </div>
 
-                            <div className="modal-footer mt-8">
-                                <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={() => setStep(2)}
-                                    disabled={selectedProductIds.size === 0 && importMode !== 'csv'}
-                                >
-                                    Continuar a Revisión
-                                </button>
+                                {/* CSV Mode */}
+                                {importMode === 'csv' && (
+                                    <div className="bulk-csv-section">
+                                        <div
+                                            className={`bulk-dropzone ${isDragOver ? 'drag-over' : ''} ${csvData.length > 0 ? 'has-file' : ''}`}
+                                            onDragOver={handleDragOver}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={handleDrop}
+                                        >
+                                            <input
+                                                type="file"
+                                                accept=".csv,.xlsx,.xls"
+                                                onChange={handleFileUpload}
+                                                className="bulk-file-input"
+                                            />
+                                            <div className="bulk-dropzone-content">
+                                                {csvData.length > 0 ? (
+                                                    <>
+                                                        <FileText size={48} className="bulk-file-icon" />
+                                                        <h3>Archivo cargado</h3>
+                                                        <p className="bulk-file-count">{csvData.length} productos encontrados</p>
+                                                        <p className="bulk-file-hint">Hacé clic para cambiar</p>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="bulk-upload-icon-wrapper">
+                                                            <Upload size={40} />
+                                                        </div>
+                                                        <h3>Arrastrá tu archivo aquí</h3>
+                                                        <p>o hacé clic para seleccionar</p>
+                                                        <div className="bulk-formats">
+                                                            <span className="bulk-format-badge">CSV</span>
+                                                            <span className="bulk-format-badge">XLSX</span>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button className="bulk-template-btn" onClick={downloadTemplate}>
+                                            <Download size={16} />
+                                            <span>Descargar plantilla de ejemplo</span>
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
 
+                    {/* Step 2: Review */}
                     {step === 2 && (
-                        <div className="step-content">
-                            <h3 className="section-title">Revisar Cambios ({previewChanges.length})</h3>
-                            <div className="preview-table-wrapper card">
-                                <table className="preview-table">
+                        <div className="bulk-step-content">
+                            <div className="bulk-review-header">
+                                <h3>Revisar Cambios</h3>
+                                <span className="bulk-review-count">{previewChanges.length} productos</span>
+                            </div>
+
+                            <div className="bulk-preview-table-wrapper">
+                                <table className="bulk-preview-table">
                                     <thead>
                                         <tr>
-                                            <th>Producto</th>
-                                            <th className="text-right">Precio Actual</th>
-                                            <th className="text-right">Precio Nuevo</th>
-                                            <th className="text-right">Variación</th>
+                                            <th>PRODUCTO</th>
+                                            <th className="bulk-col-right">PRECIO ACTUAL</th>
+                                            <th className="bulk-col-right">PRECIO NUEVO</th>
+                                            <th className="bulk-col-right">VARIACIÓN</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {previewChanges.slice(0, 100).map((change, idx) => (
                                             <tr key={idx}>
                                                 <td>
-                                                    <p className="font-bold m-0">{change.productName}</p>
-                                                    {change.basePrice && <span className="text-micro text-muted">Costo base: ${change.basePrice}</span>}
+                                                    <span className="bulk-product-name">{change.productName}</span>
+                                                    {change.basePrice && (
+                                                        <span className="bulk-cost-base">Costo: ${change.basePrice}</span>
+                                                    )}
                                                 </td>
-                                                <td className="text-right text-muted">${change.oldPrice.toLocaleString()}</td>
-                                                <td className="text-right font-bold text-primary">${change.newPrice.toLocaleString()}</td>
-                                                <td className="text-right">
-                                                    <span className={`badge ${change.change >= 0 ? 'bg-success-light text-success' : 'bg-danger-light text-danger'}`}>
+                                                <td className="bulk-col-right bulk-old-price">${change.oldPrice.toLocaleString()}</td>
+                                                <td className="bulk-col-right bulk-new-price">${change.newPrice.toLocaleString()}</td>
+                                                <td className="bulk-col-right">
+                                                    <span className={`bulk-change-badge ${change.change >= 0 ? 'positive' : 'negative'}`}>
                                                         {change.change >= 0 ? '+' : ''}{change.changePercent}%
                                                     </span>
                                                 </td>
@@ -511,53 +635,111 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                     </tbody>
                                 </table>
                                 {previewChanges.length > 100 && (
-                                    <p className="text-muted text-center p-4">... y {previewChanges.length - 100} más</p>
+                                    <div className="bulk-more-rows">
+                                        ... y {previewChanges.length - 100} más
+                                    </div>
                                 )}
-                            </div>
-
-                            <div className="modal-footer mt-8">
-                                <button className="btn btn-secondary" onClick={() => setStep(1)}>Volver</button>
-                                <button className="btn btn-primary" onClick={() => setStep(3)}>Confirmar</button>
+                                {previewChanges.length === 0 && (
+                                    <div className="bulk-empty-review">
+                                        <AlertCircle size={48} className="bulk-empty-icon" />
+                                        <p className="bulk-empty-title">No hay cambios para mostrar</p>
+                                        <p className="bulk-empty-subtitle">Verificá la configuración del paso anterior</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
 
+                    {/* Step 3: Confirm */}
                     {step === 3 && (
-                        <div className="step-content text-center py-8">
-                            <div className="confirmation-circle bg-primary-light text-primary mx-auto mb-6">
-                                <TrendingUp size={48} />
-                            </div>
-                            <h2 className="text-h2 mb-2">¿Confirmar Actualización?</h2>
-                            <p className="text-body text-muted mb-8">
-                                Se actualizarán <strong>{previewChanges.length}</strong> productos de forma permanente.
-                            </p>
-
-                            <div className="summary-card bg-surface-hover p-4 rounded-xl mb-8">
-                                <div className="summary-row flex justify-between mb-2">
-                                    <span>Método:</span>
-                                    <span className="font-bold">
-                                        {importMode === 'percentage' ? 'Aumento %' :
-                                            importMode === 'margin' ? 'Margen de Ganancia' :
-                                                importMode === 'csv' ? 'Excel/CSV' : 'Manual'}
-                                    </span>
+                        <div className="bulk-step-content">
+                            <div className="bulk-confirm-content">
+                                <div className="bulk-confirm-icon-wrapper">
+                                    <TrendingUp size={64} />
                                 </div>
-                                <div className="summary-row flex justify-between">
-                                    <span>Productos:</span>
-                                    <span className="font-bold">{previewChanges.length}</span>
-                                </div>
-                            </div>
+                                <h2 className="bulk-confirm-title">¿Confirmar Actualización?</h2>
+                                <p className="bulk-confirm-subtitle">
+                                    Se actualizarán <strong>{previewChanges.length}</strong> productos de forma permanente
+                                </p>
 
-                            <div className="flex gap-4 justify-center">
-                                <button className="btn btn-secondary" onClick={() => setStep(2)}>Revisar de nuevo</button>
-                                <button className="btn btn-primary btn-lg" onClick={applyChanges} disabled={isLoading}>
-                                    {isLoading ? 'Aplicando...' : 'Sí, Actualizar Precios'}
-                                </button>
+                                <div className="bulk-confirm-summary">
+                                    <div className="bulk-summary-row">
+                                        <span className="bulk-summary-label">Método:</span>
+                                        <span className="bulk-summary-value">
+                                            {importMode === 'percentage' ? 'Aumento %' :
+                                                importMode === 'margin' ? 'Margen de Ganancia' :
+                                                    importMode === 'csv' ? 'Excel/CSV' : 'Manual'}
+                                        </span>
+                                    </div>
+                                    <div className="bulk-summary-row">
+                                        <span className="bulk-summary-label">Productos:</span>
+                                        <span className="bulk-summary-value">{previewChanges.length}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
                 </div>
+
+                {/* Footer */}
+                <div className="bulk-modal-footer">
+                    {step === 1 && (
+                        <>
+                            <button className="bulk-btn bulk-btn-cancel" onClick={onClose}>
+                                Cancelar
+                            </button>
+                            <button
+                                className="bulk-btn bulk-btn-primary"
+                                onClick={() => setStep(2)}
+                                disabled={selectedCount === 0}
+                            >
+                                <span>Continuar a Revisión</span>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+                            </button>
+                        </>
+                    )}
+
+                    {step === 2 && (
+                        <>
+                            <button className="bulk-btn bulk-btn-cancel" onClick={() => setStep(1)}>
+                                Volver
+                            </button>
+                            <button
+                                className="bulk-btn bulk-btn-primary"
+                                onClick={() => setStep(3)}
+                                disabled={previewChanges.length === 0}
+                            >
+                                Confirmar
+                            </button>
+                        </>
+                    )}
+
+                    {step === 3 && (
+                        <>
+                            <button className="bulk-btn bulk-btn-cancel" onClick={() => setStep(2)}>
+                                Revisar de nuevo
+                            </button>
+                            <button
+                                className="bulk-btn bulk-btn-primary bulk-btn-confirm"
+                                onClick={applyChanges}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <RefreshCw size={18} className="bulk-spin" />
+                                        <span>Aplicando...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check size={18} strokeWidth={3} />
+                                        <span>Sí, Actualizar Precios</span>
+                                    </>
+                                )}
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
-            {alertModal && <AlertModal {...alertModal} />}
         </div>
     );
 };
