@@ -20,14 +20,7 @@ import {
     X,
     Eye,
     EyeOff,
-    CreditCard,
-    ArrowUpRight,
-    AlertTriangle,
-    Star,
-    Zap,
-    Crown,
-    Leaf,
-    Loader2
+    CreditCard
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';

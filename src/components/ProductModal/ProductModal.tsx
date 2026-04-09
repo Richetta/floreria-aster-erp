@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, AlertCircle, TrendingUp, Plus, Check } from 'lucide-react';
-import { useStore } from '../../store/useStore';
+import { useStore, type AppState } from '../../store/useStore';
 import type { Product, Category } from '../../store/slices/types';
 import { generateIdWithPrefix, generateProductCode } from '../../utils/idGenerator';
 import { validatePrice, validateQuantity, clamp } from '../../utils/format';
@@ -21,15 +21,15 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     productToEdit,
     initialCategory
 }) => {
-    const addProduct = useStore((state) => state.addProduct);
-    const updateProduct = useStore((state) => state.updateProduct);
-    const categoriesData = useStore((state) => state.categoriesData);
-    const brands = useStore((state) => state.brands);
-    const loadBrands = useStore((state) => state.loadBrands);
-    const addBrand = useStore((state) => state.addBrand);
-    const loadProducts = useStore((state) => state.loadProducts);
-    const suppliers = useStore((state) => state.suppliers);
-    const loadSuppliers = useStore((state) => state.loadSuppliers);
+    const addProduct = useStore((state: AppState) => state.addProduct);
+    const updateProduct = useStore((state: AppState) => state.updateProduct);
+    const categoriesData = useStore((state: AppState) => state.categoriesData);
+    const brands = useStore((state: AppState) => state.brands);
+    const loadBrands = useStore((state: AppState) => state.loadBrands);
+    const addBrand = useStore((state: AppState) => state.addBrand);
+    const loadProducts = useStore((state: AppState) => state.loadProducts);
+    const suppliers = useStore((state: AppState) => state.suppliers);
+    const loadSuppliers = useStore((state: AppState) => state.loadSuppliers);
 
     const [formData, setFormData] = useState<any>({
         code: '',
