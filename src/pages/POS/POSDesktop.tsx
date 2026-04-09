@@ -2,7 +2,6 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Search,
-
     ShoppingCart,
     Trash2,
     CreditCard,
@@ -18,12 +17,16 @@ import {
     Award,
     Filter,
     ChevronDown,
+    ChevronUp,
     AlertCircle,
     Copy,
     Printer,
     UserPlus,
     Plus,
-    Minus
+    Minus,
+    Tag,
+    Package,
+    Building2
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
@@ -59,9 +62,11 @@ export const POSDesktop = () => {
 
     const addCustomer = useStore((state) => state.addCustomer);
     const tags = useStore((state) => state.tags);
+    const brands = useStore((state) => state.brands);
     const loadProducts = useStore((state) => state.loadProducts);
     const loadPackages = useStore((state) => state.loadPackages);
     const loadCustomers = useStore((state) => state.loadCustomers);
+    const loadBrands = useStore((state) => state.loadBrands);
 
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
@@ -100,10 +105,16 @@ export const POSDesktop = () => {
 
     // UI states
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeCategory, setActiveCategory] = useState<string>('Todos');
-    const [activeTag, setActiveTag] = useState<string | null>(null);
+    const [activeCategories, setActiveCategories] = useState<string[]>([]);
+    const [activeBrands, setActiveBrands] = useState<string[]>([]);
+    const [activeTags, setActiveTags] = useState<string[]>([]);
     const [productView, setProductView] = useState<ProductView>('all');
     const [showFilters, setShowFilters] = useState(false);
+    const [expandedFilterSections, setExpandedFilterSections] = useState<Record<string, boolean>>({
+        categories: true,
+        brands: true,
+        tags: false
+    });
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
     const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
@@ -146,7 +157,12 @@ export const POSDesktop = () => {
         const loadData = async () => {
             setIsLoading(true);
             try {
-                await Promise.allSettled([loadProducts(), loadPackages(), loadCustomers()]);
+                await Promise.allSettled([
+                    loadProducts(),
+                    loadPackages(),
+                    loadCustomers(),
+                    loadBrands()
+                ]);
             } catch (err) {
                 console.error("Error loading POS data:", err);
             } finally {
@@ -538,14 +554,26 @@ export const POSDesktop = () => {
         }
     };
 
-    // Product filtering logic with views
+    // Product filtering logic with views and multi-select filters
     const filteredProducts = useMemo(() => {
         let result = (products || []).filter(p => {
             const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 p.code.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;
-            const matchesTag = !activeTag || p.tags.includes(activeTag);
-            return matchesSearch && matchesCategory && matchesTag;
+
+            // Multi-select category filter (OR logic within categories)
+            const matchesCategory = activeCategories.length === 0 ||
+                activeCategories.includes(p.category) ||
+                (activeCategories.includes('Sin Categoría') && !p.category);
+
+            // Multi-select brand filter (OR logic within brands)
+            const matchesBrand = activeBrands.length === 0 ||
+                (p.brand_name && activeBrands.includes(p.brand_name));
+
+            // Multi-select tag filter (OR logic - if any tag matches)
+            const matchesTag = activeTags.length === 0 ||
+                p.tags.some(tag => activeTags.includes(tag));
+
+            return matchesSearch && matchesCategory && matchesBrand && matchesTag;
         });
 
         // Apply view sorting
@@ -567,7 +595,7 @@ export const POSDesktop = () => {
         }
 
         return result;
-    }, [products, searchTerm, activeCategory, activeTag, productView]);
+    }, [products, searchTerm, activeCategories, activeBrands, activeTags, productView]);
 
     const getViewTitle = () => {
         switch (productView) {
@@ -609,6 +637,48 @@ export const POSDesktop = () => {
         if (index === 1) return '#2';
         if (index === 2) return '#3';
         return `#${index + 1}`;
+    };
+
+    // Filter toggle helpers
+    const toggleCategory = (category: string) => {
+        setActiveCategories(prev =>
+            prev.includes(category)
+                ? prev.filter(c => c !== category)
+                : [...prev, category]
+        );
+    };
+
+    const toggleBrand = (brand: string) => {
+        setActiveBrands(prev =>
+            prev.includes(brand)
+                ? prev.filter(b => b !== brand)
+                : [...prev, brand]
+        );
+    };
+
+    const toggleTag = (tag: string) => {
+        setActiveTags(prev =>
+            prev.includes(tag)
+                ? prev.filter(t => t !== tag)
+                : [...prev, tag]
+        );
+    };
+
+    const clearAllFilters = () => {
+        setActiveCategories([]);
+        setActiveBrands([]);
+        setActiveTags([]);
+    };
+
+    const toggleFilterSection = (section: string) => {
+        setExpandedFilterSections(prev => ({
+            ...prev,
+            [section]: !prev[section]
+        }));
+    };
+
+    const getActiveFilterCount = () => {
+        return activeCategories.length + activeBrands.length + activeTags.length;
     };
 
     return (
@@ -730,13 +800,15 @@ export const POSDesktop = () => {
                         </div>
 
                         <button
-                            className={`filter-toggle-btn ${showFilters || activeCategory !== 'Todos' || activeTag ? 'active' : ''}`}
+                            className={`filter-toggle-btn ${showFilters || getActiveFilterCount() > 0 ? 'active' : ''}`}
                             onClick={() => setShowFilters(!showFilters)}
-                            title="Filtros por categoría y etiquetas"
+                            title="Filtros avanzados"
                         >
                             <Filter size={20} />
                             <span>Filtros</span>
-                            {(activeCategory !== 'Todos' || activeTag) && <span className="filter-dot"></span>}
+                            {getActiveFilterCount() > 0 && (
+                                <span className="filter-count-badge">{getActiveFilterCount()}</span>
+                            )}
                         </button>
 
                         <button
@@ -766,44 +838,165 @@ export const POSDesktop = () => {
                     {/* Collapsible Filters Drawer */}
                     {showFilters && (
                         <div className="filters-drawer animate-slide-down mb-4">
-                            <div className="filters-header mb-3">
-                                <h3 className="text-small font-bold uppercase tracking-wider text-muted">Filtrar Productos</h3>
-                                <button className="text-micro text-primary font-bold" onClick={() => {
-                                    setActiveCategory('Todos');
-                                    setActiveTag(null);
-                                }}>Limpiar Filtros</button>
+                            <div className="filters-header">
+                                <div className="filters-header-left">
+                                    <Filter size={18} className="filters-header-icon" />
+                                    <h3 className="filters-title">Filtros Avanzados</h3>
+                                </div>
+                                <button className="clear-filters-btn" onClick={clearAllFilters}>
+                                    <X size={14} />
+                                    <span>Limpiar todo</span>
+                                </button>
                             </div>
 
-                            {/* Category & Tag Filters Componentized internally */}
-                            <div className="category-filters-minimal mb-3">
-                                {['Todos', ...(categories || []), (products.some(p => p.category === 'Sin Categoría') ? 'Sin Categoría' : '')].filter(Boolean).map(cat => (
+                            {/* Category Filter Section */}
+                            <div className="filter-section">
+                                <button
+                                    className="filter-section-header"
+                                    onClick={() => toggleFilterSection('categories')}
+                                >
+                                    <Package size={16} className="filter-section-icon" />
+                                    <span>Categorías</span>
+                                    <span className="filter-section-count">
+                                        {activeCategories.length > 0 ? `(${activeCategories.length})` : ''}
+                                    </span>
+                                    {expandedFilterSections.categories ? (
+                                        <ChevronUp size={16} className="filter-chevron" />
+                                    ) : (
+                                        <ChevronDown size={16} className="filter-chevron" />
+                                    )}
+                                </button>
+                                {expandedFilterSections.categories && (
+                                    <div className="filter-chips-grid">
+                                        {['Todos', ...(categories || []), (products.some(p => p.category === 'Sin Categoría') ? 'Sin Categoría' : '')].filter(Boolean).map(cat => (
+                                            <button
+                                                key={cat}
+                                                className={`filter-chip ${activeCategories.includes(cat) ? 'active' : ''}`}
+                                                onClick={() => cat === 'Todos' ? setActiveCategories([]) : toggleCategory(cat)}
+                                            >
+                                                {cat === 'Todos' && <Package size={12} />}
+                                                <span>{cat}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Brand Filter Section */}
+                            {brands && brands.length > 0 && (
+                                <div className="filter-section">
                                     <button
-                                        key={cat}
-                                        className={`minimal-chip ${activeCategory === cat ? 'active' : ''}`}
-                                        onClick={() => setActiveCategory(cat)}
+                                        className="filter-section-header"
+                                        onClick={() => toggleFilterSection('brands')}
                                     >
-                                        {cat}
+                                        <Building2 size={16} className="filter-section-icon" />
+                                        <span>Marcas</span>
+                                        <span className="filter-section-count">
+                                            {activeBrands.length > 0 ? `(${activeBrands.length})` : ''}
+                                        </span>
+                                        {expandedFilterSections.brands ? (
+                                            <ChevronUp size={16} className="filter-chevron" />
+                                        ) : (
+                                            <ChevronDown size={16} className="filter-chevron" />
+                                        )}
                                     </button>
-                                ))}
-                            </div>
+                                    {expandedFilterSections.brands && (
+                                        <div className="filter-chips-grid">
+                                            <button
+                                                className={`filter-chip ${activeBrands.length === 0 ? 'active' : ''}`}
+                                                onClick={() => setActiveBrands([])}
+                                            >
+                                                <Building2 size={12} />
+                                                <span>Todos</span>
+                                            </button>
+                                            {brands.map(brand => (
+                                                <button
+                                                    key={brand.id}
+                                                    className={`filter-chip ${activeBrands.includes(brand.name) ? 'active' : ''}`}
+                                                    onClick={() => toggleBrand(brand.name)}
+                                                >
+                                                    <span>{brand.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
+                            {/* Tag Filter Section */}
                             {tags.length > 0 && (
-                                <div className="tag-filters-minimal">
+                                <div className="filter-section">
                                     <button
-                                        className={`minimal-chip tag ${activeTag === null ? 'active' : ''}`}
-                                        onClick={() => setActiveTag(null)}
+                                        className="filter-section-header"
+                                        onClick={() => toggleFilterSection('tags')}
                                     >
-                                        Todos los tags
+                                        <Tag size={16} className="filter-section-icon" />
+                                        <span>Etiquetas</span>
+                                        <span className="filter-section-count">
+                                            {activeTags.length > 0 ? `(${activeTags.length})` : ''}
+                                        </span>
+                                        {expandedFilterSections.tags ? (
+                                            <ChevronUp size={16} className="filter-chevron" />
+                                        ) : (
+                                            <ChevronDown size={16} className="filter-chevron" />
+                                        )}
                                     </button>
-                                    {tags.map(tag => (
-                                        <button
-                                            key={tag}
-                                            className={`minimal-chip tag ${activeTag === tag ? 'active' : ''}`}
-                                            onClick={() => setActiveTag(tag)}
-                                        >
-                                            {tag}
-                                        </button>
-                                    ))}
+                                    {expandedFilterSections.tags && (
+                                        <div className="filter-chips-grid">
+                                            <button
+                                                className={`filter-chip tag-chip ${activeTags.length === 0 ? 'active' : ''}`}
+                                                onClick={() => setActiveTags([])}
+                                            >
+                                                <Tag size={12} />
+                                                <span>Todas</span>
+                                            </button>
+                                            {tags.map(tag => (
+                                                <button
+                                                    key={tag}
+                                                    className={`filter-chip tag-chip ${activeTags.includes(tag) ? 'active' : ''}`}
+                                                    onClick={() => toggleTag(tag)}
+                                                >
+                                                    <span>{tag}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Active Filters Summary */}
+                            {getActiveFilterCount() > 0 && (
+                                <div className="active-filters-summary">
+                                    <span className="active-summary-label">Filtros activos:</span>
+                                    <div className="active-chips-list">
+                                        {activeCategories.map(cat => (
+                                            <span key={cat} className="active-chip">
+                                                <Package size={10} />
+                                                <span>{cat}</span>
+                                                <button onClick={() => cat === 'Todos' ? setActiveCategories([]) : toggleCategory(cat)}>
+                                                    <X size={10} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                        {activeBrands.map(brand => (
+                                            <span key={brand} className="active-chip brand-chip">
+                                                <Building2 size={10} />
+                                                <span>{brand}</span>
+                                                <button onClick={() => toggleBrand(brand)}>
+                                                    <X size={10} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                        {activeTags.map(tag => (
+                                            <span key={tag} className="active-chip tag-chip">
+                                                <Tag size={10} />
+                                                <span>{tag}</span>
+                                                <button onClick={() => toggleTag(tag)}>
+                                                    <X size={10} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -1717,7 +1910,7 @@ export const POSDesktop = () => {
                         setShowTicketPrinter(false);
                         setTicketData(null);
                     }}
-                    shopName="Florería Mi Jard�n"
+                    shopName="Florería Mi Jard�n"
                     shopPhone="11-1234-5678"
                     shopAddress="Calle de las Rosas 789"
                 />

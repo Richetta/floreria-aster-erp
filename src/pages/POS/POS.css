@@ -8,7 +8,8 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    gap: 0; /* Remove gap if we want total seamless look, or keep small */
+    gap: 0;
+    /* Remove gap if we want total seamless look, or keep small */
     margin: 0;
     padding: 0;
     background: white;
@@ -43,7 +44,8 @@
     .pos-catalog {
         border-radius: 0;
         box-shadow: none;
-        flex: 2; /* Restructurado para dar más espacio a pos-cart-panel */
+        flex: 2;
+        /* Restructurado para dar más espacio a pos-cart-panel */
     }
 }
 
@@ -79,12 +81,13 @@
     align-items: center;
     background: #F6F4EF;
     border: 2px solid #D1CDBF;
-    border-radius: 50px !important; /* Forces semicircular ends */
+    border-radius: 50px !important;
+    /* Forces semicircular ends */
     padding: 0 1.5rem;
     height: 54px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden !important;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .pos-search:focus-within {
@@ -176,57 +179,241 @@
     border-radius: 50%;
 }
 
+.filter-count-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    background: #4F7A5A;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 /* Filters Drawer */
 .filters-drawer {
-    background: #F6F4EF;
+    background: white;
     border-radius: 16px;
-    padding: 1.25rem;
-    border: 1px solid #D1CDBF;
+    padding: 1.5rem;
+    border: 2px solid #E5E7EB;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .filters-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #F3F4F6;
 }
 
-.category-filters-minimal, .tag-filters-minimal {
+.filters-header-left {
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 0.5rem;
 }
 
-.minimal-chip {
-    padding: 0.4rem 1rem;
+.filters-header-icon {
+    color: #4F7A5A;
+}
+
+.filters-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1F2937;
+    margin: 0;
+}
+
+.clear-filters-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    background: #F9FAFB;
+    border: 1px solid #D1D5DB;
     border-radius: 8px;
+    color: #6B7280;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.clear-filters-btn:hover {
+    background: #F3F4F6;
+    border-color: #9CA3AF;
+    color: #374151;
+}
+
+/* Filter Sections */
+.filter-section {
+    margin-bottom: 1rem;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #F9FAFB;
+}
+
+.filter-section:last-child {
+    margin-bottom: 0;
+}
+
+.filter-section-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-section-header:hover {
+    background: #F3F4F6;
+}
+
+.filter-section-icon {
+    color: #4F7A5A;
+    flex-shrink: 0;
+}
+
+.filter-section-header span:not(.filter-section-count):not(.filter-chevron) {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1F2937;
+}
+
+.filter-section-count {
+    font-size: 0.85rem;
+    color: #6B7280;
+    font-weight: 500;
+}
+
+.filter-chevron {
+    margin-left: auto;
+    color: #9CA3AF;
+    transition: transform 0.2s ease;
+}
+
+.filter-chips-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0 1rem 1rem;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.875rem;
     background: white;
-    border: 1px solid #D1CDBF;
-    color: #6B6B6B;
-    font-size: 0.8rem;
+    border: 1.5px solid #D1D5DB;
+    border-radius: 8px;
+    color: #374151;
+    font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.minimal-chip:hover {
+.filter-chip:hover {
     border-color: #4F7A5A;
     color: #4F7A5A;
+    background: #F0FDF4;
 }
 
-.minimal-chip.active {
+.filter-chip.active {
     background: #4F7A5A;
     color: white;
     border-color: #4F7A5A;
 }
 
-.minimal-chip.tag {
-    border-radius: 20px;
-    font-size: 0.75rem;
-    background: #F6F4EF;
+.filter-chip.tag-chip:hover {
+    border-color: #8B5CF6;
+    color: #8B5CF6;
+    background: #F5F3FF;
 }
 
-.minimal-chip.tag.active {
-    background: #4f46e5;
+.filter-chip.tag-chip.active {
+    background: #8B5CF6;
+    color: white;
+    border-color: #8B5CF6;
+}
+
+/* Active Filters Summary */
+.active-filters-summary {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid #F3F4F6;
+}
+
+.active-summary-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6B7280;
+    margin-bottom: 0.75rem;
+}
+
+.active-chips-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.active-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.375rem 0.625rem;
+    background: #EEF2FF;
+    border: 1px solid #C7D2FE;
+    border-radius: 6px;
+    color: #4F46E5;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.active-chip.brand-chip {
+    background: #FEF3C7;
+    border-color: #FCD34D;
+    color: #92400E;
+}
+
+.active-chip.tag-chip {
+    background: #F5F3FF;
+    border-color: #DDD6FE;
+    color: #7C3AED;
+}
+
+.active-chip button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+    margin-left: 0.25rem;
+}
+
+.active-chip button:hover {
+    opacity: 1;
 }
 
 /* Modern Nav Pills (Segmented Control) */
@@ -271,8 +458,15 @@
 }
 
 @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Product List */
@@ -531,7 +725,8 @@
         flex-shrink: 0;
         box-shadow: none;
         border-left: 1px solid #D1CDBF;
-        border-right: 1px solid #D1CDBF; /* Ensure right border is visible */
+        border-right: 1px solid #D1CDBF;
+        /* Ensure right border is visible */
     }
 }
 
@@ -1327,8 +1522,13 @@
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes modalSlideUp {
@@ -1336,6 +1536,7 @@
         opacity: 0;
         transform: translateY(30px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
