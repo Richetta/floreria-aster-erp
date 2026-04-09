@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
     X, Upload, FileText, Check, AlertCircle, 
     ChevronRight, FileSpreadsheet,
-    Database, RefreshCw, PlusCircle, Download
+    Database, RefreshCw, PlusCircle, Download, Sparkles
 } from 'lucide-react';
 import { api } from '../../services/api';
 import './CsvImportModal.css';
@@ -39,19 +39,8 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
             let dataToImport;
 
             if (activeTab === 'file' && file) {
-                const formData = new FormData();
-                formData.append('file', file);
-                
-                const parseResponse = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/import-data/parse-file`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: formData
-                });
-
-                if (!parseResponse.ok) throw new Error('Error al procesar el archivo');
-                dataToImport = await parseResponse.json();
+                const parseResponse = await api.parseFile(file);
+                dataToImport = parseResponse.data;
             } else if (activeTab === 'text' && pasteText.trim()) {
                 const parseResponse = await api.request<any>('/import-data/parse-text', {
                     method: 'POST',
@@ -106,7 +95,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                 
                 {/* Header */}
                 <div className="modal-header">
-                    <h2><Database size={24} /> Importar Productos</h2>
+                    <h2 className="text-h2 flex items-center gap-2 text-white"><Database size={24} /> Importar Productos</h2>
                     <button className="modal-close-btn" onClick={handleClose}>
                         <X size={20} />
                     </button>
@@ -155,17 +144,28 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                         <Upload size={32} />
                                     </div>
                                     <div className="dropzone-text">
-                                        <h3>{file ? file.name : 'Arrastrá tu archivo aquí'}</h3>
-                                        <p>{file ? `${(file.size / 1024).toFixed(2)} KB` : 'Soportamos Excel (XLSX, XLS) y CSV'}</p>
+                                        <h3 className="text-h3 font-bold">{file ? file.name : 'Arrastrá tu archivo aquí o hacé clic'}</h3>
+                                        <p className="text-body text-muted">{file ? `${(file.size / 1024).toFixed(2)} KB` : 'Soportamos Excel (XLSX, XLS) y CSV'}</p>
                                     </div>
                                 </div>
                             ) : (
-                                <textarea 
-                                    className="paste-textarea"
-                                    placeholder="Pegá aquí el contenido de tu lista...&#10;Ejemplo: Código, Nombre, Precio..."
-                                    value={pasteText}
-                                    onChange={(e) => setPasteText(e.target.value)}
-                                />
+                                <div className="paste-area-wrapper">
+                                    <textarea 
+                                        className="paste-textarea"
+                                        placeholder="Pegá aquí el contenido de tu lista...&#10;Código, Nombre, Precio..."
+                                        value={pasteText}
+                                        onChange={(e) => setPasteText(e.target.value)}
+                                    />
+                                    <div className="paste-helper text-small text-muted mt-3 p-3 bg-surface border border-border rounded-lg">
+                                        <p className="font-bold mb-1"><Sparkles size={14} className="inline mr-1 text-primary" /> Funcionalidad inteligente de precios:</p>
+                                        <ul className="list-disc pl-5 m-0 space-y-1">
+                                            <li>Para <strong>subir un porcentaje</strong>, usá <code className="bg-surface-hover px-1 rounded">+10%</code></li>
+                                            <li>Para <strong>sumar dinero fijo</strong> al valor actual, usá <code className="bg-surface-hover px-1 rounded">+$10</code> o <code className="bg-surface-hover px-1 rounded">$10</code></li>
+                                            <li>Para <strong>imponer un precio fijo exacto</strong>, usá <code className="bg-surface-hover px-1 rounded">$$2000</code></li>
+                                            <li>Para <strong>bajar porcentaje</strong>, usá <code className="bg-surface-hover px-1 rounded">-10%</code></li>
+                                        </ul>
+                                    </div>
+                                </div>
                             )}
 
                             <div className="mt-6">

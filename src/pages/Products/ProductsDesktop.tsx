@@ -347,7 +347,6 @@ export const ProductsDesktop = () => {
                                                 <div>
                                                     <h4 className="m-0 font-bold">{p.name}</h4>
                                                     <p className="text-micro text-muted m-0">{p.code} • {p.brand_name || 'Sin Marca'}</p>
-                                                </div>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <p className="font-bold text-primary m-0 text-right">${p.price.toLocaleString()}</p>
                                                         <span className={`text-micro stock-pill ${p.stock <= p.min ? 'danger' : 'success'}`}>{p.stock} unid.</span>
