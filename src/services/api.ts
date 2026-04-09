@@ -286,6 +286,18 @@ class ApiClient {
 
   logout() {
     this.setToken(null);
+    // Clear ALL user-specific data from localStorage to prevent
+    // cross-user data contamination when switching Google accounts
+    const keysToRemove = [
+      'auth_token',
+      'user',
+      'order_templates',
+      'subscription_plan_slug',
+      'selected_plan',
+      'upgrade_flow',
+      'notifications_last_seen_count',
+    ];
+    keysToRemove.forEach(key => localStorage.removeItem(key));
   }
 
   // ============================================

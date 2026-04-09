@@ -118,24 +118,42 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       const name = payload.name;
       const picture = payload.picture;
 
-      // Check if user exists by Google ID
+      // STRICT: Only look up by Google ID
+      // This is the ONLY secure way to identify a Google user.
+      // Email-based fallback was causing different Google accounts to share data.
       let user: any = await db
         .selectFrom('users')
         .selectAll()
         .where('google_id' as any, '=', googleId)
         .executeTakeFirst();
 
-      // If not found by Google ID, check by email
+      // If found by Google ID → user exists, proceed normally.
+      // If NOT found → this is a brand new Google login.
+      //   SPECIAL CASE: If a user previously registered with email/password using
+      //   the SAME email and has NO google_id yet, link the Google account to them
+      //   (same business). Otherwise, always create a new isolated business.
       if (!user) {
-        user = await db
+        const existingByEmail = await db
           .selectFrom('users')
           .selectAll()
           .where('email', '=', email)
           .where('is_active', '=', true)
           .executeTakeFirst();
+
+        if (existingByEmail && !(existingByEmail as any).google_id) {
+          // Safe to link: user registered with email/password, first Google login.
+          // Update their google_id so future logins use the strict google_id path.
+          await db.updateTable('users')
+            .set({ google_id: googleId, updated_at: new Date() } as any)
+            .where('id', '=', existingByEmail.id)
+            .execute();
+          user = { ...existingByEmail, google_id: googleId };
+        }
+        // If existingByEmail has a different google_id → different person with same email.
+        // Fall through to create a new business for the new Google user.
       }
 
-      // Create user and business if doesn't exist
+      // Create user and business if doesn't exist (brand new Google user)
       if (!user) {
         // 1. Create a new unique business for this user
         const newBusinessId = randomUUID();
@@ -265,12 +283,22 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         .executeTakeFirst();
 
       if (!user) {
-        user = await db
+        const existingByEmail = await db
           .selectFrom('users')
           .selectAll()
           .where('email', '=', email)
           .where('is_active', '=', true)
           .executeTakeFirst();
+
+        if (existingByEmail && !(existingByEmail as any).google_id) {
+          // Link existing email/password user to this Google account
+          await db.updateTable('users')
+            .set({ google_id: googleId, updated_at: new Date() } as any)
+            .where('id', '=', existingByEmail.id)
+            .execute();
+          user = { ...existingByEmail, google_id: googleId };
+        }
+        // Different google_id on same email → create new isolated business (fall through)
       }
 
       if (!user) {

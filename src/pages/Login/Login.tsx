@@ -76,7 +76,8 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
                 return;
             }
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
+            const apiUrl = import.meta.env.PROD ? '/api' : (import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
+            const response = await fetch(`${apiUrl}/auth/google`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ credential: credentialResponse.credential }),
