@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { 
-    X, Upload, FileText, Check, AlertCircle, 
+import React, { useState, useMemo, useCallback, useRef } from 'react';
+import {
+    X, Upload, FileText, Check, AlertCircle,
     ChevronRight, FileSpreadsheet,
     Database, RefreshCw, PlusCircle, Download, Sparkles,
     Search, Percent, DollarSign, CheckSquare, Square
@@ -52,7 +52,6 @@ const parseDataIntoRows = (rawData: any[]): ParsedRow[] => {
         const cost = parseFloat(String(costRaw).replace(/[^0-9.-]+/g, "")) || 0;
         let price = parseFloat(String(priceRaw).replace(/[^0-9.-]+/g, "")) || 0;
 
-        // Custom symbol parse if manual overrides
         if (typeof priceRaw === 'string') {
             if (priceRaw.includes('$$')) {
                 price = parseFloat(priceRaw.replace(/[^\d.]/g, '')) || price;
@@ -93,13 +92,15 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     const [file, setFile] = useState<File | null>(null);
     const [pasteText, setPasteText] = useState('');
     const [importResult, setImportResult] = useState<{ updated: number, created: number } | null>(null);
+    const [isDragOver, setIsDragOver] = useState(false);
 
-    // Pre-import state
     const [previewData, setPreviewData] = useState<ParsedRow[]>([]);
     const [bulkMargin, setBulkMargin] = useState<string>('');
     const [bulkCategory, setBulkCategory] = useState('');
     const [bulkBrand, setBulkBrand] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!isOpen) return null;
 
@@ -109,6 +110,26 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
             setError(null);
         }
     };
+
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(true);
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    }, []);
+
+    const handleDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const droppedFile = e.dataTransfer.files[0];
+        if (droppedFile && (droppedFile.name.endsWith('.csv') || droppedFile.name.endsWith('.xlsx') || droppedFile.name.endsWith('.xls'))) {
+            setFile(droppedFile);
+            setError(null);
+        }
+    }, []);
 
     const handlePreview = async () => {
         setIsLoading(true);
@@ -151,7 +172,6 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                 Stock: r.stock,
                 Categoría: r.category,
                 Marca: r.brand,
-                // Fallbacks to be 100% resilient
                 code: r.code,
                 name: r.name,
                 price: r.price,
@@ -181,7 +201,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
             });
             setStep(3);
         } catch (err: any) {
-            setError(err.message || 'Error durante la importación real');
+            setError(err.message || 'Error durante la importación');
         } finally {
             setIsLoading(false);
         }
@@ -204,12 +224,11 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
         if (importResult) window.location.reload();
     };
 
-    // --- Data Grid Logic ---
     const filteredPreview = useMemo(() => {
         if (!searchTerm) return previewData;
         const low = searchTerm.toLowerCase();
-        return previewData.filter(r => 
-            r.name.toLowerCase().includes(low) || 
+        return previewData.filter(r =>
+            r.name.toLowerCase().includes(low) ||
             r.code.toLowerCase().includes(low) ||
             r.category.toLowerCase().includes(low) ||
             r.brand.toLowerCase().includes(low)
@@ -230,8 +249,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
         setPreviewData(prev => prev.map(r => {
             if (r._id !== id) return r;
             const updated = { ...r, [field]: value };
-            
-            // Recalculate interrelated price/cost/margin
+
             if (field === 'cost' || field === 'margin') {
                 updated.price = Math.round(updated.cost * (1 + updated.margin / 100));
             } else if (field === 'price') {
@@ -266,246 +284,350 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
         setPreviewData(prev => prev.map(r => r.selected ? { ...r, brand: bulkBrand } : r));
     };
 
-    // Safe uniquely identifiable categories and brands for selects
     const categoryOptions = Array.from(new Set([...categories.map((c: any) => c?.name || c), ...previewData.map(r => r.category).filter(Boolean)]));
     const brandOptions = Array.from(new Set([...brands.map((b: any) => b?.name || b), ...previewData.map(r => r.brand).filter(Boolean)]));
 
+    const selectedCount = previewData.filter(r => r.selected).length;
+
     return (
-        <div className="modal-overlay" onClick={handleClose}>
-            <div className="modal-content" style={{ maxWidth: step === 2 ? '1400px' : '1000px', width: step === 2 ? '98vw' : '95vw' }} onClick={(e) => e.stopPropagation()}>
-                
+        <div className="csv-modal-overlay" onClick={handleClose}>
+            <div className="csv-modal-container" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
-                <div className="modal-header">
-                    <h2 className="text-h2 flex items-center gap-2 text-white"><Database size={24} /> Importar Productos</h2>
-                    <button className="modal-close-btn" onClick={handleClose}>
+                <div className="csv-modal-header">
+                    <div className="csv-header-content">
+                        <div className="csv-header-icon">
+                            <Database size={28} />
+                        </div>
+                        <div className="csv-header-text">
+                            <h2>Importar Productos</h2>
+                            <p>Carga masiva de productos desde archivo CSV o Excel</p>
+                        </div>
+                    </div>
+                    <button className="csv-close-btn" onClick={handleClose}>
                         <X size={20} />
                     </button>
                 </div>
 
                 {/* Stepper */}
-                <div className="import-stepper">
-                    <div className={`step-item ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
-                        <div className="step-number">{step > 1 ? <Check size={14} /> : '1'}</div>
-                        <span>Configurar</span>
+                <div className="csv-stepper">
+                    <div className={`csv-step ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
+                        <div className="csv-step-number">
+                            {step > 1 ? <Check size={14} strokeWidth={3} /> : '1'}
+                        </div>
+                        <span className="csv-step-label">Configurar</span>
                     </div>
-                    <div className="step-divider" />
-                    <div className={`step-item ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
-                        <div className="step-number">{step > 2 ? <Check size={14} /> : '2'}</div>
-                        <span>Vista Previa Dinámica</span>
+                    <div className={`csv-step-line ${step > 1 ? 'completed' : ''}`} />
+                    <div className={`csv-step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
+                        <div className="csv-step-number">
+                            {step > 2 ? <Check size={14} strokeWidth={3} /> : '2'}
+                        </div>
+                        <span className="csv-step-label">Vista Previa</span>
                     </div>
-                    <div className="step-divider" />
-                    <div className={`step-item ${step >= 3 ? 'active' : ''}`}>
-                        <div className="step-number">3</div>
-                        <span>Finalizar</span>
+                    <div className={`csv-step-line ${step > 2 ? 'completed' : ''}`} />
+                    <div className={`csv-step ${step >= 3 ? 'active' : ''}`}>
+                        <div className="csv-step-number">3</div>
+                        <span className="csv-step-label">Finalizar</span>
                     </div>
                 </div>
 
-                <div className="import-modal-content p-0">
+                {/* Content */}
+                <div className="csv-modal-body">
+                    {error && (
+                        <div className="csv-error-alert">
+                            <AlertCircle size={18} />
+                            <span>{error}</span>
+                            <button className="csv-error-close" onClick={() => setError(null)}>
+                                <X size={14} />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Step 1: Upload */}
                     {step === 1 && (
-                        <div className="animate-fadeIn p-8">
-                            <div className="import-tabs">
-                                <button 
-                                    className={`import-tab ${activeTab === 'file' ? 'active' : ''}`}
+                        <div className="csv-upload-step">
+                            <div className="csv-tabs">
+                                <button
+                                    className={`csv-tab ${activeTab === 'file' ? 'active' : ''}`}
                                     onClick={() => setActiveTab('file')}
                                 >
-                                    <FileSpreadsheet size={18} /> Archivo Excel/CSV
+                                    <FileSpreadsheet size={18} />
+                                    <span>Archivo Excel/CSV</span>
                                 </button>
-                                <button 
-                                    className={`import-tab ${activeTab === 'text' ? 'active' : ''}`}
+                                <button
+                                    className={`csv-tab ${activeTab === 'text' ? 'active' : ''}`}
                                     onClick={() => setActiveTab('text')}
                                 >
-                                    <FileText size={18} /> Pegar Texto
+                                    <FileText size={18} />
+                                    <span>Pegar Texto</span>
                                 </button>
                             </div>
 
                             {activeTab === 'file' ? (
-                                <div className="file-dropzone">
-                                    <input type="file" onChange={handleFileChange} accept=".csv,.xlsx,.xls" />
-                                    <div className="dropzone-icon">
-                                        <Upload size={32} />
-                                    </div>
-                                    <div className="dropzone-text">
-                                        <h3 className="text-h3 font-bold">{file ? file.name : 'Arrastrá tu archivo aquí o hacé clic'}</h3>
-                                        <p className="text-body text-muted">{file ? `${(file.size / 1024).toFixed(2)} KB` : 'Soportamos Excel (XLSX, XLS) y CSV'}</p>
+                                <div
+                                    className={`csv-dropzone ${isDragOver ? 'drag-over' : ''} ${file ? 'has-file' : ''}`}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        onChange={handleFileChange}
+                                        accept=".csv,.xlsx,.xls"
+                                        className="csv-file-input"
+                                    />
+                                    <div className="csv-dropzone-content">
+                                        {file ? (
+                                            <>
+                                                <FileSpreadsheet size={56} className="csv-file-icon" />
+                                                <h3 className="csv-file-name">{file.name}</h3>
+                                                <p className="csv-file-size">{(file.size / 1024).toFixed(2)} KB</p>
+                                                <p className="csv-file-hint">Hacé clic para cambiar</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="csv-upload-icon-wrapper">
+                                                    <Upload size={48} />
+                                                </div>
+                                                <h3 className="csv-dropzone-title">Arrastrá tu archivo aquí</h3>
+                                                <p className="csv-dropzone-subtitle">o hacé clic para seleccionar</p>
+                                                <div className="csv-formats">
+                                                    <span className="csv-format-badge">CSV</span>
+                                                    <span className="csv-format-badge">XLSX</span>
+                                                    <span className="csv-format-badge">XLS</span>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
-                                <div className="paste-area-wrapper">
-                                    <textarea 
-                                        className="paste-textarea"
-                                        placeholder="Pegá aquí el contenido de tu lista...&#10;Código, Nombre, Precio..."
+                                <div className="csv-paste-section">
+                                    <textarea
+                                        className="csv-paste-textarea"
+                                        placeholder={`Pegá aquí el contenido de tu lista...\n\nEjemplo:\nCódigo,Nombre,Precio,Costo,Stock,Categoría,Marca\nPROD001,Rosas Rojas,1500,800,50,Plantas,Mi Jardín`}
                                         value={pasteText}
                                         onChange={(e) => setPasteText(e.target.value)}
                                     />
-                                    <div className="paste-helper text-small text-muted mt-3 p-3 bg-surface border border-border rounded-lg">
-                                        <p className="font-bold mb-1"><Sparkles size={14} className="inline mr-1 text-primary" /> Funcionalidad inteligente de precios:</p>
-                                        <ul className="list-disc pl-5 m-0 space-y-1">
-                                            <li>Para <strong>subir un porcentaje</strong>, usá <code className="bg-surface-hover px-1 rounded">+10%</code></li>
-                                            <li>Para <strong>sumar dinero fijo</strong> al valor actual, usá <code className="bg-surface-hover px-1 rounded">+$10</code> o <code className="bg-surface-hover px-1 rounded">$10</code></li>
-                                            <li>Para <strong>imponer un precio fijo exacto</strong>, usá <code className="bg-surface-hover px-1 rounded">$$2000</code></li>
-                                        </ul>
+                                    <div className="csv-paste-helper">
+                                        <div className="csv-helper-icon">
+                                            <Sparkles size={16} />
+                                        </div>
+                                        <div className="csv-helper-text">
+                                            <p className="csv-helper-title">Funcionalidad inteligente de precios:</p>
+                                            <ul>
+                                                <li><code>+10%</code> → Subir un porcentaje</li>
+                                                <li><code>+$10</code> o <code>$10</code> → Sumar dinero fijo</li>
+                                                <li><code>$$2000</code> → Imponer precio fijo exacto</li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
-                            <div className="mt-6 flex justify-between items-center">
-                                <button onClick={handleDownloadTemplate} className="btn-text text-primary flex items-center gap-2">
-                                    <Download size={16} /> Descargar plantilla de ejemplo
-                                </button>
-                            </div>
+                            <button className="csv-template-btn" onClick={handleDownloadTemplate}>
+                                <Download size={16} />
+                                <span>Descargar plantilla de ejemplo</span>
+                            </button>
                         </div>
                     )}
 
+                    {/* Step 2: Preview */}
                     {step === 2 && (
-                        <div className="animate-fadeIn preview-grid-container flex flex-col h-full">
-                            {/* Toolbar for bulk actions */}
-                            <div className="grid-toolbar p-4 bg-surface border-b border-border flex flex-wrap gap-4 items-center justify-between">
-                                <div className="flex items-center gap-2 flex-grow max-w-sm">
-                                    <div className="search-bar w-full">
-                                        <Search className="search-icon" size={18} />
-                                        <input 
-                                            type="text" 
-                                            placeholder="Buscar productos en la lista..." 
-                                            className="form-input search-input pl-10"
+                        <div className="csv-preview-step">
+                            {/* Toolbar */}
+                            <div className="csv-preview-toolbar">
+                                <div className="csv-toolbar-left">
+                                    <div className="csv-search-box">
+                                        <Search size={16} className="csv-search-icon" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar productos..."
                                             value={searchTerm}
                                             onChange={e => setSearchTerm(e.target.value)}
                                         />
                                     </div>
-                                </div>
-                                <div className="bulk-actions flex flex-wrap gap-3 items-center">
-                                    <span className="text-small font-bold text-muted mr-2 flex items-center gap-1">
-                                        <Sparkles size={16} className="text-primary"/> Acciones Masivas
+                                    <span className="csv-selected-count">
+                                        {selectedCount} seleccionados
                                     </span>
-                                    
-                                    {/* Categoria Bulk */}
-                                    <div className="flex items-center gap-1">
-                                        <select className="form-input text-small py-1 h-9" value={bulkCategory} onChange={e => setBulkCategory(e.target.value)}>
-                                            <option value="">Clasificar Carpeta...</option>
-                                            {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                        <button className="btn btn-secondary py-1 px-2 h-9" onClick={applyBulkCategory} disabled={!bulkCategory}>Aplicar</button>
-                                    </div>
-
-                                    {/* Marca Bulk */}
-                                    <div className="flex items-center gap-1">
-                                        <select className="form-input text-small py-1 h-9" value={bulkBrand} onChange={e => setBulkBrand(e.target.value)}>
-                                            <option value="">Clasificar Marca...</option>
-                                            {brandOptions.map(b => <option key={b} value={b}>{b}</option>)}
-                                        </select>
-                                        <button className="btn btn-secondary py-1 px-2 h-9" onClick={applyBulkBrand} disabled={!bulkBrand}>Aplicar</button>
-                                    </div>
-
-                                    {/* Margen Bulk */}
-                                    <div className="flex items-center gap-1 border-l pl-3 ml-1">
-                                        <span className="text-small text-muted flex items-center"><Percent size={14} className="mr-1"/> Ganancia:</span>
-                                        <input 
-                                            type="number" 
-                                            className="form-input text-small py-1 h-9 w-20" 
-                                            placeholder="%" 
-                                            value={bulkMargin} 
-                                            onChange={e => setBulkMargin(e.target.value)}
-                                        />
-                                        <button className="btn btn-secondary py-1 px-2 h-9" onClick={applyBulkMargin} disabled={bulkMargin === ''}>Aplicar</button>
-                                    </div>
+                                </div>
+                                <div className="csv-toolbar-right">
+                                    <button
+                                        className="csv-deselect-btn"
+                                        onClick={() => setPreviewData(prev => prev.map(r => ({ ...r, selected: false })))}
+                                    >
+                                        <Square size={14} />
+                                        Deseleccionar todo
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Data Table */}
-                            <div className="table-wrapper overflow-auto" style={{ maxHeight: 'calc(80vh - 200px)' }}>
-                                <table className="w-full text-left border-collapse">
-                                    <thead className="bg-surface-hover sticky top-0 z-10 shadow-sm">
+                            {/* Bulk Actions */}
+                            <div className="csv-bulk-actions-bar">
+                                <Sparkles size={16} className="csv-bulk-icon" />
+                                <span className="csv-bulk-label">Acciones masivas:</span>
+
+                                <div className="csv-bulk-group">
+                                    <select
+                                        className="csv-bulk-select"
+                                        value={bulkCategory}
+                                        onChange={e => setBulkCategory(e.target.value)}
+                                    >
+                                        <option value="">Categoría...</option>
+                                        {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                    <button
+                                        className="csv-bulk-apply-btn"
+                                        onClick={applyBulkCategory}
+                                        disabled={!bulkCategory}
+                                    >
+                                        Aplicar
+                                    </button>
+                                </div>
+
+                                <div className="csv-bulk-group">
+                                    <select
+                                        className="csv-bulk-select"
+                                        value={bulkBrand}
+                                        onChange={e => setBulkBrand(e.target.value)}
+                                    >
+                                        <option value="">Marca...</option>
+                                        {brandOptions.map(b => <option key={b} value={b}>{b}</option>)}
+                                    </select>
+                                    <button
+                                        className="csv-bulk-apply-btn"
+                                        onClick={applyBulkBrand}
+                                        disabled={!bulkBrand}
+                                    >
+                                        Aplicar
+                                    </button>
+                                </div>
+
+                                <div className="csv-bulk-divider" />
+
+                                <div className="csv-bulk-group csv-margin-bulk-group">
+                                    <Percent size={14} className="csv-bulk-percent-icon" />
+                                    <input
+                                        type="number"
+                                        className="csv-bulk-margin-input"
+                                        placeholder="Margen %"
+                                        value={bulkMargin}
+                                        onChange={e => setBulkMargin(e.target.value)}
+                                    />
+                                    <button
+                                        className="csv-bulk-apply-btn"
+                                        onClick={applyBulkMargin}
+                                        disabled={bulkMargin === ''}
+                                    >
+                                        Aplicar
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Table */}
+                            <div className="csv-table-wrapper">
+                                <table className="csv-table">
+                                    <thead>
                                         <tr>
-                                            <th className="p-3 border-b border-border w-10 text-center">
-                                                <button onClick={toggleAll} className="text-muted hover:text-primary">
-                                                    {filteredPreview.length > 0 && filteredPreview.every(r => r.selected) ? <CheckSquare size={18} className="text-primary"/> : <Square size={18} />}
+                                            <th className="csv-col csv-select-col">
+                                                <button onClick={toggleAll} className="csv-select-all-btn">
+                                                    {filteredPreview.length > 0 && filteredPreview.every(r => r.selected) ? (
+                                                        <CheckSquare size={18} className="csv-checkbox checked" />
+                                                    ) : (
+                                                        <Square size={18} className="csv-checkbox" />
+                                                    )}
                                                 </button>
                                             </th>
-                                            <th className="p-3 border-b border-border text-micro font-bold uppercase text-muted">Código</th>
-                                            <th className="p-3 border-b border-border text-micro font-bold uppercase text-muted">Nombre del Producto</th>
-                                            <th className="p-3 border-b border-border text-micro font-bold uppercase text-muted">Carpeta</th>
-                                            <th className="p-3 border-b border-border text-micro font-bold uppercase text-muted">Marca</th>
-                                            <th className="p-3 border-b border-border text-micro font-bold uppercase text-muted w-24">Stock</th>
-                                            <th className="p-3 border-b border-border text-micro font-bold uppercase text-muted w-32">Costo ($)</th>
-                                            <th className="p-3 border-b border-border text-micro font-bold uppercase text-muted w-28">Margen (%)</th>
-                                            <th className="p-3 border-b border-border text-micro font-bold uppercase text-muted w-32">P. Venta ($)</th>
+                                            <th className="csv-col csv-code-col">CÓDIGO</th>
+                                            <th className="csv-col csv-name-col">NOMBRE</th>
+                                            <th className="csv-col csv-category-col">CATEGORÍA</th>
+                                            <th className="csv-col csv-brand-col">MARCA</th>
+                                            <th className="csv-col csv-stock-col">STOCK</th>
+                                            <th className="csv-col csv-cost-col">COSTO ($)</th>
+                                            <th className="csv-col csv-margin-col">MARGEN (%)</th>
+                                            <th className="csv-col csv-price-col">P. VENTA ($)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {filteredPreview.map((row) => (
-                                            <tr key={row._id} className={`border-b border-border/50 hover:bg-surface transition-colors ${row.selected ? '' : 'opacity-50'}`}>
-                                                <td className="p-2 text-center">
-                                                    <button onClick={() => toggleRow(row._id)} className="text-muted hover:text-primary pt-1">
-                                                        {row.selected ? <CheckSquare size={18} className="text-primary"/> : <Square size={18} />}
+                                            <tr key={row._id} className={`csv-row ${!row.selected ? 'csv-row-unselected' : ''}`}>
+                                                <td className="csv-cell csv-select-cell">
+                                                    <button onClick={() => toggleRow(row._id)} className="csv-row-select-btn">
+                                                        {row.selected ? (
+                                                            <CheckSquare size={16} className="csv-checkbox checked" />
+                                                        ) : (
+                                                            <Square size={16} className="csv-checkbox" />
+                                                        )}
                                                     </button>
                                                 </td>
-                                                <td className="p-2">
-                                                    <input 
-                                                        className="form-input text-small py-1 px-2 w-full bg-transparent border-transparent hover:border-border focus:bg-white"
+                                                <td className="csv-cell csv-code-cell">
+                                                    <input
+                                                        className="csv-cell-input"
                                                         value={row.code}
                                                         onChange={e => updateRow(row._id, 'code', e.target.value)}
                                                     />
                                                 </td>
-                                                <td className="p-2">
-                                                    <input 
-                                                        className="form-input text-small py-1 px-2 w-full bg-transparent border-transparent hover:border-border focus:bg-white font-medium"
+                                                <td className="csv-cell csv-name-cell">
+                                                    <input
+                                                        className="csv-cell-input csv-name-input"
                                                         value={row.name}
                                                         onChange={e => updateRow(row._id, 'name', e.target.value)}
                                                     />
                                                 </td>
-                                                <td className="p-2">
-                                                    <input 
-                                                        className="form-input text-micro py-1 px-2 w-full bg-transparent border-transparent hover:border-border focus:bg-white"
+                                                <td className="csv-cell csv-category-cell">
+                                                    <input
+                                                        className="csv-cell-input"
                                                         value={row.category}
-                                                        placeholder="Ninguna"
+                                                        placeholder="Sin categoría"
                                                         onChange={e => updateRow(row._id, 'category', e.target.value)}
-                                                        list="categories-list"
+                                                        list="csv-categories-list"
                                                     />
                                                 </td>
-                                                <td className="p-2">
-                                                    <input 
-                                                        className="form-input text-micro py-1 px-2 w-full bg-transparent border-transparent hover:border-border focus:bg-white"
+                                                <td className="csv-cell csv-brand-cell">
+                                                    <input
+                                                        className="csv-cell-input"
                                                         value={row.brand}
-                                                        placeholder="Ninguna"
+                                                        placeholder="Sin marca"
                                                         onChange={e => updateRow(row._id, 'brand', e.target.value)}
-                                                        list="brands-list"
+                                                        list="csv-brands-list"
                                                     />
                                                 </td>
-                                                <td className="p-2">
-                                                    <input 
+                                                <td className="csv-cell csv-stock-cell">
+                                                    <input
                                                         type="number"
-                                                        className="form-input text-small py-1 px-2 w-full bg-transparent border-transparent hover:border-border focus:bg-white"
+                                                        className="csv-cell-input csv-stock-input"
                                                         value={row.stock}
                                                         onChange={e => updateRow(row._id, 'stock', Number(e.target.value))}
                                                     />
                                                 </td>
-                                                <td className="p-2">
-                                                    <div className="relative">
-                                                        <DollarSign size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted"/>
-                                                        <input 
+                                                <td className="csv-cell csv-cost-cell">
+                                                    <div className="csv-input-icon-wrapper">
+                                                        <DollarSign size={12} />
+                                                        <input
                                                             type="number"
-                                                            className="form-input text-small py-1 pl-6 pr-2 w-full bg-transparent border-transparent hover:border-border focus:bg-white"
+                                                            className="csv-cell-input csv-cost-input"
                                                             value={row.cost}
                                                             onChange={e => updateRow(row._id, 'cost', Number(e.target.value))}
                                                         />
                                                     </div>
                                                 </td>
-                                                <td className="p-2">
-                                                    <div className="relative">
-                                                        <input 
+                                                <td className="csv-cell csv-margin-cell">
+                                                    <div className="csv-input-icon-wrapper csv-margin-wrapper">
+                                                        <input
                                                             type="number"
-                                                            className="form-input text-small py-1 pl-2 pr-6 w-full bg-transparent border-transparent hover:border-border focus:bg-white text-right"
+                                                            className="csv-cell-input csv-margin-input"
                                                             value={row.margin}
                                                             onChange={e => updateRow(row._id, 'margin', Number(e.target.value))}
                                                         />
-                                                        <Percent size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted"/>
+                                                        <Percent size={12} />
                                                     </div>
                                                 </td>
-                                                <td className="p-2">
-                                                    <div className="relative">
-                                                        <DollarSign size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted"/>
-                                                        <input 
+                                                <td className="csv-cell csv-price-cell">
+                                                    <div className="csv-input-icon-wrapper csv-price-wrapper">
+                                                        <DollarSign size={12} />
+                                                        <input
                                                             type="number"
-                                                            className="form-input text-small py-1 pl-6 pr-2 w-full font-bold text-primary bg-transparent border-transparent hover:border-border focus:bg-white"
+                                                            className="csv-cell-input csv-price-input"
                                                             value={row.price}
                                                             onChange={e => updateRow(row._id, 'price', Number(e.target.value))}
                                                         />
@@ -516,78 +638,106 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                     </tbody>
                                 </table>
                                 {filteredPreview.length === 0 && (
-                                    <div className="p-12 text-center text-muted font-medium">No se encontraron productos.</div>
+                                    <div className="csv-empty-state">
+                                        <Search size={48} className="csv-empty-icon" />
+                                        <p className="csv-empty-title">No se encontraron productos</p>
+                                        <p className="csv-empty-subtitle">Intentá con otro término de búsqueda</p>
+                                    </div>
                                 )}
                             </div>
-                            
-                            <datalist id="categories-list">
+
+                            <datalist id="csv-categories-list">
                                 {categoryOptions.map(c => <option key={c} value={c} />)}
                             </datalist>
-                            <datalist id="brands-list">
+                            <datalist id="csv-brands-list">
                                 {brandOptions.map(b => <option key={b} value={b} />)}
                             </datalist>
                         </div>
                     )}
 
+                    {/* Step 3: Success */}
                     {step === 3 && importResult && (
-                        <div className="success-state text-center animate-fadeIn p-12">
-                            <div className="success-icon-large mb-4">
-                                <Check size={64} />
-                            </div>
-                            <h2 className="text-h2 mb-2">¡Importación Exitosa!</h2>
-                            <p className="text-muted mb-8">Los {importResult.created + importResult.updated} datos han sido integrados correctamente a la base de datos.</p>
-
-                            <div className="import-summary-results flex justify-center gap-6">
-                                <div className="result-card-premium p-6 bg-surface rounded-xl border border-border flex flex-col items-center">
-                                    <PlusCircle size={32} className="text-success mb-2" />
-                                    <div className="text-h2 text-success font-black">{importResult.created}</div>
-                                    <div className="text-label uppercase tracking-widest text-muted">Nuevos Creados</div>
+                        <div className="csv-success-step">
+                            <div className="csv-success-content">
+                                <div className="csv-success-icon-wrapper">
+                                    <Check size={64} strokeWidth={3} />
                                 </div>
-                                <div className="result-card-premium p-6 bg-surface rounded-xl border border-border flex flex-col items-center">
-                                    <RefreshCw size={32} className="text-primary mb-2" />
-                                    <div className="text-h2 text-primary font-black">{importResult.updated}</div>
-                                    <div className="text-label uppercase tracking-widest text-muted">Actualizados</div>
+                                <h2 className="csv-success-title">¡Importación Exitosa!</h2>
+                                <p className="csv-success-subtitle">
+                                    Se procesaron {importResult.created + importResult.updated} productos correctamente
+                                </p>
+
+                                <div className="csv-success-cards">
+                                    <div className="csv-success-card csv-created-card">
+                                        <div className="csv-card-icon">
+                                            <PlusCircle size={32} />
+                                        </div>
+                                        <div className="csv-card-value">{importResult.created}</div>
+                                        <div className="csv-card-label">Nuevos creados</div>
+                                    </div>
+                                    <div className="csv-success-card csv-updated-card">
+                                        <div className="csv-card-icon">
+                                            <RefreshCw size={32} />
+                                        </div>
+                                        <div className="csv-card-value">{importResult.updated}</div>
+                                        <div className="csv-card-label">Actualizados</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-
-                    {error && (
-                        <div className="import-error-msg m-4 p-4 bg-danger/10 text-danger border border-danger/30 rounded-lg flex items-center gap-2">
-                            <AlertCircle size={18} /> {error}
                         </div>
                     )}
                 </div>
 
-                <div className="import-modal-footer p-4 bg-surface border-t border-border flex justify-end gap-3 rounded-b-xl">
+                {/* Footer */}
+                <div className="csv-modal-footer">
                     {step === 1 && (
                         <>
-                            <button className="btn-premium-secondary" onClick={onClose}>Cancelar</button>
-                            <button 
-                                className="btn-premium-primary" 
+                            <button className="csv-btn csv-btn-cancel" onClick={onClose}>
+                                Cancelar
+                            </button>
+                            <button
+                                className="csv-btn csv-btn-primary"
                                 onClick={handlePreview}
                                 disabled={isLoading || (activeTab === 'file' ? !file : !pasteText.trim())}
                             >
-                                {isLoading ? <RefreshCw size={18} className="animate-spin" /> : 'Procesar Vista Previa'} <ChevronRight size={18} />
+                                {isLoading ? (
+                                    <RefreshCw size={18} className="csv-btn-icon csv-spin" />
+                                ) : (
+                                    <>
+                                        <span>Procesar Vista Previa</span>
+                                        <ChevronRight size={18} />
+                                    </>
+                                )}
                             </button>
                         </>
                     )}
 
                     {step === 2 && (
                         <>
-                            <button className="btn-premium-secondary" onClick={() => setStep(1)}>Atrás</button>
-                            <button 
-                                className="btn-premium-primary" 
+                            <button className="csv-btn csv-btn-cancel" onClick={() => setStep(1)}>
+                                Atrás
+                            </button>
+                            <button
+                                className="csv-btn csv-btn-primary"
                                 onClick={handleImport}
-                                disabled={isLoading || previewData.filter(r => r.selected).length === 0}
+                                disabled={isLoading || selectedCount === 0}
                             >
-                                {isLoading ? <RefreshCw size={18} className="animate-spin" /> : `Confirmar e Importar (${previewData.filter(r => r.selected).length})`}
+                                {isLoading ? (
+                                    <RefreshCw size={18} className="csv-btn-icon csv-spin" />
+                                ) : (
+                                    <>
+                                        <span>Confirmar e Importar</span>
+                                        <span className="csv-count-badge">({selectedCount})</span>
+                                    </>
+                                )}
                             </button>
                         </>
                     )}
 
                     {step === 3 && (
-                        <button className="btn-premium-primary" onClick={handleClose}>Finalizar</button>
+                        <button className="csv-btn csv-btn-primary" onClick={handleClose}>
+                            Finalizar
+                        </button>
                     )}
                 </div>
             </div>
