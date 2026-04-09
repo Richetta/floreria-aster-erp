@@ -174,14 +174,14 @@ export const ProductsDesktop = () => {
                 {/* Main Content */}
                 <main className="products-main">
                     <div className="unified-toolbar card mb-4">
-                        <div className="toolbar-top-row">
-                            <div className="toolbar-title-group">
+                        <div className="toolbar-top-row flex justify-between items-center mb-4">
+                            <div className="toolbar-title-group flex items-center gap-4">
                                 <h1 className="text-h2 font-bold m-0">Catálogo</h1>
                                 <span className="badge bg-surface-hover text-muted">{filteredProducts.length} productos</span>
                             </div>
                             
-                            <div className="toolbar-actions-group">
-                                <div className="more-actions-dropdown">
+                            <div className="toolbar-actions-group flex items-center gap-3">
+                                <div className="more-actions-dropdown relative">
                                     <button
                                         className={`btn btn-secondary ${showMoreMenu ? 'active' : ''}`}
                                         onClick={() => setShowMoreMenu(!showMoreMenu)}
@@ -218,8 +218,8 @@ export const ProductsDesktop = () => {
                             </div>
                         </div>
 
-                        <div className="toolbar-bottom-row pt-4 mt-4 border-t border-border flex flex-wrap items-center justify-between gap-4">
-                            <div className="search-pill flex-1 min-w-[280px]">
+                        <div className="toolbar-bottom-row pt-4 border-t border-border flex flex-wrap items-center justify-between gap-4">
+                            <div className="search-pill flex-1 min-w-[300px]">
                                 <Search size={18} className="text-muted" />
                                 <input
                                     type="text"
@@ -229,35 +229,38 @@ export const ProductsDesktop = () => {
                                 />
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-3">
+                            <div className="filter-controls-group flex flex-wrap items-center gap-3">
                                 {/* Category Filter Dropdown */}
                                 <div className="relative">
                                     <button 
-                                        className="category-select-group flex items-center gap-2 px-3 py-1 bg-surface-hover rounded-xl border border-border"
+                                        className={`category-select-group flex items-center gap-2 px-3 py-1 rounded-xl border border-border transition-all ${activeCategories.length > 0 ? 'bg-primary/5 border-primary/30' : 'bg-surface-hover'}`}
                                         onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
                                     >
-                                        <Folder size={16} className="text-muted" />
-                                        <span className="font-medium text-small text-main">
+                                        <Folder size={16} className={activeCategories.length > 0 ? 'text-primary' : 'text-muted'} />
+                                        <span className={`font-medium text-small ${activeCategories.length > 0 ? 'text-primary' : 'text-main'}`}>
                                             {activeCategories.length === 0 ? 'Todas las carpetas' : `${activeCategories.length} carpetas`}
                                         </span>
                                     </button>
                                     {isCategoryDropdownOpen && (
                                         <>
-                                            <div className="fixed inset-0 z-[98]" onClick={() => setIsCategoryDropdownOpen(false)} />
-                                            <div className="absolute top-full mt-2 left-0 w-64 bg-white border border-border rounded-xl shadow-lg z-[99] p-2 max-h-[300px] overflow-y-auto">
+                                            <div className="dropdown-overlay" onClick={() => setIsCategoryDropdownOpen(false)} />
+                                            <div className="filter-dropdown-menu">
+                                                <div className="dropdown-header px-3 py-2 border-b border-border bg-surface-hover rounded-t-xl mb-1">
+                                                    <span className="text-micro font-bold text-muted uppercase tracking-wider">Filtrar por Carpetas</span>
+                                                </div>
                                                 {categoriesData.map(c => (
-                                                    <label key={c.id} className="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+                                                    <label key={c.id} className="dropdown-checkbox-item">
                                                         {activeCategories.includes(c.name) ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} className="text-muted" />}
-                                                        <span className={activeCategories.includes(c.name) ? 'font-bold' : ''}>{c.name}</span>
+                                                        <span className={activeCategories.includes(c.name) ? 'font-bold text-primary text-small' : 'text-small'}>{c.name}</span>
                                                         <input type="checkbox" className="hidden" checked={activeCategories.includes(c.name)} onChange={(e) => {
                                                             if (e.target.checked) setActiveCategories([...activeCategories, c.name]);
                                                             else setActiveCategories(activeCategories.filter(a => a !== c.name));
                                                         }} />
                                                     </label>
                                                 ))}
-                                                <label className="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+                                                <label className="dropdown-checkbox-item">
                                                     {activeCategories.includes('Sin Categoría') ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} className="text-muted" />}
-                                                    <span className={activeCategories.includes('Sin Categoría') ? 'font-bold' : ''}>Sin Categoría</span>
+                                                    <span className={activeCategories.includes('Sin Categoría') ? 'font-bold text-primary text-small' : 'text-small'}>Sin Categoría</span>
                                                     <input type="checkbox" className="hidden" checked={activeCategories.includes('Sin Categoría')} onChange={(e) => {
                                                         if (e.target.checked) setActiveCategories([...activeCategories, 'Sin Categoría']);
                                                         else setActiveCategories(activeCategories.filter(a => a !== 'Sin Categoría'));
@@ -269,7 +272,7 @@ export const ProductsDesktop = () => {
                                 </div>
 
                                 <button 
-                                    className="btn-icon bg-surface-hover border border-border rounded-xl px-3 py-1 flex items-center gap-2 text-small font-medium hover:text-primary transition-colors"
+                                    className="btn-icon bg-surface-hover border border-border rounded-xl px-3 py-1 flex items-center gap-2 text-small font-medium hover:text-primary transition-colors h-10"
                                     onClick={() => setIsCategoryModalOpen(true)}
                                     title="Administrar Carpetas"
                                 >
@@ -279,31 +282,34 @@ export const ProductsDesktop = () => {
                                 {/* Brand Filter Dropdown */}
                                 <div className="relative">
                                     <button 
-                                        className="category-select-group flex items-center gap-2 px-3 py-1 bg-surface-hover rounded-xl border border-border"
+                                        className={`category-select-group flex items-center gap-2 px-3 py-1 rounded-xl border border-border transition-all ${activeBrands.length > 0 ? 'bg-primary/5 border-primary/30' : 'bg-surface-hover'}`}
                                         onClick={() => setIsBrandDropdownOpen(!isBrandDropdownOpen)}
                                     >
-                                        <Tag size={16} className="text-muted" />
-                                        <span className="font-medium text-small text-main">
+                                        <Tag size={16} className={activeBrands.length > 0 ? 'text-primary' : 'text-muted'} />
+                                        <span className={`font-medium text-small ${activeBrands.length > 0 ? 'text-primary' : 'text-main'}`}>
                                             {activeBrands.length === 0 ? 'Todas las marcas' : `${activeBrands.length} marcas`}
                                         </span>
                                     </button>
                                     {isBrandDropdownOpen && (
                                         <>
-                                            <div className="fixed inset-0 z-[98]" onClick={() => setIsBrandDropdownOpen(false)} />
-                                            <div className="absolute top-full mt-2 left-0 w-64 bg-white border border-border rounded-xl shadow-lg z-[99] p-2 max-h-[300px] overflow-y-auto">
+                                            <div className="dropdown-overlay" onClick={() => setIsBrandDropdownOpen(false)} />
+                                            <div className="filter-dropdown-menu">
+                                                <div className="dropdown-header px-3 py-2 border-b border-border bg-surface-hover rounded-t-xl mb-1">
+                                                    <span className="text-micro font-bold text-muted uppercase tracking-wider">Filtrar por Marcas</span>
+                                                </div>
                                                 {brands.map(b => (
-                                                    <label key={b.id} className="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+                                                    <label key={b.id} className="dropdown-checkbox-item">
                                                         {activeBrands.includes(b.id) ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} className="text-muted" />}
-                                                        <span className={activeBrands.includes(b.id) ? 'font-bold' : ''}>{b.name}</span>
+                                                        <span className={activeBrands.includes(b.id) ? 'font-bold text-primary text-small' : 'text-small'}>{b.name}</span>
                                                         <input type="checkbox" className="hidden" checked={activeBrands.includes(b.id)} onChange={(e) => {
                                                             if (e.target.checked) setActiveBrands([...activeBrands, b.id]);
                                                             else setActiveBrands(activeBrands.filter(a => a !== b.id));
                                                         }} />
                                                     </label>
                                                 ))}
-                                                <label className="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
+                                                <label className="dropdown-checkbox-item">
                                                     {activeBrands.includes('Sin Marca') ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} className="text-muted" />}
-                                                    <span className={activeBrands.includes('Sin Marca') ? 'font-bold' : ''}>Sin Marca</span>
+                                                    <span className={activeBrands.includes('Sin Marca') ? 'font-bold text-primary text-small' : 'text-small'}>Sin Marca</span>
                                                     <input type="checkbox" className="hidden" checked={activeBrands.includes('Sin Marca')} onChange={(e) => {
                                                         if (e.target.checked) setActiveBrands([...activeBrands, 'Sin Marca']);
                                                         else setActiveBrands(activeBrands.filter(a => a !== 'Sin Marca'));
@@ -314,35 +320,35 @@ export const ProductsDesktop = () => {
                                     )}
                                 </div>
 
-                                <div className="sort-controls flex items-center gap-1 bg-surface-hover border border-border rounded-xl px-2 py-1">
+                                <div className="sort-controls flex items-center gap-1 bg-surface-hover border border-border rounded-xl px-2 py-0 h-10">
                                     <select
-                                        className="form-input text-small border-none bg-transparent m-0 py-1 h-8 focus:ring-0 font-medium"
+                                        className="form-input text-small border-none bg-transparent m-0 py-1 h-8 focus:ring-0 font-medium cursor-pointer"
                                         value={sortBy}
                                         onChange={(e) => setSortBy(e.target.value as any)}
                                     >
-                                        <option value="name">Ordenar: Nombre</option>
-                                        <option value="code">Ordenar: Código</option>
-                                        <option value="price">Ordenar: Precio</option>
-                                        <option value="stock">Ordenar: Stock</option>
+                                        <option value="name">Nombre</option>
+                                        <option value="code">Código</option>
+                                        <option value="price">Precio</option>
+                                        <option value="stock">Stock</option>
                                     </select>
                                     <button
-                                        className="btn-icon p-1 hover-primary rounded bg-surface border border-border shadow-sm"
+                                        className="btn-icon p-1 hover-primary rounded bg-surface border border-border shadow-sm h-7 w-7 flex items-center justify-center"
                                         onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                                         title="Cambiar dirección"
                                     >
-                                        {sortOrder === 'asc' ? '↓' : '↑'}
+                                        <span className="text-micro font-bold">{sortOrder === 'asc' ? '↓' : '↑'}</span>
                                     </button>
                                 </div>
 
-                                <div className="view-toggle flex gap-1 bg-surface-hover border border-border rounded-xl p-1">
+                                <div className="view-toggle flex gap-1 bg-surface-hover border border-border rounded-xl p-1 h-10">
                                     <button
-                                        className={`btn-icon p-1 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-muted hover:text-primary hover:bg-surface'}`}
+                                        className={`btn-icon p-1 w-8 h-8 rounded-lg transition-colors flex items-center justify-center ${viewMode === 'grid' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-muted hover:text-primary hover:bg-surface'}`}
                                         onClick={() => setViewMode('grid')}
                                     >
                                         <Grid3x3 size={16} />
                                     </button>
                                     <button
-                                        className={`btn-icon p-1 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-muted hover:text-primary hover:bg-surface'}`}
+                                        className={`btn-icon p-1 w-8 h-8 rounded-lg transition-colors flex items-center justify-center ${viewMode === 'list' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-muted hover:text-primary hover:bg-surface'}`}
                                         onClick={() => setViewMode('list')}
                                     >
                                         <List size={16} />
