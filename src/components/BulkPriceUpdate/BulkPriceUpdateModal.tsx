@@ -23,7 +23,7 @@ interface PriceChange {
 
 export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalProps) => {
     const products = useStore(state => state.products);
-    const updateProduct = useStore(state => state.updateProduct);
+    // Removed unused updateProduct for TS compliance
 
     const [isLoading, setIsLoading] = useState(false);
     const { alertModal, showAlert } = useModal();

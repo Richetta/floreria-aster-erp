@@ -325,7 +325,6 @@ export const Login = () => {
     const heroRef = useFadeIn();
     const problemsRef = useFadeIn();
     const solutionRef = useFadeIn();
-    const pricingRef = useFadeIn();
     const demoRef = useFadeIn();
     const benefitsRef = useFadeIn();
     const ctaRef = useFadeIn();
