@@ -312,17 +312,25 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
                     <div className="form-group mb-6">
                         <label className="form-label">Código de Barras (Opcional)</label>
-                        <div className="input-with-action">
+                        <div className="input-with-action flex gap-2">
                             <input
                                 type="text"
-                                className="form-input"
+                                className="form-input flex-1"
                                 placeholder="Escaneá o escribí el código"
                                 value={formData.barcode || ''}
                                 onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
                             />
                             <button 
                                 type="button" 
-                                className="input-action-btn"
+                                className="btn btn-secondary py-1 px-4 border border-border rounded-lg text-small"
+                                onClick={() => setFormData({ ...formData, barcode: formData.code || generateProductCode() })}
+                                title="Generar Automático"
+                            >
+                                Generar
+                            </button>
+                            <button 
+                                type="button" 
+                                className="btn-icon border border-border bg-surface hover:bg-surface-hover text-primary rounded-lg px-3"
                                 onClick={() => setIsScanOpen(true)}
                                 title="Escanear con cámara"
                             >

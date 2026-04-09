@@ -112,7 +112,7 @@ export const CustomerModal = ({ isOpen, onClose, customerToEdit }: CustomerModal
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="customer-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2 className="text-h2">
                         {customerToEdit ? 'Editar Cliente' : 'Nuevo Cliente'}

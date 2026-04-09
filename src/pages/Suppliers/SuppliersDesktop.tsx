@@ -323,20 +323,22 @@ export const SuppliersDesktop = () => {
             {/* Supplier Modal - Redesigned for Premium Experience */}
             {isModalOpen && (
                 <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-                    <div className="supplier-modal-content animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-                        <div className="supplier-modal-header">
-                            <div className="header-icon-container">
-                                {editingSupplier ? <Edit2 size={28} /> : <Building2 size={28} />}
+                    <div className="modal-content animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="flex items-center gap-4">
+                                <div className="text-primary flex items-center justify-center">
+                                    {editingSupplier ? <Edit2 size={28} /> : <Building2 size={28} />}
+                                </div>
+                                <div className="header-text">
+                                    <h2 className="text-h2">
+                                        {editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+                                    </h2>
+                                    <p className="text-small text-muted">
+                                        {editingSupplier ? `Actualizando datos de ${editingSupplier.name}` : 'Registrá un nuevo socio comercial'}
+                                    </p>
+                                </div>
                             </div>
-                            <div className="header-text">
-                                <h2 className="text-h2 text-white">
-                                    {editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
-                                </h2>
-                                <p className="text-small text-white opacity-80">
-                                    {editingSupplier ? `Actualizando datos de ${editingSupplier.name}` : 'Registrá un nuevo socio comercial'}
-                                </p>
-                            </div>
-                            <button className="close-modal-btn" onClick={() => setIsModalOpen(false)}>
+                            <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
                                 <X size={24} />
                             </button>
                         </div>
@@ -422,14 +424,14 @@ export const SuppliersDesktop = () => {
             {/* Magic OCR Modal */}
             {isMagicModalOpen && (
                 <div className="modal-overlay" onClick={() => setIsMagicModalOpen(false)}>
-                    <div className="modal-content max-w-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header flex justify-between items-center mb-6">
-                            <h2 className="text-section-title flex items-center gap-2">
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2 className="text-h2 flex items-center gap-2">
                                 <Sparkles size={24} className="text-primary" />
                                 Carga Mágica de Precios
                             </h2>
-                            <button className="btn-icon" onClick={() => setIsMagicModalOpen(false)}>
-                                <X size={24} />
+                            <button className="modal-close-btn" onClick={() => setIsMagicModalOpen(false)}>
+                                <X size={20} />
                             </button>
                         </div>
 

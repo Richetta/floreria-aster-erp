@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronDown, Folder, Plus, Edit2, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, Plus, Edit2, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import type { Category } from '../../store/slices/types';
 import './CategoryTree.css';
 
@@ -20,7 +20,11 @@ const CategoryItem: React.FC<{
     onAddSub: (id: string) => void;
     onRename: (cat: Category) => void;
     onDelete: (cat: Category) => void;
-}> = ({ category, level, activeCategory, onSelect, onAddSub, onRename, onDelete }) => {
+    onMoveUp?: (cat: Category) => void;
+    onMoveDown?: (cat: Category) => void;
+    isFirst?: boolean;
+    isLast?: boolean;
+}> = ({ category, level, activeCategory, onSelect, onAddSub, onRename, onDelete, onMoveUp, onMoveDown, isFirst, isLast }) => {
     const [isExpanded, setIsExpanded] = useState(true);
     const hasChildren = category.children && category.children.length > 0;
     const isActive = activeCategory === category.name;
@@ -51,6 +55,16 @@ const CategoryItem: React.FC<{
                 </div>
 
                 <div className="category-actions">
+                    {onMoveUp && !isFirst && (
+                        <button className="action-btn" onClick={(e) => { e.stopPropagation(); onMoveUp(category); }} title="Subir">
+                            <ArrowUp size={14} />
+                        </button>
+                    )}
+                    {onMoveDown && !isLast && (
+                        <button className="action-btn" onClick={(e) => { e.stopPropagation(); onMoveDown(category); }} title="Bajar">
+                            <ArrowDown size={14} />
+                        </button>
+                    )}
                     <button 
                         className="action-btn" 
                         onClick={(e) => { e.stopPropagation(); onAddSub(category.id); }}
@@ -77,7 +91,7 @@ const CategoryItem: React.FC<{
 
             {hasChildren && isExpanded && (
                 <div className="category-children">
-                    {category.children!.map(child => (
+                    {category.children!.map((child, idx) => (
                         <CategoryItem 
                             key={child.id}
                             category={child}
@@ -87,6 +101,10 @@ const CategoryItem: React.FC<{
                             onAddSub={onAddSub}
                             onRename={onRename}
                             onDelete={onDelete}
+                            onMoveUp={onMoveUp}
+                            onMoveDown={onMoveDown}
+                            isFirst={idx === 0}
+                            isLast={idx === category.children!.length - 1}
                         />
                     ))}
                 </div>
@@ -103,6 +121,94 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
     onRename,
     onDelete
 }) => {
+    const [orderMap, setOrderMap] = useState<Record<string, number>>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('category_order') || '{}');
+        } catch {
+            return {};
+        }
+    });
+
+    const saveOrderMap = (newMap: Record<string, number>) => {
+        setOrderMap(newMap);
+        localStorage.setItem('category_order', JSON.stringify(newMap));
+    };
+
+    const handleMove = (cat: Category, direction: 'up' | 'down') => {
+        const parentId = cat.parent_id || null;
+        
+        // Find siblings depending on whether it's root or nested
+        let siblings: Category[] = [];
+        if (!parentId) {
+            siblings = [...categories];
+        } else {
+            // Find parent recursively
+            const findParent = (list: Category[]): Category | null => {
+                for (const c of list) {
+                    if (c.id === parentId) return c;
+                    if (c.children) {
+                        const found = findParent(c.children);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            const parent = findParent(categories);
+            if (parent && parent.children) {
+                siblings = [...parent.children];
+            }
+        }
+        
+        siblings.sort((a, b) => (orderMap[a.id] ?? 0) - (orderMap[b.id] ?? 0));
+        
+        const idx = siblings.findIndex(s => s.id === cat.id);
+        if (idx === -1) return;
+        
+        // Setup default order if empty
+        const newMap = { ...orderMap };
+        let changed = false;
+        
+        siblings.forEach((s, i) => {
+            if (newMap[s.id] === undefined) {
+                newMap[s.id] = i * 10;
+                changed = true;
+            }
+        });
+        
+        if (direction === 'up' && idx > 0) {
+            const target = siblings[idx - 1];
+            const temp = newMap[cat.id];
+            newMap[cat.id] = newMap[target.id];
+            newMap[target.id] = temp;
+            saveOrderMap(newMap);
+        } else if (direction === 'down' && idx < siblings.length - 1) {
+            const target = siblings[idx + 1];
+            const temp = newMap[cat.id];
+            newMap[cat.id] = newMap[target.id];
+            newMap[target.id] = temp;
+            saveOrderMap(newMap);
+        } else if (changed) {
+            saveOrderMap(newMap);
+        }
+    };
+
+    // Sort categories
+    const sortedCategories = [...categories].sort((a, b) => (orderMap[a.id] ?? 0) - (orderMap[b.id] ?? 0));
+    
+    // Process children sorting recursively
+    const sortChildrenRecursively = (cats: Category[]): Category[] => {
+        return cats.map(c => {
+            if (c.children && c.children.length > 0) {
+                return {
+                    ...c,
+                    children: sortChildrenRecursively([...c.children]).sort((a, b) => (orderMap[a.id] ?? 0) - (orderMap[b.id] ?? 0))
+                };
+            }
+            return c;
+        });
+    };
+    
+    const finalCategories = sortChildrenRecursively(sortedCategories);
     return (
         <div className="category-tree-root">
             <div 
@@ -116,7 +222,7 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
             </div>
 
             <div className="category-tree-list">
-                {categories.map(cat => (
+                {finalCategories.map((cat, idx) => (
                     <CategoryItem 
                         key={cat.id}
                         category={cat}
@@ -126,6 +232,10 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
                         onAddSub={onAddSub}
                         onRename={onRename}
                         onDelete={onDelete}
+                        onMoveUp={(c) => handleMove(c, 'up')}
+                        onMoveDown={(c) => handleMove(c, 'down')}
+                        isFirst={idx === 0}
+                        isLast={idx === finalCategories.length - 1}
                     />
                 ))}
             </div>

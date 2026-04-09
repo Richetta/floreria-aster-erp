@@ -525,10 +525,10 @@ textarea {
 
 .modal-content {
     background: var(--color-surface);
-    width: 100%;
-    max-width: 600px;
+    width: 95vw;
+    max-width: 1000px;
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-float);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     display: flex;
     flex-direction: column;
     max-height: 90vh;
@@ -537,11 +537,32 @@ textarea {
 }
 
 .modal-header {
-    padding: 1.5rem;
+    padding: 1.5rem 2rem;
+    background: var(--color-surface-hover);
     border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.modal-close-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+    background: var(--color-danger);
+    color: white;
+    border-color: var(--color-danger);
 }
 
 .modal-body {

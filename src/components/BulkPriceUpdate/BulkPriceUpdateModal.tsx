@@ -278,7 +278,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="bulk-price-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2 className="text-h2 flex items-center gap-2">
                         <TrendingUp size={24} className="text-primary" />

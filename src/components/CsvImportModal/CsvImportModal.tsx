@@ -101,13 +101,13 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     };
 
     return (
-        <div className="import-modal-overlay" onClick={handleClose}>
-            <div className="import-modal-container" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={handleClose}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 
                 {/* Header */}
-                <div className="import-modal-header">
+                <div className="modal-header">
                     <h2><Database size={24} /> Importar Productos</h2>
-                    <button className="import-modal-close" onClick={handleClose}>
+                    <button className="modal-close-btn" onClick={handleClose}>
                         <X size={20} />
                     </button>
                 </div>

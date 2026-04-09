@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Search, Upload, FileDown, Folder, Tag, Grid3x3, List, MoreVertical } from 'lucide-react';
+import { Plus, Search, Upload, FileDown, Folder, Tag, Grid3x3, List, MoreVertical, Edit2, Barcode } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { useStore } from '../../store/useStore';
 import type { Product } from '../../store/useStore';
@@ -235,7 +235,7 @@ export const ProductsDesktop = () => {
 
                             <div className="flex flex-wrap items-center gap-3">
                                 {/* Brand Filter Dropdown */}
-                                <div className="category-select-group flex items-center gap-2">
+                                <div className="category-select-group flex items-center gap-2 px-3 py-1 bg-surface-hover rounded-xl border border-border">
                                     <Tag size={16} className="text-muted" />
                                     <select
                                         className="form-input border-none bg-transparent font-medium py-1 m-0 h-8 focus:ring-0"
@@ -250,34 +250,35 @@ export const ProductsDesktop = () => {
                                     </select>
                                 </div>
 
-                                <div className="sort-controls flex items-center gap-1 bg-surface border border-border rounded-lg p-1">
+                                <div className="sort-controls flex items-center gap-1 bg-surface-hover border border-border rounded-xl px-2 py-1">
                                     <select
-                                        className="form-input text-small border-none bg-transparent m-0 py-1 h-8 focus:ring-0"
+                                        className="form-input text-small border-none bg-transparent m-0 py-1 h-8 focus:ring-0 font-medium"
                                         value={sortBy}
                                         onChange={(e) => setSortBy(e.target.value as any)}
                                     >
-                                        <option value="name">Nombre</option>
-                                        <option value="code">Código</option>
-                                        <option value="price">Precio</option>
-                                        <option value="stock">Stock</option>
+                                        <option value="name">Ordenar: Nombre</option>
+                                        <option value="code">Ordenar: Código</option>
+                                        <option value="price">Ordenar: Precio</option>
+                                        <option value="stock">Ordenar: Stock</option>
                                     </select>
                                     <button
-                                        className="btn-icon p-1"
+                                        className="btn-icon p-1 hover-primary rounded bg-surface border border-border shadow-sm"
                                         onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                        title="Cambiar dirección"
                                     >
-                                        {sortOrder === 'asc' ? '↑' : '↓'}
+                                        {sortOrder === 'asc' ? '↓' : '↑'}
                                     </button>
                                 </div>
 
-                                <div className="view-toggle flex gap-1 bg-surface border border-border rounded-lg p-1">
+                                <div className="view-toggle flex gap-1 bg-surface-hover border border-border rounded-xl p-1">
                                     <button
-                                        className={`btn-icon p-1 ${viewMode === 'grid' ? 'active' : ''}`}
+                                        className={`btn-icon p-1 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-muted hover:text-primary hover:bg-surface'}`}
                                         onClick={() => setViewMode('grid')}
                                     >
                                         <Grid3x3 size={16} />
                                     </button>
                                     <button
-                                        className={`btn-icon p-1 ${viewMode === 'list' ? 'active' : ''}`}
+                                        className={`btn-icon p-1 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-muted hover:text-primary hover:bg-surface'}`}
                                         onClick={() => setViewMode('list')}
                                     >
                                         <List size={16} />
@@ -327,8 +328,11 @@ export const ProductsDesktop = () => {
                                                     </td>
                                                     <td className="text-right">
                                                         <div className="flex justify-end gap-2">
-                                                            <button className="btn-icon" onClick={() => { setProductToEdit(p); setIsModalOpen(true); }}>
-                                                                <Upload size={18} />
+                                                            <button className="btn-icon text-muted hover:text-primary" onClick={() => { setProductForBarcode(p); setShowBarcodePrinter(true); }} title="Imprimir Código de Barras">
+                                                                <Barcode size={18} />
+                                                            </button>
+                                                            <button className="btn-icon text-muted hover:text-primary" onClick={() => { setProductToEdit(p); setIsModalOpen(true); }} title="Editar Producto">
+                                                                <Edit2 size={18} />
                                                             </button>
                                                         </div>
                                                     </td>
@@ -344,9 +348,18 @@ export const ProductsDesktop = () => {
                                                     <h4 className="m-0 font-bold">{p.name}</h4>
                                                     <p className="text-micro text-muted m-0">{p.code} • {p.brand_name || 'Sin Marca'}</p>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="font-bold text-primary m-0">${p.price.toLocaleString()}</p>
-                                                    <span className={`text-micro stock-pill ${p.stock <= p.min ? 'danger' : 'success'}`}>{p.stock} unid.</span>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <p className="font-bold text-primary m-0 text-right">${p.price.toLocaleString()}</p>
+                                                        <span className={`text-micro stock-pill ${p.stock <= p.min ? 'danger' : 'success'}`}>{p.stock} unid.</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2 ml-4">
+                                                    <button className="btn-icon text-muted hover:text-primary bg-surface" onClick={() => { setProductForBarcode(p); setShowBarcodePrinter(true); }} title="Imprimir Código de Barras">
+                                                        <Barcode size={18} />
+                                                    </button>
+                                                    <button className="btn-icon text-muted hover:text-primary bg-surface" onClick={() => { setProductToEdit(p); setIsModalOpen(true); }} title="Editar Producto">
+                                                        <Edit2 size={18} />
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}

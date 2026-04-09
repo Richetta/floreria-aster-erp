@@ -110,7 +110,7 @@ export const PriceHistoryModal = ({ isOpen, onClose, productId }: PriceHistoryMo
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="price-history-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <div className="flex items-center gap-2">
                         <History size={24} className="text-primary" />
