@@ -191,6 +191,40 @@
     color: #E65100;
 }
 
+/* Utility amount colors for direct class usage */
+.amount-green {
+    color: #1B5E20;
+}
+
+.amount-red {
+    color: #B71C1C;
+}
+
+.amount-sage {
+    color: #2E7D32;
+}
+
+.amount-amber {
+    color: #E65100;
+}
+
+/* Utility badge colors for direct class usage */
+.badge-green {
+    color: #1B5E20;
+}
+
+.badge-red {
+    color: #B71C1C;
+}
+
+.badge-sage {
+    color: #2E7D32;
+}
+
+.badge-amber {
+    color: #E65100;
+}
+
 .card-breakdown {
     display: flex;
     flex-direction: column;
