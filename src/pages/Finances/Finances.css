@@ -94,11 +94,10 @@
 }
 
 .summary-card {
-    background: white;
-    border-radius: 14px;
-    padding: 1.25rem;
-    border: 1px solid #EAE8E3;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
     transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
@@ -106,8 +105,25 @@
 }
 
 .summary-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+}
+
+/* Card background colors - solid pastel */
+.card-income {
+    background: #E8F5E9;
+}
+
+.card-expense {
+    background: #FFEBEE;
+}
+
+.card-balance {
+    background: #E8F0E9;
+}
+
+.card-debt {
+    background: #FFF3E0;
 }
 
 .card-top {
@@ -121,54 +137,57 @@
     align-items: center;
     gap: 0.375rem;
     font-size: 0.75rem;
-    font-weight: 700;
-    color: #6B6B6B;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
 
-.badge-red {
-    color: #C62828;
+.card-income .card-badge {
+    color: #1B5E20;
 }
 
-.badge-sage {
-    color: #4F7A5A;
+.card-expense .card-badge {
+    color: #B71C1C;
 }
 
-.badge-amber {
+.card-balance .card-badge {
+    color: #2E7D32;
+}
+
+.card-debt .card-badge {
     color: #E65100;
 }
 
 .card-count {
     font-size: 0.7rem;
-    font-weight: 600;
-    color: #B0B0B0;
-    background: #F5F5F5;
-    padding: 0.2rem 0.5rem;
-    border-radius: 6px;
+    font-weight: 700;
+    color: #555;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 0.25rem 0.625rem;
+    border-radius: 8px;
 }
 
 .card-amount {
-    font-size: 1.75rem;
-    font-weight: 800;
+    font-size: 2rem;
+    font-weight: 900;
     letter-spacing: -0.03em;
     line-height: 1;
-    margin: 0.25rem 0;
+    margin: 0.375rem 0;
 }
 
-.amount-green {
+.card-income .card-amount {
+    color: #1B5E20;
+}
+
+.card-expense .card-amount {
+    color: #B71C1C;
+}
+
+.card-balance .card-amount {
     color: #2E7D32;
 }
 
-.amount-red {
-    color: #C62828;
-}
-
-.amount-sage {
-    color: #4F7A5A;
-}
-
-.amount-amber {
+.card-debt .card-amount {
     color: #E65100;
 }
 
@@ -177,7 +196,7 @@
     flex-direction: column;
     gap: 0.5rem;
     padding-top: 0.75rem;
-    border-top: 1px solid #F0EDE8;
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .breakdown-item {
@@ -185,7 +204,8 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.8rem;
-    color: #6B6B6B;
+    color: #444;
+    font-weight: 600;
 }
 
 .breakdown-item span {
@@ -193,8 +213,8 @@
 }
 
 .breakdown-item strong {
-    color: #3A3A3A;
-    font-weight: 700;
+    color: #222;
+    font-weight: 800;
 }
 
 .balance-indicator {
@@ -202,33 +222,52 @@
     align-items: center;
     gap: 0.25rem;
     font-size: 0.7rem;
-    color: #B0B0B0;
-    font-weight: 600;
+    color: #555;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 0.25rem 0.625rem;
+    border-radius: 8px;
 }
 
 .card-footer-text {
     font-size: 0.8rem;
-    color: #6B6B6B;
-    font-weight: 600;
-    padding-top: 0.5rem;
-    border-top: 1px solid #F0EDE8;
+    font-weight: 700;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.card-income .card-footer-text {
+    color: #1B5E20;
+}
+
+.card-expense .card-footer-text {
+    color: #B71C1C;
+}
+
+.card-balance .card-footer-text {
+    color: #2E7D32;
+}
+
+.card-debt .card-footer-text {
+    color: #E65100;
 }
 
 .collect-all-btn {
-    background: transparent;
-    border: 1px solid #FFB74D;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1.5px solid #FFB74D;
     color: #E65100;
-    padding: 0.375rem 0.75rem;
-    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
     transition: all 0.2s ease;
     width: 100%;
 }
 
 .collect-all-btn:hover {
-    background: #FFF8E1;
+    background: white;
+    border-color: #E65100;
 }
 
 /* ===================== MAIN CONTENT ===================== */
