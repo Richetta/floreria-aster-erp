@@ -157,9 +157,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             return;
         }
 
+        // Resolve category_id from category name
+        const resolvedCategoryId = categoriesData?.find(c => c.name === formData.category)?.id;
+
         if (productToEdit) {
             await updateProduct(productToEdit.id, {
                 ...formData,
+                category_id: resolvedCategoryId,
                 price: validatedPrice!,
                 cost: validatedCost!,
                 stock: validatedStock!,
@@ -172,6 +176,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 barcode: formData.barcode,
                 name: formData.name!,
                 category: formData.category!,
+                category_id: resolvedCategoryId,
                 brand_id: formData.brand_id,
                 price: validatedPrice!,
                 cost: validatedCost!,
@@ -242,8 +247,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                     required
                                 >
+                                    <option value="">Seleccionar categoría...</option>
                                     {(categoriesData || []).map(cat => {
-                                        // Recursive function to get full path
+                                        // Recursive function to get full path for display
                                         const getPath = (c: Category, all: Category[]): string => {
                                             if (!c.parent_id) return c.name;
                                             const parent = all.find(p => p.id === c.parent_id);

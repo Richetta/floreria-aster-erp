@@ -321,51 +321,68 @@
     flex: 1;
 }
 
-/* Order Card - Kanban */
+/* Order Card - Kanban with Solid Colors */
 .order-card {
-    background: white;
     border-radius: 10px;
     padding: 1rem;
     margin-bottom: 0.75rem;
-    border: 1.5px solid #E5E7EB;
+    border: none;
     border-left: 4px solid;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.order-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
 }
 
 .order-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(-3px) scale(1.02);
 }
 
 .order-card.status-pending {
-    border-left-color: #EF4444;
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    border-left-color: #B91C1C;
 }
 
 .order-card.status-assembling {
-    border-left-color: #A855F7;
+    background: linear-gradient(135deg, #A855F7 0%, #9333EA 100%);
+    border-left-color: #7C3AED;
 }
 
 .order-card.status-ready {
-    border-left-color: #3B82F6;
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+    border-left-color: #1D4ED8;
 }
 
 .order-card.status-out_for_delivery {
-    border-left-color: #F59E0B;
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    border-left-color: #B45309;
 }
 
 .order-card.status-delivered {
-    border-left-color: #10B981;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    border-left-color: #047857;
 }
 
 .order-card.status-cancelled {
-    border-left-color: #6B7280;
-    opacity: 0.6;
+    background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);
+    border-left-color: #374151;
+    opacity: 0.7;
 }
 
 .order-card.status-archived {
-    border-left-color: #6B7280;
-    opacity: 0.6;
+    background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);
+    border-left-color: #374151;
+    opacity: 0.7;
 }
 
 .order-card-header {
@@ -430,19 +447,21 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.375rem 0.625rem;
-    border-radius: 6px;
+    border-radius: 20px;
     font-size: 0.7rem;
     font-weight: 700;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
 }
 
 .order-payment-status.pending {
-    background: #FEF2F2;
     color: #DC2626;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
 }
 
 .order-payment-status.paid {
-    background: #ECFDF5;
     color: #059669;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);
 }
 
 .order-empty-state {
@@ -839,6 +858,295 @@
 
 .btn-secondary:hover {
     background: #F9FAFB;
+}
+
+/* Modal Action Buttons - Colorful with Animations */
+.modal-header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.action-icon-btn {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.action-icon-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.action-icon-btn:hover {
+    transform: translateY(-2px) scale(1.08);
+}
+
+.action-icon-btn:hover::before {
+    opacity: 1;
+}
+
+.action-icon-btn:active {
+    transform: translateY(0) scale(0.95);
+}
+
+.action-icon-btn svg {
+    position: relative;
+    z-index: 1;
+    transition: all 0.25s ease;
+}
+
+/* WhatsApp Button - Green with WhatsApp color */
+.action-icon-btn.whatsapp {
+    background: #DCFCE7;
+    color: #16A34A;
+}
+
+.action-icon-btn.whatsapp::before {
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+}
+
+.action-icon-btn.whatsapp:hover {
+    color: white;
+    box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+}
+
+/* Edit Button - Blue */
+.action-icon-btn.edit {
+    background: #DBEAFE;
+    color: #2563EB;
+}
+
+.action-icon-btn.edit::before {
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+}
+
+.action-icon-btn.edit:hover {
+    color: white;
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+/* Cancel Button - Red */
+.action-icon-btn.cancel {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.action-icon-btn.cancel::before {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+}
+
+.action-icon-btn.cancel:hover {
+    color: white;
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+/* Archive Button - Gray */
+.action-icon-btn.archive {
+    background: #F3F4F6;
+    color: #6B7280;
+}
+
+.action-icon-btn.archive::before {
+    background: linear-gradient(135deg, #9CA3AF 0%, #6B7280 100%);
+}
+
+.action-icon-btn.archive:hover {
+    color: white;
+    box-shadow: 0 6px 16px rgba(107, 114, 128, 0.4);
+}
+
+/* Delete Button - Dark Red */
+.action-icon-btn.delete {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.action-icon-btn.delete::before {
+    background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+}
+
+.action-icon-btn.delete:hover {
+    color: white;
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.5);
+}
+
+/* Print Button - Purple */
+.action-icon-btn.print {
+    background: #F3E8FF;
+    color: #9333EA;
+}
+
+.action-icon-btn.print::before {
+    background: linear-gradient(135deg, #A855F7 0%, #9333EA 100%);
+}
+
+.action-icon-btn.print:hover {
+    color: white;
+    box-shadow: 0 6px 16px rgba(168, 85, 247, 0.4);
+}
+
+/* Close Button */
+.modal-close-elegant {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #F3F4F6;
+    border: none;
+    border-radius: 12px;
+    color: #6B7280;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.modal-close-elegant:hover {
+    background: #E5E7EB;
+    color: #374151;
+    transform: rotate(90deg);
+}
+
+/* Modal Detail Cards - Colorful */
+.detail-card {
+    background: white;
+    border-radius: 14px;
+    border: 1.5px solid #E5E7EB;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+}
+
+.detail-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.detail-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 2px solid #F3F4F6;
+    background: linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 100%);
+}
+
+.detail-card-header svg {
+    color: #4F7A5A;
+}
+
+.detail-card-header h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1F2937;
+}
+
+.detail-card-body {
+    padding: 1.25rem;
+}
+
+/* Items List in Modal */
+.order-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.order-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem;
+    background: #F9FAFB;
+    border-radius: 10px;
+    border: 1px solid #E5E7EB;
+    transition: all 0.2s ease;
+}
+
+.order-item-row:hover {
+    background: #F3F4F6;
+    transform: translateX(4px);
+}
+
+/* Finance Summary Cards */
+.finance-summary-card {
+    background: linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 100%);
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1.5px solid #E5E7EB;
+    text-align: center;
+}
+
+.finance-value {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin: 0.5rem 0 0.25rem;
+}
+
+.finance-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Filter Button Enhancements */
+.orders-filter-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: white;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    color: #374151;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    overflow: hidden;
+}
+
+.orders-filter-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(79, 122, 90, 0.05) 0%, rgba(79, 122, 90, 0) 100%);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.orders-filter-btn:hover {
+    background: #F9FAFB;
+    border-color: #D1D5DB;
+    transform: translateY(-1px);
+}
+
+.orders-filter-btn:hover::before {
+    opacity: 1;
+}
+
+.orders-filter-btn.active {
+    background: linear-gradient(135deg, #4F7A5A 0%, #5A9B6A 100%);
+    border-color: #4F7A5A;
+    color: white;
+    box-shadow: 0 4px 12px rgba(79, 122, 90, 0.3);
+}
+
+.orders-filter-btn.active::before {
+    display: none;
 }
 
 /* Responsive */
