@@ -102,8 +102,10 @@ export const ProductsDesktop = () => {
     const filteredProducts = useMemo(() => {
         if (!products) return [];
         let result = products.filter(p => {
-            const matchesCategory = activeCategories.length === 0 || activeCategories.includes(p.category) || (activeCategories.includes('Sin Categoría') && !p.category);
-            const matchesBrand = activeBrands.length === 0 || (p.brand_id && activeBrands.includes(p.brand_id)) || (activeBrands.includes('Sin Marca') && !p.brand_id);
+            const isUncategorized = !p.category || p.category === '' || p.category === 'Sin Categoría';
+            const matchesCategory = activeCategories.length === 0 || activeCategories.includes(p.category) || (activeCategories.includes('Sin Categoría') && isUncategorized);
+            const isUnbranded = !p.brand_id || p.brand_id === '';
+            const matchesBrand = activeBrands.length === 0 || (p.brand_id && activeBrands.includes(p.brand_id)) || (activeBrands.includes('Sin Marca') && isUnbranded);
             const matchesSearch = p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
                 (p.code || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase());
             return matchesCategory && matchesBrand && matchesSearch;
