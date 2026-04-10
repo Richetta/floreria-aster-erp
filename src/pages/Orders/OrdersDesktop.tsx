@@ -1,27 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
-    Plus,
-    Search,
-    Clock,
-    Truck,
-    X,
-    FileText,
-    Banknote,
-    UserCircle,
-    MapPin,
-    CalendarDays,
-    LayoutGrid,
-    Copy,
-    Package,
-    Clock9,
-    Check,
-    MessageSquare,
-    CreditCard,
-    DollarSign,
-    ArrowRight,
-    ChevronLeft,
-    ChevronRight,
-    Trash2
+    Plus, Search, Clock, Truck, X, FileText, Banknote, UserCircle,
+    MapPin, CalendarDays, LayoutGrid, Copy, Package, Clock9, Check,
+    MessageSquare, CreditCard, DollarSign, ArrowRight, ChevronLeft,
+    ChevronRight, Trash2, Calendar, Filter, Eye, Archive, AlertCircle
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Order } from '../../store/useStore';
@@ -87,23 +69,42 @@ export const OrdersDesktop = () => {
 
     const [draggedOrderId, setDraggedOrderId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'kanban' | 'calendar'>('kanban');
+    const [showFilters, setShowFilters] = useState(false);
+    const [statusFilters, setStatusFilters] = useState<string[]>([]);
+    const [deliveryFilter, setDeliveryFilter] = useState<'all' | 'pickup' | 'delivery'>('all');
 
     // Flow columns for Kanban view
-    const columns: { id: Order['status'], label: string, icon: any, color: string }[] = useMemo(() => [
-        { id: 'pending', label: 'Pendiente', icon: Clock, color: '#ef4444' },
-        { id: 'assembling', label: 'En Armado', icon: Search, color: '#a855f7' },
-        { id: 'ready', label: 'Listo', icon: Check, color: '#3b82f6' },
-        { id: 'out_for_delivery', label: 'En Camino', icon: Truck, color: '#eab308' },
-        { id: 'delivered', label: 'Entregado', icon: Check, color: '#22c55e' },
-        { id: 'cancelled', label: 'Cancelado', icon: X, color: '#ef4444' },
-        { id: 'archived', label: 'Archivado', icon: Package, color: '#6B6B6B' }
+    const columns: { id: Order['status'], label: string, icon: any, color: string, bg: string }[] = useMemo(() => [
+        { id: 'pending', label: 'Pendiente', icon: Clock, color: '#EF4444', bg: '#FEF2F2' },
+        { id: 'assembling', label: 'En Armado', icon: FileText, color: '#A855F7', bg: '#FAF5FF' },
+        { id: 'ready', label: 'Listo', icon: Check, color: '#3B82F6', bg: '#EFF6FF' },
+        { id: 'out_for_delivery', label: 'En Camino', icon: Truck, color: '#F59E0B', bg: '#FFFBEB' },
+        { id: 'delivered', label: 'Entregado', icon: Check, color: '#10B981', bg: '#ECFDF5' },
+        { id: 'cancelled', label: 'Cancelado', icon: X, color: '#6B7280', bg: '#F9FAFB' },
+        { id: 'archived', label: 'Archivado', icon: Archive, color: '#6B7280', bg: '#F9FAFB' }
     ], []);
+
+    const toggleStatusFilter = (status: string) => {
+        setStatusFilters(prev =>
+            prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+        );
+    };
 
     const filteredOrders = useMemo(() => {
         let base = (orders || []).filter(o =>
             o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             o.id.toLowerCase().includes(searchTerm.toLowerCase())
         );
+
+        // Status filters
+        if (statusFilters.length > 0) {
+            base = base.filter(o => statusFilters.includes(o.status));
+        }
+
+        // Delivery method filter
+        if (deliveryFilter !== 'all') {
+            base = base.filter(o => o.deliveryMethod === deliveryFilter);
+        }
 
         if (timeFilter !== 'todos') {
             const today = new Date();
@@ -113,18 +114,18 @@ export const OrdersDesktop = () => {
                 const oDate = new Date(o.date);
                 const oDateClear = new Date(o.date);
                 oDateClear.setHours(0, 0, 0, 0);
-                
+
                 if (timeFilter === 'hoy') {
                     return oDateClear.getTime() === today.getTime();
                 }
-                
+
                 if (timeFilter === 'esta-semana') {
                     const first = today.getDate() - today.getDay();
                     const last = first + 6;
                     const firstDay = new Date(today.setDate(first));
                     const lastDay = new Date(today.setDate(last));
-                    firstDay.setHours(0,0,0,0);
-                    lastDay.setHours(23,59,59,999);
+                    firstDay.setHours(0, 0, 0, 0);
+                    lastDay.setHours(23, 59, 59, 999);
                     return oDate >= firstDay && oDate <= lastDay;
                 }
 
@@ -146,7 +147,7 @@ export const OrdersDesktop = () => {
         }
 
         return base;
-    }, [orders, searchTerm, timeFilter, selectedMonth, showArchived]);
+    }, [orders, searchTerm, timeFilter, selectedMonth, showArchived, statusFilters, deliveryFilter]);
 
     // --- Drag and Drop Handlers ---
     const handleDragStart = (e: React.DragEvent, orderId: string) => {
@@ -176,7 +177,7 @@ export const OrdersDesktop = () => {
     const handleDrop = (e: React.DragEvent, newStatus: Order['status']) => {
         e.preventDefault();
         e.currentTarget.classList.remove('bg-surface-hover');
-        
+
         if (draggedOrderId) {
             updateOrderStatus(draggedOrderId, newStatus);
             if (selectedOrder && selectedOrder.id === draggedOrderId) {
@@ -222,9 +223,9 @@ export const OrdersDesktop = () => {
         try {
             // Use the dedicated order payment endpoint
             const result = await api.registerOrderPayment(
-                selectedOrder.id, 
-                amount, 
-                paymentMethod, 
+                selectedOrder.id,
+                amount,
+                paymentMethod,
                 `Pago sobre pedido #${selectedOrder.id.slice(0, 8)}`
             );
 
@@ -248,7 +249,7 @@ export const OrdersDesktop = () => {
     const handleDeleteOrder = async () => {
         if (!selectedOrder) return;
         if (!window.confirm('¿Estás seguro de eliminar este pedido permanentemente?')) return;
-        
+
         setIsActionLoading(true);
         await deleteOrder(selectedOrder.id);
         setSelectedOrder(null);
@@ -258,7 +259,7 @@ export const OrdersDesktop = () => {
     const handleCancelOrder = async () => {
         if (!selectedOrder) return;
         if (!window.confirm('¿Confirmas cancelar este pedido?')) return;
-        
+
         setIsActionLoading(true);
         await updateOrderStatus(selectedOrder.id, 'cancelled');
         setSelectedOrder({ ...selectedOrder, status: 'cancelled' });
@@ -305,19 +306,19 @@ export const OrdersDesktop = () => {
             `*Total:* $${selectedOrder.total.toLocaleString()}%0A` +
             `*Seña:* $${(selectedOrder.advancePayment || 0).toLocaleString()}%0A` +
             `*Saldo:* $${(selectedOrder.total - (selectedOrder.advancePayment || 0)).toLocaleString()}`;
-        
+
         const phone = selectedOrder.customerPhone || '';
         const cleanPhone = phone.replace(/\D/g, '');
         window.open(`https://wa.me/${cleanPhone.startsWith('54') ? cleanPhone : '54' + cleanPhone}?text=${message}`, '_blank');
     };
 
     const renderCalendar = () => {
-        const year = new Date().getFullYear(); 
+        const year = new Date().getFullYear();
         const month = timeFilter === 'mes-especifico' ? selectedMonth : new Date().getMonth();
-        
+
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
-        
+
         const days: (number | null)[] = [];
         for (let i = 0; i < firstDay; i++) {
             days.push(null);
@@ -347,7 +348,7 @@ export const OrdersDesktop = () => {
                         {monthNames[month]} {year}
                     </h2>
                     <div className="calendar-nav-controls">
-                        <button 
+                        <button
                             className="calendar-nav-btn"
                             onClick={() => {
                                 let newMonth = month - 1;
@@ -360,7 +361,7 @@ export const OrdersDesktop = () => {
                             <ChevronLeft size={20} />
                         </button>
                         <div className="calendar-nav-divider"></div>
-                        <button 
+                        <button
                             className="calendar-nav-btn"
                             onClick={() => {
                                 let newMonth = month + 1;
@@ -374,25 +375,25 @@ export const OrdersDesktop = () => {
                         </button>
                     </div>
                 </div>
-                
+
                 <div className="calendar-grid custom-scrollbar">
                     {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
                         <div key={day} className="calendar-header-day">{day}</div>
                     ))}
-                    
+
                     {days.map((day, idx) => {
                         if (!day) return <div key={`empty-${idx}`} className="calendar-day-cell is-empty" />;
                         const dayOrders = ordersByDate[day] || [];
                         const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
-                        
+
                         return (
                             <div key={`day-${day}`} className={`calendar-day-cell ${isToday ? 'is-today' : ''}`}>
                                 <span className="calendar-day-number">{day}</span>
-                                
+
                                 <div className="calendar-orders-container custom-scrollbar">
                                     {dayOrders.map(order => (
-                                        <div 
-                                            key={order.id} 
+                                        <div
+                                            key={order.id}
                                             className={`calendar-order-pill status-${order.status}`}
                                             onClick={() => setSelectedOrder(order)}
                                         >
@@ -479,14 +480,14 @@ export const OrdersDesktop = () => {
                                 className={`segmented-btn ${viewMode === 'kanban' ? 'active' : ''}`}
                                 onClick={() => setViewMode('kanban')}
                             >
-                                <LayoutGrid size={18}/>
+                                <LayoutGrid size={18} />
                                 <span>Kanban</span>
                             </button>
                             <button
                                 className={`segmented-btn ${viewMode === 'calendar' ? 'active' : ''}`}
                                 onClick={() => { setViewMode('calendar'); setTimeFilter('mes-especifico'); }}
                             >
-                                <CalendarDays size={18}/>
+                                <CalendarDays size={18} />
                                 <span>Calendario</span>
                             </button>
                         </div>
@@ -495,7 +496,7 @@ export const OrdersDesktop = () => {
                     {/* Segunda fila: Filtros de tiempo */}
                     <div className="time-filters flex flex-wrap items-center gap-3 pt-2">
                         <span className="filter-label text-micro font-semibold text-muted uppercase tracking-wider">Filtrar por:</span>
-                        
+
                         <div className="time-filter-buttons flex flex-wrap gap-2">
                             {[
                                 { id: 'hoy', label: 'Hoy' },
@@ -550,16 +551,113 @@ export const OrdersDesktop = () => {
 
                         {/* Show Archived Toggle */}
                         <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input 
-                                type="checkbox" 
+                            <input
+                                type="checkbox"
                                 className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                                 checked={showArchived}
                                 onChange={e => setShowArchived(e.target.checked)}
                             />
                             <span className="text-small font-medium text-muted">Ver Cancelados/Archivados</span>
                         </label>
+
+                        {/* Advanced Filters Button */}
+                        <button
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${showFilters ? 'bg-primary/5 border-primary text-primary' : 'bg-surface border-border text-muted'}`}
+                            onClick={() => setShowFilters(!showFilters)}
+                        >
+                            <Filter size={14} />
+                            <span className="text-small font-medium">Filtros</span>
+                            {(statusFilters.length > 0 || deliveryFilter !== 'all') && (
+                                <span className="w-5 h-5 rounded-full bg-primary text-white text-micro font-bold flex items-center justify-center">
+                                    {statusFilters.length + (deliveryFilter !== 'all' ? 1 : 0)}
+                                </span>
+                            )}
+                        </button>
                     </div>
                 </div>
+
+                {/* Advanced Filters Panel */}
+                {showFilters && (
+                    <div className="advanced-filters-panel mt-4 p-4 bg-surface rounded-xl border border-border animate-slide-down">
+                        <div className="filters-grid grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Status Filters */}
+                            <div className="filter-section">
+                                <h4 className="text-micro font-bold uppercase tracking-wider text-muted mb-2 flex items-center gap-1.5">
+                                    <Eye size={12} />
+                                    Por Estado
+                                </h4>
+                                <div className="status-checkboxes flex flex-col gap-1.5">
+                                    {columns.filter(c => c.id !== 'cancelled' && c.id !== 'archived').map(col => (
+                                        <label key={col.id} className="status-checkbox flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={statusFilters.includes(col.id)}
+                                                onChange={() => toggleStatusFilter(col.id)}
+                                                className="w-4 h-4 rounded"
+                                                style={{ accentColor: col.color }}
+                                            />
+                                            <span className="text-small" style={{ color: col.color }}>{col.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Delivery Method Filter */}
+                            <div className="filter-section">
+                                <h4 className="text-micro font-bold uppercase tracking-wider text-muted mb-2 flex items-center gap-1.5">
+                                    <Truck size={12} />
+                                    Método de Entrega
+                                </h4>
+                                <div className="delivery-options flex flex-col gap-1.5">
+                                    <label className="delivery-option flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="deliveryFilter"
+                                            checked={deliveryFilter === 'all'}
+                                            onChange={() => setDeliveryFilter('all')}
+                                            className="w-4 h-4"
+                                            style={{ accentColor: '#4F7A5A' }}
+                                        />
+                                        <span className="text-small">Todos</span>
+                                    </label>
+                                    <label className="delivery-option flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="deliveryFilter"
+                                            checked={deliveryFilter === 'delivery'}
+                                            onChange={() => setDeliveryFilter('delivery')}
+                                            className="w-4 h-4"
+                                            style={{ accentColor: '#4F7A5A' }}
+                                        />
+                                        <span className="text-small">Envío a domicilio</span>
+                                    </label>
+                                    <label className="delivery-option flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="deliveryFilter"
+                                            checked={deliveryFilter === 'pickup'}
+                                            onChange={() => setDeliveryFilter('pickup')}
+                                            className="w-4 h-4"
+                                            style={{ accentColor: '#4F7A5A' }}
+                                        />
+                                        <span className="text-small">Retiro en local</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Clear Filters */}
+                            <div className="filter-section flex items-end">
+                                <button
+                                    className="w-full px-4 py-2 bg-background border border-border rounded-lg text-small font-medium text-muted hover:bg-surface-hover transition-colors"
+                                    onClick={() => { setStatusFilters([]); setDeliveryFilter('all'); }}
+                                >
+                                    <X size={14} className="inline mr-1.5" />
+                                    Limpiar Filtros
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Kanban / Calendar Board Layout */}
@@ -589,55 +687,64 @@ export const OrdersDesktop = () => {
                                     </div>
 
                                     <div className="kanban-cards-container p-2 overflow-y-auto flex-1 custom-scrollbar">
-                                        {columnOrders.map(order => (
-                                            <div
-                                                key={order.id}
-                                                id={`order-card-${order.id}`}
-                                                className={`order-card mb-2 p-3 status-${order.status} ${draggedOrderId === order.id ? 'opacity-50' : ''}`}
-                                                onClick={() => setSelectedOrder(order)}
-                                                draggable="true"
-                                                onDragStart={(e) => handleDragStart(e, order.id)}
-                                                onDragEnd={() => handleDragEnd(order.id)}
-                                            >
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <span className="text-micro font-black bg-white/20 px-1.5 py-0.5 rounded text-white tracking-widest uppercase">#{order.id.split('-')[0]}</span>
-                                                </div>
-
-                                                <h4 className="font-extrabold text-small leading-tight mb-2 tracking-tight text-white">{order.customerName}</h4>
-
-                                                <div className="space-y-1.5 mb-2 bg-white/10 p-2 rounded-lg border border-white/20">
-                                                    <div className="flex items-center gap-1.5 text-white font-bold text-micro">
-                                                        <CalendarDays size={11} className="text-white" />
-                                                        <span>{new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: 'short' }).format(new Date(order.date))}</span>
+                                        {columnOrders.map(order => {
+                                            const pendingBalance = order.total - (order.advancePayment || 0);
+                                            const isPaid = pendingBalance <= 1;
+                                            return (
+                                                <div
+                                                    key={order.id}
+                                                    id={`order-card-${order.id}`}
+                                                    className={`order-card mb-2 p-3 status-${order.status} ${draggedOrderId === order.id ? 'opacity-50' : ''}`}
+                                                    onClick={() => setSelectedOrder(order)}
+                                                    draggable="true"
+                                                    onDragStart={(e) => handleDragStart(e, order.id)}
+                                                    onDragEnd={() => handleDragEnd(order.id)}
+                                                >
+                                                    <div className="order-card-header">
+                                                        <span className="order-id">#{order.id.split('-')[0]}</span>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 text-white text-micro font-bold">
-                                                        <Clock size={11} className="text-white" />
-                                                        <span>{timeSlotLabel(order.deliveryTimeSlot)}</span>
-                                                    </div>
-                                                </div>
 
-                                                <div className="mt-2 pt-2 border-t border-white/30 flex justify-between items-end">
-                                                    <div className="order-price-box">
-                                                        <span className="text-micro text-white/70 uppercase font-black tracking-tighter block">TOTAL</span>
-                                                        <p className="font-black text-base text-white">${order.total.toLocaleString()}</p>
-                                                    </div>
-                                                    
-                                                    {/* Debt indicator as a chip at bottom-right */}
-                                                    {order.total - (order.advancePayment || 0) > 1 ? (
-                                                        <div className="order-debt-chip pulse">
-                                                            Debe ${(order.total - (order.advancePayment || 0)).toLocaleString()}
+                                                    <h4 className="order-customer">{order.customerName}</h4>
+
+                                                    <div className="order-details">
+                                                        <div className="order-detail-row">
+                                                            <CalendarDays size={12} />
+                                                            <span>{new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: 'short' }).format(new Date(order.date))}</span>
                                                         </div>
-                                                    ) : (order.total > 0 && order.total - (order.advancePayment || 0) <= 1) ? (
-                                                        <div className="order-paid-chip">Saldado</div>
-                                                    ) : null}
+                                                        <div className="order-detail-row">
+                                                            <Clock9 size={12} />
+                                                            <span>{timeSlotLabel(order.deliveryTimeSlot)}</span>
+                                                        </div>
+                                                        {order.deliveryMethod && (
+                                                            <div className="order-detail-row">
+                                                                <MapPin size={12} />
+                                                                <span>{order.deliveryMethod === 'delivery' ? 'Envío' : 'Retiro'}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="order-footer">
+                                                        <div className="order-total">${order.total.toLocaleString()}</div>
+                                                        {pendingBalance > 1 ? (
+                                                            <div className="order-payment-status pending">
+                                                                <AlertCircle size={10} />
+                                                                Debe ${pendingBalance.toLocaleString()}
+                                                            </div>
+                                                        ) : order.total > 0 ? (
+                                                            <div className="order-payment-status paid">
+                                                                <Check size={10} />
+                                                                Saldado
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
 
                                         {columnOrders.length === 0 && (
                                             <div className="text-center py-8 px-4 bg-background/50 rounded-xl border border-dashed border-border mt-2">
                                                 <p className="text-micro text-muted mb-3">Sin pedidos en esta etapa</p>
-                                                <button 
+                                                <button
                                                     className="btn btn-sm btn-secondary w-full flex items-center justify-center gap-1.5 opacity-70 hover:opacity-100"
                                                     onClick={() => navigate('/pos', { state: { initialTab: 'agendar' } })}
                                                 >
@@ -660,7 +767,7 @@ export const OrdersDesktop = () => {
             {selectedOrder && (
                 <div className="modal-overlay" onClick={() => { setSelectedOrder(null); setShowPaymentPanel(false); setPaymentAmount(''); setPaymentError(''); setIsEditing(false); }}>
                     <div className="modal-content redesigned-modal" onClick={e => e.stopPropagation()}>
-                        
+
                         {/* Header Section */}
                         <header className="modal-header-elegant">
                             <div className="header-left">
@@ -669,8 +776,8 @@ export const OrdersDesktop = () => {
                                     <div className="id-container">
                                         <span className="id-label">PEDIDO</span>
                                         <h2 className="id-value">#{selectedOrder.id.slice(0, 8)}</h2>
-                                        <button 
-                                            className="copy-btn" 
+                                        <button
+                                            className="copy-btn"
                                             title="Copiar ID completo"
                                             onClick={() => {
                                                 navigator.clipboard.writeText(selectedOrder.id);
@@ -720,7 +827,7 @@ export const OrdersDesktop = () => {
 
                         <div className="modal-scroll-area">
                             <div className="modal-grid-v2">
-                                
+
                                 {/* Section: Client & Delivery */}
                                 <div className="grid-column">
                                     <section className="detail-card">
@@ -735,18 +842,18 @@ export const OrdersDesktop = () => {
                                             <div className="customer-details">
                                                 {isEditing ? (
                                                     <div className="edit-field-group">
-                                                        <input 
-                                                            type="text" 
-                                                            className="edit-input-main" 
-                                                            value={editForm.customerName || ''} 
-                                                            onChange={e => setEditForm({...editForm, customerName: e.target.value})}
+                                                        <input
+                                                            type="text"
+                                                            className="edit-input-main"
+                                                            value={editForm.customerName || ''}
+                                                            onChange={e => setEditForm({ ...editForm, customerName: e.target.value })}
                                                             placeholder="Nombre del cliente"
                                                         />
-                                                        <input 
-                                                            type="text" 
-                                                            className="edit-input-sub" 
-                                                            value={editForm.customerPhone || ''} 
-                                                            onChange={e => setEditForm({...editForm, customerPhone: e.target.value})}
+                                                        <input
+                                                            type="text"
+                                                            className="edit-input-sub"
+                                                            value={editForm.customerPhone || ''}
+                                                            onChange={e => setEditForm({ ...editForm, customerPhone: e.target.value })}
                                                             placeholder="Teléfono"
                                                         />
                                                     </div>
@@ -774,11 +881,11 @@ export const OrdersDesktop = () => {
                                                     <div className="info-text">
                                                         <span className="label">Fecha Entrega</span>
                                                         {isEditing ? (
-                                                            <input 
-                                                                type="date" 
-                                                                className="edit-input-inline" 
-                                                                value={editForm.date ? new Date(editForm.date).toISOString().split('T')[0] : ''} 
-                                                                onChange={e => setEditForm({...editForm, date: e.target.value})}
+                                                            <input
+                                                                type="date"
+                                                                className="edit-input-inline"
+                                                                value={editForm.date ? new Date(editForm.date).toISOString().split('T')[0] : ''}
+                                                                onChange={e => setEditForm({ ...editForm, date: e.target.value })}
                                                             />
                                                         ) : (
                                                             <p className="value">{formatDeliveryDate(selectedOrder.date)}</p>
@@ -790,10 +897,10 @@ export const OrdersDesktop = () => {
                                                     <div className="info-text">
                                                         <span className="label">Horario</span>
                                                         {isEditing ? (
-                                                            <select 
+                                                            <select
                                                                 className="edit-input-inline"
                                                                 value={editForm.deliveryTimeSlot || 'allday'}
-                                                                onChange={e => setEditForm({...editForm, deliveryTimeSlot: e.target.value as any})}
+                                                                onChange={e => setEditForm({ ...editForm, deliveryTimeSlot: e.target.value as any })}
                                                             >
                                                                 <option value="morning">Mañana (9-13hs)</option>
                                                                 <option value="afternoon">Tarde (14-18hs)</option>
@@ -819,23 +926,23 @@ export const OrdersDesktop = () => {
                                                     <div className="address-content">
                                                         {isEditing ? (
                                                             <div className="edit-address-group">
-                                                                <input 
-                                                                    type="text" 
-                                                                    placeholder="Calle" 
-                                                                    value={editForm.deliveryAddress?.street || ''} 
-                                                                    onChange={e => setEditForm({...editForm, deliveryAddress: {...editForm.deliveryAddress, street: e.target.value}})}
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Calle"
+                                                                    value={editForm.deliveryAddress?.street || ''}
+                                                                    onChange={e => setEditForm({ ...editForm, deliveryAddress: { ...editForm.deliveryAddress, street: e.target.value } })}
                                                                 />
-                                                                <input 
-                                                                    type="text" 
-                                                                    placeholder="Altura" 
-                                                                    value={editForm.deliveryAddress?.number || ''} 
-                                                                    onChange={e => setEditForm({...editForm, deliveryAddress: {...editForm.deliveryAddress, number: e.target.value}})}
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Altura"
+                                                                    value={editForm.deliveryAddress?.number || ''}
+                                                                    onChange={e => setEditForm({ ...editForm, deliveryAddress: { ...editForm.deliveryAddress, number: e.target.value } })}
                                                                 />
-                                                                <input 
-                                                                    type="text" 
-                                                                    placeholder="Piso/Depto" 
-                                                                    value={editForm.deliveryAddress?.floor || ''} 
-                                                                    onChange={e => setEditForm({...editForm, deliveryAddress: {...editForm.deliveryAddress, floor: e.target.value}})}
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Piso/Depto"
+                                                                    value={editForm.deliveryAddress?.floor || ''}
+                                                                    onChange={e => setEditForm({ ...editForm, deliveryAddress: { ...editForm.deliveryAddress, floor: e.target.value } })}
                                                                 />
                                                             </div>
                                                         ) : (
@@ -865,10 +972,10 @@ export const OrdersDesktop = () => {
                                             </div>
                                             <div className="detail-card-body">
                                                 {isEditing ? (
-                                                    <textarea 
-                                                        className="edit-textarea" 
-                                                        value={editForm.cardMessage || ''} 
-                                                        onChange={e => setEditForm({...editForm, cardMessage: e.target.value})}
+                                                    <textarea
+                                                        className="edit-textarea"
+                                                        value={editForm.cardMessage || ''}
+                                                        onChange={e => setEditForm({ ...editForm, cardMessage: e.target.value })}
                                                         placeholder="Escribe el mensaje para la tarjeta..."
                                                     />
                                                 ) : (
@@ -1025,10 +1132,10 @@ export const OrdersDesktop = () => {
                                         </div>
                                         <div className="detail-card-body">
                                             {isEditing ? (
-                                                <textarea 
-                                                    className="edit-textarea" 
-                                                    value={editForm.notes || ''} 
-                                                    onChange={e => setEditForm({...editForm, notes: e.target.value})}
+                                                <textarea
+                                                    className="edit-textarea"
+                                                    value={editForm.notes || ''}
+                                                    onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
                                                     placeholder="Notas internas del pedido..."
                                                 />
                                             ) : (
