@@ -67,7 +67,7 @@ export const FinancesMobile = () => {
         <div className="finances-mobile-wrapper">
             <header className="mobile-finances-header">
                 <div className="finances-header-top">
-                    <h2>Finanzas</h2>
+                    <h2>Movimientos</h2>
                     <button className="add-expense-btn" onClick={() => setShowExpenseSheet(true)}>
                         <span className="material-symbols-rounded">add</span>
                         Gasto

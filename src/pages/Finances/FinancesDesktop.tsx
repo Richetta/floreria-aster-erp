@@ -218,13 +218,13 @@ export const FinancesDesktop = () => {
                 <div>
                     <h1 className="text-h1 flex items-center gap-3">
                         <Wallet className="text-primary" size={32} />
-                        Caja y Finanzas
+                        Movimientos Financieros
                     </h1>
-                    <p className="text-body text-muted mt-1">Gestión integral de flujos de caja y proyecciones.</p>
+                    <p className="text-body text-muted mt-1">Control de ingresos, egresos y estado de cuentas.</p>
                 </div>
                 <button className="btn btn-primary shadow-lg hover:translate-y-[-2px] transition-all" onClick={() => setShowExpenseModal(true)}>
                     <Plus size={20} />
-                    Asentar Gasto
+                    Registrar Gasto
                 </button>
             </header>
 

@@ -100,9 +100,9 @@ const navItems: NavItem[] = [
     label: 'Finanzas',
     desc: 'Control económico',
     children: [
-      { path: '/finanzas', label: 'Ingresos y Egresos' },
-      { path: '/ventas', label: 'Historial Ventas', icon: FileText },
-      { path: '/caja', label: 'Caja Diaria', icon: Vault },
+      { path: '/finanzas', label: 'Movimientos' },
+      { path: '/ventas', label: 'Ventas', icon: FileText },
+      { path: '/caja', label: 'Caja', icon: Vault },
       { path: '/reportes', label: 'Reportes', icon: BarChart3 },
     ]
   },
@@ -201,9 +201,9 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                       <span className="sidebar-sublabel flex items-center justify-between w-full">
                         {child.label}
                         {child.path === '/reposicion' && restockItems.length > 0 && (
-                           <span className={`px-2 py-0.5 ml-2 text-xs font-bold rounded-full ${unassignedCount > 0 ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'}`}>
-                             {restockItems.length}
-                           </span>
+                          <span className={`px-2 py-0.5 ml-2 text-xs font-bold rounded-full ${unassignedCount > 0 ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'}`}>
+                            {restockItems.length}
+                          </span>
                         )}
                       </span>
                     </NavLink>

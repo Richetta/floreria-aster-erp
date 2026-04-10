@@ -9,7 +9,7 @@ export const CashRegisterMobile = () => {
     const [dailySummary, setDailySummary] = useState<any>(null);
     const [cashInDrawer, setCashInDrawer] = useState<any>(null);
     const [cashStatus, setCashStatus] = useState<any>(null);
-    
+
     // Modal states
     const [showOpeningModal, setShowOpeningModal] = useState(false);
     const [showClosingModal, setShowClosingModal] = useState(false);
@@ -83,11 +83,11 @@ export const CashRegisterMobile = () => {
         <div className="cash-mobile-wrapper">
             <header className="mobile-cash-header">
                 <div className="cash-header-top">
-                    <h2>Caja del Día</h2>
+                    <h2>Caja</h2>
                     <div className="date-picker-wrap">
-                        <input 
-                            type="date" 
-                            value={selectedDate} 
+                        <input
+                            type="date"
+                            value={selectedDate}
                             onChange={e => setSelectedDate(e.target.value)}
                         />
                     </div>
@@ -194,19 +194,19 @@ export const CashRegisterMobile = () => {
                         <form onSubmit={handleOpenCaja}>
                             <div className="m-form-group">
                                 <label>Fondo Inicial</label>
-                                <input 
-                                    type="number" 
-                                    placeholder="0.00" 
-                                    value={openingBalance} 
-                                    onChange={e => setOpeningBalance(e.target.value)} 
+                                <input
+                                    type="number"
+                                    placeholder="0.00"
+                                    value={openingBalance}
+                                    onChange={e => setOpeningBalance(e.target.value)}
                                     autoFocus
                                 />
                             </div>
                             <div className="m-form-group">
                                 <label>Notas</label>
-                                <textarea 
-                                    placeholder="Opcional..." 
-                                    value={notes} 
+                                <textarea
+                                    placeholder="Opcional..."
+                                    value={notes}
                                     onChange={e => setNotes(e.target.value)}
                                 />
                             </div>
@@ -225,19 +225,19 @@ export const CashRegisterMobile = () => {
                         <form onSubmit={handleCloseCaja}>
                             <div className="m-form-group">
                                 <label>Efectivo Observado (Caja física)</label>
-                                <input 
-                                    type="number" 
-                                    placeholder="Monto total contado" 
-                                    value={observedCash} 
-                                    onChange={e => setObservedCash(e.target.value)} 
+                                <input
+                                    type="number"
+                                    placeholder="Monto total contado"
+                                    value={observedCash}
+                                    onChange={e => setObservedCash(e.target.value)}
                                     autoFocus
                                 />
                             </div>
                             <div className="m-form-group">
                                 <label>Notas de Cierre</label>
-                                <textarea 
-                                    placeholder="Cualquier novedad..." 
-                                    value={notes} 
+                                <textarea
+                                    placeholder="Cualquier novedad..."
+                                    value={notes}
                                     onChange={e => setNotes(e.target.value)}
                                 />
                             </div>

@@ -115,7 +115,7 @@ export const ReportsDesktop = () => {
         <div className="reports-page">
             <header className="page-header mb-6">
                 <div>
-                    <h1 className="text-h1">Reportes y Estadísticas</h1>
+                    <h1 className="text-h1">Reportes</h1>
                     <p className="text-body mt-2">Analizá el rendimiento de tu negocio</p>
                 </div>
                 <button className="btn btn-secondary" onClick={handleExport}>

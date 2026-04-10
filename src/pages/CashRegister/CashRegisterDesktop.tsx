@@ -34,7 +34,7 @@ export const CashRegisterDesktop = () => {
     });
     const [closingResult, setClosingResult] = useState<any>(null);
     const [cashInDrawer, setCashInDrawer] = useState<any>(null);
-    const [cashStatus, setCashStatus] = useState<{is_open: boolean; is_closed: boolean; opening: any} | null>(null);
+    const [cashStatus, setCashStatus] = useState<{ is_open: boolean; is_closed: boolean; opening: any } | null>(null);
 
     const { alertModal, showAlert } = useModal();
 
@@ -46,7 +46,7 @@ export const CashRegisterDesktop = () => {
                 // Check cash status first
                 const status = await api.getCashRegisterStatus(selectedDate);
                 setCashStatus(status);
-                
+
                 // Load summary
                 const summary = await api.getDailySummary(selectedDate);
                 setDailySummary(summary);
@@ -172,8 +172,8 @@ export const CashRegisterDesktop = () => {
         <div className="cash-register-page">
             <header className="page-header mb-6">
                 <div>
-                    <h1 className="text-h1">Cierre de Caja</h1>
-                    <p className="text-body mt-2">Control diario de ingresos, egresos y balance</p>
+                    <h1 className="text-h1">Caja</h1>
+                    <p className="text-body mt-2">Control diario de ingresos, egresos y balance de caja</p>
                     {cashStatus && (
                         <div className={`cash-status-badge ${cashStatus.is_open ? 'open' : 'closed'}`}>
                             {cashStatus.is_open ? (
@@ -390,28 +390,26 @@ export const CashRegisterDesktop = () => {
                                                 {new Date(t.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                                             </td>
                                             <td>
-                                                <span className={`badge ${
-                                                    t.type === 'sale' || t.type === 'payment_received' 
-                                                        ? 'badge-success' 
+                                                <span className={`badge ${t.type === 'sale' || t.type === 'payment_received'
+                                                        ? 'badge-success'
                                                         : 'badge-danger'
-                                                }`}>
-                                                    {t.type === 'sale' ? 'Venta' : 
-                                                     t.type === 'payment_received' ? 'Cobro' : 
-                                                     t.type === 'expense' ? 'Gasto' : 'Pago Prov.'}
+                                                    }`}>
+                                                    {t.type === 'sale' ? 'Venta' :
+                                                        t.type === 'payment_received' ? 'Cobro' :
+                                                            t.type === 'expense' ? 'Gasto' : 'Pago Prov.'}
                                                 </span>
                                             </td>
                                             <td>{t.category}</td>
                                             <td>
                                                 {t.payment_method === 'cash' ? 'Efectivo' :
-                                                 t.payment_method === 'card' ? 'Tarjeta' :
-                                                 t.payment_method === 'transfer' ? 'Transferencia' : '-'}
+                                                    t.payment_method === 'card' ? 'Tarjeta' :
+                                                        t.payment_method === 'transfer' ? 'Transferencia' : '-'}
                                             </td>
                                             <td>{t.description}</td>
-                                            <td className={`text-right font-bold ${
-                                                t.type === 'sale' || t.type === 'payment_received' 
-                                                    ? 'text-success' 
+                                            <td className={`text-right font-bold ${t.type === 'sale' || t.type === 'payment_received'
+                                                    ? 'text-success'
                                                     : 'text-danger'
-                                            }`}>
+                                                }`}>
                                                 {t.type === 'sale' || t.type === 'payment_received' ? '+' : '-'}
                                                 {formatCurrency(t.amount)}
                                             </td>
@@ -453,7 +451,7 @@ export const CashRegisterDesktop = () => {
                                         type="number"
                                         className="form-input"
                                         value={closingData.opening_balance}
-                                        onChange={(e) => setClosingData({...closingData, opening_balance: parseFloat(e.target.value) || 0})}
+                                        onChange={(e) => setClosingData({ ...closingData, opening_balance: parseFloat(e.target.value) || 0 })}
                                         step="0.01"
                                     />
                                     <p className="text-micro text-muted mt-1">
@@ -467,7 +465,7 @@ export const CashRegisterDesktop = () => {
                                         type="number"
                                         className="form-input"
                                         value={closingData.observed_cash}
-                                        onChange={(e) => setClosingData({...closingData, observed_cash: e.target.value})}
+                                        onChange={(e) => setClosingData({ ...closingData, observed_cash: e.target.value })}
                                         placeholder="Contá el efectivo y completá este campo"
                                         step="0.01"
                                         autoFocus
@@ -483,7 +481,7 @@ export const CashRegisterDesktop = () => {
                                         className="form-input"
                                         rows={3}
                                         value={closingData.notes}
-                                        onChange={(e) => setClosingData({...closingData, notes: e.target.value})}
+                                        onChange={(e) => setClosingData({ ...closingData, notes: e.target.value })}
                                         placeholder="Ej: Faltante por cambio mal dado, etc."
                                     />
                                 </div>
@@ -511,7 +509,7 @@ export const CashRegisterDesktop = () => {
                                     <CheckCircle2 size={64} className="text-success" />
                                 </div>
                                 <h3 className="text-h2 mb-4">¡Cierre Creado!</h3>
-                                
+
                                 <div className="result-summary bg-surface p-4 rounded-lg mb-4">
                                     <div className="result-row flex justify-between mb-2">
                                         <span className="text-muted">Saldo Inicial:</span>
@@ -527,11 +525,10 @@ export const CashRegisterDesktop = () => {
                                                 <span className="text-muted">Efectivo Observado:</span>
                                                 <span className="font-bold">{formatCurrency(closingResult.closing.observed_cash)}</span>
                                             </div>
-                                            <div className={`result-row flex justify-between text-lg ${
-                                                closingResult.closing.discrepancy >= 0 
-                                                    ? 'text-success' 
+                                            <div className={`result-row flex justify-between text-lg ${closingResult.closing.discrepancy >= 0
+                                                    ? 'text-success'
                                                     : 'text-danger'
-                                            }`}>
+                                                }`}>
                                                 <span className="font-bold">
                                                     {closingResult.closing.discrepancy >= 0 ? 'Sobrante' : 'Faltante'}:
                                                 </span>
@@ -590,7 +587,7 @@ export const CashRegisterDesktop = () => {
                                     type="number"
                                     className="form-input"
                                     value={openingData.opening_balance}
-                                    onChange={(e) => setOpeningData({...openingData, opening_balance: parseFloat(e.target.value) || 0})}
+                                    onChange={(e) => setOpeningData({ ...openingData, opening_balance: parseFloat(e.target.value) || 0 })}
                                     step="0.01"
                                     autoFocus
                                 />
@@ -605,7 +602,7 @@ export const CashRegisterDesktop = () => {
                                     className="form-input"
                                     rows={3}
                                     value={openingData.notes}
-                                    onChange={(e) => setOpeningData({...openingData, notes: e.target.value})}
+                                    onChange={(e) => setOpeningData({ ...openingData, notes: e.target.value })}
                                     placeholder="Ej: Billetes de $1000: 5, $500: 10, etc."
                                 />
                             </div>
