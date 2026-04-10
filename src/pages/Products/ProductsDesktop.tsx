@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
     Plus, Search, Upload, FileDown, Folder, Tag, Grid3x3, List,
     MoreVertical, Edit2, Barcode, Trash2, Settings, X, CheckSquare,
@@ -165,10 +165,10 @@ export const ProductsDesktop = () => {
     };
 
     // Render category options with hierarchy indentation
-    const renderCategoryOptions = (categories: typeof categoriesData, level: number) => {
+    const renderCategoryOptions = (categories: typeof categoriesData, level: number): React.ReactNode => {
         return categories.map(cat => (
-            <>
-                <label key={cat.id} className="filter-option category-option" style={{ '--indent-level': level } as React.CSSProperties}>
+            <React.Fragment key={cat.id}>
+                <label className="filter-option category-option" style={{ '--indent-level': level } as React.CSSProperties}>
                     <input
                         type="checkbox"
                         checked={activeCategories.includes(cat.name)}
@@ -186,7 +186,7 @@ export const ProductsDesktop = () => {
                     <span className="filter-option-text">{cat.name}</span>
                 </label>
                 {cat.children && cat.children.length > 0 && renderCategoryOptions(cat.children, level + 1)}
-            </>
+            </React.Fragment>
         ));
     };
 
