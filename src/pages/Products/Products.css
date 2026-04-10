@@ -674,12 +674,13 @@
 }
 
 .action-btn {
-    width: 36px;
-    height: 36px;
+    position: relative;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #F9FAFB;
+    background: white;
     border: 1.5px solid #E5E7EB;
     border-radius: 10px;
     color: #6B7280;
@@ -687,8 +688,14 @@
     transition: all 0.2s ease;
 }
 
+.action-btn svg {
+    position: relative;
+    z-index: 1;
+}
+
 .action-btn:hover {
     transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
 }
 
 .action-btn.delete:hover {
@@ -707,6 +714,30 @@
     background: #EEF2FF;
     border-color: #C7D2FE;
     color: #4F46E5;
+}
+
+.action-btn::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    padding: 0.5rem 0.75rem;
+    background: #1F2937;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.action-btn:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }
 
 /* List View */
@@ -823,12 +854,13 @@
 }
 
 .list-action-btn {
+    position: relative;
     width: 40px;
     height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #F9FAFB;
+    background: white;
     border: 1.5px solid #E5E7EB;
     border-radius: 10px;
     color: #6B7280;
@@ -836,8 +868,14 @@
     transition: all 0.2s ease;
 }
 
+.list-action-btn svg {
+    position: relative;
+    z-index: 1;
+}
+
 .list-action-btn:hover {
     transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
 }
 
 .list-action-btn.delete:hover {
@@ -856,6 +894,30 @@
     background: #EEF2FF;
     border-color: #C7D2FE;
     color: #4F46E5;
+}
+
+.list-action-btn::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    padding: 0.5rem 0.75rem;
+    background: #1F2937;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.list-action-btn:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }
 
 /* Dropdown Menu */
