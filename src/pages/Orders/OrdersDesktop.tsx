@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import {
     Plus, Search, Clock, Truck, X, FileText, Banknote, UserCircle,
     MapPin, CalendarDays, LayoutGrid, Copy, Package, Clock9, Check,
-    MessageSquare, CreditCard, DollarSign, ChevronLeft,
-    ChevronRight, Trash2, Filter, Eye, Archive, AlertCircle, Printer
+    MessageSquare, CreditCard, DollarSign, ChevronLeft, ArrowRight,
+    ChevronRight, Filter, Eye, Archive, AlertCircle, Printer
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Order } from '../../store/useStore';

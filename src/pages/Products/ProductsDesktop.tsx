@@ -88,6 +88,21 @@ export const ProductsDesktop = () => {
     const [showBarcodePrinter, setShowBarcodePrinter] = useState(false);
     const [productForBarcode, setProductForBarcode] = useState<Product | null>(null);
     const [showImportModal, setShowImportModal] = useState(false);
+    const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+
+    // Product selection for bulk operations
+    const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+
+    const toggleProductSelection = (productId: string) => {
+        setSelectedProductIds(prev => {
+            const next = new Set(prev);
+            if (next.has(productId)) next.delete(productId);
+            else next.add(productId);
+            return next;
+        });
+    };
+
+    const clearSelection = () => setSelectedProductIds(new Set());
 
     // Refs & Print
     const printRef = useRef<HTMLDivElement>(null);
@@ -125,6 +140,20 @@ export const ProductsDesktop = () => {
 
         return result;
     }, [products, activeCategories, activeBrands, debouncedSearchTerm, sortBy, sortOrder]);
+
+    // Bulk selection helpers (must be after filteredProducts)
+    const toggleSelectAll = () => {
+        if (selectedProductIds.size === filteredProducts.length) {
+            setSelectedProductIds(new Set());
+        } else {
+            setSelectedProductIds(new Set(filteredProducts.map(p => p.id)));
+        }
+    };
+
+    const selectedProducts = useMemo(() =>
+        filteredProducts.filter(p => selectedProductIds.has(p.id)),
+        [filteredProducts, selectedProductIds]
+    );
 
     // Handlers
     const handleAddSubCategory = (parentId: string) => {
@@ -483,6 +512,17 @@ export const ProductsDesktop = () => {
                                     <span className="view-toggle-label">Lista</span>
                                 </button>
                             </div>
+
+                            {/* Bulk Edit Button */}
+                            {selectedProductIds.size > 0 && (
+                                <button
+                                    className="btn-bulk-edit"
+                                    onClick={() => setShowBulkEditModal(true)}
+                                >
+                                    <Check size={16} />
+                                    Editar {selectedProductIds.size}
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -512,6 +552,14 @@ export const ProductsDesktop = () => {
                                     <table className="products-table">
                                         <thead>
                                             <tr>
+                                                <th className="col-checkbox">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={filteredProducts.length > 0 && selectedProductIds.size === filteredProducts.length}
+                                                        onChange={toggleSelectAll}
+                                                        className="bulk-checkbox"
+                                                    />
+                                                </th>
                                                 <th className="col-code">CÓDIGO</th>
                                                 <th className="col-product">PRODUCTO</th>
                                                 <th className="col-cost text-right">COSTO</th>
@@ -522,7 +570,15 @@ export const ProductsDesktop = () => {
                                         </thead>
                                         <tbody>
                                             {filteredProducts.map((p, index) => (
-                                                <tr key={p.id} className={`product-row ${p.stock <= p.min ? 'low-stock' : ''}`} style={{ animationDelay: `${index * 0.03}s` }}>
+                                                <tr key={p.id} className={`product-row ${p.stock <= p.min ? 'low-stock' : ''} ${selectedProductIds.has(p.id) ? 'selected-row' : ''}`} style={{ animationDelay: `${index * 0.03}s` }}>
+                                                    <td className="col-checkbox">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedProductIds.has(p.id)}
+                                                            onChange={() => toggleProductSelection(p.id)}
+                                                            className="bulk-checkbox"
+                                                        />
+                                                    </td>
                                                     <td className="col-code">
                                                         <span className="code-text">{p.code}</span>
                                                     </td>
@@ -660,6 +716,13 @@ export const ProductsDesktop = () => {
 
             {confirmModal && <ConfirmModal {...confirmModal} />}
             {alertModal && <AlertModal {...alertModal} />}
+
+            {/* Bulk Edit Modal */}
+            <BulkEditModal
+                selectedProducts={selectedProducts}
+                isOpen={showBulkEditModal}
+                onClose={() => { setShowBulkEditModal(false); clearSelection(); }}
+            />
 
             <div style={{ display: 'none' }}>
                 <PrintableCatalog

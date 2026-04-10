@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Check, Tag, Barcode, DollarSign, Building2, Folder } from 'lucide-react';
 import { useStore, type AppState } from '../../store/useStore';
 import type { Product } from '../../store/slices/types';
@@ -16,7 +16,6 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
     const updateProduct = useStore((state: AppState) => state.updateProduct);
     const loadProducts = useStore((state: AppState) => state.loadProducts);
 
-    const [editMode, setEditMode] = useState<'replace' | 'append'>('replace');
     const [fields, setFields] = useState({
         barcode: { enabled: false, value: '' },
         category: { enabled: false, value: '' },
@@ -59,24 +58,30 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
                     case 'brand_id':
                         updates.brand_id = value.value;
                         break;
-                    case 'price':
-                        if (value.operation === 'set') {
-                            updates.price = parseFloat(value.value);
-                        } else if (value.operation === 'add') {
-                            updates.price = product.price + parseFloat(value.value);
+                    case 'price': {
+                        const priceVal = parseFloat(value.value);
+                        const priceOp = ('operation' in value) ? value.operation : 'set';
+                        if (priceOp === 'set') {
+                            updates.price = priceVal;
+                        } else if (priceOp === 'add') {
+                            updates.price = product.price + priceVal;
                         } else {
-                            updates.price = Math.max(0, product.price - parseFloat(value.value));
+                            updates.price = Math.max(0, product.price - priceVal);
                         }
                         break;
-                    case 'cost':
-                        if (value.operation === 'set') {
-                            updates.cost = parseFloat(value.value);
-                        } else if (value.operation === 'add') {
-                            updates.cost = (product.cost || 0) + parseFloat(value.value);
+                    }
+                    case 'cost': {
+                        const costVal = parseFloat(value.value);
+                        const costOp = ('operation' in value) ? value.operation : 'set';
+                        if (costOp === 'set') {
+                            updates.cost = costVal;
+                        } else if (costOp === 'add') {
+                            updates.cost = (product.cost || 0) + costVal;
                         } else {
-                            updates.cost = Math.max(0, (product.cost || 0) - parseFloat(value.value));
+                            updates.cost = Math.max(0, (product.cost || 0) - costVal);
                         }
                         break;
+                    }
                 }
             }
 
