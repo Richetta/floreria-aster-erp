@@ -677,18 +677,25 @@
     position: relative;
     width: 40px;
     height: 40px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     background: white;
     border: 1.5px solid #E5E7EB;
     border-radius: 10px;
-    color: #6B7280;
     cursor: pointer;
     transition: all 0.2s ease;
+    padding: 0;
 }
 
 .action-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+    stroke-width: 2;
+    fill: none !important;
+    stroke: currentColor !important;
+    color: #6B7280 !important;
+    display: block;
     position: relative;
     z-index: 1;
 }
@@ -698,22 +705,31 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
 }
 
-.action-btn.delete:hover {
+.action-btn.delete {
     background: #FEF2F2;
     border-color: #FECACA;
-    color: #DC2626;
 }
 
-.action-btn.barcode:hover {
+.action-btn.delete svg {
+    color: #DC2626 !important;
+}
+
+.action-btn.barcode {
     background: #F0FDF4;
     border-color: #BBF7D0;
-    color: #166534;
 }
 
-.action-btn.edit:hover {
+.action-btn.barcode svg {
+    color: #166534 !important;
+}
+
+.action-btn.edit {
     background: #EEF2FF;
     border-color: #C7D2FE;
-    color: #4F46E5;
+}
+
+.action-btn.edit svg {
+    color: #4F46E5 !important;
 }
 
 .action-btn::after {
@@ -857,18 +873,25 @@
     position: relative;
     width: 40px;
     height: 40px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     background: white;
     border: 1.5px solid #E5E7EB;
     border-radius: 10px;
-    color: #6B7280;
     cursor: pointer;
     transition: all 0.2s ease;
+    padding: 0;
 }
 
 .list-action-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+    stroke-width: 2;
+    fill: none !important;
+    stroke: currentColor !important;
+    color: #6B7280 !important;
+    display: block;
     position: relative;
     z-index: 1;
 }
@@ -878,22 +901,31 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
 }
 
-.list-action-btn.delete:hover {
+.list-action-btn.delete {
     background: #FEF2F2;
     border-color: #FECACA;
-    color: #DC2626;
 }
 
-.list-action-btn.barcode:hover {
+.list-action-btn.delete svg {
+    color: #DC2626 !important;
+}
+
+.list-action-btn.barcode {
     background: #F0FDF4;
     border-color: #BBF7D0;
-    color: #166534;
 }
 
-.list-action-btn.edit:hover {
+.list-action-btn.barcode svg {
+    color: #166534 !important;
+}
+
+.list-action-btn.edit {
     background: #EEF2FF;
     border-color: #C7D2FE;
-    color: #4F46E5;
+}
+
+.list-action-btn.edit svg {
+    color: #4F46E5 !important;
 }
 
 .list-action-btn::after {
