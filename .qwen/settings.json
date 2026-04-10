@@ -17,7 +17,8 @@
       "Bash(npx *)",
       "Bash(dir *)",
       "Bash(type *)",
-      "Read(c:\\Users\\Jan\\Documents\\Floreria\\floreria-aster-erp\\src\\pages\\Settings/**)"
+      "Read(c:\\Users\\Jan\\Documents\\Floreria\\floreria-aster-erp\\src\\pages\\Settings/**)",
+      "Bash(select-object *)"
     ]
   },
   "$version": 3

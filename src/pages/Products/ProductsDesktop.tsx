@@ -549,21 +549,21 @@ export const ProductsDesktop = () => {
                                                                 onClick={() => handleDeleteProduct(p)}
                                                                 title="Eliminar"
                                                             >
-                                                                <Trash2 size={16} />
+                                                                <Trash2 size={18} strokeWidth={2} />
                                                             </button>
                                                             <button
                                                                 className="action-btn barcode"
                                                                 onClick={() => { setProductForBarcode(p); setShowBarcodePrinter(true); }}
                                                                 title="Código de barras"
                                                             >
-                                                                <Barcode size={16} />
+                                                                <Barcode size={18} strokeWidth={2} />
                                                             </button>
                                                             <button
                                                                 className="action-btn edit"
                                                                 onClick={() => { setProductToEdit(p); setIsModalOpen(true); }}
                                                                 title="Editar"
                                                             >
-                                                                <Edit2 size={16} />
+                                                                <Edit2 size={18} strokeWidth={2} />
                                                             </button>
                                                         </div>
                                                     </td>
@@ -610,21 +610,21 @@ export const ProductsDesktop = () => {
                                                         onClick={() => handleDeleteProduct(p)}
                                                         title="Eliminar"
                                                     >
-                                                        <Trash2 size={16} />
+                                                        <Trash2 size={18} strokeWidth={2} />
                                                     </button>
                                                     <button
                                                         className="list-action-btn barcode"
                                                         onClick={() => { setProductForBarcode(p); setShowBarcodePrinter(true); }}
                                                         title="Código de barras"
                                                     >
-                                                        <Barcode size={16} />
+                                                        <Barcode size={18} strokeWidth={2} />
                                                     </button>
                                                     <button
                                                         className="list-action-btn edit"
                                                         onClick={() => { setProductToEdit(p); setIsModalOpen(true); }}
                                                         title="Editar"
                                                     >
-                                                        <Edit2 size={16} />
+                                                        <Edit2 size={18} strokeWidth={2} />
                                                     </button>
                                                 </div>
                                             </div>
