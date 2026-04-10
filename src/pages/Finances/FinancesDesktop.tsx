@@ -4,13 +4,19 @@ import {
     TrendingUp,
     TrendingDown,
     Plus,
-    FileText,
     AlertCircle,
     ArrowUpRight,
     ArrowDownLeft,
     Wallet,
     Calendar,
-    Search
+    Search,
+    Users,
+    Receipt,
+    X,
+    Check,
+    Tag,
+    CreditCard,
+    Banknote
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
@@ -23,8 +29,8 @@ const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
         style: 'currency',
         currency: 'ARS',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
     }).format(amount);
 };
 
@@ -33,29 +39,55 @@ const formatDate = (dateString: string) => {
         hour: '2-digit',
         minute: '2-digit',
         day: '2-digit',
-        month: '2-digit'
+        month: 'short'
     }).format(new Date(dateString));
 };
 
-// --- COMPONENTS ---
-const LedgerItemPremium = ({ t }: { t: any }) => (
-    <div className="ledger-item">
-        <div className="flex justify-between items-start">
-            <div className="flex flex-col gap-1">
-                <span className="text-small font-bold text-text">{t.category}</span>
-                <span className="text-micro text-muted uppercase tracking-tighter">{t.description || 'Sin descripción'}</span>
+// --- TRANSACTION ITEM COMPONENT ---
+const TransactionItem = ({ t }: { t: any }) => {
+    const isIncome = t.type === 'income';
+
+    return (
+        <div className={`transaction-item ${isIncome ? 'transaction-income' : 'transaction-expense'}`}>
+            <div className="transaction-icon">
+                {isIncome ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
             </div>
-            <div className="text-right">
-                <div className={`font-bold flex items-center gap-1 ${t.type === 'income' ? 'text-success' : 'text-danger'}`}>
-                    {t.type === 'income' ? <ArrowUpRight size={14} /> : <ArrowDownLeft size={14} />}
-                    {formatCurrency(t.amount)}
+            <div className="transaction-info">
+                <div className="transaction-category">{t.category}</div>
+                <div className="transaction-desc">{t.description || 'Sin descripción'}</div>
+            </div>
+            <div className="transaction-amount">
+                <div className={`amount-value ${isIncome ? 'amount-positive' : 'amount-negative'}`}>
+                    {isIncome ? '+' : '-'}{formatCurrency(t.amount)}
                 </div>
-                <span className="text-micro text-muted font-medium">{formatDate(t.date)}</span>
+                <div className="amount-date">{formatDate(t.date)}</div>
             </div>
         </div>
+    );
+};
+
+// --- DEBTOR CARD COMPONENT ---
+const DebtorCard = ({ debtor, onCollect }: { debtor: any; onCollect: (id: string, amount: string) => void }) => (
+    <div className="debtor-card" onClick={() => onCollect(debtor.id, debtor.debtBalance.toString())}>
+        <div className="debtor-avatar">
+            <span>{debtor.name.charAt(0).toUpperCase()}</span>
+        </div>
+        <div className="debtor-details">
+            <div className="debtor-name">{debtor.name}</div>
+            <div className="debtor-contact">{debtor.phone || 'Sin teléfono'}</div>
+        </div>
+        <div className="debtor-balance">
+            <div className="debtor-label">Debe</div>
+            <div className="debtor-value">{formatCurrency(debtor.debtBalance)}</div>
+        </div>
+        <button className="debtor-collect-btn">
+            <Receipt size={14} />
+            Cobrar
+        </button>
     </div>
 );
 
+// --- MAIN COMPONENT ---
 export const FinancesDesktop = () => {
     const transactions = useStore((state) => state.transactions);
     const customers = useStore((state) => state.customers);
@@ -65,6 +97,18 @@ export const FinancesDesktop = () => {
     const loadCustomers = useStore((state) => state.loadCustomers);
 
     const [isLoading, setIsLoading] = useState(true);
+    const [showExpenseModal, setShowExpenseModal] = useState(false);
+    const [expenseForm, setExpenseForm] = useState({
+        amount: '',
+        category: 'Insumos',
+        description: '',
+        method: 'cash' as 'cash' | 'transfer'
+    });
+    const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean; customerId: string; amount: string }>({
+        isOpen: false, customerId: '', amount: ''
+    });
+
+    const { confirmModal, showConfirm } = useModal();
 
     useEffect(() => {
         const loadData = async () => {
@@ -75,23 +119,7 @@ export const FinancesDesktop = () => {
         loadData();
     }, []);
 
-    const [showExpenseModal, setShowExpenseModal] = useState(false);
-    const [expenseForm, setExpenseForm] = useState({
-        amount: '',
-        category: 'Insumos',
-        description: '',
-        method: 'cash' as 'cash' | 'transfer'
-    });
-
-    const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean, customerId: string, amount: string }>({
-        isOpen: false, customerId: '', amount: ''
-    });
-
-    const { confirmModal, showConfirm } = useModal();
-
-    // --- CALCULATIONS (SAFE NUMERIC REDUCTION) ---
-    const totalAccountsReceivable = (customers || []).reduce((sum, c) => sum + (Number(c.debtBalance) || 0), 0);
-
+    // --- CALCULATIONS ---
     const incomeByMethod = {
         cash: (transactions || []).filter(t => t.type === 'income' && t.method === 'cash').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
         card: (transactions || []).filter(t => t.type === 'income' && t.method === 'card').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
@@ -105,10 +133,11 @@ export const FinancesDesktop = () => {
 
     const totalIncome = Object.values(incomeByMethod).reduce((a, b) => Number(a) + Number(b), 0);
     const totalExpense = Object.values(expenseByMethod).reduce((a, b) => Number(a) + Number(b), 0);
-    const netBalance = Number(totalIncome) - Number(totalExpense);
-
-    const debtors = (customers || []).filter(c => (Number(c.debtBalance) || 0) > 0)
-        .sort((a, b) => (Number(b.debtBalance) || 0) - (Number(a.debtBalance) || 0));
+    const netBalance = totalIncome - totalExpense;
+    const totalDebt = (customers || []).reduce((sum, c) => sum + (Number(c.debtBalance) || 0), 0);
+    const debtors = (customers || []).filter(c => (Number(c.debtBalance) || 0) > 0).sort((a, b) => (Number(b.debtBalance) || 0) - (Number(a.debtBalance) || 0));
+    const incomeCount = (transactions || []).filter(t => t.type === 'income').length;
+    const expenseCount = (transactions || []).filter(t => t.type === 'expense').length;
 
     // --- HANDLERS ---
     const handleAddExpense = async (e: React.FormEvent) => {
@@ -128,7 +157,7 @@ export const FinancesDesktop = () => {
 
         setShowExpenseModal(false);
         setExpenseForm({ amount: '', category: 'Insumos', description: '', method: 'cash' });
-        loadTransactions(); // Reload to be sure
+        loadTransactions();
     };
 
     const handleProcessDebtPayment = async (e: React.FormEvent) => {
@@ -157,12 +186,10 @@ export const FinancesDesktop = () => {
     };
 
     const handleCollectAll = async () => {
-        const totalToCollect = debtors.reduce((sum, d) => sum + (Number(d.debtBalance) || 0), 0);
-        if (totalToCollect === 0) return;
-
+        if (totalDebt === 0) return;
         const confirmed = await showConfirm({
             title: '¿Cobrar todas las deudas?',
-            message: `Se cobrarán ${formatCurrency(totalToCollect)} en efectivo de ${debtors.length} clientes. Esta acción no se puede deshacer.`,
+            message: `Se cobrarán ${formatCurrency(totalDebt)} en efectivo de ${debtors.length} clientes.`,
             confirmText: 'Cobrar todo',
             variant: 'warning'
         });
@@ -185,214 +212,264 @@ export const FinancesDesktop = () => {
         }
     };
 
+    const openPaymentModal = (customerId: string, amount: string) => {
+        setPaymentModal({ isOpen: true, customerId, amount });
+    };
+
+    // Payment method breakdown data
+    const incomeMethods = [
+        { label: 'Efectivo', value: incomeByMethod.cash, icon: Banknote, color: '#4CAF50' },
+        { label: 'Transferencia', value: incomeByMethod.transfer, icon: CreditCard, color: '#4F7A5A' },
+    ];
+
+    const expenseMethods = [
+        { label: 'Efectivo', value: expenseByMethod.cash, icon: Banknote, color: '#E57373' },
+        { label: 'Banco', value: expenseByMethod.transfer, icon: CreditCard, color: '#FFA726' },
+    ];
+
     return (
         <div className="finances-page">
             {/* Loading State */}
             {isLoading && (
-                <div className="loading-overlay" style={{
-                    position: 'fixed',
-                    inset: 0,
-                    background: 'rgba(255,255,255,0.8)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                    backdropFilter: 'blur(5px)'
-                }}>
-                    <div style={{ textAlign: 'center' }}>
-                        <div className="spinner" style={{
-                            width: 60,
-                            height: 60,
-                            border: '5px solid #f3f4f6',
-                            borderTopColor: '#4F7A5A',
-                            borderRadius: '50%',
-                            animation: 'spin 1s linear infinite',
-                            margin: '0 auto 1.5rem'
-                        }}></div>
-                        <p style={{ color: '#6B6B6B', fontWeight: 600, fontSize: '1.1rem' }}>Sincronizando finanzas...</p>
+                <div className="loading-overlay">
+                    <div className="loading-content">
+                        <div className="loading-spinner"></div>
+                        <p>Sincronizando finanzas...</p>
                     </div>
                 </div>
             )}
 
-            <header className="page-header">
-                <div>
-                    <h1 className="text-h1 flex items-center gap-3">
-                        <Wallet className="text-primary" size={32} />
-                        Movimientos Financieros
-                    </h1>
-                    <p className="text-body text-muted mt-1">Control de ingresos, egresos y estado de cuentas.</p>
+            {/* Page Header */}
+            <header className="finances-header">
+                <div className="header-left">
+                    <div className="header-icon">
+                        <Wallet size={28} />
+                    </div>
+                    <div className="header-text">
+                        <h1>Movimientos</h1>
+                        <p>Control de ingresos, egresos y cuentas pendientes</p>
+                    </div>
                 </div>
-                <button className="btn btn-primary shadow-lg hover:translate-y-[-2px] transition-all" onClick={() => setShowExpenseModal(true)}>
-                    <Plus size={20} />
+                <button className="btn-add-expense" onClick={() => setShowExpenseModal(true)}>
+                    <Plus size={18} />
                     Registrar Gasto
                 </button>
             </header>
 
-            {/* Premium Metric Cards */}
-            <div className="metrics-grid">
-                <div className="glass-panel metric-card income">
-                    <div className="metric-header">
-                        <span className="text-small font-bold text-muted uppercase">Ingresos Totales</span>
-                        <div className="metric-icon-box"><TrendingUp size={20} /></div>
+            {/* Summary Cards */}
+            <div className="summary-cards">
+                {/* Income Card */}
+                <div className="summary-card card-income">
+                    <div className="card-top">
+                        <div className="card-badge">
+                            <TrendingUp size={14} />
+                            Ingresos
+                        </div>
+                        <span className="card-count">{incomeCount} movimientos</span>
                     </div>
-                    <h2 className="metric-value text-success">{formatCurrency(totalIncome)}</h2>
-                    <div className="metric-footer">
-                        <span className="pill bg-success-light">Ef: {formatCurrency(incomeByMethod.cash)}</span>
-                        <span className="pill bg-primary-light">Tr: {formatCurrency(incomeByMethod.transfer)}</span>
-                    </div>
-                </div>
-
-                <div className="glass-panel metric-card expense">
-                    <div className="metric-header">
-                        <span className="text-small font-bold text-muted uppercase">Egresos / Salidas</span>
-                        <div className="metric-icon-box"><TrendingDown size={20} /></div>
-                    </div>
-                    <h2 className="metric-value text-danger">{formatCurrency(totalExpense)}</h2>
-                    <div className="metric-footer">
-                        <span className="pill bg-danger-light">Caja: {formatCurrency(expenseByMethod.cash)}</span>
-                        <span className="pill bg-surface-hover">Banco: {formatCurrency(expenseByMethod.transfer)}</span>
+                    <div className="card-amount amount-green">{formatCurrency(totalIncome)}</div>
+                    <div className="card-breakdown">
+                        {incomeMethods.filter(m => m.value > 0).map((m, i) => (
+                            <div key={i} className="breakdown-item">
+                                <m.icon size={12} style={{ color: m.color }} />
+                                <span>{m.label}</span>
+                                <strong>{formatCurrency(m.value)}</strong>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                <div className="glass-panel metric-card balance">
-                    <div className="metric-header">
-                        <span className="text-small font-bold text-muted uppercase">Balance Neto</span>
-                        <div className="metric-icon-box"><DollarSign size={20} /></div>
+                {/* Expense Card */}
+                <div className="summary-card card-expense">
+                    <div className="card-top">
+                        <div className="card-badge badge-red">
+                            <TrendingDown size={14} />
+                            Egresos
+                        </div>
+                        <span className="card-count">{expenseCount} movimientos</span>
                     </div>
-                    <h2 className={`metric-value ${netBalance >= 0 ? 'text-primary' : 'text-danger'}`}>{formatCurrency(netBalance)}</h2>
-                    <div className="metric-footer">
-                        <span className="text-micro text-muted font-bold flex items-center gap-1">
+                    <div className="card-amount amount-red">{formatCurrency(totalExpense)}</div>
+                    <div className="card-breakdown">
+                        {expenseMethods.filter(m => m.value > 0).map((m, i) => (
+                            <div key={i} className="breakdown-item">
+                                <m.icon size={12} style={{ color: m.color }} />
+                                <span>{m.label}</span>
+                                <strong>{formatCurrency(m.value)}</strong>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Balance Card */}
+                <div className="summary-card card-balance">
+                    <div className="card-top">
+                        <div className="card-badge badge-sage">
+                            <DollarSign size={14} />
+                            Balance
+                        </div>
+                        <div className="balance-indicator">
                             <Calendar size={12} />
-                            Estado al momento
-                        </span>
+                            <span>Hoy</span>
+                        </div>
+                    </div>
+                    <div className={`card-amount ${netBalance >= 0 ? 'amount-sage' : 'amount-red'}`}>
+                        {formatCurrency(netBalance)}
+                    </div>
+                    <div className="card-footer-text">
+                        {netBalance >= 0 ? 'Balance positivo ✓' : 'Balance negativo ⚠'}
                     </div>
                 </div>
 
-                <div className="glass-panel metric-card debt">
-                    <div className="metric-header">
-                        <span className="text-small font-bold text-muted uppercase">Cuentas Pendientes</span>
-                        <div className="metric-icon-box"><AlertCircle size={20} /></div>
+                {/* Debt Card */}
+                <div className="summary-card card-debt">
+                    <div className="card-top">
+                        <div className="card-badge badge-amber">
+                            <AlertCircle size={14} />
+                            Cuentas Fiadas
+                        </div>
+                        <span className="card-count">{debtors.length} clientes</span>
                     </div>
-                    <h2 className="metric-value text-warning">{formatCurrency(totalAccountsReceivable)}</h2>
-                    <div className="metric-footer">
-                        <button className="text-micro text-primary font-bold hover:underline" onClick={handleCollectAll}>
-                            Saldar Cuentas
-                        </button>
+                    <div className="card-amount amount-amber">{formatCurrency(totalDebt)}</div>
+                    <div className="card-footer-text">
+                        {totalDebt > 0 && (
+                            <button className="collect-all-btn" onClick={handleCollectAll}>
+                                Cobrar todas las cuentas
+                            </button>
+                        )}
+                        {totalDebt === 0 && <span>✨ Sin deudas pendientes</span>}
                     </div>
                 </div>
             </div>
 
-            <div className="finances-content">
-                {/* Ledger Panel */}
-                <div className="glass-panel ledger-container">
-                    <div className="ledger-header">
-                        <h3 className="text-h3 flex items-center gap-2">
-                            <FileText size={24} className="text-primary" />
-                            Historial de Movimientos
-                        </h3>
-                        <div className="flex gap-2">
-                            <span className="pill bg-success-light">Ingresos</span>
-                            <span className="pill bg-danger-light">Egresos</span>
+            {/* Main Content */}
+            <div className="finances-main">
+                {/* Transactions Section */}
+                <section className="finances-section transactions-section">
+                    <div className="section-header">
+                        <div className="section-title">
+                            <Receipt size={20} />
+                            <h2>Historial de Movimientos</h2>
+                        </div>
+                        <div className="section-badges">
+                            <span className="badge-green">{incomeCount} ingresos</span>
+                            <span className="badge-red">{expenseCount} egresos</span>
                         </div>
                     </div>
 
-                    <div className="ledger-columns">
-                        <div className="ledger-column">
-                            <span className="column-title">
-                                <TrendingUp size={16} className="text-success" />
-                                Entradas de Caja
-                            </span>
-                            <div className="ledger-scroll">
-                                {[...(transactions || [])].filter(t => t.type === 'income').map(t => (
-                                    <LedgerItemPremium key={t.id} t={t} />
-                                ))}
-                                {(transactions || []).filter(t => t.type === 'income').length === 0 && (
-                                    <div className="text-center py-10 opacity-40 italic">No hay ingresos registrados hoy</div>
+                    <div className="transactions-grid">
+                        {/* Income Column */}
+                        <div className="transactions-column">
+                            <div className="column-header header-green">
+                                <div className="header-dot dot-green"></div>
+                                <span>Ingresos</span>
+                            </div>
+                            <div className="transactions-list">
+                                {(transactions || []).filter(t => t.type === 'income').length === 0 ? (
+                                    <div className="empty-column">
+                                        <div className="empty-icon">📥</div>
+                                        <p>Sin ingresos aún</p>
+                                    </div>
+                                ) : (
+                                    [...(transactions || [])].filter(t => t.type === 'income').map(t => (
+                                        <TransactionItem key={t.id} t={t} />
+                                    ))
                                 )}
                             </div>
                         </div>
 
-                        <div className="ledger-column">
-                            <span className="column-title">
-                                <TrendingDown size={16} className="text-danger" />
-                                Salidas de Caja
-                            </span>
-                            <div className="ledger-scroll">
-                                {[...(transactions || [])].filter(t => t.type === 'expense').map(t => (
-                                    <LedgerItemPremium key={t.id} t={t} />
-                                ))}
-                                {(transactions || []).filter(t => t.type === 'expense').length === 0 && (
-                                    <div className="text-center py-10 opacity-40 italic">No hay egresos registrados hoy</div>
+                        {/* Expense Column */}
+                        <div className="transactions-column">
+                            <div className="column-header header-red">
+                                <div className="header-dot dot-red"></div>
+                                <span>Egresos</span>
+                            </div>
+                            <div className="transactions-list">
+                                {(transactions || []).filter(t => t.type === 'expense').length === 0 ? (
+                                    <div className="empty-column">
+                                        <div className="empty-icon">📤</div>
+                                        <p>Sin egresos aún</p>
+                                    </div>
+                                ) : (
+                                    [...(transactions || [])].filter(t => t.type === 'expense').map(t => (
+                                        <TransactionItem key={t.id} t={t} />
+                                    ))
                                 )}
                             </div>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                {/* Debtors Panel */}
-                <div className="glass-panel debtors-container">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-h3 flex items-center gap-2">
-                            <Search size={22} className="text-warning" />
-                            Cuentas Fiadas
-                        </h3>
-                        <span className="pill bg-warning-light">{debtors.length} Clientes</span>
+                {/* Debtors Section */}
+                <section className="finances-section debtors-section">
+                    <div className="section-header">
+                        <div className="section-title">
+                            <Users size={20} />
+                            <h2>Cuentas Fiadas</h2>
+                        </div>
+                        {debtors.length > 0 && (
+                            <span className="badge-amber">{debtors.length} pendientes</span>
+                        )}
                     </div>
 
-                    <div className="debtors-list overflow-y-auto pr-2" style={{ maxHeight: '600px' }}>
+                    <div className="debtors-list">
                         {debtors.length === 0 ? (
-                            <div className="text-center py-16">
-                                <div className="text-h1 mb-4">✨</div>
-                                <h4 className="text-success font-bold">¡Todo cobrado!</h4>
-                                <p className="text-small text-muted">No hay deudas pendientes en el sistema.</p>
+                            <div className="empty-debtors">
+                                <div className="empty-debtors-icon">✅</div>
+                                <h3>¡Todo al día!</h3>
+                                <p>No hay cuentas pendientes</p>
                             </div>
                         ) : (
                             debtors.map(d => (
-                                <div key={d.id} className="debtor-card-premium">
-                                    <div className="debtor-info">
-                                        <h4>{d.name}</h4>
-                                        <p>{d.phone}</p>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="debt-amount">
-                                            <span className="text-micro text-muted font-bold uppercase">Balance</span>
-                                            <span className="debt-value">{formatCurrency(d.debtBalance)}</span>
-                                        </div>
-                                        <button
-                                            className="btn btn-primary px-4 py-2 text-small shadow-sm"
-                                            onClick={() => setPaymentModal({ isOpen: true, customerId: d.id, amount: d.debtBalance.toString() })}
-                                        >
-                                            Cobrar
-                                        </button>
-                                    </div>
-                                </div>
+                                <DebtorCard key={d.id} debtor={d} onCollect={openPaymentModal} />
                             ))
                         )}
                     </div>
-                </div>
+                </section>
             </div>
 
-            {/* Modal: New Expense */}
+            {/* Expense Modal */}
             {showExpenseModal && (
-                <div className="modal-backdrop backdrop-blur-md">
-                    <div className="modal-content glass-panel p-8 max-w-lg w-full">
-                        <h2 className="text-h2 mb-4 text-danger flex items-center gap-2">
-                            <ArrowDownLeft size={28} />
-                            Asentar Salida
-                        </h2>
-                        <form onSubmit={handleAddExpense} className="flex flex-col gap-5">
-                            <div>
-                                <label className="form-label text-muted font-bold">Monto del Gasto</label>
-                                <div className="relative mt-1">
-                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={20} />
-                                    <input required type="number" min="1" className="form-input text-h3 pl-10" value={expenseForm.amount} onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })} autoFocus placeholder="0" />
+                <div className="modal-overlay" onClick={() => setShowExpenseModal(false)}>
+                    <div className="modal-container" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header-custom">
+                            <div className="modal-title-wrap">
+                                <div className="modal-icon-red">
+                                    <ArrowDownLeft size={22} />
+                                </div>
+                                <div>
+                                    <h2>Registrar Gasto</h2>
+                                    <p>Completa los datos del movimiento</p>
+                                </div>
+                            </div>
+                            <button className="modal-close" onClick={() => setShowExpenseModal(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleAddExpense} className="modal-form">
+                            <div className="form-field">
+                                <label>Monto del gasto</label>
+                                <div className="input-with-icon">
+                                    <DollarSign size={18} />
+                                    <input
+                                        required
+                                        type="number"
+                                        min="1"
+                                        placeholder="0"
+                                        value={expenseForm.amount}
+                                        onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                                        autoFocus
+                                    />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="form-label text-muted">Categoría</label>
-                                    <select className="form-input" value={expenseForm.category} onChange={e => setExpenseForm({ ...expenseForm, category: e.target.value })}>
+                            <div className="form-row">
+                                <div className="form-field">
+                                    <label>Categoría</label>
+                                    <select
+                                        value={expenseForm.category}
+                                        onChange={e => setExpenseForm({ ...expenseForm, category: e.target.value })}
+                                    >
                                         <option value="Sueldos/Jornales">Sueldos/Jornales</option>
                                         <option value="Insumos">Insumos Varios</option>
                                         <option value="Mercadería (Flores)">Mercadería (Flores)</option>
@@ -401,50 +478,86 @@ export const FinancesDesktop = () => {
                                         <option value="Otros">Otros</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="form-label text-muted">Medio de Pago</label>
-                                    <select className="form-input" value={expenseForm.method} onChange={e => setExpenseForm({ ...expenseForm, method: e.target.value as any })}>
-                                        <option value="cash">Efectivo (Caja)</option>
-                                        <option value="transfer">Banco (Transf/Tarj)</option>
+                                <div className="form-field">
+                                    <label>Medio de pago</label>
+                                    <select
+                                        value={expenseForm.method}
+                                        onChange={e => setExpenseForm({ ...expenseForm, method: e.target.value as any })}
+                                    >
+                                        <option value="cash">Efectivo</option>
+                                        <option value="transfer">Transferencia</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="form-label text-muted">Concepto / Detalle</label>
-                                <input type="text" className="form-input" value={expenseForm.description} onChange={e => setExpenseForm({ ...expenseForm, description: e.target.value })} placeholder="Ej: Pago de flete flores..." />
+                            <div className="form-field">
+                                <label>Concepto</label>
+                                <input
+                                    type="text"
+                                    placeholder="Ej: Pago de flete flores..."
+                                    value={expenseForm.description}
+                                    onChange={e => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                                />
                             </div>
 
-                            <div className="flex justify-end gap-3 mt-4">
-                                <button type="button" className="btn bg-surface border border-border" onClick={() => setShowExpenseModal(false)}>Cancelar</button>
-                                <button type="submit" className="btn bg-danger text-white hover:bg-red-600 transition-colors">Confirmar Salida</button>
+                            <div className="modal-actions">
+                                <button type="button" className="btn-cancel" onClick={() => setShowExpenseModal(false)}>
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="btn-submit btn-submit-red">
+                                    <Check size={16} />
+                                    Confirmar Gasto
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
-            {/* Modal: Process Debt Payment */}
+            {/* Payment Modal */}
             {paymentModal.isOpen && (
-                <div className="modal-backdrop backdrop-blur-md">
-                    <div className="modal-content glass-panel p-8 max-w-lg w-full">
-                        <h2 className="text-h2 mb-4 text-primary flex items-center gap-2">
-                            <ArrowUpRight size={28} />
-                            Cobrar Deuda
-                        </h2>
-                        <form onSubmit={handleProcessDebtPayment} className="flex flex-col gap-6">
-                            <div>
-                                <label className="form-label text-muted font-bold">Monto a Recibir</label>
-                                <div className="relative mt-1">
-                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-success" size={24} />
-                                    <input required type="number" min="1" max={customers.find(c => c.id === paymentModal.customerId)?.debtBalance} className="form-input text-h2 font-bold text-success pl-10" value={paymentModal.amount} onChange={e => setPaymentModal({ ...paymentModal, amount: e.target.value })} autoFocus />
+                <div className="modal-overlay" onClick={() => setPaymentModal({ isOpen: false, customerId: '', amount: '' })}>
+                    <div className="modal-container modal-sm" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header-custom">
+                            <div className="modal-title-wrap">
+                                <div className="modal-icon-green">
+                                    <ArrowUpRight size={22} />
                                 </div>
-                                <p className="text-tiny text-muted mt-2 italic">El dinero ingresará directamente al flujo de caja de hoy.</p>
+                                <div>
+                                    <h2>Cobrar Deuda</h2>
+                                    <p>Registrá el pago del cliente</p>
+                                </div>
+                            </div>
+                            <button className="modal-close" onClick={() => setPaymentModal({ isOpen: false, customerId: '', amount: '' })}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleProcessDebtPayment} className="modal-form">
+                            <div className="form-field">
+                                <label>Monto a recibir</label>
+                                <div className="input-with-icon input-green">
+                                    <DollarSign size={18} />
+                                    <input
+                                        required
+                                        type="number"
+                                        min="1"
+                                        max={customers.find(c => c.id === paymentModal.customerId)?.debtBalance}
+                                        value={paymentModal.amount}
+                                        onChange={e => setPaymentModal({ ...paymentModal, amount: e.target.value })}
+                                        autoFocus
+                                    />
+                                </div>
                             </div>
 
-                            <div className="flex justify-end gap-3">
-                                <button type="button" className="btn bg-surface border border-border" onClick={() => setPaymentModal({ isOpen: false, customerId: '', amount: '' })}>Cancelar</button>
-                                <button type="submit" className="btn btn-primary text-white shadow-lg">Registrar Cobro</button>
+                            <div className="modal-actions">
+                                <button type="button" className="btn-cancel" onClick={() => setPaymentModal({ isOpen: false, customerId: '', amount: '' })}>
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="btn-submit">
+                                    <Check size={16} />
+                                    Registrar Cobro
+                                </button>
                             </div>
                         </form>
                     </div>
