@@ -16,7 +16,8 @@
       "Bash(findstr *)",
       "Bash(npx *)",
       "Bash(dir *)",
-      "Bash(type *)"
+      "Bash(type *)",
+      "Read(c:\\Users\\Jan\\Documents\\Floreria\\floreria-aster-erp\\src\\pages\\Settings/**)"
     ]
   },
   "$version": 3

@@ -31,14 +31,14 @@ const CategoryItem: React.FC<{
 
     return (
         <div className="category-tree-item-container">
-            <div 
+            <div
                 className={`category-tree-item ${isActive ? 'active' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
                 onClick={() => onSelect(category.name)}
             >
                 <div className="flex items-center gap-2 flex-1 overflow-hidden">
                     {hasChildren ? (
-                        <button 
+                        <button
                             className="expand-btn"
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -56,33 +56,33 @@ const CategoryItem: React.FC<{
 
                 <div className="category-actions">
                     {onMoveUp && !isFirst && (
-                        <button className="action-btn" onClick={(e) => { e.stopPropagation(); onMoveUp(category); }} title="Subir">
+                        <button className="action-btn" onClick={(e) => { e.stopPropagation(); onMoveUp(category); }} title="Mover arriba en la lista">
                             <ArrowUp size={14} />
                         </button>
                     )}
                     {onMoveDown && !isLast && (
-                        <button className="action-btn" onClick={(e) => { e.stopPropagation(); onMoveDown(category); }} title="Bajar">
+                        <button className="action-btn" onClick={(e) => { e.stopPropagation(); onMoveDown(category); }} title="Mover abajo en la lista">
                             <ArrowDown size={14} />
                         </button>
                     )}
-                    <button 
-                        className="action-btn" 
+                    <button
+                        className="action-btn"
                         onClick={(e) => { e.stopPropagation(); onAddSub(category.id); }}
-                        title="Nueva Sub-carpeta"
+                        title="Crear sub-carpeta aquí"
                     >
                         <Plus size={14} />
                     </button>
-                    <button 
-                        className="action-btn" 
+                    <button
+                        className="action-btn"
                         onClick={(e) => { e.stopPropagation(); onRename(category); }}
-                        title="Renombrar"
+                        title="Renombrar carpeta"
                     >
                         <Edit2 size={14} />
                     </button>
-                    <button 
-                        className="action-btn hover-danger" 
+                    <button
+                        className="action-btn hover-danger"
                         onClick={(e) => { e.stopPropagation(); onDelete(category); }}
-                        title="Eliminar"
+                        title="Eliminar carpeta"
                     >
                         <Trash2 size={14} />
                     </button>
@@ -92,7 +92,7 @@ const CategoryItem: React.FC<{
             {hasChildren && isExpanded && (
                 <div className="category-children">
                     {category.children!.map((child, idx) => (
-                        <CategoryItem 
+                        <CategoryItem
                             key={child.id}
                             category={child}
                             level={level + 1}
@@ -113,9 +113,9 @@ const CategoryItem: React.FC<{
     );
 };
 
-export const CategoryTree: React.FC<CategoryTreeProps> = ({ 
-    categories, 
-    activeCategory, 
+export const CategoryTree: React.FC<CategoryTreeProps> = ({
+    categories,
+    activeCategory,
     onSelect,
     onAddSub,
     onRename,
@@ -136,7 +136,7 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
 
     const handleMove = (cat: Category, direction: 'up' | 'down') => {
         const parentId = cat.parent_id || null;
-        
+
         // Find siblings depending on whether it's root or nested
         let siblings: Category[] = [];
         if (!parentId) {
@@ -158,23 +158,23 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
                 siblings = [...parent.children];
             }
         }
-        
+
         siblings.sort((a, b) => (orderMap[a.id] ?? 0) - (orderMap[b.id] ?? 0));
-        
+
         const idx = siblings.findIndex(s => s.id === cat.id);
         if (idx === -1) return;
-        
+
         // Setup default order if empty
         const newMap = { ...orderMap };
         let changed = false;
-        
+
         siblings.forEach((s, i) => {
             if (newMap[s.id] === undefined) {
                 newMap[s.id] = i * 10;
                 changed = true;
             }
         });
-        
+
         if (direction === 'up' && idx > 0) {
             const target = siblings[idx - 1];
             const temp = newMap[cat.id];
@@ -194,7 +194,7 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
 
     // Sort categories
     const sortedCategories = [...categories].sort((a, b) => (orderMap[a.id] ?? 0) - (orderMap[b.id] ?? 0));
-    
+
     // Process children sorting recursively
     const sortChildrenRecursively = (cats: Category[]): Category[] => {
         return cats.map(c => {
@@ -207,11 +207,11 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
             return c;
         });
     };
-    
+
     const finalCategories = sortChildrenRecursively(sortedCategories);
     return (
         <div className="category-tree-root">
-            <div 
+            <div
                 className={`category-tree-item root-item ${activeCategory === 'Todos' ? 'active' : ''}`}
                 onClick={() => onSelect('Todos')}
             >
@@ -223,7 +223,7 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
 
             <div className="category-tree-list">
                 {finalCategories.map((cat, idx) => (
-                    <CategoryItem 
+                    <CategoryItem
                         key={cat.id}
                         category={cat}
                         level={0}

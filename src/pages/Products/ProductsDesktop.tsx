@@ -164,6 +164,32 @@ export const ProductsDesktop = () => {
         }
     };
 
+    // Render category options with hierarchy indentation
+    const renderCategoryOptions = (categories: typeof categoriesData, level: number) => {
+        return categories.map(cat => (
+            <>
+                <label key={cat.id} className="filter-option category-option" style={{ '--indent-level': level } as React.CSSProperties}>
+                    <input
+                        type="checkbox"
+                        checked={activeCategories.includes(cat.name)}
+                        onChange={(e) => {
+                            if (e.target.checked) setActiveCategories([...activeCategories, cat.name]);
+                            else setActiveCategories(activeCategories.filter(a => a !== cat.name));
+                        }}
+                    />
+                    {activeCategories.includes(cat.name) ? (
+                        <CheckSquare size={16} className="filter-checkbox checked" />
+                    ) : (
+                        <Square size={16} className="filter-checkbox" />
+                    )}
+                    {level > 0 && <span className="category-indent">└ </span>}
+                    <span className="filter-option-text">{cat.name}</span>
+                </label>
+                {cat.children && cat.children.length > 0 && renderCategoryOptions(cat.children, level + 1)}
+            </>
+        ));
+    };
+
     return (
         <div className="inventory-container">
             {isLoading && (
@@ -323,24 +349,7 @@ export const ProductsDesktop = () => {
                                                 </button>
                                             </div>
                                             <div className="filter-dropdown-content">
-                                                {categoriesData.map(c => (
-                                                    <label key={c.id} className="filter-option">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={activeCategories.includes(c.name)}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) setActiveCategories([...activeCategories, c.name]);
-                                                                else setActiveCategories(activeCategories.filter(a => a !== c.name));
-                                                            }}
-                                                        />
-                                                        {activeCategories.includes(c.name) ? (
-                                                            <CheckSquare size={16} className="filter-checkbox checked" />
-                                                        ) : (
-                                                            <Square size={16} className="filter-checkbox" />
-                                                        )}
-                                                        <span className="filter-option-text">{c.name}</span>
-                                                    </label>
-                                                ))}
+                                                {renderCategoryOptions(categoriesData, 0)}
                                                 <label className="filter-option">
                                                     <input
                                                         type="checkbox"
@@ -457,16 +466,18 @@ export const ProductsDesktop = () => {
                                 <button
                                     className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
                                     onClick={() => setViewMode('grid')}
-                                    title="Vista de tabla"
+                                    title="Vista de Tabla"
                                 >
                                     <Grid3x3 size={18} />
+                                    <span className="view-toggle-label">Tabla</span>
                                 </button>
                                 <button
                                     className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
                                     onClick={() => setViewMode('list')}
-                                    title="Vista de lista"
+                                    title="Vista de Lista"
                                 >
                                     <List size={18} />
+                                    <span className="view-toggle-label">Lista</span>
                                 </button>
                             </div>
                         </div>

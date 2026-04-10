@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, AlertCircle, TrendingUp, Plus, Check } from 'lucide-react';
+import { X, Save, AlertCircle, TrendingUp, Plus, Check, Package, Truck, DollarSign, Edit2, Barcode } from 'lucide-react';
 import { useStore, type AppState } from '../../store/useStore';
 import type { Product, Category } from '../../store/slices/types';
 import { generateIdWithPrefix, generateProductCode } from '../../utils/idGenerator';
@@ -190,8 +190,18 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         <div className="modal-overlay">
             <div className="modal-content product-modal">
                 <header className="modal-header">
-                    <h2 className="text-h2">{productToEdit ? 'Editar Producto' : 'Nuevo Producto'}</h2>
-                    <button className="btn-icon" onClick={onClose}>
+                    <div className="modal-header-content">
+                        <div className="modal-title-wrapper">
+                            <div className="modal-icon">
+                                {productToEdit ? <Edit2 size={24} /> : <Plus size={24} />}
+                            </div>
+                            <h2 className="text-h2">{productToEdit ? 'Editar Producto' : 'Nuevo Producto'}</h2>
+                        </div>
+                        <p className="modal-subtitle">
+                            {productToEdit ? 'Modificá los datos del producto' : 'Completá la información del nuevo producto'}
+                        </p>
+                    </div>
+                    <button className="btn-icon modal-close" onClick={onClose}>
                         <X size={24} />
                     </button>
                 </header>
@@ -204,23 +214,29 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                         </div>
                     )}
 
-                    <div className="form-group mb-4">
-                        <label className="form-label">Nombre del Producto *</label>
-                        <input
-                            type="text"
-                            className="form-input text-large"
-                            placeholder="Ej: Ramo Rosas Rojas"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            autoFocus
-                        />
-                    </div>
+                    {/* Sección: Información Básica */}
+                    <div className="form-section">
+                        <div className="section-header">
+                            <Package size={18} className="section-icon" />
+                            <h3 className="section-title">Información Básica</h3>
+                        </div>
 
-                    <div className="grid grid-2 gap-4 mb-4">
-                        <div className="form-group grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
+                        <div className="form-group mb-4">
+                            <label className="form-label">Nombre del Producto *</label>
+                            <input
+                                type="text"
+                                className="form-input text-large"
+                                placeholder="Ej: Ramo Rosas Rojas"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="grid grid-2 gap-4 mb-4">
+                            <div className="form-group">
                                 <label className="form-label">Carpeta / Categoría *</label>
-                                <select 
+                                <select
                                     className="form-select"
                                     value={formData.category}
                                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
@@ -242,12 +258,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                 </select>
                             </div>
 
-                            <div>
+                            <div className="form-group">
                                 <label className="form-label">Marca</label>
                                 <div className="flex gap-2">
                                     {!isAddingBrand ? (
                                         <>
-                                            <select 
+                                            <select
                                                 className="form-select flex-1"
                                                 value={formData.brand_id}
                                                 onChange={(e) => setFormData({ ...formData, brand_id: e.target.value })}
@@ -257,7 +273,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                                     <option key={brand.id} value={brand.id}>{brand.name}</option>
                                                 ))}
                                             </select>
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onClick={() => setIsAddingBrand(true)}
                                                 className="btn btn-secondary p-2"
@@ -268,7 +284,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                         </>
                                     ) : (
                                         <>
-                                            <input 
+                                            <input
                                                 type="text"
                                                 className="form-input flex-1"
                                                 placeholder="Nombre de marca"
@@ -276,14 +292,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                                 onChange={(e) => setNewBrandName(e.target.value)}
                                                 autoFocus
                                             />
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onClick={handleQuickAddBrand}
                                                 className="btn btn-primary p-2"
                                             >
                                                 <Check size={20} />
                                             </button>
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onClick={() => {
                                                     setIsAddingBrand(false);
@@ -298,151 +314,180 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                 </div>
                             </div>
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Código (Opcional)</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                placeholder="E-123"
-                                value={formData.code || ''}
-                                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                            />
-                        </div>
-                    </div>
 
-                    <div className="form-group mb-6">
-                        <label className="form-label">Código de Barras (Opcional)</label>
-                        <div className="input-with-action flex gap-2">
-                            <input
-                                type="text"
-                                className="form-input flex-1"
-                                placeholder="Escaneá o escribí el código"
-                                value={formData.barcode || ''}
-                                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                            />
-                            <button 
-                                type="button" 
-                                className="btn btn-secondary py-1 px-4 border border-border rounded-lg text-small"
-                                onClick={() => setFormData({ ...formData, barcode: formData.code || generateProductCode() })}
-                                title="Generar Automático"
-                            >
-                                Generar
-                            </button>
-                            <button 
-                                type="button" 
-                                className="btn-icon border border-border bg-surface hover:bg-surface-hover text-primary rounded-lg px-3"
-                                onClick={() => setIsScanOpen(true)}
-                                title="Escanear con cámara"
-                            >
-                                <span className="material-symbols-rounded">photo_camera</span>
-                            </button>
-                        </div>
-                        <p className="text-micro text-muted mt-1">Vincula el producto físico escaneando su código de barras.</p>
-                    </div>
+                        <div className="grid grid-2 gap-4 mb-4">
+                            <div className="form-group">
+                                <label className="form-label">Código (Opcional)</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="E-123"
+                                    value={formData.code || ''}
+                                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                                />
+                            </div>
 
-                    <div className="form-group mb-6">
-                        <label className="form-label font-bold text-primary">Proveedor que lo suministra (Opcional)</label>
-                        <select
-                            className="form-input"
-                            value={formData.supplierId || ''}
-                            onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
-                        >
-                            <option value="">-- Sin Proveedor Asignado --</option>
-                            {(suppliers || []).map(sup => (
-                                <option key={sup.id} value={sup.id}>{sup.name}</option>
-                            ))}
-                        </select>
-                        <p className="text-micro text-muted mt-1">Esto ayuda a organizar la reposición de stock por proveedor.</p>
-                    </div>
-
-                    <div className="grid grid-2 gap-4 mb-6">
-                        <div className="form-group">
-                            <label className="form-label">Costo ($) *</label>
-                            <input
-                                type="number"
-                                className="form-input text-h3"
-                                value={formData.cost}
-                                onChange={(e) => {
-                                    const value = Math.max(0, parseFloat(e.target.value) || 0);
-                                    setFormData({ ...formData, cost: value });
-                                }}
-                                placeholder="0"
-                                min="0"
-                                step="0.01"
-                            />
-                            <p className="text-micro text-muted mt-1">Precio que pagás al proveedor</p>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Precio de Venta ($) *</label>
-                            <input
-                                type="number"
-                                className="form-input text-h3"
-                                value={formData.price}
-                                onChange={(e) => {
-                                    const value = Math.max(0, parseFloat(e.target.value) || 0);
-                                    setFormData({ ...formData, price: value });
-                                }}
-                                placeholder="0"
-                                min="0"
-                                step="0.01"
-                            />
-                            <p className="text-micro text-muted mt-1">Precio al público</p>
-                        </div>
-                    </div>
-
-                    {/* Margin Display */}
-                    {(formData.cost || 0) > 0 && (formData.price || 0) > 0 && (
-                        <div className="margin-display mb-6 p-4 bg-surface rounded-lg border border-border">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <TrendingUp size={20} className={margin >= 50 ? 'text-success' : margin >= 30 ? 'text-warning' : 'text-danger'} />
-                                    <div>
-                                        <p className="text-small font-bold">Margen de Ganancia</p>
-                                        <p className="text-micro text-muted">
-                                            Ganancia: ${((formData.price || 0) - (formData.cost || 0)).toLocaleString()}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className={`text-h2 font-bold ${margin >= 50 ? 'text-success' : margin >= 30 ? 'text-warning' : 'text-danger'}`}>
-                                        {margin.toFixed(1)}%
-                                    </p>
-                                    <p className="text-micro text-muted">
-                                        {margin >= 50 ? 'Excelente' : margin >= 30 ? 'Bueno' : 'Bajo'}
-                                    </p>
+                            <div className="form-group">
+                                <label className="form-label">Código de Barras</label>
+                                <div className="input-with-action">
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Escaneá o escribí"
+                                        value={formData.barcode || ''}
+                                        onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                                    />
                                 </div>
                             </div>
                         </div>
-                    )}
 
-                    <div className="grid grid-2 gap-4 mb-6">
-                        <div className="form-group">
-                            <label className="form-label">Stock Inicial</label>
-                            <input
-                                type="number"
-                                className="form-input text-h3"
-                                value={formData.stock}
-                                onChange={(e) => {
-                                    const value = Math.max(0, parseInt(e.target.value) || 0);
-                                    setFormData({ ...formData, stock: value });
-                                }}
-                                min="0"
-                            />
+                        <div className="barcode-actions mb-4">
+                            <button
+                                type="button"
+                                className="btn-action-secondary"
+                                onClick={() => setFormData({ ...formData, barcode: formData.code || generateProductCode() })}
+                            >
+                                <Barcode size={16} />
+                                Generar automático
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-action-primary"
+                                onClick={() => setIsScanOpen(true)}
+                            >
+                                <span className="material-symbols-rounded">photo_camera</span>
+                                Escanear con cámara
+                            </button>
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Alerta Stock</label>
-                            <input
-                                type="number"
-                                className="form-input text-h3"
-                                value={formData.min}
-                                onChange={(e) => {
-                                    const value = clamp(parseInt(e.target.value) || 5, 1, 1000);
-                                    setFormData({ ...formData, min: value });
-                                }}
-                                min="1"
-                                max="1000"
-                            />
-                            <p className="text-micro text-muted mt-1">Recibir alerta cuando el stock sea ≤ a este valor</p>
+                    </div>
+
+                    {/* Sección: Proveedor */}
+                    <div className="form-section">
+                        <div className="section-header">
+                            <Truck size={18} className="section-icon" />
+                            <h3 className="section-title">Proveedor</h3>
+                        </div>
+
+                        <div className="form-group mb-4">
+                            <label className="form-label">Proveedor que lo suministra (Opcional)</label>
+                            <select
+                                className="form-input"
+                                value={formData.supplierId || ''}
+                                onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                            >
+                                <option value="">-- Sin Proveedor Asignado --</option>
+                                {(suppliers || []).map(sup => (
+                                    <option key={sup.id} value={sup.id}>{sup.name}</option>
+                                ))}
+                            </select>
+                            <p className="text-micro text-muted mt-1">Esto ayuda a organizar la reposición de stock por proveedor.</p>
+                        </div>
+                    </div>
+
+                    {/* Sección: Precios */}
+                    <div className="form-section">
+                        <div className="section-header">
+                            <DollarSign size={18} className="section-icon" />
+                            <h3 className="section-title">Precios y Ganancias</h3>
+                        </div>
+
+                        <div className="grid grid-2 gap-4 mb-4">
+                            <div className="form-group">
+                                <label className="form-label">Costo ($) *</label>
+                                <input
+                                    type="number"
+                                    className="form-input text-h3"
+                                    value={formData.cost}
+                                    onChange={(e) => {
+                                        const value = Math.max(0, parseFloat(e.target.value) || 0);
+                                        setFormData({ ...formData, cost: value });
+                                    }}
+                                    placeholder="0"
+                                    min="0"
+                                    step="0.01"
+                                />
+                                <p className="text-micro text-muted mt-1">Precio que pagás al proveedor</p>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Precio de Venta ($) *</label>
+                                <input
+                                    type="number"
+                                    className="form-input text-h3"
+                                    value={formData.price}
+                                    onChange={(e) => {
+                                        const value = Math.max(0, parseFloat(e.target.value) || 0);
+                                        setFormData({ ...formData, price: value });
+                                    }}
+                                    placeholder="0"
+                                    min="0"
+                                    step="0.01"
+                                />
+                                <p className="text-micro text-muted mt-1">Precio al público</p>
+                            </div>
+                        </div>
+
+                        {/* Margin Display */}
+                        {(formData.cost || 0) > 0 && (formData.price || 0) > 0 && (
+                            <div className="margin-display mb-4">
+                                <div className="margin-header">
+                                    <div className="margin-icon-wrapper">
+                                        <TrendingUp size={24} className={margin >= 50 ? 'text-success' : margin >= 30 ? 'text-warning' : 'text-danger'} />
+                                    </div>
+                                    <div className="margin-info">
+                                        <p className="margin-label font-bold">Margen de Ganancia</p>
+                                        <p className="margin-subtext">
+                                            Ganancia: ${((formData.price || 0) - (formData.cost || 0)).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className="margin-value">
+                                        <p className={`margin-percentage ${margin >= 50 ? 'text-success' : margin >= 30 ? 'text-warning' : 'text-danger'}`}>
+                                            {margin.toFixed(1)}%
+                                        </p>
+                                        <p className="margin-status">
+                                            {margin >= 50 ? 'Excelente' : margin >= 30 ? 'Bueno' : 'Bajo'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Sección: Stock */}
+                    <div className="form-section">
+                        <div className="section-header">
+                            <Package size={18} className="section-icon" />
+                            <h3 className="section-title">Stock e Inventario</h3>
+                        </div>
+
+                        <div className="grid grid-2 gap-4 mb-4">
+                            <div className="form-group">
+                                <label className="form-label">Stock Inicial</label>
+                                <input
+                                    type="number"
+                                    className="form-input text-h3"
+                                    value={formData.stock}
+                                    onChange={(e) => {
+                                        const value = Math.max(0, parseInt(e.target.value) || 0);
+                                        setFormData({ ...formData, stock: value });
+                                    }}
+                                    min="0"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Alerta Stock</label>
+                                <input
+                                    type="number"
+                                    className="form-input text-h3"
+                                    value={formData.min}
+                                    onChange={(e) => {
+                                        const value = clamp(parseInt(e.target.value) || 5, 1, 1000);
+                                        setFormData({ ...formData, min: value });
+                                    }}
+                                    min="1"
+                                    max="1000"
+                                />
+                                <p className="text-micro text-muted mt-1">Recibir alerta cuando el stock sea ≤ a este valor</p>
+                            </div>
                         </div>
                     </div>
 
@@ -458,7 +503,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 </form>
 
                 {isScanOpen && (
-                    <CameraScanner 
+                    <CameraScanner
                         onScan={handleCameraScan}
                         onClose={() => setIsScanOpen(false)}
                     />
