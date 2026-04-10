@@ -3,7 +3,7 @@ import {
     Plus, Search, Clock, Truck, X, FileText, Banknote, UserCircle,
     MapPin, CalendarDays, LayoutGrid, Copy, Package, Clock9, Check,
     MessageSquare, CreditCard, DollarSign, ArrowRight, ChevronLeft,
-    ChevronRight, Trash2, Calendar, Filter, Eye, Archive, AlertCircle
+    ChevronRight, Trash2, Filter, Eye, Archive, AlertCircle
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Order } from '../../store/useStore';
@@ -689,7 +689,6 @@ export const OrdersDesktop = () => {
                                     <div className="kanban-cards-container p-2 overflow-y-auto flex-1 custom-scrollbar">
                                         {columnOrders.map(order => {
                                             const pendingBalance = order.total - (order.advancePayment || 0);
-                                            const isPaid = pendingBalance <= 1;
                                             return (
                                                 <div
                                                     key={order.id}

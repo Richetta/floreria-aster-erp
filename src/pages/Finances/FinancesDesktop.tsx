@@ -9,12 +9,10 @@ import {
     ArrowDownLeft,
     Wallet,
     Calendar,
-    Search,
     Users,
     Receipt,
     X,
     Check,
-    Tag,
     CreditCard,
     Banknote
 } from 'lucide-react';

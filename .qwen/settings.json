@@ -19,7 +19,9 @@
       "Bash(type *)",
       "Read(c:\\Users\\Jan\\Documents\\Floreria\\floreria-aster-erp\\src\\pages\\Settings/**)",
       "Bash(select-object *)",
-      "Bash(git show *)"
+      "Bash(git show *)",
+      "Bash(del *)",
+      "Bash(git reset *)"
     ]
   },
   "$version": 3
