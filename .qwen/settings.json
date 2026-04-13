@@ -21,7 +21,8 @@
       "Bash(select-object *)",
       "Bash(git show *)",
       "Bash(del *)",
-      "Bash(git reset *)"
+      "Bash(git reset *)",
+      "Bash(npm install *)"
     ]
   },
   "$version": 3

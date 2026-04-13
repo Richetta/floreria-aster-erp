@@ -9,16 +9,16 @@ async function checkOrderLimit(businessId: string, reply: any) {
   try {
     // Get subscription limits
     const subResult = await db.selectFrom('subscriptions')
-        .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
-        .select([
-          'subscription_plans.max_orders_per_month',
-          'subscription_plans.name_short',
-          'subscription_plans.slug'
-        ])
-        .where('subscriptions.business_id', '=', businessId)
-        .where('subscriptions.status', 'in', ['active', 'trial'])
-        .limit(1)
-        .executeTakeFirst();
+      .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
+      .select([
+        'subscription_plans.max_orders_per_month',
+        'subscription_plans.name_short',
+        'subscription_plans.slug'
+      ])
+      .where('subscriptions.business_id', '=', businessId)
+      .where('subscriptions.status', 'in', ['active', 'trial'])
+      .limit(1)
+      .executeTakeFirst();
 
     // No subscription - apply free tier limit
     let maxOrders = 30; // Free tier
@@ -647,6 +647,61 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       .execute();
 
     return reply.send(orders);
+  });
+
+  // GET DELIVERIES FOR ROUTE OPTIMIZATION
+  fastify.get('/logistics/deliveries', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+
+    // Fetch all orders that need delivery optimization
+    const deliveries = await db
+      .selectFrom('orders')
+      .select([
+        'orders.id',
+        'orders.customer_id',
+        'orders.guest_name',
+        'orders.delivery_address',
+        'orders.delivery_address_street',
+        'orders.delivery_address_number',
+        'orders.delivery_address_floor',
+        'orders.delivery_address_city',
+        'orders.delivery_address_reference',
+        'orders.delivery_method',
+        'orders.delivery_date',
+        'orders.delivery_time_slot',
+        'orders.status',
+        'orders.contact_phone',
+        'orders.customer_phone',
+        'orders.notes',
+      ])
+      .where('orders.deleted_at', 'is', null)
+      .where('orders.delivery_method', '=', 'delivery')
+      .where('orders.status', 'in', ['ready', 'out_for_delivery', 'pending'])
+      .where('orders.delivery_address', 'is not', null)
+      .orderBy('orders.delivery_date', 'asc')
+      .execute();
+
+    // Get business address (florist location)
+    const business = await db
+      .selectFrom('businesses')
+      .select(['address'])
+      .where('id', '=', user.business_id)
+      .executeTakeFirst();
+
+    return reply.send({
+      deliveries,
+      floristAddress: business?.address || null,
+    });
   });
 };
 

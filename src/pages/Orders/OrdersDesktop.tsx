@@ -3,7 +3,7 @@ import {
     Plus, Search, Clock, Truck, X, FileText, Banknote, UserCircle,
     MapPin, CalendarDays, LayoutGrid, Copy, Package, Clock9, Check,
     MessageSquare, CreditCard, DollarSign, ChevronLeft, ArrowRight,
-    ChevronRight, Filter, Eye, Archive, AlertCircle, Printer
+    ChevronRight, Filter, Eye, Archive, AlertCircle
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Order } from '../../store/useStore';

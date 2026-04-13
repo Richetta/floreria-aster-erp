@@ -972,6 +972,14 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // ============================================
+  // LOGISTICS & ROUTE OPTIMIZATION
+  // ============================================
+
+  async getLogisticsDeliveries(): Promise<any> {
+    return this.request('/logistics/deliveries');
+  }
 }
 
 // ============================================
