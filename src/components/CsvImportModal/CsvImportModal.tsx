@@ -26,6 +26,7 @@ interface ParsedRow {
     stock: number;
     category: string;
     brand: string;
+    [key: string]: any; // Allow indexing
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -98,11 +99,17 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     const [importResult, setImportResult] = useState<{ updated: number, created: number } | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
 
-    const [previewData, setPreviewData] = useState<ParsedRow[]>([]);
-    const [bulkMargin, setBulkMargin] = useState<string>('');
-    const [bulkCategory, setBulkCategory] = useState('');
-    const [bulkBrand, setBulkBrand] = useState('');
-    const [searchTerm, setSearchTerm] = useState('');
+    const [textMode, setTextMode] = useState<'free' | 'grid'>('free'); // 'free' for raw text, 'grid' for excel-like
+    const [gridRows, setGridRows] = useState<any[]>(Array(10).fill({
+        _id: '',
+        'Código': '',
+        'Nombre': '',
+        'Precio ($)': '',
+        'Costo ($$)': '',
+        'Stock (+)': '',
+        'Categoria': '',
+        'Marca': ''
+    }).map(r => ({ ...r, _id: generateId() })));
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -144,12 +151,19 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
             if (activeTab === 'file' && file) {
                 const parseResponse = await api.parseFile(file);
                 rawData = parseResponse.data;
-            } else if (activeTab === 'text' && pasteText.trim()) {
-                const parseResponse = await api.request<any>('/import-data/parse-text', {
-                    method: 'POST',
-                    body: JSON.stringify({ text: pasteText })
-                });
-                rawData = parseResponse.data;
+            } else if (activeTab === 'text') {
+                if (textMode === 'free') {
+                    if (!pasteText.trim()) throw new Error('Pegá algún contenido antes de procesar.');
+                    const parseResponse = await api.request<any>('/import-data/parse-text', {
+                        method: 'POST',
+                        body: JSON.stringify({ text: pasteText })
+                    });
+                    rawData = parseResponse.data;
+                } else {
+                    // Grid Mode: Filter empty rows (must have at least name or code)
+                    rawData = gridRows.filter(r => r['Nombre'].trim() || r['Código'].trim());
+                    if (rawData.length === 0) throw new Error('Completá al menos una fila en la planilla.');
+                }
             }
 
             if (!rawData || rawData.length === 0) throw new Error('No se encontraron datos interpretables.');
@@ -408,25 +422,142 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                 </div>
                             ) : (
                                 <div className="csv-paste-section">
-                                    <textarea
-                                        className="csv-paste-textarea"
-                                        placeholder={`Pegá aquí el contenido de tu lista...\n\nEjemplo:\nCódigo,Nombre,Precio,Costo,Stock,Categoría,Marca\nPROD001,Rosas Rojas,1500,800,50,Plantas,Mi Jardín`}
-                                        value={pasteText}
-                                        onChange={(e) => setPasteText(e.target.value)}
-                                    />
-                                    <div className="csv-paste-helper">
-                                        <div className="csv-helper-icon">
-                                            <Sparkles size={16} />
-                                        </div>
-                                        <div className="csv-helper-text">
-                                            <p className="csv-helper-title">Funcionalidad inteligente de precios:</p>
-                                            <ul>
-                                                <li><code>+10%</code> → Subir un porcentaje</li>
-                                                <li><code>+$10</code> o <code>$10</code> → Sumar dinero fijo</li>
-                                                <li><code>$$2000</code> → Imponer precio fijo exacto</li>
-                                            </ul>
-                                        </div>
+                                    <div className="csv-text-mode-selector">
+                                        <button 
+                                            className={`text-mode-btn ${textMode === 'free' ? 'active' : ''}`}
+                                            onClick={() => setTextMode('free')}
+                                        >
+                                            <Sparkles size={14} />
+                                            <span>Texto Libre / Pegado Inteligente</span>
+                                        </button>
+                                        <button 
+                                            className={`text-mode-btn ${textMode === 'grid' ? 'active' : ''}`}
+                                            onClick={() => setTextMode('grid')}
+                                        >
+                                            <FileSpreadsheet size={14} />
+                                            <span>Planilla Tipo Excel</span>
+                                        </button>
                                     </div>
+
+                                    {textMode === 'free' ? (
+                                        <>
+                                            <textarea
+                                                className="csv-paste-textarea"
+                                                placeholder={`Pegá aquí el contenido de tu lista...\n\nEjemplo:\nCódigo,Nombre,Precio,Costo,Stock,Categoría,Marca\nPROD001,Rosas Rojas,1500,800,50,Plantas,Mi Jardín`}
+                                                value={pasteText}
+                                                onChange={(e) => setPasteText(e.target.value)}
+                                            />
+                                            <div className="csv-paste-helper">
+                                                <div className="csv-helper-icon">
+                                                    <Sparkles size={16} />
+                                                </div>
+                                                <div className="csv-helper-text">
+                                                    <p className="csv-helper-title">Funcionalidad inteligente de precios:</p>
+                                                    <ul>
+                                                        <li><code>+10%</code> → Subir un porcentaje</li>
+                                                        <li><code>+$10</code> o <code>$10</code> → Sumar dinero fijo</li>
+                                                        <li><code>$$2000</code> → Imponer precio fijo exacto</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="csv-grid-template">
+                                            <div className="csv-grid-wrapper">
+                                                <table className="csv-edit-grid">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Código</th>
+                                                            <th>Nombre</th>
+                                                            <th>Precio ($)</th>
+                                                            <th>Costo ($$)</th>
+                                                            <th>Stock (+)</th>
+                                                            <th>Categoría</th>
+                                                            <th>Marca</th>
+                                                            <th width="40"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {gridRows.map((row, idx) => (
+                                                            <tr key={row._id}>
+                                                                <td><input value={row['Código']} onChange={e => {
+                                                                    const newRows = [...gridRows];
+                                                                    newRows[idx]['Código'] = e.target.value;
+                                                                    setGridRows(newRows);
+                                                                }} placeholder="Ej: P001" /></td>
+                                                                <td><input value={row['Nombre']} onChange={e => {
+                                                                    const newRows = [...gridRows];
+                                                                    newRows[idx]['Nombre'] = e.target.value;
+                                                                    setGridRows(newRows);
+                                                                }} placeholder="Nombre del producto" /></td>
+                                                                <td><input type="text" value={row['Precio ($)']} onChange={e => {
+                                                                    const newRows = [...gridRows];
+                                                                    newRows[idx]['Precio ($)'] = e.target.value;
+                                                                    setGridRows(newRows);
+                                                                }} placeholder="0" /></td>
+                                                                <td><input type="text" value={row['Costo ($$)']} onChange={e => {
+                                                                    const newRows = [...gridRows];
+                                                                    newRows[idx]['Costo ($$)'] = e.target.value;
+                                                                    setGridRows(newRows);
+                                                                }} placeholder="0" /></td>
+                                                                <td><input type="text" value={row['Stock (+)']} onChange={e => {
+                                                                    const newRows = [...gridRows];
+                                                                    newRows[idx]['Stock (+)'] = e.target.value;
+                                                                    setGridRows(newRows);
+                                                                }} placeholder="0" /></td>
+                                                                <td><input value={row['Categoria']} onChange={e => {
+                                                                    const newRows = [...gridRows];
+                                                                    newRows[idx]['Categoria'] = e.target.value;
+                                                                    setGridRows(newRows);
+                                                                }} placeholder="Carpeta" /></td>
+                                                                <td><input value={row['Marca']} onChange={e => {
+                                                                    const newRows = [...gridRows];
+                                                                    newRows[idx]['Marca'] = e.target.value;
+                                                                    setGridRows(newRows);
+                                                                }} placeholder="Marca" /></td>
+                                                                <td>
+                                                                    <button className="grid-row-delete" onClick={() => {
+                                                                        setGridRows(gridRows.filter((_, i) => i !== idx));
+                                                                    }}><X size={14} /></button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div className="csv-grid-actions">
+                                                <button className="csv-grid-add-row" onClick={() => setGridRows([...gridRows, {
+                                                    _id: generateId(),
+                                                    'Código': '',
+                                                    'Nombre': '',
+                                                    'Precio ($)': '',
+                                                    'Costo ($$)': '',
+                                                    'Stock (+)': '',
+                                                    'Categoria': '',
+                                                    'Marca': ''
+                                                }])}>
+                                                    <PlusCircle size={14} />
+                                                    <span>Añadir fila</span>
+                                                </button>
+                                                <button className="csv-grid-clear" onClick={() => {
+                                                    if (confirm('¿Vaciar toda la planilla?')) {
+                                                        setGridRows(Array(10).fill({
+                                                            _id: '',
+                                                            'Código': '',
+                                                            'Nombre': '',
+                                                            'Precio ($)': '',
+                                                            'Costo ($$)': '',
+                                                            'Stock (+)': '',
+                                                            'Categoria': '',
+                                                            'Marca': ''
+                                                        }).map(r => ({ ...r, _id: generateId() })));
+                                                    }
+                                                }}>
+                                                    Vaciar planilla
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -703,7 +834,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                             <button
                                 className="csv-btn csv-btn-primary"
                                 onClick={handlePreview}
-                                disabled={isLoading || (activeTab === 'file' ? !file : !pasteText.trim())}
+                                disabled={isLoading || (activeTab === 'file' ? !file : (textMode === 'free' ? !pasteText.trim() : gridRows.every(r => !r['Nombre'] && !r['Código'])))}
                             >
                                 {isLoading ? (
                                     <RefreshCw size={18} className="csv-btn-icon csv-spin" />
