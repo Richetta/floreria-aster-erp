@@ -36,9 +36,7 @@ export const ProductsDesktop = () => {
     const renameCategory = useStore((state) => state.renameCategory);
     const deleteCategory = useStore((state) => state.deleteCategory);
     const deleteProduct = useStore((state) => state.deleteProduct);
-
-
-    // Loading state
+    const bulkDeleteProducts = useStore((state) => state.bulkDeleteProducts);
     const [isLoading, setIsLoading] = useState(true);
 
     // Load data on mount
@@ -174,13 +172,32 @@ export const ProductsDesktop = () => {
     const handleDeleteCategoryAction = async (cat: Category) => {
         const confirmed = await showConfirm({
             title: '¿Eliminar carpeta?',
-            message: `Se eliminará "${cat.name}". Los productos se moverán a "Sin Categoría".`,
-            confirmText: 'Eliminar',
+            message: `¿Qué quieres hacer con los productos dentro de "${cat.name}"?`,
+            confirmText: 'Solo Carpeta',
+            cancelText: 'Vaciarlos y Eliminar',
+            variant: 'danger'
+        });
+
+        // Use custom confirmation for the second option since showConfirm might be binary
+        if (confirmed !== null) {
+            // mode: confirmed is true -> unbind products, confirmed is false -> delete products
+            // wait, showConfirm returns boolean. true for confirmText, false for cancelText? 
+            // I need to check useModal/Modals.tsx logic
+            deleteCategory(cat.id, !confirmed); 
+            setActiveCategories(prev => prev.filter(c => c !== cat.name));
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        const confirmed = await showConfirm({
+            title: '¿Eliminar productos seleccionados?',
+            message: `Borrarás ${selectedProductIds.size} productos permanentemente. Esta acción no se puede deshacer.`,
+            confirmText: 'Eliminar Todo',
             variant: 'danger'
         });
         if (confirmed) {
-            deleteCategory(cat.name);
-            setActiveCategories(prev => prev.filter(c => c !== cat.name));
+            await bulkDeleteProducts(Array.from(selectedProductIds));
+            clearSelection();
         }
     };
 
@@ -513,15 +530,24 @@ export const ProductsDesktop = () => {
                                 </button>
                             </div>
 
-                            {/* Bulk Edit Button */}
+                            {/* Bulk Actions */}
                             {selectedProductIds.size > 0 && (
-                                <button
-                                    className="btn-bulk-edit"
-                                    onClick={() => setShowBulkEditModal(true)}
-                                >
-                                    <Check size={16} />
-                                    Editar {selectedProductIds.size}
-                                </button>
+                                <div className="bulk-actions-toolbar flex items-center gap-2">
+                                    <button
+                                        className="btn-bulk-edit"
+                                        onClick={() => setShowBulkEditModal(true)}
+                                    >
+                                        <Check size={16} />
+                                        Editar {selectedProductIds.size}
+                                    </button>
+                                    <button
+                                        className="btn-bulk-delete"
+                                        onClick={handleBulkDelete}
+                                    >
+                                        <Trash2 size={16} />
+                                        Eliminar
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>

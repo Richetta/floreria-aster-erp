@@ -35,18 +35,22 @@ const parseDataIntoRows = (rawData: any[]): ParsedRow[] => {
         const getVal = (keys: string[]) => {
             if (!row) return '';
             for (const k of keys) {
-                const foundKey = Object.keys(row).find(rk => rk.toLowerCase().trim() === k.toLowerCase());
+                const foundKey = Object.keys(row).find(rk => {
+                    const rkLow = rk.toLowerCase().trim();
+                    const kLow = k.toLowerCase().trim();
+                    return rkLow === kLow || rkLow.includes(kLow);
+                });
                 if (foundKey) return row[foundKey];
             }
             return '';
         };
 
-        const code = getVal(['código', 'codigo', 'code', 'sku']) || '';
-        const name = getVal(['nombre', 'name', 'producto', 'artículo', 'articulo']) || `Producto Sin Nombre (${idx + 1})`;
-        const costRaw = getVal(['costo', 'cost', 'precio de costo', 'precio costo']);
-        const priceRaw = getVal(['precio', 'price', 'precio de venta', 'venta']);
-        const stockRaw = getVal(['stock', 'cantidad', 'qty', 'quantity']);
-        const category = getVal(['categoría', 'categoria', 'category', 'rubro', 'carpeta']);
+        const code = getVal(['código', 'codigo', 'code', 'sku', 'ref']) || '';
+        const name = getVal(['nombre', 'name', 'producto', 'artículo', 'articulo', 'desc']) || `Producto Sin Nombre (${idx + 1})`;
+        const costRaw = getVal(['costo', 'cost', 'precio de costo', 'precio costo', 'compra', '($$)']);
+        const priceRaw = getVal(['precio', 'price', 'precio de venta', 'venta', '($)']);
+        const stockRaw = getVal(['stock', 'cantidad', 'qty', 'quantity', '(+)']);
+        const category = getVal(['categoría', 'categoria', 'category', 'rubro', 'carpeta', 'grupo']);
         const brand = getVal(['marca', 'brand']);
 
         const cost = parseFloat(String(costRaw).replace(/[^0-9.-]+/g, "")) || 0;
@@ -74,7 +78,7 @@ const parseDataIntoRows = (rawData: any[]): ParsedRow[] => {
             cost,
             margin,
             price: Math.round(price),
-            stock: parseInt(stockRaw) || 0,
+            stock: parseInt(String(stockRaw)) || 0,
             category: String(category),
             brand: String(brand)
         };
@@ -125,7 +129,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
         e.preventDefault();
         setIsDragOver(false);
         const droppedFile = e.dataTransfer.files[0];
-        if (droppedFile && (droppedFile.name.endsWith('.csv') || droppedFile.name.endsWith('.xlsx') || droppedFile.name.endsWith('.xls'))) {
+        if (droppedFile && (droppedFile.name.endsWith('.csv') || droppedFile.name.endsWith('.xlsx') || droppedFile.name.endsWith('.xls') || droppedFile.name.endsWith('.pdf') || droppedFile.name.endsWith('.doc') || droppedFile.name.endsWith('.docx'))) {
             setFile(droppedFile);
             setError(null);
         }
@@ -374,7 +378,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                         ref={fileInputRef}
                                         type="file"
                                         onChange={handleFileChange}
-                                        accept=".csv,.xlsx,.xls"
+                                        accept=".csv,.xlsx,.xls,.pdf,.doc,.docx"
                                         className="csv-file-input"
                                     />
                                     <div className="csv-dropzone-content">
@@ -393,9 +397,10 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                                 <h3 className="csv-dropzone-title">Arrastrá tu archivo aquí</h3>
                                                 <p className="csv-dropzone-subtitle">o hacé clic para seleccionar</p>
                                                 <div className="csv-formats">
+                                                    <span className="csv-format-badge">Excel</span>
                                                     <span className="csv-format-badge">CSV</span>
-                                                    <span className="csv-format-badge">XLSX</span>
-                                                    <span className="csv-format-badge">XLS</span>
+                                                    <span className="csv-format-badge">PDF</span>
+                                                    <span className="csv-format-badge">Word</span>
                                                 </div>
                                             </>
                                         )}

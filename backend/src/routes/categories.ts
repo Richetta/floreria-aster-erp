@@ -127,7 +127,7 @@ export const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // DELETE CATEGORY (Soft delete or just de-activate)
+  // DELETE CATEGORY
   fastify.delete('/:id', {
     preHandler: [async (request, reply) => {
       try {
@@ -139,15 +139,39 @@ export const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
+    const { delete_products } = request.query as { delete_products?: string };
+    const shouldDeleteProducts = delete_products === 'true';
 
     try {
-      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+      await db.transaction().execute(async (trx) => {
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-      await db
-        .updateTable('categories')
-        .set({ is_active: false, updated_at: new Date() })
-        .where('id', '=', id)
-        .execute();
+        if (shouldDeleteProducts) {
+          // Soft delete products in this category
+          await trx
+            .updateTable('products')
+            .set({ deleted_at: new Date(), updated_at: new Date() })
+            .where('category_id', '=', id)
+            .where('business_id', '=', user.business_id)
+            .execute();
+        } else {
+          // Unbind products from this category
+          await trx
+            .updateTable('products')
+            .set({ category_id: null, updated_at: new Date() })
+            .where('category_id', '=', id)
+            .where('business_id', '=', user.business_id)
+            .execute();
+        }
+
+        // Soft delete the category
+        await trx
+          .updateTable('categories')
+          .set({ is_active: false, updated_at: new Date() })
+          .where('id', '=', id)
+          .where('business_id', '=', user.business_id)
+          .execute();
+      });
 
       return reply.send({ success: true });
     } catch (error: any) {

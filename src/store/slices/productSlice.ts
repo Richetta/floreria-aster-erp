@@ -16,15 +16,16 @@ export interface ProductSlice {
     addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
     updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
     deleteProduct: (id: string) => Promise<void>;
+    bulkDeleteProducts: (ids: string[]) => Promise<void>;
     addCategory: (category: string, parentId?: string) => Promise<void>;
     renameCategory: (oldName: string, newName: string) => Promise<void>;
     deleteCategory: (name: string) => void;
     addBrand: (name: string) => Promise<Brand | null>;
     deleteBrand: (id: string) => Promise<void>;
-    
+
     addTag: (tag: string) => void;
     removeTag: (tag: string) => void;
-    
+
     trackSale: (id: string, q: number) => void;
     registerWaste: (productId: string, quantity: number, reason: string) => Promise<void>;
     getPriceHistory: (id: string) => Promise<any[]>;
@@ -60,7 +61,7 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
     loadCategories: async (includeHierarchy = false) => {
         try {
             const categoriesData = await api.getCategories(includeHierarchy);
-            set({ 
+            set({
                 categoriesData,
                 categories: categoriesData.map(c => c.name)
             } as any);
@@ -98,7 +99,7 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
             if (!current) return;
             const updatedProduct = { ...current, ...updates };
             await api.updateProduct(id, mapFrontendToApiProduct(updatedProduct, get().categoriesData));
-            
+
             set(state => ({
                 products: state.products.map(p => p.id === id ? updatedProduct : p)
             }));
@@ -119,6 +120,19 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
         } catch (error: any) {
             get().addNotification('Error al eliminar producto', 'error');
             console.error('Error deleting product:', error);
+        }
+    },
+
+    bulkDeleteProducts: async (ids: string[]) => {
+        try {
+            const result = await api.bulkDeleteProducts(ids);
+            set(state => ({
+                products: state.products.filter(p => !ids.includes(p.id))
+            }));
+            get().addNotification(`${result.deleted} productos eliminados`, 'success');
+        } catch (error: any) {
+            get().addNotification('Error al eliminar productos', 'error');
+            console.error('Error bulk deleting products:', error);
         }
     },
 
@@ -183,14 +197,23 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
         }
     },
 
-    deleteCategory: (name) => {
-        // Implement logic to delete or handle products in category
-        set(state => ({
-            categories: state.categories.filter(c => c !== name),
-            products: state.products.map(p =>
-            p.category === name ? { ...p, category: 'Sin Categoría' } : p
-            )
-        }));
+    deleteCategory: async (id: string, deleteProducts: boolean = false) => {
+        try {
+            await api.deleteCategory(id, deleteProducts);
+            set(state => ({
+                categoriesData: state.categoriesData.filter(c => c.id !== id),
+                categories: state.categoriesData.filter(c => c.id !== id).map(c => c.name),
+                products: deleteProducts 
+                    ? state.products.filter(p => !get().categoriesData.find(c => c.id === id)?.name || p.category !== get().categoriesData.find(c => c.id === id)?.name)
+                    : state.products.map(p => {
+                        const catFull = get().categoriesData.find(c => c.id === id);
+                        return (catFull && p.category === catFull.name) ? { ...p, category: 'Sin Categoría' } : p;
+                    })
+            }));
+            get().addNotification('Categoría eliminada', 'success');
+        } catch (error: any) {
+            get().addNotification('Error al eliminar categoría', 'error');
+        }
     },
 
     addTag: (tag) => {
@@ -213,8 +236,8 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
         const now = new Date().toISOString();
         set(state => ({
             products: state.products.map(p =>
-                p.id === id 
-                    ? { ...p, stock: p.stock - q, salesCount: (p.salesCount || 0) + q, lastSaleDate: now } 
+                p.id === id
+                    ? { ...p, stock: p.stock - q, salesCount: (p.salesCount || 0) + q, lastSaleDate: now }
                     : p
             )
         }));

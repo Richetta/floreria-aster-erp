@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Check, Tag, Barcode, DollarSign, Building2, Folder } from 'lucide-react';
+import { X, Check, Tag, Barcode, DollarSign, Building2, Folder, Trash2, AlertTriangle, Edit2 } from 'lucide-react';
 import { useStore, type AppState } from '../../store/useStore';
 import type { Product } from '../../store/slices/types';
 import './BulkEditModal.css';
@@ -8,14 +8,16 @@ interface BulkEditModalProps {
     selectedProducts: Product[];
     isOpen: boolean;
     onClose: () => void;
+    onDelete?: (ids: string[]) => Promise<void>;
 }
 
-export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, isOpen, onClose }) => {
+export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, isOpen, onClose, onDelete }) => {
     const categoriesData = useStore((state: AppState) => state.categoriesData);
     const brands = useStore((state: AppState) => state.brands);
     const updateProduct = useStore((state: AppState) => state.updateProduct);
     const loadProducts = useStore((state: AppState) => state.loadProducts);
 
+    const [activeTab, setActiveTab] = useState<'edit' | 'delete'>('edit');
     const [fields, setFields] = useState({
         barcode: { enabled: false, value: '' },
         category: { enabled: false, value: '' },
@@ -94,6 +96,24 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
         onClose();
     };
 
+    const handleDelete = async () => {
+        if (!onDelete) return;
+        setIsProcessing(true);
+        setProcessedCount(0);
+
+        const batchSize = 50;
+        const ids = selectedProducts.map(p => p.id);
+
+        for (let i = 0; i < ids.length; i += batchSize) {
+            const batch = ids.slice(i, i + batchSize);
+            await onDelete(batch);
+            setProcessedCount(Math.min(i + batchSize, ids.length));
+        }
+
+        setIsProcessing(false);
+        onClose();
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -103,7 +123,7 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
                     <div className="bulk-modal-title">
                         <Tag size={22} />
                         <div>
-                            <h2>Edición Masiva</h2>
+                            <h2>Acciones Masivas</h2>
                             <p>{selectedProducts.length} productos seleccionados</p>
                         </div>
                     </div>
@@ -112,11 +132,58 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
                     </button>
                 </div>
 
+                {/* Tabs */}
+                <div className="bulk-tabs">
+                    <button
+                        className={`bulk-tab-btn ${activeTab === 'edit' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('edit')}
+                    >
+                        <Edit2 size={16} />
+                        Editar campos
+                    </button>
+                    <button
+                        className={`bulk-tab-btn ${activeTab === 'delete' ? 'active danger' : ''}`}
+                        onClick={() => setActiveTab('delete')}
+                    >
+                        <Trash2 size={16} />
+                        Eliminar
+                    </button>
+                </div>
+
                 <div className="bulk-modal-body">
                     {isProcessing ? (
                         <div className="bulk-processing">
                             <div className="processing-spinner"></div>
                             <p>Procesando {processedCount} de {selectedProducts.length} productos...</p>
+                        </div>
+                    ) : activeTab === 'delete' ? (
+                        <div className="bulk-delete-section">
+                            <div className="bulk-delete-warning">
+                                <AlertTriangle size={24} className="bulk-delete-warning-icon" />
+                                <div>
+                                    <p className="bulk-delete-warning-title">¡Atención! Estás por eliminar productos</p>
+                                    <p className="bulk-delete-warning-text">
+                                        Vas a eliminar <strong>{selectedProducts.length} producto{selectedProducts.length !== 1 ? 's' : ''}</strong>. Esta acción no se puede deshacer.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="bulk-delete-list">
+                                <h4>Productos a eliminar:</h4>
+                                <ul>
+                                    {selectedProducts.slice(0, 20).map(p => (
+                                        <li key={p.id}>
+                                            <Trash2 size={14} className="delete-item-icon" />
+                                            <span className="delete-item-name">{p.name}</span>
+                                            <span className="delete-item-code">{p.code}</span>
+                                        </li>
+                                    ))}
+                                    {selectedProducts.length > 20 && (
+                                        <li className="delete-more-indicator">
+                                            ... y {selectedProducts.length - 20} más
+                                        </li>
+                                    )}
+                                </ul>
+                            </div>
                         </div>
                     ) : (
                         <>
@@ -286,14 +353,25 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
                     <button className="btn-bulk-cancel" onClick={onClose} disabled={isProcessing}>
                         Cancelar
                     </button>
-                    <button
-                        className="btn-bulk-apply"
-                        onClick={handleApply}
-                        disabled={isProcessing || !Object.values(fields).some(f => f.enabled)}
-                    >
-                        <Check size={16} />
-                        {isProcessing ? `Procesando...` : `Aplicar a ${selectedProducts.length} productos`}
-                    </button>
+                    {activeTab === 'delete' ? (
+                        <button
+                            className="btn-bulk-delete"
+                            onClick={handleDelete}
+                            disabled={isProcessing || !onDelete}
+                        >
+                            <Trash2 size={16} />
+                            {isProcessing ? `Eliminando...` : `Eliminar ${selectedProducts.length} producto${selectedProducts.length !== 1 ? 's' : ''}`}
+                        </button>
+                    ) : (
+                        <button
+                            className="btn-bulk-apply"
+                            onClick={handleApply}
+                            disabled={isProcessing || !Object.values(fields).some(f => f.enabled)}
+                        >
+                            <Check size={16} />
+                            {isProcessing ? `Procesando...` : `Aplicar a ${selectedProducts.length} producto${selectedProducts.length !== 1 ? 's' : ''}`}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

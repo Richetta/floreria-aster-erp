@@ -9,17 +9,17 @@ async function checkProductLimit(businessId: string, reply: any) {
   try {
     // Get subscription limits
     const subResult = await db.selectFrom('subscriptions')
-        .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
-        .select([
-          'subscription_plans.max_products',
-          'subscription_plans.name_short',
-          'subscription_plans.slug',
-          'subscriptions.status'
-        ])
-        .where('subscriptions.business_id', '=', businessId)
-        .where('subscriptions.status', 'in', ['active', 'trial'])
-        .limit(1)
-        .executeTakeFirst();
+      .innerJoin('subscription_plans', 'subscription_plans.id', 'subscriptions.plan_id')
+      .select([
+        'subscription_plans.max_products',
+        'subscription_plans.name_short',
+        'subscription_plans.slug',
+        'subscriptions.status'
+      ])
+      .where('subscriptions.business_id', '=', businessId)
+      .where('subscriptions.status', 'in', ['active', 'trial'])
+      .limit(1)
+      .executeTakeFirst();
 
     // No subscription - apply free tier limit
     let maxProducts = 50; // Free tier
@@ -418,6 +418,42 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return reply.send({ success: true });
+  });
+
+  // BULK DELETE PRODUCTS
+  fastify.post('/bulk-delete', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+    const { ids } = request.body as { ids: string[] };
+
+    if (!ids || ids.length === 0) {
+      return reply.status(400).send({ error: 'No product IDs provided' });
+    }
+
+    const result = await db.transaction().execute(async (trx) => {
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+
+      const res = await trx
+        .updateTable('products')
+        .set({
+          deleted_at: new Date(),
+          is_active: false
+        })
+        .where('id', 'in', ids)
+        .where('business_id', '=', user.business_id)
+        .executeTakeFirst();
+
+      return { deleted: Number(res.numChangedRows || 0) };
+    });
+
+    return reply.send({ success: true, ...result });
   });
 
   // UPDATE STOCK

@@ -376,6 +376,13 @@ class ApiClient {
     });
   }
 
+  async bulkDeleteProducts(ids: string[]): Promise<{ success: boolean; deleted: number }> {
+    return this.request<{ success: boolean; deleted: number }>('/products/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    });
+  }
+
   async bulkAssignSupplier(productIds: string[], supplierId: string): Promise<{ success: boolean; updated: number }> {
     return this.request<{ success: boolean; updated: number }>('/products/bulk-supplier', {
       method: 'PUT',
@@ -533,8 +540,8 @@ class ApiClient {
     });
   }
 
-  async deleteCategory(id: string): Promise<{ success: boolean }> {
-    return this.request<{ success: boolean }>(`/categories/${id}`, {
+  async deleteCategory(id: string, deleteProducts: boolean = false): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/categories/${id}?delete_products=${deleteProducts}`, {
       method: 'DELETE',
     });
   }

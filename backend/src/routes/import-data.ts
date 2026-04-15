@@ -43,20 +43,61 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     return isNaN(parsed) ? undefined : parsed;
   };
 
+  const findHeaderIndex = (headersRow: any[], keywords: string[]) => {
+    return headersRow.findIndex(val => {
+      if (!val) return false;
+      const s = String(val).toLowerCase();
+      return keywords.some(k => s.includes(k.toLowerCase()));
+    });
+  };
+
   const smartParseText = (text: string) => {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3);
     const results: any[] = [];
-    for (const line of lines) {
+    
+    // Header detection from text if available
+    let headerIdx = -1;
+    const commonKeywords = ['cod', 'nom', 'pre', 'cost', 'cant'];
+    for (let i = 0; i < Math.min(lines.length, 5); i++) {
+        const lineLower = lines[i].toLowerCase();
+        if (commonKeywords.filter(k => lineLower.includes(k)).length >= 2) {
+            headerIdx = i;
+            break;
+        }
+    }
+
+    const dataLines = headerIdx !== -1 ? lines.slice(headerIdx + 1) : lines;
+
+    for (const line of dataLines) {
       if (line.toLowerCase().includes('total') || line.toLowerCase().includes('fecha')) continue;
-      const priceMatch = line.match(/(\$?\s?(\d+[.,]\d{2})|\$?\s?(\d{2,}))/);
-      if (!priceMatch) continue;
-      const price = cleanPrice(priceMatch[1]);
+      
+      // Try Price detection
+      const priceMatch = line.match(/(\$?\s?(\d+([.,]\d{2})?)|\$?\s?(\d{2,}))/g);
+      let price: number | undefined;
+      let cost: number | undefined;
+      
+      if (priceMatch && priceMatch.length >= 1) {
+        price = cleanPrice(priceMatch[priceMatch.length - 1]);
+        if (priceMatch.length >= 2) {
+            cost = cleanPrice(priceMatch[0]);
+        }
+      }
+
       if (price === undefined) continue;
-      const codeMatch = line.match(/([A-Z0-9]{2,10}[-.]?[A-Z0-9]{1,10})/i);
+
+      // Try Code detection
+      const codeMatch = line.match(/([A-Z0-9]{3,10}[-.]?[A-Z0-9]{1,10})/i);
       const code = codeMatch ? codeMatch[1].toUpperCase() : `AUTO-${Math.random().toString(36).substring(7).toUpperCase()}`;
-      let name = line.replace(priceMatch[0], '').replace(codeMatch ? codeMatch[0] : '', '').replace(/[-|]/g, ' ').trim();
+      
+      // Clean name
+      let name = line;
+      if (priceMatch) priceMatch.forEach(p => name = name.replace(p, ''));
+      if (codeMatch) name = name.replace(codeMatch[0], '');
+      name = name.replace(/[-|]/g, ' ').replace(/\s+/g, ' ').trim();
+      
       if (name.length < 2) name = "Producto sin nombre";
-      results.push({ code, name, price });
+      
+      results.push({ code, name, price, cost });
     }
     return results;
   };
@@ -94,124 +135,91 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
         await sql`SELECT set_config('app.current_business_id', ${businessId}, true)`.execute(trx);
         const stats = { updated: 0, created: 0, errors: [] as any[] };
 
-        // Optimization: Fetch all existing products, categories, and brands in this batch at once
+        // Fetch all potential existing data to reduce queries
         const codes = body.data.map(r => r.code).filter(Boolean);
         const existingProducts = codes.length > 0
           ? await trx.selectFrom('products')
             .select(['id', 'code', 'cost', 'price', 'stock_quantity', 'category_id', 'brand_id'])
             .where('code', 'in', codes)
+            .where('business_id', '=', businessId)
             .where('deleted_at', 'is', null)
             .execute()
           : [];
 
         const existingMap = new Map(existingProducts.map(p => [p.code, p]));
 
-        // Collect unique category and brand names from the import data
         const categoryNames = [...new Set(body.data.map(r => r.category_name).filter(Boolean) as string[])];
         const brandNames = [...new Set(body.data.map(r => r.brand_name).filter(Boolean) as string[])];
 
-        // Fetch existing categories by name for this business
-        const existingCategoriesByName = categoryNames.length > 0
-          ? await trx.selectFrom('categories')
-            .select(['id', 'name'])
-            .where('business_id', '=', businessId)
-            .where('name', 'in', categoryNames)
-            .execute()
-          : [];
-
-        const categoryMapByName = new Map(existingCategoriesByName.map(c => [c.name.toLowerCase(), c.id as string]));
-
-        // Fetch existing brands by name for this business
-        const existingBrandsByName = brandNames.length > 0
-          ? await trx.selectFrom('brands')
-            .select(['id', 'name'])
-            .where('business_id', '=', businessId)
-            .where('name', 'in', brandNames)
-            .execute()
-          : [];
-
-        const brandMapByName = new Map(existingBrandsByName.map(b => [b.name.toLowerCase(), b.id as string]));
-
-        // Cache for newly created categories/brands during this import
-        const createdCategoryCache = new Map<string, string>();
-        const createdBrandCache = new Map<string, string>();
-
-        // Helper: resolve category name to ID (create if doesn't exist)
-        const resolveCategoryId = async (name: string): Promise<string | null> => {
-          if (!name) return null;
-          const lower = name.toLowerCase();
-          if (categoryMapByName.has(lower)) return categoryMapByName.get(lower)!;
-          if (createdCategoryCache.has(lower)) return createdCategoryCache.get(lower)!;
-
-          const newId = randomUUID();
-          await trx.insertInto('categories').values({
-            id: newId,
-            business_id: businessId,
-            name: name,
-            is_active: true,
-            created_at: new Date()
-          } as any).execute();
-          createdCategoryCache.set(lower, newId);
-          categoryMapByName.set(lower, newId);
-          return newId;
-        };
-
-        // Helper: resolve brand name to ID (create if doesn't exist)
-        const resolveBrandId = async (name: string): Promise<string | null> => {
-          if (!name) return null;
-          const lower = name.toLowerCase();
-          if (brandMapByName.has(lower)) return brandMapByName.get(lower)!;
-          if (createdBrandCache.has(lower)) return createdBrandCache.get(lower)!;
-
-          const newId = randomUUID();
-          await trx.insertInto('brands').values({
-            id: newId,
-            business_id: businessId,
-            name: name,
-            created_at: new Date()
-          } as any).execute();
-          createdBrandCache.set(lower, newId);
-          brandMapByName.set(lower, newId);
-          return newId;
-        };
-
-        // Pre-resolve all category and brand IDs
-        const resolvedCategoryIds = new Map<string, string | null>();
-        const resolvedBrandIds = new Map<string, string | null>();
-
-        for (const catName of categoryNames) {
-          const id = await resolveCategoryId(catName);
-          resolvedCategoryIds.set(catName, id);
+        // Resolve or create categories
+        const categoryMap = new Map<string, string>();
+        for (const name of categoryNames) {
+           const lower = name.toLowerCase().trim();
+           let cat = await trx.selectFrom('categories')
+             .where('business_id', '=', businessId)
+             .where('name', 'ilike', name.trim())
+             .select(['id'])
+             .executeTakeFirst();
+           
+           if (!cat) {
+             const newId = randomUUID();
+             await trx.insertInto('categories').values({
+               id: newId,
+               business_id: businessId,
+               name: name.trim(),
+               is_active: true
+             } as any).execute();
+             cat = { id: newId };
+           }
+           categoryMap.set(lower, cat.id as string);
         }
-        for (const brandName of brandNames) {
-          const id = await resolveBrandId(brandName);
-          resolvedBrandIds.set(brandName, id);
+
+        // Resolve or create brands
+        const brandMap = new Map<string, string>();
+        for (const name of brandNames) {
+           const lower = name.toLowerCase().trim();
+           let brand = await trx.selectFrom('brands')
+             .where('business_id', '=', businessId)
+             .where('name', 'ilike', name.trim())
+             .select(['id'])
+             .executeTakeFirst();
+           
+           if (!brand) {
+             const newId = randomUUID();
+             await trx.insertInto('brands').values({
+               id: newId,
+               business_id: businessId,
+               name: name.trim()
+             } as any).execute();
+             brand = { id: newId };
+           }
+           brandMap.set(lower, brand.id as string);
         }
 
         for (const row of body.data) {
           try {
             const product = existingMap.get(row.code);
-
-            // Resolve category and brand IDs from names
-            const categoryId = row.category_id || (row.category_name ? (resolvedCategoryIds.get(row.category_name) ?? null) : null);
-            const brandId = row.brand_id || (row.brand_name ? (resolvedBrandIds.get(row.brand_name) ?? null) : null);
+            
+            // Resolve IDs
+            const categoryId = row.category_id || (row.category_name ? categoryMap.get(row.category_name.toLowerCase().trim()) : null) || null;
+            const brandId = row.brand_id || (row.brand_name ? brandMap.get(row.brand_name.toLowerCase().trim()) : null) || null;
 
             if (product) {
               const updateData: any = { updated_at: new Date() };
               let hasChanges = false;
 
-              if (body.update_costs && row.cost !== undefined && row.cost !== product.cost) {
+              if (body.update_costs && row.cost !== undefined && Number(row.cost) !== Number(product.cost)) {
                 updateData.cost = row.cost;
                 hasChanges = true;
               }
 
               if (body.update_prices) {
-                if (row.price !== undefined && row.price !== product.price) {
+                if (row.price !== undefined && Number(row.price) !== Number(product.price)) {
                   updateData.price = row.price;
                   hasChanges = true;
                 } else if (body.auto_margin && row.cost !== undefined) {
-                  const newPrice = row.cost * (1 + body.margin_percent / 100);
-                  if (newPrice !== product.price) {
+                  const newPrice = Math.round(row.cost * (1 + body.margin_percent / 100));
+                  if (newPrice !== Number(product.price)) {
                     updateData.price = newPrice;
                     hasChanges = true;
                   }
@@ -241,41 +249,22 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
 
               if (hasChanges) {
                 await trx.updateTable('products').set(updateData).where('id', '=', product.id).execute();
-
-                if (body.update_costs || body.update_prices) {
-                  await trx.insertInto('price_history').values({
-                    id: randomUUID(),
-                    business_id: businessId,
-                    product_id: product.id,
-                    old_cost: product.cost,
-                    old_price: product.price,
-                    new_cost: updateData.cost !== undefined ? updateData.cost : typeof product.cost === 'string' ? parseFloat(product.cost) : product.cost,
-                    new_price: updateData.price !== undefined ? updateData.price : typeof product.price === 'string' ? parseFloat(product.price) : product.price,
-                    changed_by: user.sub,
-                    reason: 'Bulk Import',
-                    created_at: new Date(),
-                    metadata: {}
-                  } as any).execute();
-                }
                 stats.updated++;
               }
-            } else if (row.name) {
+            } else {
               await trx.insertInto('products').values({
                 id: randomUUID(),
                 business_id: businessId,
                 code: row.code,
-                name: row.name,
-                category_id: categoryId || null,
-                brand_id: brandId || null,
+                name: row.name || "Producto sin nombre",
+                category_id: categoryId,
+                brand_id: brandId,
                 cost: row.cost || 0,
                 price: row.price || (body.auto_margin && row.cost ? row.cost * (1 + body.margin_percent / 100) : (row.cost ? Math.round(row.cost * 1.5) : 0)),
                 stock_quantity: row.stock || 0,
                 margin_percent: row.margin_percent || null,
                 min_stock: 5,
                 is_active: true,
-                is_barcode: false,
-                tags: [],
-                images: [],
                 created_at: new Date(),
                 updated_at: new Date()
               } as any).execute();
@@ -299,7 +288,8 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
       const buffer = await fileRequest.toBuffer();
       const filename = fileRequest.filename.toLowerCase();
       let parsedData: any[] = [];
-      if (filename.endsWith('.xlsx')) {
+
+      if (filename.endsWith('.xlsx') || filename.endsWith('.xls')) {
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(buffer as any);
         const worksheet = workbook.getWorksheet(1);
@@ -308,26 +298,22 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
           worksheet.eachRow((row, rowNumber) => {
             const values = Array.isArray(row.values) ? row.values : [];
             if (rowNumber === 1) {
-              values.forEach((val, idx) => {
-                if (!val) return;
-                const s = String(val).toLowerCase();
-                if (s.includes('cod')) headers.code = idx;
-                if (s.includes('nom') || s.includes('prod') || s.includes('desc')) headers.name = idx;
-                if (s.includes('pre') || s.includes('venta')) headers.price = idx;
-                if (s.includes('cost')) headers.cost = idx;
-                if (s.includes('stoc') || s.includes('cant')) headers.stock = idx;
-                if (s.includes('cate') || s.includes('rubro') || s.includes('carpe')) headers.category = idx;
-                if (s.includes('marca') || s.includes('brand')) headers.brand = idx;
-              });
+              headers.code = findHeaderIndex(values, ['cod', 'sku', 'ref', 'código', 'codigo']);
+              headers.name = findHeaderIndex(values, ['nom', 'prod', 'art', 'desc', 'nombre', 'producto', 'articulo', 'artículo']);
+              headers.price = findHeaderIndex(values, ['pre', 'venta', 'p.v', 'pvp', 'precio', '($)']);
+              headers.cost = findHeaderIndex(values, ['cost', 'compra', 'p.c', 'costo', '($$)']);
+              headers.stock = findHeaderIndex(values, ['stoc', 'cant', 'qty', 'units', 'stock', '(+)']);
+              headers.category = findHeaderIndex(values, ['cate', 'rubro', 'carpe', 'grupo', 'seccion', 'categoría', 'categoria', 'carpeta']);
+              headers.brand = findHeaderIndex(values, ['marca', 'brand', 'fabr']);
               return;
             }
-            const code = String(values[headers.code || 1] || '').trim();
+            const code = String(values[headers.code] || values[1] || '').trim();
             if (!code || code === 'undefined' || code === 'null') return;
 
             parsedData.push({
               code,
-              name: values[headers.name || 2] || 'Producto sin nombre',
-              price: cleanPrice(values[headers.price || 4]),
+              name: values[headers.name] || values[2] || 'Producto sin nombre',
+              price: cleanPrice(values[headers.price]),
               cost: cleanPrice(values[headers.cost]),
               stock: cleanPrice(values[headers.stock]),
               category: values[headers.category] || '',
@@ -335,11 +321,24 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
             });
           });
         }
+      } else if (filename.endsWith('.pdf')) {
+        if (PDFParse) {
+           const data = await PDFParse(buffer);
+           parsedData = smartParseText(data.text);
+        } else {
+           throw new Error("Librería de PDFs no disponible en el servidor.");
+        }
+      } else if (filename.endsWith('.docx') || filename.endsWith('.doc')) {
+        const result = await mammoth.extractRawText({ buffer });
+        parsedData = smartParseText(result.value);
       } else {
         parsedData = smartParseText(buffer.toString());
       }
       return reply.send({ data: parsedData });
-    } catch (e: any) { return reply.status(500).send({ error: e.message }); }
+    } catch (e: any) { 
+        console.error('[PARSE-FILE] Error:', e);
+        return reply.status(500).send({ error: e.message }); 
+    }
   });
 
   fastify.post('/parse-text', async (request, reply) => {
@@ -348,7 +347,6 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get('/export-template', async (request, reply) => {
-    const user = request.user as any;
     const products = await db.selectFrom('products').select(['code', 'name', 'cost', 'price', 'stock_quantity']).where('deleted_at', 'is', null).execute();
     const csv = [['codigo', 'nombre', 'costo', 'precio', 'stock'].join(','), ...products.map(p => [p.code, `"${p.name}"`, p.cost, p.price, p.stock_quantity].join(','))].join('\n');
     reply.header('Content-Type', 'text/csv').header('Content-Disposition', 'attachment; filename="productos.csv"');
