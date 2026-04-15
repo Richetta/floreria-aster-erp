@@ -236,3 +236,31 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+.bulk-barcode-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.bulk-barcode-input-group .bulk-input {
+    margin-top: 0;
+}
+
+.bulk-auto-gen-label {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6B6B6B;
+    cursor: pointer;
+    user-select: none;
+}
+
+.bulk-auto-gen-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #4F7A5A;
+}

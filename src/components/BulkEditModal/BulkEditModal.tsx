@@ -19,8 +19,8 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
 
     const [activeTab, setActiveTab] = useState<'edit' | 'delete'>('edit');
     const [fields, setFields] = useState({
-        barcode: { enabled: false, value: '' },
-        category: { enabled: false, value: '' },
+        barcode: { enabled: false, value: '', autoGenerate: false },
+        category_id: { enabled: false, value: '' },
         brand_id: { enabled: false, value: '' },
         price: { enabled: false, value: '', operation: 'set' as 'set' | 'add' | 'subtract' },
         cost: { enabled: false, value: '', operation: 'set' as 'set' | 'add' | 'subtract' },
@@ -42,6 +42,9 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
         setIsProcessing(true);
         setProcessedCount(0);
 
+        const now = Date.now().toString().slice(-8); // Use last 8 digits of timestamp as seed
+        let index = 0;
+
         for (const product of selectedProducts) {
             const updates: any = {};
 
@@ -49,20 +52,27 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
                 if (!value.enabled) continue;
 
                 switch (field) {
-                    case 'barcode':
-                        updates.barcode = value.value;
+                    case 'barcode': {
+                        const barcodeValue = value as { value: string; autoGenerate: boolean };
+                        if (barcodeValue.autoGenerate) {
+                            // Generate unique barcode: Seed + index + random
+                            const uniquePart = (index++).toString().padStart(3, '0');
+                            const randomPart = Math.floor(Math.random() * 10).toString();
+                            updates.barcode = `${now}${uniquePart}${randomPart}`; // 12 digits
+                        } else {
+                            updates.barcode = barcodeValue.value;
+                        }
                         break;
-                    case 'category':
-                        const categoryId = categoriesData?.find(c => c.name === value.value)?.id;
-                        updates.category = value.value;
-                        updates.category_id = categoryId;
+                    }
+                    case 'category_id':
+                        updates.category_id = value.value;
                         break;
                     case 'brand_id':
                         updates.brand_id = value.value;
                         break;
                     case 'price': {
                         const priceVal = parseFloat(value.value);
-                        const priceOp = ('operation' in value) ? value.operation : 'set';
+                        const priceOp = ('operation' in value) ? (value as any).operation : 'set';
                         if (priceOp === 'set') {
                             updates.price = priceVal;
                         } else if (priceOp === 'add') {
@@ -74,7 +84,7 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
                     }
                     case 'cost': {
                         const costVal = parseFloat(value.value);
-                        const costOp = ('operation' in value) ? value.operation : 'set';
+                        const costOp = ('operation' in value) ? (value as any).operation : 'set';
                         if (costOp === 'set') {
                             updates.cost = costVal;
                         } else if (costOp === 'add') {
@@ -87,7 +97,11 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
                 }
             }
 
-            await updateProduct(product.id, updates);
+            try {
+                await updateProduct(product.id, updates);
+            } catch (err) {
+                console.error(`Error updating product ${product.id}:`, err);
+            }
             setProcessedCount(prev => prev + 1);
         }
 
@@ -203,23 +217,34 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
                                         </label>
                                     </div>
                                     {fields.barcode.enabled && (
-                                        <input
-                                            type="text"
-                                            className="bulk-input"
-                                            placeholder="Nuevo código de barras..."
-                                            value={fields.barcode.value}
-                                            onChange={e => updateField('barcode', { value: e.target.value })}
-                                        />
+                                        <div className="bulk-barcode-input-group">
+                                            <input
+                                                type="text"
+                                                className="bulk-input"
+                                                placeholder={fields.barcode.autoGenerate ? "Se generará automáticamente..." : "Nuevo código de barras..."}
+                                                value={fields.barcode.value}
+                                                onChange={e => updateField('barcode', { value: e.target.value })}
+                                                disabled={fields.barcode.autoGenerate}
+                                            />
+                                            <label className="bulk-auto-gen-label">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={fields.barcode.autoGenerate}
+                                                    onChange={e => updateField('barcode', { autoGenerate: e.target.checked })}
+                                                />
+                                                Generar automáticamente
+                                            </label>
+                                        </div>
                                     )}
                                 </div>
 
-                                {/* Category Field */}
-                                <div className={`bulk-field ${fields.category.enabled ? 'enabled' : ''}`}>
+                                 {/* Category Field */}
+                                <div className={`bulk-field ${fields.category_id.enabled ? 'enabled' : ''}`}>
                                     <div className="bulk-field-header">
                                         <input
                                             type="checkbox"
-                                            checked={fields.category.enabled}
-                                            onChange={e => updateField('category', { enabled: e.target.checked })}
+                                            checked={fields.category_id.enabled}
+                                            onChange={e => updateField('category_id', { enabled: e.target.checked })}
                                             id="bulk-category"
                                         />
                                         <label htmlFor="bulk-category">
@@ -227,15 +252,15 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
                                             Categoría
                                         </label>
                                     </div>
-                                    {fields.category.enabled && (
+                                    {fields.category_id.enabled && (
                                         <select
                                             className="bulk-select"
-                                            value={fields.category.value}
-                                            onChange={e => updateField('category', { value: e.target.value })}
+                                            value={fields.category_id.value}
+                                            onChange={e => updateField('category_id', { value: e.target.value })}
                                         >
                                             <option value="">Seleccionar categoría...</option>
                                             {categoriesData?.map(cat => (
-                                                <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
                                             ))}
                                         </select>
                                     )}
