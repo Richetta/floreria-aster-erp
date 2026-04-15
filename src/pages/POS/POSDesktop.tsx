@@ -7,6 +7,7 @@ import {
     CreditCard,
     Banknote,
     Calendar,
+    MessageSquare,
     X,
     Check,
     Store,
@@ -87,6 +88,7 @@ export const POSDesktop = () => {
         deliveryDate,
         deliveryTimeSlot,
         orderNotes,
+        cardMessage,
         deliveryMethod,
         advancePayment,
         deliveryAddress,
@@ -427,6 +429,7 @@ export const POSDesktop = () => {
                     date: localDeliveryDate.toISOString(),
                     items: cart,
                     notes: orderNotes,
+                    cardMessage: cardMessage,
                     advancePayment: advancePayment,
                     deliveryMethod: deliveryMethod,
                     deliveryAddress: deliveryMethod === 'delivery' ? deliveryAddress : undefined,
@@ -1598,13 +1601,27 @@ export const POSDesktop = () => {
                                             </div>
 
                                             <div className="form-group-compact mt-2">
-                                                <label className="form-label-compact">Notas</label>
+                                                <label className="form-label-compact">Consideraciones Internas</label>
                                                 <textarea
                                                     className="form-input notes-input-compact"
-                                                    rows={2}
-                                                    placeholder="Ej: Tarjeta, moño..."
+                                                    rows={1}
+                                                    placeholder="Ej: Moño rojo, sin espinas..."
                                                     value={orderNotes}
                                                     onChange={(e) => updatePosOrderForm({ orderNotes: e.target.value })}
+                                                />
+                                            </div>
+
+                                            <div className="form-group-compact mt-2">
+                                                <label className="form-label-compact" style={{ color: '#8B4513' }}>
+                                                    <MessageSquare size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                                                    Mensaje de la Tarjeta
+                                                </label>
+                                                <textarea
+                                                    className="form-input card-message-input-compact"
+                                                    rows={2}
+                                                    placeholder="Escribí acá lo que va en la tarjeta..."
+                                                    value={cardMessage}
+                                                    onChange={(e) => updatePosOrderForm({ cardMessage: e.target.value })}
                                                 />
                                             </div>
                                         </div>

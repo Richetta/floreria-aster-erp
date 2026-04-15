@@ -11,6 +11,7 @@ export interface PosSlice {
         deliveryDate: string;
         deliveryTimeSlot: 'morning' | 'afternoon' | 'evening' | 'allday';
         orderNotes: string;
+        cardMessage: string;
         deliveryMethod: 'pickup' | 'delivery';
         advancePayment: number;
         deliveryAddress: {
@@ -41,6 +42,7 @@ const initialPosOrderForm = {
     deliveryDate: new Date().toISOString().split('T')[0],
     deliveryTimeSlot: 'allday' as const,
     orderNotes: '',
+    cardMessage: '',
     deliveryMethod: 'pickup' as const,
     advancePayment: 0,
     deliveryAddress: {

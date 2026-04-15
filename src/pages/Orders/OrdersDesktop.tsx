@@ -15,9 +15,11 @@ export const OrdersDesktop = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const orders = useStore((state) => state.orders);
+    const products = useStore((state) => state.products);
     const updateOrderStatus = useStore((state) => state.updateOrderStatus);
     const loadOrders = useStore((state) => state.loadOrders);
     const loadCustomers = useStore((state) => state.loadCustomers);
+    const loadProducts = useStore((state) => state.loadProducts);
     const deleteOrder = useStore((state) => state.deleteOrder);
     const updateOrder = useStore((state) => state.updateOrder);
     const addNotification = useStore((state) => state.addNotification);
@@ -29,7 +31,7 @@ export const OrdersDesktop = () => {
     useEffect(() => {
         const loadData = async () => {
             setIsLoading(true);
-            await Promise.all([loadOrders(), loadCustomers()]);
+            await Promise.all([loadOrders(), loadCustomers(), loadProducts()]);
             setIsLoading(false);
         };
         loadData();
@@ -967,23 +969,24 @@ export const OrdersDesktop = () => {
                                     </section>
 
                                     {/* Card message section */}
-                                    {(selectedOrder as any).cardMessage && (
+                                    {(isEditing || (selectedOrder as any).cardMessage) && (
                                         <section className="detail-card mt-4">
-                                            <div className="detail-card-header">
-                                                <MessageSquare size={18} />
-                                                <h3>Texto para Tarjeta</h3>
+                                            <div className="detail-card-header" style={{ borderBottomColor: '#FDF2F2' }}>
+                                                <MessageSquare size={18} style={{ color: '#8B4513' }} />
+                                                <h3 style={{ color: '#8B4513' }}>Texto para Tarjeta</h3>
                                             </div>
                                             <div className="detail-card-body">
                                                 {isEditing ? (
                                                     <textarea
-                                                        className="edit-textarea"
+                                                        className="edit-textarea card-message-input-compact"
                                                         value={editForm.cardMessage || ''}
                                                         onChange={e => setEditForm({ ...editForm, cardMessage: e.target.value })}
                                                         placeholder="Escribe el mensaje para la tarjeta..."
+                                                        rows={3}
                                                     />
                                                 ) : (
                                                     <div className="card-message-display">
-                                                        "{selectedOrder.cardMessage}"
+                                                        {selectedOrder.cardMessage || 'Sin mensaje de tarjeta.'}
                                                     </div>
                                                 )}
                                             </div>
@@ -1002,14 +1005,17 @@ export const OrdersDesktop = () => {
                                             <div className="items-list-modern">
                                                 {selectedOrder.items && selectedOrder.items.length > 0 ? (
                                                     selectedOrder.items.map((item: any, idx: number) => {
-                                                        // Try multiple possible property names for product name
+                                                        // Fallback logic: Try to find product name in the local products store if missing
+                                                        const matchedProduct = item.product_id ? products.find(p => p.id === item.product_id) : null;
+                                                        
                                                         const productName = item.name ||
                                                             item.product_name ||
                                                             item.productName ||
+                                                            matchedProduct?.name ||
                                                             item.description ||
                                                             item.product?.name ||
                                                             (typeof item === 'string' ? item : null) ||
-                                                            'Producto sin nombre';
+                                                            'Producto';
 
                                                         return (
                                                             <div key={idx} className="order-item-row">

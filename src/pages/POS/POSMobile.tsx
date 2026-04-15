@@ -45,6 +45,7 @@ export const POSMobile = () => {
         deliveryDate,
         deliveryTimeSlot,
         orderNotes,
+        cardMessage,
         deliveryMethod,
         advancePayment,
         deliveryAddress,
@@ -148,6 +149,7 @@ export const POSMobile = () => {
                     date: new Date(deliveryDate).toISOString(),
                     items: cart,
                     notes: orderNotes,
+                    cardMessage,
                     advancePayment,
                     deliveryMethod,
                     deliveryAddress: deliveryMethod === 'delivery' ? deliveryAddress : undefined,
@@ -416,6 +418,28 @@ export const POSMobile = () => {
                                 value={advancePayment || ''}
                                 onChange={e => updatePosOrderForm({ advancePayment: Number(e.target.value) })}
                                 placeholder="0.00"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="order-form-section">
+                        <label>
+                            <span className="material-symbols-rounded">notes</span>
+                            Notas y Mensaje
+                        </label>
+                        <div className="dual-notes-mobile">
+                            <textarea
+                                placeholder="Notas internas (ej: moño azul)"
+                                value={orderNotes}
+                                onChange={e => updatePosOrderForm({ orderNotes: e.target.value })}
+                                rows={1}
+                            />
+                            <textarea
+                                className="card-message-mobile"
+                                placeholder="Mensaje para la tarjeta..."
+                                value={cardMessage}
+                                onChange={e => updatePosOrderForm({ cardMessage: e.target.value })}
+                                rows={2}
                             />
                         </div>
                     </div>
