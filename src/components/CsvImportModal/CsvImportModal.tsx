@@ -99,6 +99,12 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     const [importResult, setImportResult] = useState<{ updated: number, created: number } | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
 
+    const [previewData, setPreviewData] = useState<ParsedRow[]>([]);
+    const [bulkMargin, setBulkMargin] = useState<string>('');
+    const [bulkCategory, setBulkCategory] = useState('');
+    const [bulkBrand, setBulkBrand] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+
     const [textMode, setTextMode] = useState<'free' | 'grid'>('free'); // 'free' for raw text, 'grid' for excel-like
     const [gridRows, setGridRows] = useState<any[]>(Array(10).fill({
         _id: '',
@@ -109,7 +115,16 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
         'Stock (+)': '',
         'Categoria': '',
         'Marca': ''
-    }).map(r => ({ ...r, _id: generateId() })));
+    }).map(() => ({ 
+        _id: generateId(),
+        'Código': '',
+        'Nombre': '',
+        'Precio ($)': '',
+        'Costo ($$)': '',
+        'Stock (+)': '',
+        'Categoria': '',
+        'Marca': '' 
+    })));
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -256,7 +271,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     const toggleAll = () => {
         const allSelected = filteredPreview.every(r => r.selected);
         const filteredIds = new Set(filteredPreview.map(r => r._id));
-        setPreviewData(prev => prev.map(r => filteredIds.has(r._id) ? { ...r, selected: !allSelected } : r));
+        setPreviewData(prev => prev.map((r: ParsedRow) => filteredIds.has(r._id) ? { ...r, selected: !allSelected } : r));
     };
 
     const toggleRow = (id: string) => {
@@ -264,7 +279,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     };
 
     const updateRow = (id: string, field: keyof ParsedRow, value: any) => {
-        setPreviewData(prev => prev.map(r => {
+        setPreviewData(prev => prev.map((r: ParsedRow) => {
             if (r._id !== id) return r;
             const updated = { ...r, [field]: value };
 
@@ -282,7 +297,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     const applyBulkMargin = () => {
         if (bulkMargin === '') return;
         const m = Number(bulkMargin);
-        setPreviewData(prev => prev.map(r => {
+        setPreviewData(prev => prev.map((r: ParsedRow) => {
             if (!r.selected) return r;
             return {
                 ...r,
@@ -294,12 +309,12 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
 
     const applyBulkCategory = () => {
         if (!bulkCategory) return;
-        setPreviewData(prev => prev.map(r => r.selected ? { ...r, category: bulkCategory } : r));
+        setPreviewData(prev => prev.map((r: ParsedRow) => r.selected ? { ...r, category: bulkCategory } : r));
     };
 
     const applyBulkBrand = () => {
         if (!bulkBrand) return;
-        setPreviewData(prev => prev.map(r => r.selected ? { ...r, brand: bulkBrand } : r));
+        setPreviewData(prev => prev.map((r: ParsedRow) => r.selected ? { ...r, brand: bulkBrand } : r));
     };
 
     const categoryOptions = Array.from(new Set([...categories.map((c: any) => c?.name || c), ...previewData.map(r => r.category).filter(Boolean)]));
@@ -474,7 +489,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                                             <th>Stock (+)</th>
                                                             <th>Categoría</th>
                                                             <th>Marca</th>
-                                                            <th width="40"></th>
+                                                            <th style={{ width: '40px' }}></th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>

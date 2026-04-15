@@ -669,7 +669,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       .select([
         'orders.id',
         'orders.customer_id',
-        'orders.guest_name',
+        'orders.customer_name',
         'orders.delivery_address',
         'orders.delivery_address_street',
         'orders.delivery_address_number',
@@ -682,7 +682,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
         'orders.status',
         'orders.contact_phone',
         'orders.customer_phone',
-        'orders.notes',
+        'orders.delivery_notes as notes',
       ])
       .where('orders.deleted_at', 'is', null)
       .where('orders.delivery_method', '=', 'delivery')

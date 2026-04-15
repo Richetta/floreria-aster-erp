@@ -19,7 +19,7 @@ export interface ProductSlice {
     bulkDeleteProducts: (ids: string[]) => Promise<void>;
     addCategory: (category: string, parentId?: string) => Promise<void>;
     renameCategory: (oldName: string, newName: string) => Promise<void>;
-    deleteCategory: (name: string) => void;
+    deleteCategory: (id: string, deleteProducts?: boolean) => Promise<void>;
     addBrand: (name: string) => Promise<Brand | null>;
     deleteBrand: (id: string) => Promise<void>;
 

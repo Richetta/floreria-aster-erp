@@ -180,11 +180,11 @@ export const ProductsDesktop = () => {
 
         // Use custom confirmation for the second option since showConfirm might be binary
         if (confirmed !== null) {
-            // mode: confirmed is true -> unbind products, confirmed is false -> delete products
-            // wait, showConfirm returns boolean. true for confirmText, false for cancelText? 
-            // I need to check useModal/Modals.tsx logic
-            deleteCategory(cat.id, !confirmed); 
-            setActiveCategories(prev => prev.filter(c => c !== cat.name));
+            await deleteCategory(cat.id, !confirmed);
+            // Wait for category to be deleted from store as well
+            if (activeCategories.includes(cat.name)) {
+                setActiveCategories(prev => prev.filter(c => c !== cat.name));
+            }
         }
     };
 
