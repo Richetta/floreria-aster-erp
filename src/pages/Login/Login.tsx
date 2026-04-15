@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import type { CredentialResponse } from '@react-oauth/google';
 import {
-    Lock, Mail, Flower2, AlertCircle, Eye, EyeOff,
+    Lock, Mail, AlertCircle, Eye, EyeOff,
     Package, ShoppingCart, TrendingUp, Truck,
     BarChart3, ChevronDown, CheckCircle2, Zap, Clock,
     ClipboardList, AlertTriangle, BarChart2, ArrowRight,
-    Star, Play, Sprout, Leaf
+    Star, Play
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { api } from '../../services/api';
