@@ -16,7 +16,7 @@ export const config = {
   // Business
   defaultBusinessId: process.env.DEFAULT_BUSINESS_ID || '00000000-0000-0000-0000-000000000001',
 
-  // Frontend URL
+  // Frontend URLs (can be comma-separated list)
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 
   // Google OAuth

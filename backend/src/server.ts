@@ -17,8 +17,9 @@ const fastify = Fastify({
 
 // Register plugins
 console.log('Registering CORS...');
+const allowedOrigins = config.frontendUrl.split(',').map(o => o.trim());
 await fastify.register(cors, {
-  origin: config.nodeEnv === 'development' ? true : config.frontendUrl,
+  origin: config.nodeEnv === 'development' ? true : allowedOrigins,
   credentials: true
 });
 
