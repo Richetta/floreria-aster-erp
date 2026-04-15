@@ -304,38 +304,46 @@ export const OrdersDesktop = () => {
     const handleWhatsAppShare = () => {
         if (!selectedOrder) return;
         
-        const items = selectedOrder.items?.map((i: any) => {
+        const customerName = selectedOrder.customerName || 'Cliente';
+        const orderIdShort = selectedOrder.id.slice(0, 8).toUpperCase();
+        
+        const itemsList = selectedOrder.items?.map((i: any) => {
             const qty = i.qty || i.quantity || 1;
             const name = i.name || i.product_name || i.productName || 'Producto';
-            return `• ${qty}x ${name}`;
-        }).join('%0A') || '';
+            const price = i.price || i.unit_price || 0;
+            return `🌸 *${qty}x* ${name} ($${(price * qty).toLocaleString()})`;
+        }).join('\n') || '';
 
         const pendingBalance = selectedOrder.total - (selectedOrder.advancePayment || 0);
-        const paymentStatus = pendingBalance <= 0 
-            ? '✅ TOTALMENTE PAGADO' 
-            : `⚠️ PENDIENTE DE PAGO: $${pendingBalance.toLocaleString()}`;
+        const paymentInfo = pendingBalance <= 0 
+            ? '✅ *Estado:* Totalmente pagado' 
+            : `⚠️ *Saldo pendiente:* $${pendingBalance.toLocaleString()}`;
 
-        const deliveryInfo = selectedOrder.deliveryMethod === 'delivery' 
-            ? `📍 *Envío a domicilio:*%0A   ${selectedOrder.deliveryAddress?.street} ${selectedOrder.deliveryAddress?.number}${selectedOrder.deliveryAddress?.floor ? ` (Piso: ${selectedOrder.deliveryAddress?.floor})` : ''}%0A   ${selectedOrder.deliveryAddress?.city || ''}`
+        const deliveryDateStr = formatDeliveryDate(selectedOrder.date);
+        const timeSlotStr = timeSlotLabel(selectedOrder.deliveryTimeSlot);
+        
+        const deliveryDetails = selectedOrder.deliveryMethod === 'delivery' 
+            ? `📍 *Envío a domicilio:* ${selectedOrder.deliveryAddress?.street} ${selectedOrder.deliveryAddress?.number}${selectedOrder.deliveryAddress?.floor ? ` (Piso: ${selectedOrder.deliveryAddress?.floor})` : ''}, ${selectedOrder.deliveryAddress?.city || ''}`
             : `🏬 *Retiro por local:* Mi Jardín`;
 
-        const message = `🌿 *RESUMEN DE TU PEDIDO - MI JARDÍN* 🌿%0A%0A` +
-            `*Pedido:* #${selectedOrder.id.slice(0, 8)}%0A` +
-            `*Cliente:* ${selectedOrder.customerName}%0A` +
-            `*Fecha:* ${formatDeliveryDate(selectedOrder.date)}%0A` +
-            `*Horario:* ${timeSlotLabel(selectedOrder.deliveryTimeSlot)}%0A%0A` +
-            `${deliveryInfo}%0A%0A` +
-            `📦 *Detalle del Pedido:*%0A${items}%0A%0A` +
-            `💰 *Resumen Financiero:*%0A` +
-            `- Total: $${selectedOrder.total.toLocaleString()}%0A` +
-            `- Seña/Pagado: $${(selectedOrder.advancePayment || 0).toLocaleString()}%0A` +
-            `*${paymentStatus}*%0A%0A` +
-            (selectedOrder.notes ? `📝 *Observaciones:* ${selectedOrder.notes}%0A%0A` : '') +
-            `*¿Tenés alguna duda con tu pedido?* Estamos a disposición. ¡Gracias por elegirnos! 🌸`;
+        const fullMessage = `🌿 *¡Hola ${customerName}!* 🌿\n\n` +
+            `Te comparto el resumen de tu pedido *#${orderIdShort}* en *Mi Jardín* 🌸\n\n` +
+            `📅 *Entrega:* ${deliveryDateStr}\n` +
+            `⏰ *Horario:* ${timeSlotStr}\n` +
+            `${deliveryDetails}\n\n` +
+            `📦 *Detalle del Pedido:*\n${itemsList}\n\n` +
+            `💰 *Resumen de Cuenta:*\n` +
+            `- Total: $${selectedOrder.total.toLocaleString()}\n` +
+            `- Seña/Pagado: $${(selectedOrder.advancePayment || 0).toLocaleString()}\n` +
+            `${paymentInfo}\n\n` +
+            (selectedOrder.notes ? `📝 *Notas:* ${selectedOrder.notes}\n\n` : '') +
+            `¡Cualquier consulta estamos a tu disposición! Muchas gracias por elegirnos. ✨`;
 
         const phone = selectedOrder.customerPhone || '';
         const cleanPhone = phone.replace(/\D/g, '');
-        window.open(`https://wa.me/${cleanPhone.startsWith('54') ? cleanPhone : '54' + cleanPhone}?text=${message}`, '_blank');
+        const finalPhone = cleanPhone.startsWith('54') ? cleanPhone : '54' + cleanPhone;
+        
+        window.open(`https://wa.me/${finalPhone}?text=${encodeURIComponent(fullMessage)}`, '_blank');
     };
 
     const handlePrintTicket = () => {
@@ -1018,12 +1026,12 @@ export const OrdersDesktop = () => {
                                         </div>
                                     </section>
 
-                                    {/* Card message section */}
-                                    {(isEditing || (selectedOrder as any).cardMessage) && (
+                                    {/* Card message section - Always show header in edit mode, show content when display */}
+                                    {(isEditing || selectedOrder.cardMessage) && (
                                         <section className="detail-card mt-4">
                                             <div className="detail-card-header" style={{ borderBottomColor: '#FDF2F2' }}>
                                                 <MessageSquare size={18} style={{ color: '#8B4513' }} />
-                                                <h3 style={{ color: '#8B4513' }}>Texto para Tarjeta</h3>
+                                                <h3 style={{ color: '#8B4513' }}>Mensaje de la Tarjeta</h3>
                                             </div>
                                             <div className="detail-card-body">
                                                 {isEditing ? (
@@ -1036,7 +1044,7 @@ export const OrdersDesktop = () => {
                                                     />
                                                 ) : (
                                                     <div className="card-message-display">
-                                                        {selectedOrder.cardMessage || 'Sin mensaje de tarjeta.'}
+                                                        {selectedOrder.cardMessage || 'Sin mensaje cargado.'}
                                                     </div>
                                                 )}
                                             </div>
