@@ -28,7 +28,7 @@ const mapApiToStore = (o: any): Order => ({
     deliveryAddress: o.delivery_address,
     deliveryTimeSlot: o.delivery_time_slot,
     contactPhone: o.contact_phone,
-    notes: o.notes || '',
+    notes: o.internal_notes || o.delivery_notes || '',
     cardMessage: o.card_message || ''
 });
 

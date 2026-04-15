@@ -99,9 +99,12 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update order schema (partial - mainly for status)
   const updateOrderSchema = z.object({
-    status: z.enum(['pending', 'assembling', 'ready', 'out_for_delivery', 'delivered', 'cancelled']).optional(),
+    status: z.enum(['pending', 'confirmed', 'assembling', 'ready', 'out_for_delivery', 'delivered', 'cancelled']).optional(),
     delivery_date: z.string().optional(),
     notes: z.string().optional().or(z.literal('')),
+    internal_notes: z.string().optional().or(z.literal('')),
+    delivery_notes: z.string().optional().or(z.literal('')),
+    card_message: z.string().optional().or(z.literal('')),
     delivery_address: z.object({
       street: z.string().optional(),
       number: z.string().optional(),
@@ -322,8 +325,9 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
             delivery_address: body.delivery_address || null, // Kysely handles Record<string, any>
             delivery_time_slot: body.delivery_time_slot,
             delivery_method: body.delivery_method,
-            contact_phone: finalCustomerPhone,
+            contact_phone: body.contact_phone || finalCustomerPhone,
             card_message: body.card_message || null,
+            internal_notes: body.notes || null,
             total_amount: totalAmount,
             subtotal: totalAmount,
             discount: 0,
@@ -438,6 +442,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
           ...body,
           delivery_date: body.delivery_date ? new Date(body.delivery_date) : undefined,
           delivery_address: body.delivery_address || undefined,
+          internal_notes: (body as any).notes || body.internal_notes || undefined,
           updated_at: new Date()
         } as any)
         .where('id', '=', id)

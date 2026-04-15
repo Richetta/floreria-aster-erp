@@ -369,9 +369,10 @@ export const POSMobile = () => {
                                 value={deliveryTimeSlot}
                                 onChange={e => updatePosOrderForm({ deliveryTimeSlot: e.target.value })}
                             >
-                                <option value="Mañana (09:00 - 13:00)">Mañana</option>
-                                <option value="Tarde (13:00 - 18:00)">Tarde</option>
-                                <option value="Noche (18:00 - 21:00)">Noche</option>
+                                <option value="morning">Mañana</option>
+                                <option value="afternoon">Tarde</option>
+                                <option value="evening">Noche</option>
+                                <option value="allday">Todo el día</option>
                             </select>
                         </div>
                     </div>
