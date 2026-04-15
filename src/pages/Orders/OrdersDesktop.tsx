@@ -9,6 +9,8 @@ import { useStore } from '../../store/useStore';
 import type { Order } from '../../store/useStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
+import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
+import type { TicketData } from '../../components/TicketPrinter/TicketPrinter';
 import './Orders.css';
 
 export const OrdersDesktop = () => {
@@ -54,6 +56,10 @@ export const OrdersDesktop = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState<Partial<Order>>({});
     const [isActionLoading, setIsActionLoading] = useState(false);
+
+    // Ticket Printer State
+    const [showTicketPrinter, setShowTicketPrinter] = useState(false);
+    const [ticketData, setTicketData] = useState<TicketData | null>(null);
 
     // Effect to open specific order if orderId is in location state
     // Waits until orders are loaded
@@ -297,21 +303,65 @@ export const OrdersDesktop = () => {
 
     const handleWhatsAppShare = () => {
         if (!selectedOrder) return;
-        const items = selectedOrder.items?.map((i: any) => `- ${i.qty || i.quantity || 1}x ${i.name || i.product_name || 'Producto'}`).join('%0A') || '';
-        const message = `*Resumen de Pedido #${selectedOrder.id.slice(0, 8)}*%0A%0A` +
+        
+        const items = selectedOrder.items?.map((i: any) => {
+            const qty = i.qty || i.quantity || 1;
+            const name = i.name || i.product_name || i.productName || 'Producto';
+            return `• ${qty}x ${name}`;
+        }).join('%0A') || '';
+
+        const pendingBalance = selectedOrder.total - (selectedOrder.advancePayment || 0);
+        const paymentStatus = pendingBalance <= 0 
+            ? '✅ TOTALMENTE PAGADO' 
+            : `⚠️ PENDIENTE DE PAGO: $${pendingBalance.toLocaleString()}`;
+
+        const deliveryInfo = selectedOrder.deliveryMethod === 'delivery' 
+            ? `📍 *Envío a domicilio:*%0A   ${selectedOrder.deliveryAddress?.street} ${selectedOrder.deliveryAddress?.number}${selectedOrder.deliveryAddress?.floor ? ` (Piso: ${selectedOrder.deliveryAddress?.floor})` : ''}%0A   ${selectedOrder.deliveryAddress?.city || ''}`
+            : `🏬 *Retiro por local:* Mi Jardín`;
+
+        const message = `🌿 *RESUMEN DE TU PEDIDO - MI JARDÍN* 🌿%0A%0A` +
+            `*Pedido:* #${selectedOrder.id.slice(0, 8)}%0A` +
             `*Cliente:* ${selectedOrder.customerName}%0A` +
             `*Fecha:* ${formatDeliveryDate(selectedOrder.date)}%0A` +
-            `*Horario:* ${timeSlotLabel(selectedOrder.deliveryTimeSlot)}%0A` +
-            `*Método:* ${selectedOrder.deliveryMethod === 'delivery' ? 'Envío a domicilio' : 'Retiro por local'}%0A` +
-            (selectedOrder.deliveryMethod === 'delivery' ? `*Dirección:* ${selectedOrder.deliveryAddress?.street} ${selectedOrder.deliveryAddress?.number}%0A` : '') +
-            `%0A*Productos:*%0A${items}%0A%0A` +
-            `*Total:* $${selectedOrder.total.toLocaleString()}%0A` +
-            `*Seña:* $${(selectedOrder.advancePayment || 0).toLocaleString()}%0A` +
-            `*Saldo:* $${(selectedOrder.total - (selectedOrder.advancePayment || 0)).toLocaleString()}`;
+            `*Horario:* ${timeSlotLabel(selectedOrder.deliveryTimeSlot)}%0A%0A` +
+            `${deliveryInfo}%0A%0A` +
+            `📦 *Detalle del Pedido:*%0A${items}%0A%0A` +
+            `💰 *Resumen Financiero:*%0A` +
+            `- Total: $${selectedOrder.total.toLocaleString()}%0A` +
+            `- Seña/Pagado: $${(selectedOrder.advancePayment || 0).toLocaleString()}%0A` +
+            `*${paymentStatus}*%0A%0A` +
+            (selectedOrder.notes ? `📝 *Observaciones:* ${selectedOrder.notes}%0A%0A` : '') +
+            `*¿Tenés alguna duda con tu pedido?* Estamos a disposición. ¡Gracias por elegirnos! 🌸`;
 
         const phone = selectedOrder.customerPhone || '';
         const cleanPhone = phone.replace(/\D/g, '');
         window.open(`https://wa.me/${cleanPhone.startsWith('54') ? cleanPhone : '54' + cleanPhone}?text=${message}`, '_blank');
+    };
+
+    const handlePrintTicket = () => {
+        if (!selectedOrder) return;
+        
+        const orderTicket: TicketData = {
+            type: 'order',
+            id: selectedOrder.id.toUpperCase(),
+            date: selectedOrder.date,
+            customerName: selectedOrder.customerName,
+            customerPhone: selectedOrder.customerPhone,
+            items: selectedOrder.items.map((item: any) => ({
+                name: item.name || item.product_name || item.productName || 'Producto',
+                quantity: item.qty || item.quantity || 1,
+                unitPrice: item.price || item.unit_price || 0,
+                total: (item.price || item.unit_price || 0) * (item.qty || item.quantity || 1)
+            })),
+            subtotal: selectedOrder.total,
+            total: selectedOrder.total,
+            advancePayment: selectedOrder.advancePayment || 0,
+            paymentMethod: 'cash', // Default or fetch from backend if available
+            notes: selectedOrder.notes
+        };
+        
+        setTicketData(orderTicket);
+        setShowTicketPrinter(true);
     };
 
     const renderCalendar = () => {
@@ -819,7 +869,7 @@ export const OrdersDesktop = () => {
                                         <button className="action-icon-btn delete" title="Eliminar Permanente" onClick={handleDeleteOrder}>
                                             <span className="material-symbols-rounded" style={{ fontSize: '20px' }}>delete</span>
                                         </button>
-                                        <button className="action-icon-btn print" title="Imprimir Ticket" onClick={() => window.print()}>
+                                        <button className="action-icon-btn print" title="Imprimir Ticket" onClick={handlePrintTicket}>
                                             <span className="material-symbols-rounded" style={{ fontSize: '20px' }}>print</span>
                                         </button>
                                     </>
@@ -1191,7 +1241,7 @@ export const OrdersDesktop = () => {
                                 ) : (
                                     <>
                                         <button className="btn-secondary-elegant" onClick={() => { setSelectedOrder(null); setShowPaymentPanel(false); }}>Cerrar</button>
-                                        <button className="btn-primary-elegant" onClick={() => window.print()}>
+                                        <button className="btn-primary-elegant" onClick={handlePrintTicket}>
                                             <LayoutGrid size={16} />
                                             Imprimir Ticket
                                         </button>
@@ -1201,6 +1251,14 @@ export const OrdersDesktop = () => {
                         </footer>
                     </div>
                 </div>
+            )}
+            {/* Ticket Printer Modal */}
+            {showTicketPrinter && ticketData && (
+                <TicketPrinter
+                    ticketData={ticketData}
+                    isOpen={showTicketPrinter}
+                    onClose={() => setShowTicketPrinter(false)}
+                />
             )}
         </div>
     );
