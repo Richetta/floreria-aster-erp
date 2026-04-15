@@ -3,7 +3,7 @@ import {
     Plus, Search, Clock, Truck, X, FileText, Banknote, UserCircle,
     MapPin, CalendarDays, LayoutGrid, Copy, Package, Clock9, Check,
     MessageSquare, CreditCard, DollarSign, ChevronLeft, ArrowRight,
-    ChevronRight, Filter, Eye, Archive, AlertCircle
+    ChevronRight, Filter, Archive, AlertCircle
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Order } from '../../store/useStore';
@@ -457,129 +457,83 @@ export const OrdersDesktop = () => {
                 </button>
             </header>
 
-            <div className="filters-wrapper mb-6 shrink-0">
-                <div className="filters-grid-container">
-                    {/* Search Filter */}
-                    <div className="filter-card search-filter-card">
-                        <label className="filter-card-label">Buscar</label>
-                        <div className="search-input-wrapper">
-                            <Search size={18} />
-                            <input
-                                type="text"
-                                placeholder="Buscar por cliente o ID..."
-                                className="search-input-field"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
+            <div className="orders-toolbar shrink-0 mb-6">
+                <div className="toolbar-main-row">
+                    {/* Search - Primary focus */}
+                    <div className="toolbar-search">
+                        <Search size={18} className="search-icon" />
+                        <input
+                            type="text"
+                            placeholder="Buscar cliente, ID o contenido..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        {searchTerm && (
+                            <button className="clear-search" onClick={() => setSearchTerm('')}>
+                                <X size={14} />
+                            </button>
+                        )}
                     </div>
 
-                    {/* Time Filter */}
-                    <div className="filter-card">
-                        <label className="filter-card-label">Período</label>
-                        <select
-                            className="filter-dropdown"
-                            value={timeFilter}
-                            onChange={(e) => setTimeFilter(e.target.value as any)}
-                        >
-                            <option value="hoy">Hoy</option>
-                            <option value="esta-semana">Esta Semana</option>
-                            <option value="este-mes">Este Mes</option>
-                            <option value="mes-especifico">Mes Específico</option>
-                            <option value="todos">Todos</option>
-                        </select>
+                    <div className="toolbar-actions">
+                        {/* Time Filter - Compact Dropdown */}
+                        <div className="toolbar-select-wrapper">
+                            <Clock size={16} />
+                            <select
+                                value={timeFilter}
+                                onChange={(e) => setTimeFilter(e.target.value as any)}
+                            >
+                                <option value="hoy">Hoy</option>
+                                <option value="esta-semana">Esta Semana</option>
+                                <option value="este-mes">Este Mes</option>
+                                <option value="mes-especifico">Mes Específico</option>
+                                <option value="todos">Todos</option>
+                            </select>
+                        </div>
+
                         {timeFilter === 'mes-especifico' && (
                             <select
-                                className="filter-dropdown mt-2"
+                                className="toolbar-month-select"
                                 value={selectedMonth}
                                 onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
                             >
-                                {[
-                                    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-                                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-                                ].map((name, idx) => (
+                                {['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((name, idx) => (
                                     <option key={idx} value={idx}>{name}</option>
                                 ))}
                             </select>
                         )}
-                    </div>
 
-                    {/* View Mode Toggle */}
-                    <div className="filter-card">
-                        <label className="filter-card-label">Vista</label>
-                        <div className="view-mode-toggle">
+                        <div className="toolbar-divider"></div>
+
+                        {/* View Switcher - Mini */}
+                        <div className="toolbar-view-toggle">
                             <button
-                                className={`view-mode-option ${viewMode === 'kanban' ? 'active' : ''}`}
+                                className={viewMode === 'kanban' ? 'active' : ''}
                                 onClick={() => setViewMode('kanban')}
+                                title="Vista Kanban"
                             >
-                                <LayoutGrid size={16} />
-                                <span>Kanban</span>
+                                <LayoutGrid size={18} />
                             </button>
                             <button
-                                className={`view-mode-option ${viewMode === 'calendar' ? 'active' : ''}`}
+                                className={viewMode === 'calendar' ? 'active' : ''}
                                 onClick={() => { setViewMode('calendar'); setTimeFilter('mes-especifico'); }}
+                                title="Vista Calendario"
                             >
-                                <CalendarDays size={16} />
-                                <span>Calendario</span>
+                                <CalendarDays size={18} />
                             </button>
                         </div>
-                    </div>
 
-                    {/* Status Filter */}
-                    <div className="filter-card">
-                        <label className="filter-card-label">Estado</label>
-                        <select
-                            className="filter-dropdown"
-                            value={statusFilters.length > 0 ? statusFilters[0] : 'all'}
-                            onChange={(e) => {
-                                if (e.target.value === 'all') {
-                                    setStatusFilters([]);
-                                } else {
-                                    setStatusFilters([e.target.value]);
-                                }
-                            }}
-                        >
-                            <option value="all">Todos los estados</option>
-                            {columns.filter(c => c.id !== 'cancelled' && c.id !== 'archived').map(col => (
-                                <option key={col.id} value={col.id}>{col.label}</option>
-                            ))}
-                        </select>
-                    </div>
+                        <div className="toolbar-divider"></div>
 
-                    {/* Delivery Method Filter */}
-                    <div className="filter-card">
-                        <label className="filter-card-label">Entrega</label>
-                        <select
-                            className="filter-dropdown"
-                            value={deliveryFilter}
-                            onChange={(e) => setDeliveryFilter(e.target.value as any)}
-                        >
-                            <option value="all">Todos</option>
-                            <option value="delivery">Envío a domicilio</option>
-                            <option value="pickup">Retiro en local</option>
-                        </select>
-                    </div>
-
-                    {/* Archived Toggle */}
-                    <div className="filter-card">
-                        <label className="filter-card-label">Opciones</label>
-                        <div className="archived-toggle-card" onClick={() => setShowArchived(!showArchived)}>
-                            <span className="toggle-label">Ver Cancelados/Archivados</span>
-                            <div className={`toggle-switch ${showArchived ? 'active' : ''}`}></div>
-                        </div>
-                    </div>
-
-                    {/* Advanced Filters Button */}
-                    <div className="filter-card">
-                        <label className="filter-card-label">Filtros Avanzados</label>
+                        {/* Advanced Filters Trigger */}
                         <button
-                            className={`advanced-filters-btn ${showFilters ? 'active' : ''}`}
-                            onClick={() => setShowFilters(!showFilters)}
+                            className={`btn-toolbar-filters ${showFilters || statusFilters.length > 0 || deliveryFilter !== 'all' ? 'active' : ''}`}
+                            onClick={() => setShowFilters(true)}
                         >
-                            <Filter size={16} />
+                            <Filter size={18} />
                             <span>Filtros</span>
                             {(statusFilters.length > 0 || deliveryFilter !== 'all') && (
-                                <span className="filter-badge">
+                                <span className="filter-count">
                                     {statusFilters.length + (deliveryFilter !== 'all' ? 1 : 0)}
                                 </span>
                             )}
@@ -587,85 +541,138 @@ export const OrdersDesktop = () => {
                     </div>
                 </div>
 
-                {/* Advanced Filters Panel */}
-                {showFilters && (
-                    <div className="advanced-filters-panel">
-                        <div className="advanced-filters-grid">
-                            {/* Status Filters */}
-                            <div className="advanced-filter-section">
-                                <h4>
-                                    <Eye size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                                    Por Estado
-                                </h4>
-                                <div className="status-checkboxes">
-                                    {columns.filter(c => c.id !== 'cancelled' && c.id !== 'archived').map(col => (
-                                        <label key={col.id} className="status-checkbox">
+                {/* Quick Status Pills - Only visible in Kanban or if filters active */}
+                <div className="toolbar-status-row">
+                    <button 
+                        className={`status-pill ${statusFilters.length === 0 ? 'active' : ''}`}
+                        onClick={() => setStatusFilters([])}
+                    >
+                        Todos
+                    </button>
+                    {columns.filter(c => c.id !== 'cancelled' && c.id !== 'archived').map(col => (
+                        <button
+                            key={col.id}
+                            className={`status-pill ${statusFilters.includes(col.id) ? 'active' : ''}`}
+                            onClick={() => toggleStatusFilter(col.id)}
+                            style={{ '--pill-color': col.color } as any}
+                        >
+                            <span className="pill-dot" style={{ backgroundColor: col.color }}></span>
+                            {col.label}
+                        </button>
+                    ))}
+                    <div className="toolbar-spacer"></div>
+                    <div className="archived-mini-toggle" onClick={() => setShowArchived(!showArchived)}>
+                        <div className={`mini-switch ${showArchived ? 'active' : ''}`}></div>
+                        <span>Ver Archivados</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Advanced Filters Drawer (Side Panel) */}
+            {showFilters && (
+                <div className="filters-drawer-overlay" onClick={() => setShowFilters(false)}>
+                    <div className="filters-drawer" onClick={e => e.stopPropagation()}>
+                        <div className="drawer-header">
+                            <div className="drawer-title">
+                                <Filter size={20} />
+                                <h3>Filtros Avanzados</h3>
+                            </div>
+                            <button className="drawer-close" onClick={() => setShowFilters(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="drawer-body custom-scrollbar">
+                            {/* Status Section */}
+                            <div className="drawer-section">
+                                <label className="drawer-section-label">Estados de Pedido</label>
+                                <div className="drawer-status-grid">
+                                    {columns.map(col => (
+                                        <label key={col.id} className={`drawer-checkbox status-item ${statusFilters.includes(col.id) ? 'selected' : ''}`}>
                                             <input
                                                 type="checkbox"
                                                 checked={statusFilters.includes(col.id)}
                                                 onChange={() => toggleStatusFilter(col.id)}
-                                                style={{ accentColor: col.color }}
                                             />
-                                            <span style={{ color: col.color, fontWeight: 500 }}>{col.label}</span>
+                                            <div className="status-item-content">
+                                                <div className="status-dot" style={{ backgroundColor: col.color }}></div>
+                                                <span className="status-name">{col.label}</span>
+                                            </div>
                                         </label>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Delivery Method Filter */}
-                            <div className="advanced-filter-section">
-                                <h4>
-                                    <Truck size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                                    Método de Entrega
-                                </h4>
-                                <div className="delivery-options">
-                                    <label className="delivery-option">
+                            <div className="drawer-divider"></div>
+
+                            {/* Delivery Method */}
+                            <div className="drawer-section">
+                                <label className="drawer-section-label">Método de Entrega</label>
+                                <div className="drawer-radio-group">
+                                    <label className={`drawer-radio ${deliveryFilter === 'all' ? 'selected' : ''}`}>
                                         <input
                                             type="radio"
-                                            name="deliveryFilter"
+                                            name="delivery"
                                             checked={deliveryFilter === 'all'}
                                             onChange={() => setDeliveryFilter('all')}
-                                            style={{ accentColor: '#4F7A5A' }}
                                         />
                                         <span>Todos</span>
                                     </label>
-                                    <label className="delivery-option">
+                                    <label className={`drawer-radio ${deliveryFilter === 'delivery' ? 'selected' : ''}`}>
                                         <input
                                             type="radio"
-                                            name="deliveryFilter"
+                                            name="delivery"
                                             checked={deliveryFilter === 'delivery'}
                                             onChange={() => setDeliveryFilter('delivery')}
-                                            style={{ accentColor: '#4F7A5A' }}
                                         />
                                         <span>Envío a domicilio</span>
                                     </label>
-                                    <label className="delivery-option">
+                                    <label className={`drawer-radio ${deliveryFilter === 'pickup' ? 'selected' : ''}`}>
                                         <input
                                             type="radio"
-                                            name="deliveryFilter"
+                                            name="delivery"
                                             checked={deliveryFilter === 'pickup'}
                                             onChange={() => setDeliveryFilter('pickup')}
-                                            style={{ accentColor: '#4F7A5A' }}
                                         />
                                         <span>Retiro en local</span>
                                     </label>
                                 </div>
                             </div>
 
-                            {/* Clear Filters */}
-                            <div className="advanced-filter-section">
-                                <button
-                                    className="clear-filters-btn"
-                                    onClick={() => { setStatusFilters([]); setDeliveryFilter('all'); }}
-                                >
-                                    <X size={16} />
-                                    Limpiar Filtros
-                                </button>
+                            <div className="drawer-divider"></div>
+
+                            {/* Additional Options */}
+                            <div className="drawer-section">
+                                <label className="drawer-section-label">Otras Opciones</label>
+                                <label className="drawer-checkbox legacy">
+                                    <input
+                                        type="checkbox"
+                                        checked={showArchived}
+                                        onChange={() => setShowArchived(!showArchived)}
+                                    />
+                                    <span>Incluir Cancelados y Archivados</span>
+                                </label>
                             </div>
                         </div>
+
+                        <div className="drawer-footer">
+                            <button
+                                className="btn-drawer-clear"
+                                onClick={() => {
+                                    setStatusFilters([]);
+                                    setDeliveryFilter('all');
+                                    setShowArchived(false);
+                                }}
+                            >
+                                Limpiar todo
+                            </button>
+                            <button className="btn-drawer-apply" onClick={() => setShowFilters(false)}>
+                                Aplicar filtros
+                            </button>
+                        </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* Kanban / Calendar Board Layout */}
             {viewMode === 'kanban' ? (
