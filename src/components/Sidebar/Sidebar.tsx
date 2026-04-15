@@ -163,7 +163,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       </div>
 
       <div className="sidebar-brand">
-        <span className="brand-icon">🌿</span>
+        <img src="/logo-app.png" className="brand-logo" alt="Mi Jardín Logo" />
         <h1 className="brand-text">Mi Jardín</h1>
       </div>
 

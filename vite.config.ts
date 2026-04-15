@@ -8,28 +8,28 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'mi-jardin-logo.png'],
+      includeAssets: ['favicon.ico', 'logo-app.png'],
       manifest: {
         name: 'Mi Jardín',
         short_name: 'Mi Jardín',
         description: 'Gestión Natural para tu Negocio',
-        theme_color: '#4F7A5A',
+        theme_color: '#1a3c2a',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',
         icons: [
           {
-            src: 'mi-jardin-logo.png',
+            src: 'logo-app.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'mi-jardin-logo.png',
+            src: 'logo-app.png',
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'mi-jardin-logo.png',
+            src: 'logo-app.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'

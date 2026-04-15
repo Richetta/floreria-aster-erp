@@ -7,16 +7,16 @@
 @import './styles/mobile-ux-system.css';
 
 :root {
-  /* mi jardín - Color Palette */
-  --color-primary: #4F7A5A;
-  /* Natural Green */
-  --color-primary-hover: #3d5e45;
+  /* mi jardín - Color Palette Deepened */
+  --color-primary: #1a3c2a;
+  /* Deep Forest Green */
+  --color-primary-hover: #12291d;
   --color-primary-light: #edf2ef;
 
-  --color-secondary: #A8C3A0;
-  /* Soft Sage */
+  --color-secondary: #4F7A5A;
+  /* Original Garden Green */
   --color-success: #4F7A5A;
-  /* Same as primary for consistency */
+  /* Same as secondary for botanical accent */
   --color-warning: #E6C97A;
   /* Soft Alert - Amberish */
   --color-danger: #C47A5A;

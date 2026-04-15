@@ -136,7 +136,7 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
             {/* Header */}
             <div className="login-header">
                 <div className="login-logo">
-                    <Sprout size={compact ? 40 : 56} className="logo-icon" />
+                    <img src="/logo-app.png" width={compact ? 60 : 80} alt="Mi Jardín Logo" style={{ borderRadius: '14px' }} />
                 </div>
                 <h2 className="login-title">Mi Jardín</h2>
                 <p className="login-subtitle">Sistema de Gestión ERP</p>
@@ -348,7 +348,7 @@ export const Login = () => {
                 <div className="lp-navbar__inner">
                     <div className="lp-navbar__brand">
                         <div className="lp-navbar__logo">
-                            <Leaf size={22} />
+                            <img src="/leaf-icon.png" width="24" alt="Logo icon" style={{ filter: 'brightness(0) invert(1)' }} />
                         </div>
                         <span className="lp-navbar__name">Mi Jardín</span>
                         <span className="lp-navbar__badge">ERP</span>
@@ -493,7 +493,9 @@ export const Login = () => {
                                 ) : (
                                     <div className="lp-demo__live">
                                         <div className="lp-demo__sidebar">
-                                            <div className="lp-demo__sidebar-logo">🌸</div>
+                                            <div className="lp-demo__sidebar-logo">
+                                                <img src="/leaf-icon.png" width="24" alt="Logo" style={{ filter: 'brightness(0) invert(1)' }} />
+                                            </div>
                                             {['Panel', 'Ventas', 'Stock', 'Pedidos', 'Proveedores', 'Finanzas'].map((item, i) => (
                                                 <div key={i} className={`lp-demo__sidebar-item ${i === 0 ? 'active' : ''}`}>{item}</div>
                                             ))}
@@ -573,7 +575,7 @@ export const Login = () => {
             <footer className="lp-footer">
                 <div className="lp-footer__inner">
                     <div className="lp-footer__brand">
-                        <Flower2 size={18} />
+                        <img src="/leaf-icon.png" width="20" alt="Logo icon" style={{ marginRight: '8px', filter: 'brightness(0) invert(1)' }} />
                         <span>Mi Jardín ERP · © 2026</span>
                     </div>
                     <p className="lp-footer__tagline">Hecho con 🌿 para tu jardín</p>

@@ -86,22 +86,22 @@
    ESTADO ACTIVO
    ============================================ */
 .nav-btn.active {
-    color: #4F7A5A;
+    color: var(--color-success);
 }
 
 .nav-btn.active .icon-container {
-    background: linear-gradient(135deg, #edf2ef 0%, #e9d5ff 100%);
-    box-shadow: 0 2px 8px rgba(155, 81, 224, 0.15);
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, rgba(79, 122, 90, 0.15) 100%);
+    box-shadow: 0 2px 8px rgba(26, 60, 42, 0.15);
 }
 
 .nav-btn.active .material-symbols-rounded {
     font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
-    color: #4F7A5A;
+    color: var(--color-success);
 }
 
 .nav-btn.active .nav-label {
     font-weight: 700;
-    color: #4F7A5A;
+    color: var(--color-success);
 }
 
 /* ============================================
@@ -117,19 +117,19 @@
 .icon-center-wrapper {
     width: 50px;
     height: 50px;
-    background: linear-gradient(135deg, #4F7A5A 0%, #608d6d 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    box-shadow: 0 4px 12px rgba(155, 81, 224, 0.35);
+    box-shadow: 0 4px 12px rgba(26, 60, 42, 0.35);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-btn.btn-center:active .icon-center-wrapper {
     transform: scale(0.9);
-    box-shadow: 0 2px 10px rgba(155, 81, 224, 0.3),
+    box-shadow: 0 2px 10px rgba(26, 60, 42, 0.3),
         0 0 0 3px rgba(255, 255, 255, 0.95);
 }
 
@@ -141,14 +141,14 @@
 
 .nav-btn.btn-center .nav-label {
     margin-top: 3px;
-    color: #4F7A5A;
+    color: var(--color-success);
     font-weight: 700;
 }
 
 /* Cuando Vender está activo (gradiente más intenso) */
 .nav-btn.btn-center.active .icon-center-wrapper {
-    background: linear-gradient(135deg, #608d6d 0%, #7c3aed 100%);
-    box-shadow: 0 6px 20px rgba(155, 81, 224, 0.5),
+    background: linear-gradient(135deg, var(--color-primary) 0%, #3d5e45 100%);
+    box-shadow: 0 6px 20px rgba(26, 60, 42, 0.5),
         0 0 0 3px rgba(255, 255, 255, 0.95);
 }
 
