@@ -62,13 +62,19 @@ export const createOrderSlice: StateCreator<AppState, [], [], OrderSlice> = (set
                 contact_phone: orderData.contactPhone,
                 card_message: orderData.cardMessage,
                 notes: orderData.notes,
-                items: orderData.items.map((item: any) => ({
-                    product_id: item.isPackage ? undefined : item.id,
-                    package_id: item.isPackage ? item.id : undefined,
-                    quantity: parseInt(String(item.qty), 10) || 1,
-                    unit_price: parseFloat(String(item.price || 0))
-                })),
-                advance_payment: parseFloat(String(orderData.advancePayment || 0))
+                items: orderData.items.map((item: any) => {
+                    const quantity = parseInt(String(item.qty), 10);
+                    const unitPrice = parseFloat(String(item.price || 0));
+                    
+                    return {
+                        product_id: item.isPackage ? undefined : (item.id || undefined),
+                        package_id: item.isPackage ? (item.id || undefined) : undefined,
+                        product_name: item.name || 'Producto',
+                        quantity: isNaN(quantity) || quantity < 1 ? 1 : quantity,
+                        unit_price: isNaN(unitPrice) ? 0 : unitPrice
+                    };
+                }),
+                advance_payment: parseFloat(String(orderData.advancePayment || 0)) || 0
             };
 
             console.log('[OrderSlice] Rendering final API payload:', JSON.stringify(apiData, null, 2));

@@ -88,10 +88,10 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     card_message: z.string().optional().or(z.literal('')),
     notes: z.string().optional().or(z.literal('')),
     items: z.array(z.object({
-      product_id: z.string().optional(),
-      package_id: z.string().optional(),
-      quantity: z.number().int().positive(),
-      unit_price: z.number().positive(),
+      product_id: z.string().optional().nullable(),
+      package_id: z.string().optional().nullable(),
+      quantity: z.number().int().positive().default(1),
+      unit_price: z.number().nonnegative().default(0),
       product_name: z.string().optional()
     })).min(1, 'El pedido debe tener al menos 1 item'),
     advance_payment: z.number().default(0)
