@@ -18,16 +18,13 @@ import {
     Award,
     Filter,
     ChevronDown,
-    ChevronUp,
     AlertCircle,
     Copy,
     Printer,
     UserPlus,
     Plus,
     Minus,
-    Tag,
-    Package,
-    Building2
+    Package
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
@@ -57,7 +54,6 @@ export const POSDesktop = () => {
     const updateCustomer = useStore((state) => state.updateCustomer);
     const addOrder = useStore((state) => state.addOrder);
     const addTransaction = useStore((state) => state.addTransaction);
-    const categories = useStore((state) => state.categories);
     const navigate = useNavigate();
     const isMobile = useMediaQuery('(max-width: 768px)');
 
@@ -117,11 +113,6 @@ export const POSDesktop = () => {
     const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
     const [productView, setProductView] = useState<ProductView>('all');
     const [showFilters, setShowFilters] = useState(false);
-    const [expandedFilterSections, setExpandedFilterSections] = useState<Record<string, boolean>>({
-        categories: true,
-        brands: true,
-        tags: false
-    });
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
     const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
@@ -661,14 +652,6 @@ export const POSDesktop = () => {
     };
 
     // Filter toggle helpers
-    const toggleCategory = (category: string) => {
-        setActiveCategories(prev =>
-            prev.includes(category)
-                ? prev.filter(c => c !== category)
-                : [...prev, category]
-        );
-    };
-
     const toggleBrand = (brand: string) => {
         setActiveBrands(prev =>
             prev.includes(brand)
@@ -677,11 +660,9 @@ export const POSDesktop = () => {
         );
     };
 
-    const toggleTag = (tag: string) => {
+    const toggleTag = (tagName: string) => {
         setActiveTags(prev =>
-            prev.includes(tag)
-                ? prev.filter(t => t !== tag)
-                : [...prev, tag]
+            prev.includes(tagName) ? prev.filter(t => t !== tagName) : [...prev, tagName]
         );
     };
 
