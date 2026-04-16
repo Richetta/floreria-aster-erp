@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { FastifyInstance, FastifyReply } from 'fastify';
-import { authenticate } from '../middleware/auth';
+import { authenticate } from '../middleware/auth.js';
 import { db } from '../db/index.js';
 
 // ============================================
