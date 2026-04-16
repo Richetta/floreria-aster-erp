@@ -114,17 +114,30 @@ export const CalendarDesktop = () => {
 
     const upcomingListDays = React.useMemo(() => {
         const list = [];
-        const todayAtZero = new Date();
-        todayAtZero.setHours(0, 0, 0, 0);
+        const todayLocalStr = toDateStringLocal(new Date());
 
+        let startDate = new Date();
+        startDate.setHours(0, 0, 0, 0);
         let iterDays = 30;
-        if (listTimeframe === 'week') iterDays = 7;
-        if (listTimeframe === 'trimonth') iterDays = 90;
-        if (listTimeframe === 'year') iterDays = 365;
+
+        if (listTimeframe === 'week') {
+            startDate = new Date();
+            iterDays = 7;
+        } else if (listTimeframe === 'month') {
+            startDate = new Date(currentYear, currentMonth, 1);
+            iterDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+        } else if (listTimeframe === 'trimonth') {
+            startDate = new Date();
+            iterDays = 90;
+        } else if (listTimeframe === 'year') {
+            startDate = new Date(currentYear, 0, 1);
+            iterDays = new Date(currentYear, 11, 31).getDate() >= 365 ? 366 : 365; // Handle leap years or just hardcode length loop
+            iterDays = (new Date(currentYear, 11, 31).getTime() - new Date(currentYear, 0, 1).getTime()) / (1000 * 3600 * 24) + 1;
+        }
 
         for (let i = 0; i < iterDays; i++) {
-            const scanDate = new Date(todayAtZero);
-            scanDate.setDate(todayAtZero.getDate() + i);
+            const scanDate = new Date(startDate);
+            scanDate.setDate(startDate.getDate() + i);
             const scanString = toDateStringLocal(scanDate);
             
             const dayOrders = getOrdersForDay(scanString);
@@ -134,14 +147,14 @@ export const CalendarDesktop = () => {
                 list.push({
                     date: scanDate,
                     dateString: scanString,
-                    isToday: i === 0,
+                    isToday: scanString === todayLocalStr,
                     orders: dayOrders,
                     specialDates: daySpecials
                 });
             }
         }
         return list;
-    }, [orders, specialDates, filters, listTimeframe]);
+    }, [orders, specialDates, filters, listTimeframe, currentYear, currentMonth]);
 
     // ---- ACTIONS ----
     const handleDayClick = (mappedDate: Date) => {
@@ -370,7 +383,7 @@ export const CalendarDesktop = () => {
 
                                             <div className="cards-container">
                                                 {ld.specialDates.map(sd => (
-                                                    <div key={sd.id} className="glass-card" style={{ backgroundColor: sd.color || '#fef3c7' }}>
+                                                    <div key={sd.id} className="glass-card" style={{ backgroundColor: sd.color || '#fef3c7', cursor: 'pointer' }} onClick={() => handleDayClick(ld.date)}>
                                                         <div className="card-content-left">
                                                             <div className="card-header-flex">
                                                                 {sd.category === 'feriado' ? <AlertCircle size={16} color="#ea580c"/> : <CheckCircle2 size={16} opacity={0.4}/>}
@@ -380,7 +393,7 @@ export const CalendarDesktop = () => {
                                                             {sd.description && <p className="card-desc" style={{color: getTextColorForBg(sd.color || '')}}>{sd.description}</p>}
                                                         </div>
                                                         {sd.category === 'personal' && (
-                                                             <button className="event-btn" onClick={() => handleEditEvent({ ...sd })}>
+                                                             <button className="event-btn" onClick={(e) => { e.stopPropagation(); handleEditEvent({ ...sd }); }}>
                                                                  <Edit2 size={14} color="var(--color-text-main)"/>
                                                              </button>
                                                         )}
