@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, MapPin, Truck, AlertCircle, X, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, MapPin, Truck, AlertCircle, X, Trash2, Filter } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import './Calendar.css';
 
@@ -22,6 +22,13 @@ export const CalendarDesktop = () => {
         category: 'personal' as const,
         color: '#4F7A5A',
         description: ''
+    });
+
+    const [filters, setFilters] = useState({
+        showOrders: true,
+        showHolidays: true,
+        showCommercial: true,
+        showPersonal: true
     });
 
     const currentYear = currentDate.getFullYear();
@@ -68,14 +75,19 @@ export const CalendarDesktop = () => {
         const isToday = dateString === toDateStringLocal(new Date());
 
         // Find relevant data for this day
-        const dayOrders = orders.filter(o => {
+        let dayOrders = orders.filter(o => {
             if (!o.date) return false;
             // Handle ISO string or simple string date parsing safely usually it's YYYY-MM-DD...
             const oDate = new Date(o.date);
             return toDateStringLocal(oDate) === dateString;
         });
+        if (!filters.showOrders) dayOrders = [];
 
-        const daySpecialDates = specialDates.filter(sd => sd.date === dateString);
+        const daySpecialDates = specialDates.filter(sd => sd.date === dateString && (
+            (sd.category === 'feriado' && filters.showHolidays) ||
+            (sd.category === 'comercial' && filters.showCommercial) ||
+            (sd.category === 'personal' && filters.showPersonal)
+        ));
 
         return {
             date: mappedDate,
@@ -126,6 +138,22 @@ export const CalendarDesktop = () => {
                     </p>
                 </div>
                 <div className="calendar-controls">
+                    <div className="calendar-filters flex items-center gap-3 bg-surface p-2 rounded-lg border border-border text-sm">
+                        <Filter size={16} className="text-muted" />
+                        <label className="flex items-center gap-1 cursor-pointer">
+                            <input type="checkbox" checked={filters.showOrders} onChange={(e) => setFilters({...filters, showOrders: e.target.checked})} />
+                            Pedidos
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                            <input type="checkbox" checked={filters.showHolidays} onChange={(e) => setFilters({...filters, showHolidays: e.target.checked})} />
+                            Feriados
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                            <input type="checkbox" checked={filters.showCommercial} onChange={(e) => setFilters({...filters, showCommercial: e.target.checked})} />
+                            Efemérides
+                        </label>
+                    </div>
+                    
                     <button className="btn-secondary btn-sm" onClick={goToday}>Hoy</button>
                     <div className="calendar-nav-group">
                         <button className="btn-icon" onClick={prevMonth}><ChevronLeft size={20} /></button>
