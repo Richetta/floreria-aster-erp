@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Search,
@@ -133,29 +133,26 @@ export const POSDesktop = () => {
     // Historial de escaneos para debugging
     const scanHistoryRef = useRef<{ code: string, timestamp: number, success: boolean, productName?: string }[]>([]);
 
-    // Success Modals
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [lastSaleData, setLastSaleData] = useState<{
-        id: string,
-        total: number,
-        method: string,
-        items: any[],
-        date: string
-    } | null>(null);
-    const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
-    const [lastOrderData, setLastOrderData] = useState<{
-        id: string,
-        customerName: string,
-        deliveryDate: string,
-        total: number,
-        advancePayment: number,
-        items: any[]
-    } | null>(null);
-    const [showTemplatesModal, setShowTemplatesModal] = useState(false);
-
-    // Ticket Printer State
     const [showTicketPrinter, setShowTicketPrinter] = useState(false);
     const [ticketData, setTicketData] = useState<TicketData | null>(null);
+
+    // Filter Dropdown state
+    const [activeDropdown, setActiveDropdown] = useState<'stock' | 'category' | 'brand' | 'tag' | null>(null);
+
+    const toggleDropdown = (name: 'stock' | 'category' | 'brand' | 'tag') => {
+        setActiveDropdown(prev => prev === name ? null : name);
+    };
+
+    // Close dropdowns on outside click
+    useEffect(() => {
+        const handleOutsideClick = (e: MouseEvent) => {
+            if (!(e.target as HTMLElement).closest('.filter-dropdown-wrapper')) {
+                setActiveDropdown(null);
+            }
+        };
+        window.addEventListener('click', handleOutsideClick);
+        return () => window.removeEventListener('click', handleOutsideClick);
+    }, []);
 
     // Custom modal hook (replaces native alert/confirm)
     const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
@@ -564,6 +561,23 @@ export const POSDesktop = () => {
         }
     };
 
+    // Helper for hierarchical category filtering
+    const getDescendantCategoryIds = (categoryId: string): string[] => {
+        let ids = [categoryId];
+        const folder = categoriesData.find(c => c.id === categoryId);
+        if (folder?.children && folder.children.length > 0) {
+            folder.children.forEach(child => {
+                ids = [...ids, ...getDescendantCategoryIds(child.id)];
+            });
+        }
+        return ids;
+    };
+
+    const activeFolderDescendants = useMemo(() => {
+        if (!activeFolderId) return [];
+        return getDescendantCategoryIds(activeFolderId);
+    }, [activeFolderId, categoriesData]);
+
     // Product filtering logic with views and multi-select filters
     const filteredProducts = useMemo(() => {
         let result = (products || []).filter(p => {
@@ -575,11 +589,8 @@ export const POSDesktop = () => {
                 activeCategories.includes(p.category) ||
                 (activeCategories.includes('Sin Categoría') && !p.category);
 
-            // Hierarchical Folder logic
-            const matchesFolder = !activeFolderId || p.category_id === activeFolderId || (
-                // If the active folder has children, check if the product belongs to any of them
-                categoriesData.find(c => c.id === activeFolderId)?.children?.some(child => child.id === p.category_id)
-            );
+            // Hierarchical Folder logic (Recursive)
+            const matchesFolder = !activeFolderId || activeFolderDescendants.includes(p.category_id || '');
 
             // Multi-select brand filter (OR logic within brands)
             const matchesBrand = activeBrands.length === 0 ||
@@ -805,145 +816,97 @@ export const POSDesktop = () => {
                             )}
                         </div>
 
-                        <div style={{ position: 'relative' }}>
-                            <button
-                                className={`filter-icon-btn ${showFilters || getActiveFilterCount() > 0 ? 'active' : ''}`}
-                                onClick={() => setShowFilters(!showFilters)}
-                                title="Filtros avanzados"
-                            >
-                                <Filter size={22} />
-                                {getActiveFilterCount() > 0 && (
-                                    <span className="filter-count-badge-new">{getActiveFilterCount()}</span>
-                                )}
-                            </button>
+                        <div className="filters-bar-horizontal">
+                            {/* Stock Dropdown */}
+                            <div className="filter-dropdown-wrapper">
+                                <button 
+                                    className={`dropdown-trigger ${stockFilter !== 'all' ? 'active' : ''}`}
+                                    onClick={() => toggleDropdown('stock')}
+                                >
+                                    <Filter size={16} />
+                                    <span>Stock: {stockFilter === 'all' ? 'Todos' : stockFilter === 'in' ? 'Con Stock' : stockFilter === 'low' ? 'Bajo Stock' : 'Sin Stock'}</span>
+                                    <ChevronDown size={14} className={activeDropdown === 'stock' ? 'rotate-180' : ''} />
+                                </button>
+                                <div className={`dropdown-menu-premium ${activeDropdown === 'stock' ? 'show' : ''}`}>
+                                    <button className={`menu-item-premium ${stockFilter === 'all' ? 'active' : ''}`} onClick={() => { setStockFilter('all'); setActiveDropdown(null); }}>
+                                        <span>Todos</span>
+                                        <Check size={16} className="check-icon" />
+                                    </button>
+                                    <button className={`menu-item-premium ${stockFilter === 'in' ? 'active' : ''}`} onClick={() => { setStockFilter('in'); setActiveDropdown(null); }}>
+                                        <span>Con Stock</span>
+                                        <Check size={16} className="check-icon" />
+                                    </button>
+                                    <button className={`menu-item-premium ${stockFilter === 'low' ? 'active' : ''}`} onClick={() => { setStockFilter('low'); setActiveDropdown(null); }}>
+                                        <span>Bajo Stock</span>
+                                        <Check size={16} className="check-icon" />
+                                    </button>
+                                    <button className={`menu-item-premium ${stockFilter === 'out' ? 'active' : ''}`} onClick={() => { setStockFilter('out'); setActiveDropdown(null); }}>
+                                        <span>Sin Stock</span>
+                                        <Check size={16} className="check-icon" />
+                                    </button>
+                                </div>
+                            </div>
 
-                            {/* Compact Popover Filter Panel */}
-                            {showFilters && (
-                                <div className="filter-popover animate-scale-in">
-                                    <div className="filter-popover-header">
-                                        <h3>Filtros</h3>
-                                        <div className="flex gap-2">
-                                            {getActiveFilterCount() > 0 && (
-                                                <button className="text-link-sm" onClick={clearAllFilters}>Limpiar</button>
-                                            )}
-                                            <button className="close-popover" onClick={() => setShowFilters(false)}>
-                                                <X size={18} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="filter-popover-content">
-                                        {/* Stock Status Filter */}
-                                        <div className="filter-group">
-                                            <label>Stock</label>
-                                            <div className="filter-pills">
-                                                <button 
-                                                    className={`filter-pill ${stockFilter === 'all' ? 'active' : ''}`}
-                                                    onClick={() => setStockFilter('all')}
-                                                >Todos</button>
-                                                <button 
-                                                    className={`filter-pill ${stockFilter === 'in' ? 'active' : ''}`}
-                                                    onClick={() => setStockFilter('in')}
-                                                >Con Stock</button>
-                                                <button 
-                                                    className={`filter-pill ${stockFilter === 'low' ? 'active' : ''}`}
-                                                    onClick={() => setStockFilter('low')}
-                                                >Bajo Stock</button>
-                                                <button 
-                                                    className={`filter-pill ${stockFilter === 'out' ? 'active' : ''}`}
-                                                    onClick={() => setStockFilter('out')}
-                                                >Sin Stock</button>
-                                            </div>
-                                        </div>
-
-                                        {/* Folder / Subfolder Filter */}
-                                        <div className="filter-group">
-                                            <label>Carpetas / Categorías</label>
-                                            <div className="folder-tree">
-                                                <button 
-                                                    className={`folder-item ${!activeFolderId ? 'active' : ''}`}
-                                                    onClick={() => setActiveFolderId(null)}
-                                                >
-                                                    <Package size={14} />
-                                                    <span>Todas</span>
+                            {/* Folders Dropdown */}
+                            <div className="filter-dropdown-wrapper">
+                                <button 
+                                    className={`dropdown-trigger ${activeFolderId ? 'active' : ''}`}
+                                    onClick={() => toggleDropdown('category')}
+                                >
+                                    <Package size={16} />
+                                    <span>{activeFolderId ? categoriesData.find(c => c.id === activeFolderId)?.name : 'Categoría'}</span>
+                                    <ChevronDown size={14} className={activeDropdown === 'category' ? 'rotate-180' : ''} />
+                                </button>
+                                <div className={`dropdown-menu-premium ${activeDropdown === 'category' ? 'show' : ''}`} style={{ width: '280px' }}>
+                                    <button className={`menu-item-premium ${!activeFolderId ? 'active' : ''}`} onClick={() => { setActiveFolderId(null); setActiveDropdown(null); }}>
+                                        <span>Todas</span>
+                                        <Check size={16} className="check-icon" />
+                                    </button>
+                                    <div className="folder-scroller" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                        {categoriesData.filter(c => !c.parent_id).map(folder => (
+                                            <div key={folder.id}>
+                                                <button className={`menu-item-premium ${activeFolderId === folder.id ? 'active' : ''}`} onClick={() => { setActiveFolderId(folder.id); setActiveDropdown(null); }}>
+                                                    <span style={{ fontWeight: 700 }}>{folder.name}</span>
+                                                    <Check size={16} className="check-icon" />
                                                 </button>
-                                                {categoriesData.filter(c => !c.parent_id).map(folder => {
-                                                    const isExpanded = expandedFolders.includes(folder.id) || 
-                                                                     folder.children?.some(child => child.id === activeFolderId);
-                                                    
-                                                    return (
-                                                        <div key={folder.id} className="folder-container">
-                                                            <button 
-                                                                className={`folder-item ${activeFolderId === folder.id ? 'active' : ''}`}
-                                                                onClick={() => {
-                                                                    setActiveFolderId(folder.id);
-                                                                    setExpandedFolders(prev => 
-                                                                        prev.includes(folder.id) ? prev.filter(id => id !== folder.id) : [...prev, folder.id]
-                                                                    );
-                                                                }}
-                                                            >
-                                                                <Plus size={12} className={isExpanded ? 'rotate-45' : ''} />
-                                                                <span>{folder.name}</span>
-                                                            </button>
-                                                            {isExpanded && folder.children && folder.children.length > 0 && (
-                                                                <div className="subfolder-list">
-                                                                    {folder.children.map(sub => (
-                                                                        <button 
-                                                                            key={sub.id}
-                                                                            className={`subfolder-item ${activeFolderId === sub.id ? 'active' : ''}`}
-                                                                            onClick={(e) => { 
-                                                                                e.stopPropagation(); 
-                                                                                setActiveFolderId(sub.id); 
-                                                                            }}
-                                                                        >
-                                                                            <span>{sub.name}</span>
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
+                                                {folder.children?.map(sub => (
+                                                    <button key={sub.id} className={`menu-item-premium ${activeFolderId === sub.id ? 'active' : ''}`} onClick={() => { setActiveFolderId(sub.id); setActiveDropdown(null); }} style={{ paddingLeft: '2rem' }}>
+                                                        <span style={{ fontSize: '0.85rem' }}>{sub.name}</span>
+                                                        <Check size={14} className="check-icon" />
+                                                    </button>
+                                                ))}
                                             </div>
-                                        </div>
-
-                                        {/* Brand Filter */}
-                                        {brands.length > 0 && (
-                                            <div className="filter-group">
-                                                <label>Marcas</label>
-                                                <div className="filter-chips-compact">
-                                                    {brands.map(brand => (
-                                                        <button 
-                                                            key={brand.id}
-                                                            className={`chip-compact ${activeBrands.includes(brand.name) ? 'active' : ''}`}
-                                                            onClick={() => toggleBrand(brand.name)}
-                                                        >
-                                                            {brand.name}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Tag Filter */}
-                                        {tags.length > 0 && (
-                                            <div className="filter-group">
-                                                <label>Etiquetas</label>
-                                                <div className="filter-chips-compact">
-                                                    {tags.map(tag => (
-                                                        <button 
-                                                            key={tag}
-                                                            className={`chip-compact tag ${activeTags.includes(tag) ? 'active' : ''}`}
-                                                            onClick={() => toggleTag(tag)}
-                                                        >
-                                                            {tag}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
+                                        ))}
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Brand Dropdown */}
+                            {brands.length > 0 && (
+                                <div className="filter-dropdown-wrapper">
+                                    <button 
+                                        className={`dropdown-trigger ${activeBrands.length > 0 ? 'active' : ''}`}
+                                        onClick={() => toggleDropdown('brand')}
+                                    >
+                                        <Award size={16} />
+                                        <span>Marcas {activeBrands.length > 0 ? `(${activeBrands.length})` : ''}</span>
+                                        <ChevronDown size={14} className={activeDropdown === 'brand' ? 'rotate-180' : ''} />
+                                    </button>
+                                    <div className={`dropdown-menu-premium ${activeDropdown === 'brand' ? 'show' : ''}`}>
+                                        <div className="brand-scroller" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                            {brands.map(brand => (
+                                                <button key={brand.id} className={`menu-item-premium ${activeBrands.includes(brand.name) ? 'active' : ''}`} onClick={() => toggleBrand(brand.name)}>
+                                                    <span>{brand.name}</span>
+                                                    <Check size={16} className="check-icon" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {getActiveFilterCount() > 0 && (
+                                <button className="text-link-sm" onClick={clearAllFilters} style={{ marginLeft: '0.5rem' }}>Limpiar filtros</button>
                             )}
                         </div>
 
@@ -1243,32 +1206,33 @@ export const POSDesktop = () => {
                             ) : (
                                 cart.map((item, idx) => (
                                     <div className="cart-line-item" key={`${item.id}-${idx}`}>
-                                        <div className="cart-line-details">
-                                            <h4 className="cart-item-name">{item.name}</h4>
-                                            <p className="text-micro text-muted">${item.price?.toLocaleString() || '0'} c/u</p>
+                                        <div className="cart-item-info-row">
+                                            <div className="flex-1">
+                                                <h4 className="cart-item-name">{item.name}</h4>
+                                                <p className="cart-item-price-unit">${item.price?.toLocaleString()} c/u</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-body font-bold text-primary">${((item.price || 0) * item.qty).toLocaleString()}</span>
+                                            </div>
                                         </div>
 
-                                        <div className="cart-line-actions">
+                                        <div className="cart-item-actions-row">
                                             <div className="qty-controls">
-                                                <button className="qty-btn" onClick={() => updateCartQty(item.id, -1)} title="Disminuir cantidad">
-                                                    <Minus size={16} />
+                                                <button className="qty-btn" onClick={() => updateCartQty(item.id, -1)} title="Disminuir">
+                                                    <Minus size={14} />
                                                 </button>
                                                 <span className="qty-value">{item.qty}</span>
-                                                <button className="qty-btn" onClick={() => updateCartQty(item.id, 1)} title="Aumentar cantidad">
-                                                    <Plus size={16} />
+                                                <button className="qty-btn" onClick={() => updateCartQty(item.id, 1)} title="Aumentar">
+                                                    <Plus size={14} />
                                                 </button>
-                                            </div>
-
-                                            <div className="cart-line-total font-bold">
-                                                ${((item.price || 0) * item.qty).toLocaleString()}
                                             </div>
 
                                             <button
-                                                className="btn-icon text-danger"
+                                                className="btn-icon text-danger opacity-50 hover:opacity-100"
                                                 onClick={() => removeFromCart(item.id)}
-                                                title="Quitar del carrito (Esc)"
+                                                title="Quitar"
                                             >
-                                                <Trash2 size={14} />
+                                                <Trash2 size={16} />
                                             </button>
                                         </div>
                                     </div>
@@ -1635,15 +1599,15 @@ export const POSDesktop = () => {
                     {checkoutMode === 'sale' && (
                         <div className="cart-footer">
                             <div className="sale-checkout-compact">
-                                <div className="quick-sale-options mb-3">
-                                    <div className="flex gap-2 mb-2">
-                                        <div className="flex-1 form-group-compact">
-                                            <label className="text-micro mb-1">Cliente (Opcional)</label>
+                                <div className="quick-sale-options mb-4">
+                                    <div className="flex gap-4 mb-3">
+                                        <div className="flex-1 form-group">
+                                            <label className="form-label-compact" style={{fontSize: '0.7rem', color: '#94a3b8'}}>Cliente (Opcional)</label>
                                             <select
                                                 className="form-input"
                                                 value={selectedCustomer}
                                                 onChange={(e) => updatePosOrderForm({ selectedCustomer: e.target.value })}
-                                                style={{ padding: '0.4rem 0.5rem', fontSize: '0.85rem', height: '32px' }}
+                                                style={{ padding: '0.6rem 0.75rem', fontSize: '0.9rem', height: '42px', width: '100%', background: '#f8fafc' }}
                                             >
                                                 <option value="">Consumidor Final (Sin asignar)</option>
                                                 {customers.map(c => (
@@ -1651,26 +1615,26 @@ export const POSDesktop = () => {
                                                 ))}
                                             </select>
                                         </div>
-                                        <div className="form-group-compact" style={{ width: '80px' }}>
-                                            <label className="text-micro mb-1">Dcto. %</label>
+                                        <div className="form-group" style={{ width: '100px' }}>
+                                            <label className="form-label-compact" style={{fontSize: '0.7rem', color: '#94a3b8'}}>Dcto. %</label>
                                             <input
                                                 type="number"
                                                 className="form-input"
                                                 value={quickSaleDiscount}
                                                 onChange={(e) => setQuickSaleDiscount(Number(e.target.value))}
                                                 min="0" max="100"
-                                                style={{ padding: '0.4rem 0.5rem', fontSize: '0.85rem', height: '32px' }}
+                                                style={{ padding: '0.6rem 0.75rem', fontSize: '0.9rem', height: '42px', width: '100%', background: '#f8fafc' }}
                                             />
                                         </div>
                                     </div>
-                                    <div className="form-group-compact">
+                                    <div className="form-group">
                                         <input
                                             type="text"
                                             className="form-input"
                                             placeholder="Notas (opcional, ej: pago exacto)..."
                                             value={orderNotes}
                                             onChange={(e) => updatePosOrderForm({ orderNotes: e.target.value })}
-                                            style={{ padding: '0.4rem 0.5rem', fontSize: '0.85rem', height: '32px' }}
+                                            style={{ padding: '0.6rem 1rem', fontSize: '0.9rem', height: '42px', width: '100%', background: '#f8fafc' }}
                                         />
                                     </div>
                                 </div>

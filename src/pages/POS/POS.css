@@ -9,10 +9,9 @@
     flex-direction: column;
     height: 100vh;
     gap: 0;
-    /* Remove gap if we want total seamless look, or keep small */
     margin: 0;
     padding: 0;
-    background: white;
+    background: #fcfbf8; /* Softer vanilla background */
     overflow: hidden;
 }
 
@@ -178,7 +177,7 @@
     min-width: 22px;
     height: 22px;
     padding: 0 4px;
-    background: #ef4444;
+    background: var(--color-danger, #ef4444);
     color: white;
     font-size: 0.75rem;
     font-weight: 800;
@@ -186,8 +185,114 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: 3px solid white;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* ========================================
+   Dropdown Filters Premium Style
+   ======================================== */
+.filters-bar-horizontal {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.filter-dropdown-wrapper {
+    position: relative;
+}
+
+.dropdown-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    background: white;
+    border: 2px solid #EAE5D9;
+    border-radius: 50px;
+    color: #6B6B6B;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.dropdown-trigger:hover {
+    border-color: #4F7A5A;
+    color: #4F7A5A;
+    background: #F6F4EF;
+}
+
+.dropdown-trigger.active {
+    background: #4F7A5A;
+    border-color: #4F7A5A;
+    color: white;
+    box-shadow: 0 4px 12px rgba(79, 122, 90, 0.25);
+}
+
+.dropdown-menu-premium {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 240px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(234, 229, 217, 0.8);
+    border-radius: 18px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+    padding: 0.75rem;
+    display: none;
+    animation: slideInDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dropdown-menu-premium.show {
+    display: flex;
+    flex-direction: column;
+}
+
+.menu-item-premium {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: #3A3A3A;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.menu-item-premium:hover {
+    background: #F6F4EF;
+}
+
+.menu-item-premium.active {
+    background: rgba(79, 122, 90, 0.1);
+    color: #4F7A5A;
+}
+
+.menu-item-premium .check-icon {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.menu-item-premium.active .check-icon {
+    opacity: 1;
+}
+
+@keyframes slideInDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* Filter Popover - Compact & Premium */
@@ -541,34 +646,27 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.25rem;
+    padding: 1.25rem 1.5rem; /* More aire */
     background: white;
-    border: 2px solid #D1CDBF;
-    border-radius: 16px;
+    border: 2px solid #EAE5D9;
+    border-radius: 20px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
 }
 
 .product-list-item:hover {
     border-color: #4F7A5A;
-    box-shadow: 0 4px 16px rgba(155, 81, 224, 0.15);
-    transform: translateX(4px);
-}
-
-.product-list-item:active {
-    transform: scale(0.98);
-}
-
-.product-list-item.out-of-stock {
-    opacity: 0.5;
-    cursor: not-allowed;
+    box-shadow: 0 12px 24px rgba(79, 122, 90, 0.08);
+    transform: translateY(-2px);
 }
 
 .product-list-name {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #3A3A3A;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #1e293b;
     margin: 0;
+    letter-spacing: -0.01em;
 }
 
 .product-list-meta {
@@ -590,14 +688,109 @@
 }
 
 .product-list-price {
-    font-size: 1.1rem;
-    font-weight: 800;
+    font-size: 1.25rem;
+    font-weight: 900;
     color: #4F7A5A;
-    min-width: 90px;
+    min-width: 110px;
     text-align: right;
+    letter-spacing: -0.02em;
 }
 
-.stock-badge {
+.pos-cart-panel {
+    width: 450px; /* Spacious width */
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-left: 1px solid #D1CDBF;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+}
+
+.cart-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #F6F4EF;
+    background: white;
+}
+
+.cart-items-section {
+    padding: 1rem 2rem;
+}
+
+.cart-line-item {
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid #F6F4EF;
+    gap: 0.75rem;
+}
+
+.cart-line-item:last-child {
+    border-bottom: none;
+}
+
+.cart-item-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.cart-item-name {
+    font-size: 1.05rem;
+    font-weight: 750;
+    color: #1e293b;
+    margin: 0;
+}
+
+.cart-item-price-unit {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 0.25rem;
+}
+
+.cart-item-actions-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+}
+
+.qty-controls {
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 10px;
+    padding: 2px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.qty-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: white;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.qty-btn:hover {
+    background: #4F7A5A;
+    color: white;
+}
+
+.qty-value {
+    width: 36px;
+    text-align: center;
+    font-weight: 800;
+    color: #1e293b;
+    font-size: 0.95rem;
+}
     font-size: 0.7rem;
     font-weight: 700;
     padding: 0.25rem 0.625rem;
