@@ -120,6 +120,8 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
           'products.tags',
           'products.category_id',
           'products.brand_id',
+          'products.sales_count',
+          'products.last_sale_date',
           'categories.name as category_name',
           'brands.name as brand_name'
         ])
