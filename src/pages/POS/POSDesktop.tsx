@@ -21,6 +21,7 @@ import {
     AlertCircle,
     Copy,
     Printer,
+    User,
     UserPlus,
     Plus,
     Minus,
@@ -99,6 +100,15 @@ export const POSDesktop = () => {
     // Local-only state
     const [customerSearch, setCustomerSearch] = useState('');
     const [expandedSection, setExpandedSection] = useState<number | null>(1);
+    
+    const toggleSection = (section: number) => {
+        if (expandedSection === section) {
+            setExpandedSection(null);
+        } else {
+            setExpandedSection(section);
+        }
+    };
+
     const [isAddingCustomer, setIsAddingCustomer] = useState(false);
     const [newCustomerName, setNewCustomerName] = useState('');
     const [newCustomerPhone, setNewCustomerPhone] = useState('');
@@ -118,13 +128,13 @@ export const POSDesktop = () => {
     const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [isScanningEnabled, setIsScanningEnabled] = useState(true);
+    const [quickSaleDiscount, setQuickSaleDiscount] = useState<number>(0);
 
     // Historial de escaneos para debugging
     const scanHistoryRef = useRef<{ code: string, timestamp: number, success: boolean, productName?: string }[]>([]);
 
     // Success Modals
     const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [quickSaleDiscount, setQuickSaleDiscount] = useState(0);
     const [lastSaleData, setLastSaleData] = useState<{
         id: string,
         total: number,
@@ -612,12 +622,10 @@ export const POSDesktop = () => {
     }, [products, searchTerm, activeCategories, activeBrands, activeTags, productView]);
 
     const getViewTitle = () => {
-        switch (productView) {
-            case 'recent': return 'Últimos Vendidos';
-            case 'top': return 'Más Vendidos';
-            case 'all': return 'Lista Completa';
-            case 'packages': return 'Paquetes';
-        }
+        if (productView === 'recent') return 'Recientes';
+        if (productView === 'top') return 'Top Vendidos';
+        if (productView === 'packages') return 'Arreglos';
+        return 'Todos los Productos';
     };
 
     const getTimeAgo = (dateString?: string) => {
@@ -639,11 +647,6 @@ export const POSDesktop = () => {
     const isValidDate = (dateString: string) => {
         const date = new Date(dateString);
         return !isNaN(date.getTime());
-    };
-
-    // Toggle accordion section
-    const toggleSection = (sectionNum: number) => {
-        setExpandedSection(expandedSection === sectionNum ? null : sectionNum);
     };
 
     const getRankBadge = (index: number) => {
@@ -1274,379 +1277,334 @@ export const POSDesktop = () => {
                         </div>
 
                         {checkoutMode === 'order' && (
-                            /* PEDIR PARA DESPUÉS - Formulario con Acordeón */
-                            <div className="order-form-scrollable">
+                            /* PEDIR PARA DESPUÉS - Formulario Premium sin Acordeón */
+                            <div className="order-form-spacious">
                                 {/* Step 1: Customer */}
-                                <div className="order-form-section">
-                                    <div
-                                        className={`section-header ${expandedSection === 1 ? 'expanded' : ''}`}
-                                        onClick={() => toggleSection(1)}
-                                    >
-                                        <div className="section-title-row">
-                                            <span className="section-number">1</span>
-                                            <h4 className="section-title">Cliente</h4>
+                                <div className="order-card-section">
+                                    <div className="section-header-premium">
+                                        <div className="section-title-wrapper">
+                                            <div className="section-icon-badge"><User size={18} /></div>
+                                            <h4 className="section-title">Datos del Cliente</h4>
                                         </div>
-                                        {expandedSection !== 1 && (selectedCustomer || (isGuest && guestName)) && (
-                                            <span className="selected-value" style={{ marginLeft: 'auto', marginRight: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
-                                                {isGuest ? (guestName || 'Invitado') : (customers.find(c => c.id === selectedCustomer)?.name)}
-                                            </span>
-                                        )}
-                                        <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 1 ? 'expanded' : ''}`} />
                                     </div>
 
-                                    {expandedSection === 1 && (
-                                        <div className="section-content expanded">
-                                            <div className="guest-toggle-container mb-3">
-                                                <button
-                                                    className={`guest-toggle-btn ${isGuest ? 'active' : ''}`}
-                                                    onClick={() => updatePosOrderForm({ isGuest: !isGuest, selectedCustomer: '' })}
-                                                    type="button"
-                                                >
-                                                    <UserPlus size={16} />
-                                                    <span>{isGuest ? 'Cambiar a Cliente Agendado' : 'Venta como Invitado (Sin agendar)'}</span>
-                                                </button>
-                                            </div>
+                                    <div className="section-content-spacious">
+                                        <div className="guest-toggle-container mb-4">
+                                            <button
+                                                className={`guest-toggle-btn ${isGuest ? 'active' : ''}`}
+                                                onClick={() => updatePosOrderForm({ isGuest: !isGuest, selectedCustomer: '' })}
+                                                type="button"
+                                            >
+                                                <UserPlus size={18} />
+                                                <span>{isGuest ? 'Cambiar a Cliente Agendado' : 'Venta como Invitado'}</span>
+                                            </button>
+                                        </div>
 
-                                            {isGuest ? (
-                                                <div className="guest-fields">
-                                                    <div className="form-group mb-2">
-                                                        <label className="text-micro mb-1">Nombre del Cliente <span className="text-danger">*</span></label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-input"
-                                                            placeholder="Nombre para el pedido..."
-                                                            value={guestName}
-                                                            onChange={(e) => updatePosOrderForm({ guestName: e.target.value })}
-                                                            autoFocus
-                                                        />
-                                                    </div>
-                                                    <div className="form-group mb-2">
-                                                        <label className="text-micro mb-1">Teléfono (Opcional)</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-input"
-                                                            placeholder="Teléfono de contacto..."
-                                                            value={guestPhone}
-                                                            onChange={(e) => updatePosOrderForm({ guestPhone: e.target.value })}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div className="search-input-wrapper">
-                                                        <Search size={16} className="search-icon" />
-                                                        <input
-                                                            type="text"
-                                                            className="form-input customer-search-input"
-                                                            placeholder="Buscar cliente..."
-                                                            value={customerSearch}
-                                                            onChange={(e) => setCustomerSearch(e.target.value)}
-                                                            autoFocus
-                                                        />
-                                                    </div>
-
-                                                    <div className="customer-list-compact">
-                                                        {filteredCustomers.slice(0, 6).map(customer => (
-                                                            <button
-                                                                key={customer.id}
-                                                                className={`customer-list-item-compact ${selectedCustomer === customer.id ? 'selected' : ''}`}
-                                                                onClick={() => updatePosOrderForm({ selectedCustomer: customer.id, isGuest: false })}
-                                                            >
-                                                                <div className="customer-list-info">
-                                                                    <span className="customer-list-name">{customer.name}</span>
-                                                                    <span className="customer-list-phone">{customer.phone}</span>
-                                                                </div>
-                                                                {selectedCustomer === customer.id && (
-                                                                    <Check size={16} className="text-primary" />
-                                                                )}
-                                                            </button>
-                                                        ))}
-                                                        <button
-                                                            className="customer-list-item-compact new-customer-btn"
-                                                            onClick={() => setIsAddingCustomer(true)}
-                                                        >
-                                                            <div className="customer-list-info">
-                                                                <span className="customer-list-name">+ Nuevo Cliente</span>
-                                                                <span className="customer-list-phone">Crear en agenda</span>
-                                                            </div>
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            )}
-                                            {isAddingCustomer && (
-                                                <div className="new-customer-form-compact">
+                                        {isGuest ? (
+                                            <div className="guest-fields">
+                                                <div className="form-group mb-3">
+                                                    <label className="form-label">Nombre del Cliente <span className="text-danger">*</span></label>
                                                     <input
                                                         type="text"
-                                                        className="form-input mb-2"
-                                                        placeholder="Nombre completo"
-                                                        value={newCustomerName}
-                                                        onChange={(e) => setNewCustomerName(e.target.value)}
+                                                        className="form-input form-input-lg"
+                                                        placeholder="Nombre para el pedido..."
+                                                        value={guestName}
+                                                        onChange={(e) => updatePosOrderForm({ guestName: e.target.value })}
+                                                        autoFocus
                                                     />
-                                                    <input
-                                                        type="tel"
-                                                        className="form-input mb-2"
-                                                        placeholder="Teléfono"
-                                                        value={newCustomerPhone}
-                                                        onChange={(e) => setNewCustomerPhone(e.target.value)}
-                                                    />
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            className="btn btn-sm btn-success flex-1"
-                                                            onClick={handleAddCustomer}
-                                                            disabled={!newCustomerName.trim()}
-                                                        >
-                                                            <Check size={14} /> Guardar
-                                                        </button>
-                                                        <button
-                                                            className="btn btn-sm btn-secondary flex-1"
-                                                            onClick={() => setIsAddingCustomer(false)}
-                                                        >
-                                                            <X size={14} /> Cancelar
-                                                        </button>
-                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    )}
+                                                <div className="form-group mb-3">
+                                                    <label className="form-label">Teléfono (Opcional)</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input form-input-lg"
+                                                        placeholder="Teléfono de contacto..."
+                                                        value={guestPhone}
+                                                        onChange={(e) => updatePosOrderForm({ guestPhone: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="search-input-wrapper mb-3">
+                                                    <Search size={18} className="search-icon" />
+                                                    <input
+                                                        type="text"
+                                                        className="form-input form-input-lg pl-10"
+                                                        placeholder="Buscar cliente agendado..."
+                                                        value={customerSearch}
+                                                        onChange={(e) => setCustomerSearch(e.target.value)}
+                                                        autoFocus
+                                                    />
+                                                </div>
+
+                                                <div className="customer-list-spacious">
+                                                    {filteredCustomers.slice(0, 6).map(customer => (
+                                                        <button
+                                                            key={customer.id}
+                                                            className={`customer-item-spacious ${selectedCustomer === customer.id ? 'selected' : ''}`}
+                                                            onClick={() => updatePosOrderForm({ selectedCustomer: customer.id, isGuest: false })}
+                                                        >
+                                                            <div className="customer-item-info">
+                                                                <span className="customer-item-name">{customer.name}</span>
+                                                                <span className="customer-item-phone">{customer.phone}</span>
+                                                            </div>
+                                                            {selectedCustomer === customer.id && (
+                                                                <Check size={20} className="text-primary check-icon" />
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                    <button
+                                                        className="customer-item-spacious new-customer-btn"
+                                                        onClick={() => setIsAddingCustomer(true)}
+                                                    >
+                                                        <div className="customer-item-info">
+                                                            <span className="customer-item-name font-bold">+ Nuevo Cliente</span>
+                                                            <span className="customer-item-phone">Crear en agenda</span>
+                                                        </div>
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                        {isAddingCustomer && (
+                                            <div className="new-customer-form-spacious mt-3">
+                                                <input
+                                                    type="text"
+                                                    className="form-input form-input-lg mb-3"
+                                                    placeholder="Nombre completo"
+                                                    value={newCustomerName}
+                                                    onChange={(e) => setNewCustomerName(e.target.value)}
+                                                />
+                                                <input
+                                                    type="tel"
+                                                    className="form-input form-input-lg mb-3"
+                                                    placeholder="Teléfono"
+                                                    value={newCustomerPhone}
+                                                    onChange={(e) => setNewCustomerPhone(e.target.value)}
+                                                />
+                                                <div className="flex gap-3 mt-4">
+                                                    <button
+                                                        className="btn btn-primary flex-1 py-3"
+                                                        onClick={handleAddCustomer}
+                                                        disabled={!newCustomerName.trim()}
+                                                    >
+                                                        <Check size={18} className="mr-2" /> Guardar
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-secondary flex-1 py-3"
+                                                        onClick={() => setIsAddingCustomer(false)}
+                                                    >
+                                                        <X size={18} className="mr-2" /> Cancelar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Step 2: Delivery */}
-                                <div className="order-form-section">
-                                    <div
-                                        className={`section-header ${expandedSection === 2 ? 'expanded' : ''}`}
-                                        onClick={() => toggleSection(2)}
-                                    >
-                                        <div className="section-title-row">
-                                            <span className="section-number">2</span>
+                                <div className="order-card-section mt-4">
+                                    <div className="section-header-premium">
+                                        <div className="section-title-wrapper">
+                                            <div className="section-icon-badge"><Truck size={18} /></div>
                                             <h4 className="section-title">Entrega</h4>
                                         </div>
-                                        {expandedSection !== 2 && (
-                                            <span className="selected-value" style={{ marginLeft: 'auto', marginRight: '0.5rem' }}>
-                                                {deliveryMethod === 'pickup' ? 'Retiro' : 'Envio'}
-                                            </span>
-                                        )}
-                                        <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 2 ? 'expanded' : ''}`} />
                                     </div>
 
-                                    {expandedSection === 2 && (
-                                        <div className="section-content expanded">
-                                            <div className="delivery-method-toggle">
-                                                <button
-                                                    className={`toggle-btn ${deliveryMethod === 'pickup' ? 'active' : ''}`}
-                                                    onClick={() => updatePosOrderForm({ deliveryMethod: 'pickup' })}
-                                                >
-                                                    <Store size={14} />
-                                                    <span>Local</span>
-                                                </button>
-                                                <button
-                                                    className={`toggle-btn ${deliveryMethod === 'delivery' ? 'active' : ''}`}
-                                                    onClick={() => updatePosOrderForm({ deliveryMethod: 'delivery' })}
-                                                >
-                                                    <Truck size={14} />
-                                                    <span>Domicilio</span>
-                                                </button>
-                                            </div>
-
-                                            {deliveryMethod === 'delivery' && (
-                                                <>
-                                                    <div className="form-row-compact mt-3">
-                                                        <div className="form-group-compact flex-1">
-                                                            <label className="form-label-compact">Calle</label>
-                                                            <input
-                                                                type="text"
-                                                                className="form-input"
-                                                                placeholder="Calle"
-                                                                value={deliveryAddress.street}
-                                                                onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, street: e.target.value } })}
-                                                            />
-                                                        </div>
-                                                        <div className="form-group-compact" style={{ width: '70px' }}>
-                                                            <label className="form-label-compact">N°</label>
-                                                            <input
-                                                                type="text"
-                                                                className="form-input"
-                                                                placeholder="N°"
-                                                                value={deliveryAddress.number}
-                                                                onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, number: e.target.value } })}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="form-row-compact mt-2">
-                                                        <div className="form-group-compact" style={{ width: '70px' }}>
-                                                            <label className="form-label-compact">Piso</label>
-                                                            <input
-                                                                type="text"
-                                                                className="form-input"
-                                                                placeholder="Piso"
-                                                                value={deliveryAddress.floor}
-                                                                onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, floor: e.target.value } })}
-                                                            />
-                                                        </div>
-                                                        <div className="form-group-compact flex-1">
-                                                            <label className="form-label-compact">Localidad</label>
-                                                            <input
-                                                                type="text"
-                                                                className="form-input"
-                                                                placeholder="Localidad"
-                                                                value={deliveryAddress.city}
-                                                                onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, city: e.target.value } })}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="form-group-compact mt-2">
-                                                        <label className="form-label-compact">Teléfono</label>
-                                                        <input
-                                                            type="tel"
-                                                            className="form-input"
-                                                            placeholder="11-2345-6789"
-                                                            value={contactPhone}
-                                                            onChange={(e) => updatePosOrderForm({ contactPhone: e.target.value })}
-                                                        />
-                                                    </div>
-                                                </>
-                                            )}
-
-                                            {deliveryMethod === 'pickup' && (
-                                                <div className="pickup-info-compact">
-                                                    <Store size={16} className="text-primary" />
-                                                    <span className="text-small">Retiro sin cargo en local</span>
-                                                </div>
-                                            )}
+                                    <div className="section-content-spacious">
+                                        <div className="delivery-method-toggle-lg mb-4">
+                                            <button
+                                                className={`toggle-btn-lg ${deliveryMethod === 'pickup' ? 'active' : ''}`}
+                                                onClick={() => updatePosOrderForm({ deliveryMethod: 'pickup' })}
+                                            >
+                                                <Store size={20} />
+                                                <span>Retiro en Local</span>
+                                            </button>
+                                            <button
+                                                className={`toggle-btn-lg ${deliveryMethod === 'delivery' ? 'active' : ''}`}
+                                                onClick={() => updatePosOrderForm({ deliveryMethod: 'delivery' })}
+                                            >
+                                                <Truck size={20} />
+                                                <span>Envío a Domicilio</span>
+                                            </button>
                                         </div>
-                                    )}
-                                </div>
 
-                                {/* Step 3: Date & Time */}
-                                <div className="order-form-section">
-                                    <div
-                                        className={`section-header ${expandedSection === 3 ? 'expanded' : ''}`}
-                                        onClick={() => toggleSection(3)}
-                                    >
-                                        <div className="section-title-row">
-                                            <span className="section-number">3</span>
-                                            <h4 className="section-title">Fecha</h4>
-                                        </div>
-                                        {expandedSection !== 3 && deliveryDate && (
-                                            <span className="selected-value" style={{ marginLeft: 'auto', marginRight: '0.5rem' }}>
-                                                {(() => {
-                                                    const [y, m, d] = deliveryDate.split('-').map(Number);
-                                                    return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
-                                                })()}
-                                            </span>
-                                        )}
-                                        <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 3 ? 'expanded' : ''}`} />
-                                    </div>
-
-                                    {expandedSection === 3 && (
-                                        <div className="section-content expanded">
-                                            <div className="form-row-compact">
-                                                <div className="form-group-compact flex-1">
-                                                    <label className="form-label-compact">Fecha</label>
+                                        {deliveryMethod === 'delivery' && (
+                                            <div className="delivery-form-grid">
+                                                <div className="form-group">
+                                                    <label className="form-label">Calle</label>
                                                     <input
-                                                        type="date"
-                                                        className="form-input"
-                                                        value={deliveryDate}
-                                                        onChange={(e) => updatePosOrderForm({ deliveryDate: e.target.value })}
-                                                        min={new Date().toISOString().split('T')[0]}
+                                                        type="text"
+                                                        className="form-input form-input-lg"
+                                                        placeholder="Ej. San Martín"
+                                                        value={deliveryAddress.street}
+                                                        onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, street: e.target.value } })}
                                                     />
                                                 </div>
-                                                <div className="form-group-compact flex-1">
-                                                    <label className="form-label-compact">Horario</label>
-                                                    <select
-                                                        className="form-input"
-                                                        value={deliveryTimeSlot}
-                                                        onChange={(e) => updatePosOrderForm({ deliveryTimeSlot: e.target.value as any })}
-                                                    >
-                                                        <option value="allday">Todo el día</option>
-                                                        <option value="morning">Mañana (9-13hs)</option>
-                                                        <option value="afternoon">Tarde (14-18hs)</option>
-                                                        <option value="evening">Noche (18-21hs)</option>
-                                                    </select>
+                                                <div className="form-grid-2">
+                                                    <div className="form-group">
+                                                        <label className="form-label">N°</label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-input form-input-lg"
+                                                            placeholder="123"
+                                                            value={deliveryAddress.number}
+                                                            onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, number: e.target.value } })}
+                                                        />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Piso/Dpto</label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-input form-input-lg"
+                                                            placeholder="Ej. 3A"
+                                                            value={deliveryAddress.floor}
+                                                            onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, floor: e.target.value } })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="form-group mt-3">
+                                                    <label className="form-label">Localidad</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input form-input-lg"
+                                                        placeholder="Localidad o Barrio"
+                                                        value={deliveryAddress.city}
+                                                        onChange={(e) => updatePosOrderForm({ deliveryAddress: { ...deliveryAddress, city: e.target.value } })}
+                                                    />
+                                                </div>
+                                                <div className="form-group mt-3">
+                                                    <label className="form-label">Teléfono quien recibe</label>
+                                                    <input
+                                                        type="tel"
+                                                        className="form-input form-input-lg"
+                                                        placeholder="Ej. 11-2345-6789"
+                                                        value={contactPhone}
+                                                        onChange={(e) => updatePosOrderForm({ contactPhone: e.target.value })}
+                                                    />
                                                 </div>
                                             </div>
+                                        )}
 
-                                            <div className="form-group-compact mt-2">
-                                                <label className="form-label-compact">Consideraciones Internas</label>
-                                                <textarea
-                                                    className="form-input notes-input-compact"
-                                                    rows={1}
-                                                    placeholder="Ej: Moño rojo, sin espinas..."
-                                                    value={orderNotes}
-                                                    onChange={(e) => updatePosOrderForm({ orderNotes: e.target.value })}
-                                                />
+                                        {deliveryMethod === 'pickup' && (
+                                            <div className="pickup-banner-lg">
+                                                <Store size={24} className="text-primary mb-2" />
+                                                <h4 className="text-h4 text-primary">Retiro por Local</h4>
+                                                <p className="text-body text-muted">El pedido se preparará para ser retirado en la sucursal.</p>
                                             </div>
-
-                                            <div className="form-group-compact mt-2">
-                                                <label className="form-label-compact" style={{ color: '#8B4513' }}>
-                                                    <MessageSquare size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                                                    Mensaje de la Tarjeta
-                                                </label>
-                                                <textarea
-                                                    className="form-input card-message-input-compact"
-                                                    rows={2}
-                                                    placeholder="Escribí acá lo que va en la tarjeta..."
-                                                    value={cardMessage}
-                                                    onChange={(e) => updatePosOrderForm({ cardMessage: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Summary & Confirm - Always Visible */}
-                                <div className="order-summary-compact">
-                                    <div className="summary-row">
-                                        <span className="summary-label">Total</span>
-                                        <span className="summary-amount">${(total || 0).toLocaleString()}</span>
+                                        )}
                                     </div>
-                                    {selectedCustomer && (
-                                        <div className="summary-row">
-                                            <span className="summary-label">Cliente</span>
-                                            <span className="summary-value">{customers.find(c => c.id === selectedCustomer)?.name}</span>
-                                        </div>
-                                    )}
-                                    {deliveryDate && isValidDate(deliveryDate) && (
-                                        <div className="summary-row">
-                                            <span className="summary-label">Entrega</span>
-                                            <span className="summary-value">
-                                                {(() => {
-                                                    const [y, m, d] = deliveryDate.split('-').map(Number);
-                                                    return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
-                                                })()}
-                                            </span>
-                                        </div>
-                                    )}
                                 </div>
 
-                                <div className="advance-payment-mini">
-                                    <label className="checkbox-label-mini">
-                                        <input
-                                            type="checkbox"
-                                            checked={advancePayment > 0}
-                                            onChange={(e) => updatePosOrderForm({ advancePayment: e.target.checked ? Math.min(1000, total) : 0 })}
-                                        />
-                                        <span className="checkbox-text-mini">Seña:</span>
-                                    </label>
-                                    {advancePayment > 0 && (
-                                        <div className="advance-input-mini">
-                                            <input
-                                                type="number"
-                                                className="form-input"
-                                                value={advancePayment}
-                                                onChange={(e) => updatePosOrderForm({ advancePayment: Number(e.target.value) })}
-                                                min="0"
-                                                max={total}
+                                {/* Step 3: Date & Details */}
+                                <div className="order-card-section mt-4">
+                                    <div className="section-header-premium">
+                                        <div className="section-title-wrapper">
+                                            <div className="section-icon-badge"><Calendar size={18} /></div>
+                                            <h4 className="section-title">Fecha y Detalles</h4>
+                                        </div>
+                                    </div>
+
+                                    <div className="section-content-spacious">
+                                        <div className="form-grid-2 mb-4">
+                                            <div className="form-group">
+                                                <label className="form-label">Fecha de Entrega</label>
+                                                <input
+                                                    type="date"
+                                                    className="form-input form-input-lg"
+                                                    value={deliveryDate}
+                                                    onChange={(e) => updatePosOrderForm({ deliveryDate: e.target.value })}
+                                                    min={new Date().toISOString().split('T')[0]}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Rango Horario</label>
+                                                <select
+                                                    className="form-input form-input-lg"
+                                                    value={deliveryTimeSlot}
+                                                    onChange={(e) => updatePosOrderForm({ deliveryTimeSlot: e.target.value as any })}
+                                                >
+                                                    <option value="allday">Todo el día</option>
+                                                    <option value="morning">Mañana (9-13hs)</option>
+                                                    <option value="afternoon">Tarde (14-18hs)</option>
+                                                    <option value="evening">Noche (18-21hs)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="form-group mb-4">
+                                            <label className="form-label">
+                                                <MessageSquare size={16} className="inline mr-2 text-primary" />
+                                                Dedicatoria / Tarjeta (Se imprime)
+                                            </label>
+                                            <textarea
+                                                className="form-input popup-textarea-lg card-msg-area"
+                                                rows={4}
+                                                placeholder="Escribí acá el mensaje que va impreso en la tarjeta..."
+                                                value={cardMessage}
+                                                onChange={(e) => updatePosOrderForm({ cardMessage: e.target.value })}
                                             />
                                         </div>
-                                    )}
+
+                                        <div className="form-group">
+                                            <label className="form-label text-muted">Consideraciones Internas (No se imprime)</label>
+                                            <textarea
+                                                className="form-input popup-textarea-lg bg-surface-hover"
+                                                rows={2}
+                                                placeholder="Notas internas para el armado..."
+                                                value={orderNotes}
+                                                onChange={(e) => updatePosOrderForm({ orderNotes: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {advancePayment > 0 && (
-                                    <div className="pending-amount-mini">
-                                        <span>Pendiente:</span>
-                                        <span className="amount">${((total || 0) - (advancePayment || 0)).toLocaleString()}</span>
+                                {/* Order Summary and Payment Settings */}
+                                <div className="order-card-section mt-4 highlight-section">
+                                    <div className="section-content-spacious p-4">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-h4 text-muted">Total del Pedido</span>
+                                            <span className="text-h2 font-bold text-primary">${(total || 0).toLocaleString()}</span>
+                                        </div>
+                                        
+                                        <div className="advance-payment-lg">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <label className="checkbox-lg flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-5 h-5 accent-primary"
+                                                        checked={advancePayment > 0}
+                                                        onChange={(e) => updatePosOrderForm({ advancePayment: e.target.checked ? Math.min(1000, total) : 0 })}
+                                                    />
+                                                    <span className="font-semibold text-body">Dejó Seña / Adelaanto</span>
+                                                </label>
+                                            </div>
+                                            
+                                            {advancePayment > 0 && (
+                                                <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-border">
+                                                    <div className="flex-1">
+                                                        <label className="form-label text-xs mb-1">Monto de Seña</label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-muted">$</span>
+                                                            <input
+                                                                type="number"
+                                                                className="form-input form-input-lg pl-8 w-full"
+                                                                value={advancePayment}
+                                                                onChange={(e) => updatePosOrderForm({ advancePayment: Number(e.target.value) })}
+                                                                min="0"
+                                                                max={total}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1 text-right">
+                                                        <span className="block text-xs text-muted mb-1">Resto Pendiente</span>
+                                                        <span className="text-h4 font-bold text-danger">${((total || 0) - (advancePayment || 0)).toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                )}
+                                </div>
 
                                 <div className="order-payment-buttons">
                                     <p className="text-micro text-muted mb-2">Método de pago {advancePayment > 0 ? 'de la seña' : ''}:</p>
