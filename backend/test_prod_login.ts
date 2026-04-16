@@ -1,4 +1,4 @@
-const url = 'https://aster-backend-production.up.railway.app/api/auth/login';
+const url = 'https://mijardin-api.up.railway.app/api/auth/login';
 
 async function testLogin() {
     try {

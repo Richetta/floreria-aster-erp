@@ -94,7 +94,7 @@
    ```
    http://localhost:3000/api/auth/google/callback          (desarrollo)
    http://localhost:5173                                    (desarrollo frontend)
-   https://aster-erp-production.up.railway.app/api/auth/google/callback  (producción)
+   https://mijardin-api.up.railway.app/api/auth/google/callback  (producción)
    https://floreria-aster.vercel.app                        (producción frontend)
    ```
 
@@ -144,7 +144,7 @@
    # Google OAuth
    GOOGLE_CLIENT_ID=806329509349-r910mo70k002j62jrohh3mlr5uottjlo.apps.googleusercontent.com
    GOOGLE_CLIENT_SECRET=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
-   GOOGLE_REDIRECT_URI=https://aster-erp-production.up.railway.app/api/auth/google/callback
+   GOOGLE_REDIRECT_URI=https://mijardin-api.up.railway.app/api/auth/google/callback
    ```
 
 4. **Deploy:**
@@ -180,7 +180,7 @@
 
    ```bash
    # Backend API URL (producción - Railway)
-   VITE_API_URL=https://aster-erp-production.up.railway.app/api
+   VITE_API_URL=https://mijardin-api.up.railway.app/api
 
    # Google OAuth Client ID
    VITE_GOOGLE_CLIENT_ID=806329509349-r910mo70k002j62jrohh3mlr5uottjlo.apps.googleusercontent.com
@@ -204,7 +204,7 @@
 
 2. **Agregar nueva redirect URI:**
    - Editar OAuth Client
-   - Agregar: `https://aster-erp-production.up.railway.app/api/auth/google/callback`
+   - Agregar: `https://mijardin-api.up.railway.app/api/auth/google/callback`
    - Click **"SAVE"**
 
 ---

@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: mijardin-erp-backend
+    env: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        value: https://mijardin-erp.vercel.app
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://mijardin-erp-backend.onrender.com/api/auth/google/callback
+      - key: DEFAULT_BUSINESS_ID
+        value: 00000000-0000-0000-0000-000000000001
