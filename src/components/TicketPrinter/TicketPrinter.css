@@ -76,7 +76,8 @@
 
 .ticket-shop-cuit,
 .ticket-shop-address,
-.ticket-shop-phone {
+.ticket-shop-phone,
+.ticket-shop-ig {
     font-size: 10px;
     margin: 0.15rem 0;
     color: #666;
@@ -85,6 +86,11 @@
 .ticket-divider {
     border-top: 1px dashed #000;
     margin: 0.5rem 0;
+}
+
+.ticket-divider-thin {
+    border-top: 1px dotted #ccc;
+    margin: 0.25rem 0;
 }
 
 .ticket-info {
@@ -111,18 +117,24 @@
 
 .ticket-items-header {
     display: grid;
-    grid-template-columns: 1fr 40px 60px 60px;
+    grid-template-columns: 35px 1fr 65px;
     gap: 0.25rem;
     font-weight: 600;
     padding-bottom: 0.25rem;
-    border-bottom: 1px dashed #000;
 }
 
-.ticket-item-row {
+.ticket-item-row-basic {
     display: grid;
-    grid-template-columns: 1fr 40px 60px 60px;
+    grid-template-columns: 35px 1fr 65px;
     gap: 0.25rem;
-    padding: 0.25rem 0;
+    padding: 0.25rem 0 0 0;
+}
+
+.ticket-item-subtext {
+    font-size: 9px;
+    color: #666;
+    margin-bottom: 0.25rem;
+    padding-left: 35px; /* Aligns with name */
 }
 
 .ticket-col-name {
@@ -130,7 +142,10 @@
 }
 
 .ticket-col-qty,
-.ticket-col-price,
+.ticket-col-price {
+    text-align: left;
+}
+
 .ticket-col-total {
     text-align: right;
 }
@@ -194,16 +209,17 @@
     margin-top: 1rem;
 }
 
-.ticket-footer-text {
+.ticket-footer-msg {
     font-size: 11px;
     font-weight: 600;
     margin: 0.25rem 0;
 }
 
-.ticket-footer-text-small {
-    font-size: 9px;
-    color: #666;
+.ticket-footer-shop {
+    font-size: 12px;
+    font-weight: 700;
     margin: 0.25rem 0;
+    text-transform: uppercase;
 }
 
 /* Watermark for free plan */

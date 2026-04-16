@@ -21,7 +21,7 @@ import './Sales.css';
 export const SalesDesktop = () => {
     const transactions = useStore((state) => state.transactions);
     const customers = useStore((state) => state.customers);
-    const shopInfo = useStore((state) => state.shopInfo);
+
 
     const [searchTerm, setSearchTerm] = useState('');
     const [dateFilter, setDateFilter] = useState<string>('today'); // today, week, month, all
@@ -289,9 +289,6 @@ export const SalesDesktop = () => {
                         setShowTicketPrinter(false);
                         setTicketData(null);
                     }}
-                    shopName={shopInfo.name}
-                    shopPhone={shopInfo.phone}
-                    shopAddress={shopInfo.address}
                 />
             )}
         </div>

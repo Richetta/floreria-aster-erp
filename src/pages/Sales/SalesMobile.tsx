@@ -7,7 +7,6 @@ import './SalesMobile.css';
 export const SalesMobile = () => {
     const transactions = useStore((state) => state.transactions);
     const customers = useStore((state) => state.customers);
-    const shopInfo = useStore((state) => state.shopInfo);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('today');
@@ -146,9 +145,6 @@ export const SalesMobile = () => {
                     ticketData={ticketData}
                     isOpen={showTicketPrinter}
                     onClose={() => { setShowTicketPrinter(false); setTicketData(null); }}
-                    shopName={shopInfo.name}
-                    shopPhone={shopInfo.phone}
-                    shopAddress={shopInfo.address}
                 />
             )}
         </div>

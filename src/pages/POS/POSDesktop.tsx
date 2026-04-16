@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+﻿import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Search,
@@ -1850,9 +1850,7 @@ export const POSDesktop = () => {
                         setShowTicketPrinter(false);
                         setTicketData(null);
                     }}
-                    shopName="Florería Mi Jard�n"
-                    shopPhone="11-1234-5678"
-                    shopAddress="Calle de las Rosas 789"
+
                 />
             )}
 

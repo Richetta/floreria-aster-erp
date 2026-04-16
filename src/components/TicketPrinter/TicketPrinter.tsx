@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Printer, X } from 'lucide-react';
+import { useStore } from '../../store/useStore';
 import './TicketPrinter.css';
 
 export type TicketData = {
@@ -27,10 +28,6 @@ interface TicketPrinterProps {
     ticketData: TicketData | null;
     isOpen: boolean;
     onClose: () => void;
-    shopName?: string;
-    shopPhone?: string;
-    shopAddress?: string;
-    shopCUIT?: string;
     showWatermark?: boolean; // True for free plan
 }
 
@@ -38,14 +35,11 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
     ticketData,
     isOpen,
     onClose,
-    shopName = 'mi jardín',
-    shopPhone = '',
-    shopAddress = '',
-    shopCUIT = '',
     showWatermark = false
 }) => {
     const componentRef = useRef<HTMLDivElement>(null);
     const [planSlug, setPlanSlug] = useState<string>('');
+    const shopInfo = useStore(state => state.shopInfo);
 
     // Load plan from localStorage (set during login)
     useEffect(() => {
@@ -61,18 +55,6 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
         documentTitle: `Ticket-${ticketData?.id}`,
         onAfterPrint: onClose,
     });
-
-    // Auto-print disabled per user request - user will click button manually
-    /*
-    useEffect(() => {
-        if (isOpen && ticketData) {
-            const timer = setTimeout(() => {
-                handlePrint();
-            }, 300);
-            return () => clearTimeout(timer);
-        }
-    }, [isOpen, ticketData, handlePrint]);
-    */
 
     if (!isOpen || !ticketData) return null;
 
@@ -90,6 +72,12 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
     const formatCurrency = (amount: number) => {
         return `$${amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
     };
+
+    // Obtenemos los datos de la identidad de la floreria o aplicamos un default.
+    const finalShopName = shopInfo?.name || 'MI JARDÍN';
+    const finalShopPhone = shopInfo?.phone || '';
+    const finalShopAddress = shopInfo?.address || '';
+    const finalShopInstagram = shopInfo?.instagram || '';
 
     return (
         <div className="ticket-printer-overlay">
@@ -109,40 +97,45 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
                     <div ref={componentRef} className="ticket-preview">
                         {/* Header */}
                         <div className="ticket-header">
-                            <h1 className="ticket-shop-name">{shopName}</h1>
-                            {shopCUIT && <p className="ticket-shop-cuit">CUIT: {shopCUIT}</p>}
-                            {shopAddress && <p className="ticket-shop-address">{shopAddress}</p>}
-                            {shopPhone && <p className="ticket-shop-phone">Tel: {shopPhone}</p>}
+                            <h1 className="ticket-shop-name">{finalShopName}</h1>
+                            {finalShopAddress && <p className="ticket-shop-address">{finalShopAddress}</p>}
+                            {finalShopPhone && <p className="ticket-shop-phone">WP: {finalShopPhone}</p>}
+                            {finalShopInstagram && <p className="ticket-shop-ig">IG: {finalShopInstagram}</p>}
                             <div className="ticket-divider"></div>
                         </div>
 
                         {/* Ticket Info */}
                         <div className="ticket-info">
                             <div className="ticket-row">
-                                <span className="ticket-label">Tipo:</span>
+                                <span className="ticket-label">COMPROBANTE:</span>
                                 <span className="ticket-value">
                                     {ticketData.type === 'sale' ? 'VENTA' : 'PEDIDO'}
                                 </span>
                             </div>
                             <div className="ticket-row">
-                                <span className="ticket-label">Nº:</span>
-                                <span className="ticket-value">{ticketData.id}</span>
+                                <span className="ticket-label">TICKET Nº:</span>
+                                <span className="ticket-value">#{ticketData.id}</span>
                             </div>
                             <div className="ticket-row">
-                                <span className="ticket-label">Fecha:</span>
+                                <span className="ticket-label">FECHA:</span>
                                 <span className="ticket-value">{formatDate(ticketData.date)}</span>
                             </div>
-                            {ticketData.customerName && (
-                                <div className="ticket-row">
-                                    <span className="ticket-label">Cliente:</span>
-                                    <span className="ticket-value">{ticketData.customerName}</span>
-                                </div>
-                            )}
-                            {ticketData.customerPhone && (
-                                <div className="ticket-row">
-                                    <span className="ticket-label">Tel:</span>
-                                    <span className="ticket-value">{ticketData.customerPhone}</span>
-                                </div>
+                            {(ticketData.customerName || ticketData.customerPhone) && (
+                                <>
+                                    <div className="ticket-divider"></div>
+                                    {ticketData.customerName && (
+                                        <div className="ticket-row">
+                                            <span className="ticket-label">CLIENTE:</span>
+                                            <span className="ticket-value">{ticketData.customerName}</span>
+                                        </div>
+                                    )}
+                                    {ticketData.customerPhone && (
+                                        <div className="ticket-row">
+                                            <span className="ticket-label">TEL:</span>
+                                            <span className="ticket-value">{ticketData.customerPhone}</span>
+                                        </div>
+                                    )}
+                                </>
                             )}
                             <div className="ticket-divider"></div>
                         </div>
@@ -150,19 +143,25 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
                         {/* Items */}
                         <div className="ticket-items">
                             <div className="ticket-items-header">
-                                <span className="ticket-col-name">Producto</span>
-                                <span className="ticket-col-qty">Cant.</span>
-                                <span className="ticket-col-price">Precio</span>
-                                <span className="ticket-col-total">Total</span>
+                                <span className="ticket-col-qty">CANT</span>
+                                <span className="ticket-col-name">DESCRIPCION</span>
+                                <span className="ticket-col-total">IMPORTE</span>
                             </div>
-                            <div className="ticket-divider"></div>
+                            <div className="ticket-divider-thin"></div>
                             {ticketData.items.map((item, index) => (
-                                <div key={index} className="ticket-item-row">
-                                    <span className="ticket-col-name">{item.name}</span>
-                                    <span className="ticket-col-qty">{item.quantity}</span>
-                                    <span className="ticket-col-price">{formatCurrency(item.unitPrice)}</span>
-                                    <span className="ticket-col-total">{formatCurrency(item.total)}</span>
-                                </div>
+                                <React.Fragment key={index}>
+                                    <div className="ticket-item-row-basic">
+                                        <span className="ticket-col-qty">{item.quantity}</span>
+                                        <span className="ticket-col-name">{item.name}</span>
+                                        <span className="ticket-col-total">{formatCurrency(item.total)}</span>
+                                    </div>
+                                    {/* Precio unitario if quantity > 1 */}
+                                    {item.quantity > 1 && (
+                                        <div className="ticket-item-subtext">
+                                            {item.quantity} x {formatCurrency(item.unitPrice)}
+                                        </div>
+                                    )}
+                                </React.Fragment>
                             ))}
                             <div className="ticket-divider"></div>
                         </div>
@@ -170,51 +169,56 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
                         {/* Totals */}
                         <div className="ticket-totals">
                             <div className="ticket-total-row">
-                                <span className="ticket-total-label">Subtotal:</span>
+                                <span className="ticket-total-label">SUBTOTAL:</span>
                                 <span className="ticket-total-value">{formatCurrency(ticketData.subtotal)}</span>
                             </div>
-                            {ticketData.discount && ticketData.discount > 0 && (
+                            {ticketData.discount && ticketData.discount > 0 ? (
                                 <div className="ticket-total-row discount">
-                                    <span className="ticket-total-label">Descuento:</span>
+                                    <span className="ticket-total-label">DESCUENTO:</span>
                                     <span className="ticket-total-value">-{formatCurrency(ticketData.discount)}</span>
                                 </div>
-                            )}
-                            {ticketData.type === 'order' && ticketData.advancePayment && (
-                                <div className="ticket-total-row">
-                                    <span className="ticket-total-label">Seña/Adelanto:</span>
-                                    <span className="ticket-total-value">-{formatCurrency(ticketData.advancePayment)}</span>
-                                </div>
-                            )}
+                            ) : null}
                             <div className="ticket-total-row grand-total">
                                 <span className="ticket-total-label">TOTAL:</span>
                                 <span className="ticket-total-value">{formatCurrency(ticketData.total)}</span>
                             </div>
-                            {ticketData.type === 'order' && ticketData.advancePayment && (
-                                <div className="ticket-total-row pending">
-                                    <span className="ticket-total-label">Saldo Pendiente:</span>
-                                    <span className="ticket-total-value">
-                                        {formatCurrency(ticketData.total - (ticketData.advancePayment || 0))}
-                                    </span>
-                                </div>
-                            )}
+
+                            {ticketData.type === 'order' && ticketData.advancePayment ? (
+                                <>
+                                    <div className="ticket-total-row advance">
+                                        <span className="ticket-total-label">SEÑA/PAGO:</span>
+                                        <span className="ticket-total-value">{formatCurrency(ticketData.advancePayment)}</span>
+                                    </div>
+                                    <div className="ticket-total-row pending">
+                                        <span className="ticket-total-label">FALTA ABONAR:</span>
+                                        <span className="ticket-total-value">
+                                            {formatCurrency(ticketData.total - ticketData.advancePayment)}
+                                        </span>
+                                    </div>
+                                </>
+                            ) : null}
                         </div>
 
                         {/* Payment Method */}
                         {ticketData.paymentMethod && (
                             <div className="ticket-payment">
-                                <span className="ticket-label">Pago:</span>
-                                <span className="ticket-value">
-                                    {ticketData.paymentMethod === 'cash' ? 'Efectivo' :
-                                        ticketData.paymentMethod === 'card' ? 'Tarjeta' :
-                                            ticketData.paymentMethod === 'transfer' ? 'Transferencia' :
-                                                ticketData.paymentMethod}
-                                </span>
+                                <div className="ticket-divider-thin"></div>
+                                <div className="ticket-row">
+                                    <span className="ticket-label">MEDIO DE PAGO:</span>
+                                    <span className="ticket-value">
+                                        {ticketData.paymentMethod === 'cash' ? 'EFECTIVO' :
+                                            ticketData.paymentMethod === 'card' ? 'TARJETA' :
+                                                ticketData.paymentMethod === 'transfer' ? 'TRANSFERENCIA' :
+                                                    ticketData.paymentMethod.toUpperCase()}
+                                    </span>
+                                </div>
                             </div>
                         )}
 
                         {/* Notes */}
                         {ticketData.notes && (
                             <div className="ticket-notes">
+                                <p className="ticket-label">NOTAS:</p>
                                 <p>{ticketData.notes}</p>
                             </div>
                         )}
@@ -222,12 +226,11 @@ export const TicketPrinter: React.FC<TicketPrinterProps> = ({
                         {/* Footer */}
                         <div className="ticket-footer">
                             <div className="ticket-divider"></div>
-                            <p className="ticket-footer-text">¡Gracias por su compra!</p>
-                            <p className="ticket-footer-text">{shopName}</p>
-                            <p className="ticket-footer-text-small">Este ticket es un comprobante válido</p>
+                            <p className="ticket-footer-msg">¡GRACIAS POR SU COMPRA!</p>
+                            <p className="ticket-footer-shop">{finalShopName}</p>
                             {shouldWatermark && (
                                 <div className="ticket-watermark">
-                                    <p className="watermark-text">Powered by Mi Jardín ERP - Plan Gratuito</p>
+                                    <p className="watermark-text">Powered by Mi Jardín ERP</p>
                                 </div>
                             )}
                         </div>
