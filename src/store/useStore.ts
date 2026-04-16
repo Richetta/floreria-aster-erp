@@ -7,6 +7,7 @@ import { createPosSlice, type PosSlice } from './slices/posSlice';
 import { createFinanceSlice, type FinanceSlice } from './slices/financeSlice';
 import { createSupplierSlice, type SupplierSlice } from './slices/supplierSlice';
 import { createUiSlice, type UiSlice } from './slices/uiSlice';
+import { createCalendarSlice, type CalendarSlice } from './slices/calendarSlice';
 
 // Combined state type
 export type AppState = ProductSlice & 
@@ -16,7 +17,8 @@ export type AppState = ProductSlice &
     PosSlice & 
     FinanceSlice & 
     SupplierSlice & 
-    UiSlice;
+    UiSlice &
+    CalendarSlice;
 
 // Create the store
 export const useStore = create<AppState>()((...a) => ({
@@ -28,6 +30,7 @@ export const useStore = create<AppState>()((...a) => ({
     ...createFinanceSlice(...a),
     ...createSupplierSlice(...a),
     ...createUiSlice(...a),
+    ...createCalendarSlice(...a),
 }));
 
 // Re-export types for convenience

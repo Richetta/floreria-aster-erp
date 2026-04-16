@@ -20,7 +20,8 @@ import {
   Layers,
   FileText,
   X,
-  ChevronDown
+  ChevronDown,
+  Calendar
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { useStore } from '../../store/useStore';
@@ -57,6 +58,7 @@ const navItems: NavItem[] = [
     children: [
       { path: '/pedidos', label: 'Gestión' },
       { path: '/logistica', label: 'Logística', icon: Map },
+      { path: '/calendario', label: 'Calendario', icon: Calendar },
     ]
   },
   {

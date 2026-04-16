@@ -1,0 +1,117 @@
+.calendar-page {
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+    height: 100vh;
+}
+
+.calendar-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.calendar-nav-group {
+    display: flex;
+    align-items: center;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 0.25rem;
+}
+
+.calendar-month-title {
+    font-size: 1rem;
+    font-weight: 600;
+    min-width: 140px;
+    text-align: center;
+    color: var(--color-text);
+}
+
+.calendar-board {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.is-today {
+    background-color: var(--color-primary-light) !important;
+}
+
+.day-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+}
+
+.calendar-cell:hover .day-number:not(.bg-primary) {
+    background-color: var(--color-border);
+}
+
+.calendar-cell-content {
+    /* hides scrollbar visually but allows scrolling */
+    -ms-overflow-style: none;
+    scrollbar-width: none; 
+}
+.calendar-cell-content::-webkit-scrollbar {
+    display: none;
+}
+
+.event-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.70rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-left: 2px solid transparent;
+}
+
+.order-pill {
+    background-color: #EBF5FF;
+    color: #1D4ED8;
+    border-left-color: #3B82F6;
+}
+
+.special-pill {
+    /* Colors applied inline dynamically */
+    border-left-width: 3px;
+}
+
+.pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.day-drawer {
+    width: 450px !important;
+}
+
+.special-date-card {
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-left-width: 4px;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.drawer-sub-section {
+    padding-bottom: 1.5rem;
+    border-bottom: 1px dashed var(--color-border);
+}
+
+.drawer-sub-section:last-child {
+    border-bottom: none;
+}

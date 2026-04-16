@@ -23,6 +23,7 @@ import { CashRegister } from './pages/CashRegister';
 import { StockMovements } from './pages/StockMovements';
 import Restock from './pages/Restock';
 import { Reminders } from './pages/Reminders';
+import { CalendarDesktop } from './pages/Calendar';
 import { useAuth } from './store/useAuth';
 
 // ============================================
@@ -133,6 +134,7 @@ function App() {
                         <Route path="stock" element={<StockMovements />} />
                         <Route path="reposicion" element={<Restock />} />
                         <Route path="recordatorios" element={<Reminders />} />
+                        <Route path="calendario" element={<CalendarDesktop />} />
                         <Route path="configuracion" element={<Settings />} />
                     </Route>
 
