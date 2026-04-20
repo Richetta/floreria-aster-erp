@@ -1320,16 +1320,16 @@ export const POSDesktop = () => {
                                     </p>
                                 </div>
                             ) : (
-                                cart.map((item, idx) => (
+                                <div className="cart-items-list">
+                                {cart.map((item, idx) => (
                                     <div className="cart-line-item" key={`${item.id}-${idx}`}>
+                                        {/* LEFT: Name + unit price */}
                                         <div className="cart-item-main-info">
                                             <h4 className="cart-item-name-compact">{item.name}</h4>
-                                            <div className="cart-item-pricing-compact">
-                                                <span className="text-muted text-xs">${item.price?.toLocaleString()} c/u</span>
-                                                <span className="cart-item-total-compact">${((item.price || 0) * item.qty).toLocaleString()}</span>
-                                            </div>
+                                            <p className="cart-item-unit-price">${(item.price || 0).toLocaleString()} c/u</p>
                                         </div>
 
+                                        {/* RIGHT: Qty controls + line total + delete */}
                                         <div className="cart-item-actions-compact">
                                             <div className="qty-controls-compact">
                                                 <button className="qty-btn-mini" onClick={() => updateCartQty(item.id, -1)} title="Disminuir">
@@ -1340,17 +1340,20 @@ export const POSDesktop = () => {
                                                     <Plus size={12} />
                                                 </button>
                                             </div>
-
+                                            <span className="cart-item-total-compact">
+                                                ${((item.price || 0) * item.qty).toLocaleString()}
+                                            </span>
                                             <button
                                                 className="btn-delete-mini"
                                                 onClick={() => removeFromCart(item.id)}
-                                                title="Quitar"
+                                                title="Quitar del carrito"
                                             >
                                                 <Trash2 size={14} />
                                             </button>
                                         </div>
                                     </div>
-                                ))
+                                ))}
+                                </div>
                             )}
                         </div>
 
