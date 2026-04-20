@@ -125,7 +125,6 @@ export const POSDesktop = () => {
     const [productView, setProductView] = useState<ProductView>('all');
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
-    const [orderStep, setOrderStep] = useState<1 | 2 | 3>(1);
     const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [isScanningEnabled, setIsScanningEnabled] = useState(true);
@@ -779,7 +778,7 @@ export const POSDesktop = () => {
                             alignItems: 'center',
                             padding: '0 1.5rem',
                             height: '54px',
-                            width: '100%',
+                            flex: 1,
                             transition: 'all 0.3s ease',
                             boxShadow: isScanning ? '0 0 0 3px rgba(34, 197, 94, 0.2)' : 'none'
                         }}>
@@ -826,7 +825,63 @@ export const POSDesktop = () => {
                             )}
                         </div>
 
-                        <div className="filters-bar-horizontal">
+                        <button
+                            onClick={() => setIsScanningEnabled(!isScanningEnabled)}
+                            title={isScanningEnabled ? "Deshabilitar escáner" : "Habilitar escáner"}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                background: isScanningEnabled ? '#F6F4EF' : '#fee2e2',
+                                border: '1px solid #D1CDBF',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                color: isScanningEnabled ? '#6B6B6B' : '#dc2626',
+                                fontWeight: '500',
+                                fontSize: '0.875rem'
+                            }}
+                        >
+                            {isScanningEnabled ? <ScanLine size={20} /> : <ScanLine size={20} opacity={0.5} />}
+                            <span style={{ display: window.innerWidth > 768 ? 'inline' : 'none' }}>
+                                {isScanningEnabled ? 'Escáner ON' : 'Escáner OFF'}
+                            </span>
+                        </button>
+                    </div>
+
+                    <div className="pos-filters-nav mb-4" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                        <div className="pos-nav-pills" style={{ margin: 0 }}>
+                            <button
+                                className={`nav-pill ${productView === 'recent' ? 'active' : ''}`}
+                                onClick={() => setProductView('recent')}
+                            >
+                                <Clock size={16} />
+                                <span>Recientes</span>
+                            </button>
+                            <button
+                                className={`nav-pill ${productView === 'top' ? 'active' : ''}`}
+                                onClick={() => setProductView('top')}
+                            >
+                                <Award size={16} />
+                                <span>Top</span>
+                            </button>
+                            <button
+                                className={`nav-pill ${productView === 'all' ? 'active' : ''}`}
+                                onClick={() => setProductView('all')}
+                            >
+                                <List size={16} />
+                                <span>Todos</span>
+                            </button>
+                            <button
+                                className={`nav-pill ${productView === 'packages' ? 'active' : ''}`}
+                                onClick={() => setProductView('packages')}
+                            >
+                                <ShoppingCart size={16} />
+                                <span>Paquetes</span>
+                            </button>
+                        </div>
+
+                        <div className="filters-bar-horizontal" style={{ margin: 0, padding: 0 }}>
                             {/* Stock Dropdown */}
                             <div className="filter-dropdown-wrapper">
                                 <button 
@@ -946,63 +1001,6 @@ export const POSDesktop = () => {
                                 <button className="text-link-sm" onClick={clearAllFilters} style={{ marginLeft: '0.5rem' }}>Limpiar filtros</button>
                             )}
                         </div>
-
-                        <button
-                            onClick={() => setIsScanningEnabled(!isScanningEnabled)}
-                            title={isScanningEnabled ? "Deshabilitar escáner" : "Habilitar escáner"}
-                            style={{
-                                padding: '0.5rem 1rem',
-                                background: isScanningEnabled ? '#F6F4EF' : '#fee2e2',
-                                border: '1px solid #D1CDBF',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                color: isScanningEnabled ? '#6B6B6B' : '#dc2626',
-                                fontWeight: '500',
-                                fontSize: '0.875rem'
-                            }}
-                        >
-                            {isScanningEnabled ? <ScanLine size={20} /> : <ScanLine size={20} opacity={0.5} />}
-                            <span style={{ display: window.innerWidth > 768 ? 'inline' : 'none' }}>
-                                {isScanningEnabled ? 'Escáner ON' : 'Escáner OFF'}
-                            </span>
-                        </button>
-                    </div>
-
-
-
-                    {/* View Tabs - Modern Segmented Style */}
-                    <div className="pos-nav-pills mb-4">
-                        <button
-                            className={`nav-pill ${productView === 'recent' ? 'active' : ''}`}
-                            onClick={() => setProductView('recent')}
-                        >
-                            <Clock size={16} />
-                            <span>Recientes</span>
-                        </button>
-                        <button
-                            className={`nav-pill ${productView === 'top' ? 'active' : ''}`}
-                            onClick={() => setProductView('top')}
-                        >
-                            <Award size={16} />
-                            <span>Top</span>
-                        </button>
-                        <button
-                            className={`nav-pill ${productView === 'all' ? 'active' : ''}`}
-                            onClick={() => setProductView('all')}
-                        >
-                            <List size={16} />
-                            <span>Todos</span>
-                        </button>
-                        <button
-                            className={`nav-pill ${productView === 'packages' ? 'active' : ''}`}
-                            onClick={() => setProductView('packages')}
-                        >
-                            <ShoppingCart size={16} />
-                            <span>Paquetes</span>
-                        </button>
                     </div>
                 </div>
 
@@ -1095,7 +1093,7 @@ export const POSDesktop = () => {
                                 // Product View
                                 <div
                                     key={item.id}
-                                    className={`product-list-item ${item.stock === 0 ? 'out-of-stock-pos' : ''}`}
+                                    className={`product-list-item ${item.stock === 0 ? 'out-of-stock-pos' : ''} ${cart.some(i => i.id === item.id) ? 'selected' : ''}`}
                                     onClick={() => handleAddToCart(item)}
                                     style={item.stock === 0 ? { borderLeft: '4px solid var(--color-warning)' } : {}}
                                 >
@@ -1122,29 +1120,6 @@ export const POSDesktop = () => {
                                         <span className={`stock-badge ${item.stock <= 0 ? 'out' : item.stock < item.min ? 'low' : 'in'}`}>
                                             {item.stock <= 0 ? 'Sin stock' : `${item.stock} disponibles`}
                                         </span>
-
-                                        <div className="catalog-qty-controls">
-                                            {cart.find(i => i.id === item.id) && (
-                                                // Product is in cart - show - [qty] + controls
-                                                <>
-                                                    <button className="qty-btn-catalog minus" onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        updateQty(item.id, -1);
-                                                    }}>
-                                                        <Minus size={16} />
-                                                    </button>
-                                                    <span className="qty-value-catalog">
-                                                        {cart.find(i => i.id === item.id)?.qty}
-                                                    </span>
-                                                    <button className="qty-btn-catalog plus" onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        updateQty(item.id, 1);
-                                                    }}>
-                                                        <Plus size={16} />
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
                                     </div>
                                 </div>
                             ))
@@ -1269,38 +1244,10 @@ export const POSDesktop = () => {
                             )}
                         </div>
 
-                        {checkoutMode === 'order' && orderStep === 1 && cart.length > 0 && (
-                            <div className="p-4 bg-white border-t border-border mt-auto">
-                                <button 
-                                    className="btn btn-primary w-full py-3"
-                                    onClick={() => setOrderStep(2)}
-                                >
-                                    Siguiente: Datos del Cliente <ChevronRight size={18} className="ml-2" />
-                                </button>
-                            </div>
-                        )}
-
-                        {checkoutMode === 'order' && orderStep >= 2 && (
+                        {checkoutMode === 'order' && (
                             /* PEDIR PARA DESPUÉS - Formulario Premium sin Acordeón */
                             <div className="order-form-spacious">
-                                {/* Step Header Navigation */}
-                                <div className="flex gap-2 p-3 bg-surface-hover border-b border-border mb-3 overflow-x-auto">
-                                    <button 
-                                        className={`px-3 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap ${orderStep === 2 ? 'bg-primary text-white' : 'bg-white text-muted border border-border'}`}
-                                        onClick={() => setOrderStep(2)}
-                                    >
-                                        1. Cliente
-                                    </button>
-                                    <button 
-                                        className={`px-3 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap ${orderStep === 3 ? 'bg-primary text-white' : 'bg-white text-muted border border-border'} ${(!selectedCustomer && !isGuest) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        onClick={() => { if (selectedCustomer || isGuest) setOrderStep(3); }}
-                                    >
-                                        2. Entrega y Pago
-                                    </button>
-                                </div>
-
-                                {/* Step 2: Customer */}
-                                {orderStep === 2 && (
+                                {/* Step 1: Customer */}
                                 <div className="order-card-section">
                                     <div className="section-header-premium">
                                         <div className="section-title-wrapper">
@@ -1421,21 +1368,9 @@ export const POSDesktop = () => {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="p-4 bg-white border-t border-border mt-auto rounded-b-2xl">
-                                        <button 
-                                            className="btn btn-primary w-full py-3"
-                                            onClick={() => setOrderStep(3)}
-                                            disabled={(!isGuest && !selectedCustomer) || (isGuest && !guestName.trim())}
-                                        >
-                                            Siguiente: Entrega y Pago <ChevronRight size={18} className="ml-2" />
-                                        </button>
-                                    </div>
                                 </div>
-                                )}
 
-                                {/* Step 3: Delivery */}
-                                {orderStep === 3 && (
-                                    <>
+                                {/* Step 2: Delivery */}
                                 <div className="order-card-section mt-4">
                                     <div className="section-header-premium">
                                         <div className="section-title-wrapper">
@@ -1660,8 +1595,6 @@ export const POSDesktop = () => {
                                         </button>
                                     </div>
                                 </div>
-                                </>
-                                )}
                             </div>
                         )}
                     </div>
