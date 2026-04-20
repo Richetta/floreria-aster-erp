@@ -24,6 +24,7 @@ export const OrdersDesktop = () => {
     const loadProducts = useStore((state) => state.loadProducts);
     const deleteOrder = useStore((state) => state.deleteOrder);
     const updateOrder = useStore((state) => state.updateOrder);
+    const shopInfo = useStore((state) => state.shopInfo);
     const addNotification = useStore((state) => state.addNotification);
 
     // Loading state
@@ -47,8 +48,15 @@ export const OrdersDesktop = () => {
     // Payment panel state
     const [showPaymentPanel, setShowPaymentPanel] = useState(false);
     const [paymentAmount, setPaymentAmount] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash');
+    const [paymentMethod, setPaymentMethod] = useState<string>('');
     const [paymentLoading, setPaymentLoading] = useState(false);
+    
+    // Set default payment method when shopInfo loads
+    useEffect(() => {
+        if (shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0 && !paymentMethod) {
+            setPaymentMethod(shopInfo.paymentMethods[0].name);
+        }
+    }, [shopInfo.paymentMethods]);
     const [paymentError, setPaymentError] = useState('');
 
     // Action states
@@ -364,7 +372,7 @@ export const OrdersDesktop = () => {
             subtotal: selectedOrder.total,
             total: selectedOrder.total,
             advancePayment: selectedOrder.advancePayment || 0,
-            paymentMethod: 'cash', // Default or fetch from backend if available
+            paymentMethod: selectedOrder.payment_method || 'Efectivo',
             notes: selectedOrder.notes
         };
         
@@ -1163,22 +1171,35 @@ export const OrdersDesktop = () => {
                                                                 min="1"
                                                                 max={selectedOrder.total - (selectedOrder.advancePayment || 0)}
                                                             />
-                                                            <div className="payment-method-tabs">
-                                                                {(['cash', 'card', 'transfer'] as const).map(m => (
-                                                                    <button
-                                                                        key={m}
-                                                                        className={`payment-method-tab ${paymentMethod === m ? 'active' : ''}`}
-                                                                        onClick={() => setPaymentMethod(m)}
-                                                                    >
-                                                                        {m === 'cash' ? (
-                                                                            <><Banknote size={13} /> Efectivo</>
-                                                                        ) : m === 'card' ? (
-                                                                            <><CreditCard size={13} /> Tarjeta</>
-                                                                        ) : (
-                                                                            <><DollarSign size={13} /> Transferencia</>
-                                                                        )}
-                                                                    </button>
-                                                                ))}
+                                                            <div className="payment-method-tabs flex-wrap" style={{ gap: '0.25rem' }}>
+                                                                {(shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0) ? (
+                                                                    shopInfo.paymentMethods.filter(m => m.is_active).map(m => (
+                                                                        <button
+                                                                            key={m.id}
+                                                                            className={`payment-method-tab ${paymentMethod === m.name ? 'active' : ''}`}
+                                                                            onClick={() => setPaymentMethod(m.name)}
+                                                                        >
+                                                                            {m.type === 'cash' ? <Banknote size={13} /> : <CreditCard size={13} />}
+                                                                            {m.name}
+                                                                        </button>
+                                                                    ))
+                                                                ) : (
+                                                                    (['cash', 'card', 'transfer'] as const).map(m => (
+                                                                        <button
+                                                                            key={m}
+                                                                            className={`payment-method-tab ${paymentMethod === m ? 'active' : ''}`}
+                                                                            onClick={() => setPaymentMethod(m)}
+                                                                        >
+                                                                            {m === 'cash' ? (
+                                                                                <><Banknote size={13} /> Efectivo</>
+                                                                            ) : m === 'card' ? (
+                                                                                <><CreditCard size={13} /> Tarjeta</>
+                                                                            ) : (
+                                                                                <><DollarSign size={13} /> Transferencia</>
+                                                                            )}
+                                                                        </button>
+                                                                    ))
+                                                                )}
                                                             </div>
                                                             {paymentError && <p className="payment-error">{paymentError}</p>}
                                                             <div className="payment-form-actions">

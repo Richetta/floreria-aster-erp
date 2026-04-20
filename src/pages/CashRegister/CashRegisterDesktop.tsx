@@ -13,6 +13,7 @@ import {
     X
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useStore } from '../../store/useStore';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../../components/ui/Modals';
 import './CashRegister.css';
@@ -35,6 +36,7 @@ export const CashRegisterDesktop = () => {
     const [closingResult, setClosingResult] = useState<any>(null);
     const [cashInDrawer, setCashInDrawer] = useState<any>(null);
     const [cashStatus, setCashStatus] = useState<{ is_open: boolean; is_closed: boolean; opening: any } | null>(null);
+    const shopInfo = useStore((state) => state.shopInfo);
 
     const { alertModal, showAlert } = useModal();
 
@@ -329,24 +331,23 @@ export const CashRegisterDesktop = () => {
                         <div className="card">
                             <h3 className="text-h3 mb-4">Ingresos por Método de Pago</h3>
                             <div className="breakdown-list">
-                                <div className="breakdown-item">
-                                    <span className="breakdown-label">Efectivo</span>
-                                    <span className="breakdown-value text-success">
-                                        {formatCurrency(dailySummary.sales.cash + dailySummary.payments_received.cash)}
-                                    </span>
-                                </div>
-                                <div className="breakdown-item">
-                                    <span className="breakdown-label">Tarjeta</span>
-                                    <span className="breakdown-value text-primary">
-                                        {formatCurrency(dailySummary.sales.card + dailySummary.payments_received.card)}
-                                    </span>
-                                </div>
-                                <div className="breakdown-item">
-                                    <span className="breakdown-label">Transferencia</span>
-                                    <span className="breakdown-value">
-                                        {formatCurrency(dailySummary.sales.transfer + dailySummary.payments_received.transfer)}
-                                    </span>
-                                </div>
+                                {(shopInfo.paymentMethods || []).map(method => {
+                                    const amount = (dailySummary.sales.by_method?.[method.name] || 0) + 
+                                                   (dailySummary.payments_received.by_method?.[method.name] || 0);
+                                    if (amount === 0) return null;
+                                    return (
+                                        <div key={method.id} className="breakdown-item">
+                                            <span className="breakdown-label">{method.name}</span>
+                                            <span className={`breakdown-value ${method.type === 'cash' ? 'text-success' : 'text-primary'}`}>
+                                                {formatCurrency(amount)}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                                {Object.keys(dailySummary.sales.by_method || {}).length === 0 && 
+                                 Object.keys(dailySummary.payments_received.by_method || {}).length === 0 && (
+                                    <p className="text-muted text-center py-4">Sin ingresos registrados</p>
+                                )}
                             </div>
                         </div>
 
@@ -401,9 +402,8 @@ export const CashRegisterDesktop = () => {
                                             </td>
                                             <td>{t.category}</td>
                                             <td>
-                                                {t.payment_method === 'cash' ? 'Efectivo' :
-                                                    t.payment_method === 'card' ? 'Tarjeta' :
-                                                        t.payment_method === 'transfer' ? 'Transferencia' : '-'}
+                                                {(shopInfo.paymentMethods?.find(m => m.name === t.payment_method || m.id === t.payment_method)?.name) || 
+                                                 (t.payment_method === 'cash' ? 'Efectivo' : t.payment_method === 'card' ? 'Tarjeta' : t.payment_method || '-')}
                                             </td>
                                             <td>{t.description}</td>
                                             <td className={`text-right font-bold ${t.type === 'sale' || t.type === 'payment_received'

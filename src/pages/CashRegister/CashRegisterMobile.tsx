@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
+import { useStore } from '../../store/useStore';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../../components/ui/Modals';
 import './CashRegisterMobile.css';
@@ -9,6 +10,7 @@ export const CashRegisterMobile = () => {
     const [dailySummary, setDailySummary] = useState<any>(null);
     const [cashInDrawer, setCashInDrawer] = useState<any>(null);
     const [cashStatus, setCashStatus] = useState<any>(null);
+    const shopInfo = useStore((state) => state.shopInfo);
 
     // Modal states
     const [showOpeningModal, setShowOpeningModal] = useState(false);
@@ -173,7 +175,12 @@ export const CashRegisterMobile = () => {
                                     </div>
                                     <div className="m-trans-info">
                                         <span className="m-trans-desc">{t.description}</span>
-                                        <span className="m-trans-time">{new Date(t.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} • {t.payment_method}</span>
+                                        <span className="m-trans-time">
+                                            {new Date(t.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} • {
+                                                (shopInfo.paymentMethods?.find(m => m.name === t.payment_method || m.id === t.payment_method)?.name) || 
+                                                (t.payment_method === 'cash' ? 'Efectivo' : t.payment_method === 'card' ? 'Tarjeta' : t.payment_method || '-')
+                                            }
+                                        </span>
                                     </div>
                                     <div className={`m-trans-amount ${t.type.includes('sale') || t.type.includes('received') ? 'pos' : 'neg'}`}>
                                         {t.type.includes('sale') || t.type.includes('received') ? '+' : '-'}${t.amount.toLocaleString()}

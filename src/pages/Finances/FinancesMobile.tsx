@@ -13,13 +13,14 @@ export const FinancesMobile = () => {
     const addTransaction = useStore((state) => state.addTransaction);
     const loadTransactions = useStore((state) => state.loadTransactions);
     const loadCustomers = useStore((state) => state.loadCustomers);
+    const shopInfo = useStore((state) => state.shopInfo);
 
     const [showExpenseSheet, setShowExpenseSheet] = useState(false);
     const [expenseForm, setExpenseForm] = useState({
         amount: '',
         category: 'Insumos',
         description: '',
-        method: 'cash' as 'cash' | 'transfer'
+        method: shopInfo.paymentMethods?.[0]?.name || 'cash'
     });
 
     const { alertModal, showAlert } = useModal();
@@ -54,7 +55,7 @@ export const FinancesMobile = () => {
         });
 
         setShowExpenseSheet(false);
-        setExpenseForm({ amount: '', category: 'Insumos', description: '', method: 'cash' });
+        setExpenseForm({ amount: '', category: 'Insumos', description: '', method: shopInfo.paymentMethods?.[0]?.name || 'cash' });
         loadTransactions();
         showAlert({ title: 'Gasto registrado', message: 'Se ha asentado el movimiento correctamente.', variant: 'success' });
     };
@@ -165,9 +166,17 @@ export const FinancesMobile = () => {
                             </div>
                             <div className="m-form-group">
                                 <label>Medio de Pago</label>
-                                <select value={expenseForm.method} onChange={e => setExpenseForm({ ...expenseForm, method: e.target.value as any })}>
-                                    <option value="cash">Efectivo</option>
-                                    <option value="transfer">Transferencia</option>
+                                <select value={expenseForm.method} onChange={e => setExpenseForm({ ...expenseForm, method: e.target.value })}>
+                                    {(shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0) ? (
+                                        shopInfo.paymentMethods.map(m => (
+                                            <option key={m.id} value={m.name}>{m.name}</option>
+                                        ))
+                                    ) : (
+                                        <>
+                                            <option value="cash">Efectivo</option>
+                                            <option value="transfer">Transferencia</option>
+                                        </>
+                                    )}
                                 </select>
                             </div>
                             <div className="m-form-group">

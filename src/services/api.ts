@@ -113,7 +113,7 @@ export type Transaction = {
   type: 'sale' | 'payment_received' | 'expense' | 'supplier_payment' | 'adjustment';
   category: string;
   amount: number;
-  payment_method?: 'cash' | 'card' | 'transfer';
+  payment_method?: string;
   description?: string;
   notes?: string;
   reference_id?: string;
@@ -697,6 +697,7 @@ class ApiClient {
       body: JSON.stringify({ amount, payment_method, notes }),
     });
   }
+
 
   async getDeliveryScheduled(date?: string): Promise<Order[]> {
     const queryString = date ? `?date=${date}` : '';

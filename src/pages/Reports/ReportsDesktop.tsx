@@ -11,6 +11,7 @@ import {
     Filter
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useStore } from '../../store/useStore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../../components/ui/Modals';
@@ -297,7 +298,10 @@ export const ReportsDesktop = () => {
                                                 cx="50%"
                                                 cy="50%"
                                                 labelLine={false}
-                                                label={({ method, percent }: any) => `${method}: ${(percent * 100).toFixed(0)}%`}
+                                                label={({ method, percent }: any) => {
+                                                    const config = useStore.getState().shopInfo.paymentMethods?.find((m: any) => m.name === method || m.id === method);
+                                                    return `${config?.name || method}: ${(percent * 100).toFixed(0)}%`;
+                                                }}
                                                 outerRadius={80}
                                                 fill="#8884d8"
                                                 dataKey="total"

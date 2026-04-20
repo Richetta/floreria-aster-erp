@@ -93,6 +93,7 @@ export const FinancesDesktop = () => {
     const registerPayment = useStore((state) => state.registerPayment);
     const loadTransactions = useStore((state) => state.loadTransactions);
     const loadCustomers = useStore((state) => state.loadCustomers);
+    const shopInfo = useStore((state) => state.shopInfo);
 
     const [isLoading, setIsLoading] = useState(true);
     const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -100,10 +101,10 @@ export const FinancesDesktop = () => {
         amount: '',
         category: 'Insumos',
         description: '',
-        method: 'cash' as 'cash' | 'transfer'
+        method: shopInfo.paymentMethods?.[0]?.name || 'cash'
     });
-    const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean; customerId: string; amount: string }>({
-        isOpen: false, customerId: '', amount: ''
+    const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean; customerId: string; amount: string; method: string }>({
+        isOpen: false, customerId: '', amount: '', method: shopInfo.paymentMethods?.[0]?.name || 'cash'
     });
 
     const { confirmModal, showConfirm } = useModal();
@@ -118,19 +119,16 @@ export const FinancesDesktop = () => {
     }, []);
 
     // --- CALCULATIONS ---
-    const incomeByMethod = {
-        cash: (transactions || []).filter(t => t.type === 'income' && t.method === 'cash').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-        card: (transactions || []).filter(t => t.type === 'income' && t.method === 'card').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-        transfer: (transactions || []).filter(t => t.type === 'income' && t.method === 'transfer').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-    };
+    const transactionsByMethod = (transactions || []).reduce((acc: any, t) => {
+        const method = t.method || 'cash';
+        if (!acc[method]) acc[method] = { income: 0, expense: 0 };
+        if (t.type === 'income') acc[method].income += (Number(t.amount) || 0);
+        else acc[method].expense += (Number(t.amount) || 0);
+        return acc;
+    }, {});
 
-    const expenseByMethod = {
-        cash: (transactions || []).filter(t => t.type === 'expense' && t.method === 'cash').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-        transfer: (transactions || []).filter(t => t.type === 'expense' && t.method === 'transfer').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-    };
-
-    const totalIncome = Object.values(incomeByMethod).reduce((a, b) => Number(a) + Number(b), 0);
-    const totalExpense = Object.values(expenseByMethod).reduce((a, b) => Number(a) + Number(b), 0);
+    const totalIncome = (transactions || []).filter(t => t.type === 'income').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const totalExpense = (transactions || []).filter(t => t.type === 'expense').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     const netBalance = totalIncome - totalExpense;
     const totalDebt = (customers || []).reduce((sum, c) => sum + (Number(c.debtBalance) || 0), 0);
     const debtors = (customers || []).filter(c => (Number(c.debtBalance) || 0) > 0).sort((a, b) => (Number(b.debtBalance) || 0) - (Number(a.debtBalance) || 0));
@@ -154,7 +152,7 @@ export const FinancesDesktop = () => {
         });
 
         setShowExpenseModal(false);
-        setExpenseForm({ amount: '', category: 'Insumos', description: '', method: 'cash' });
+        setExpenseForm({ amount: '', category: 'Insumos', description: '', method: shopInfo.paymentMethods?.[0]?.name || 'cash' });
         loadTransactions();
     };
 
@@ -173,12 +171,12 @@ export const FinancesDesktop = () => {
             amount: amt,
             category: 'Cobro Deuda',
             description: `Pago sobre cuenta de ${customer.name}`,
-            method: 'cash',
+            method: paymentModal.method,
             date: new Date().toISOString(),
             relatedId: customer.id
         });
 
-        setPaymentModal({ isOpen: false, customerId: '', amount: '' });
+        setPaymentModal({ isOpen: false, customerId: '', amount: '', method: shopInfo.paymentMethods?.[0]?.name || 'cash' });
         loadCustomers();
         loadTransactions();
     };
@@ -200,7 +198,7 @@ export const FinancesDesktop = () => {
                     amount: d.debtBalance,
                     category: 'Cobro Masivo',
                     description: `Cobro total de cuenta: ${d.name}`,
-                    method: 'cash',
+                    method: shopInfo.paymentMethods?.find(m => m.type === 'cash')?.name || 'cash',
                     date: new Date().toISOString(),
                     relatedId: d.id
                 });
@@ -211,19 +209,10 @@ export const FinancesDesktop = () => {
     };
 
     const openPaymentModal = (customerId: string, amount: string) => {
-        setPaymentModal({ isOpen: true, customerId, amount });
+        setPaymentModal({ isOpen: true, customerId, amount, method: shopInfo.paymentMethods?.[0]?.name || 'cash' });
     };
 
-    // Payment method breakdown data
-    const incomeMethods = [
-        { label: 'Efectivo', value: incomeByMethod.cash, icon: Banknote, color: '#4CAF50' },
-        { label: 'Transferencia', value: incomeByMethod.transfer, icon: CreditCard, color: '#4F7A5A' },
-    ];
-
-    const expenseMethods = [
-        { label: 'Efectivo', value: expenseByMethod.cash, icon: Banknote, color: '#E57373' },
-        { label: 'Banco', value: expenseByMethod.transfer, icon: CreditCard, color: '#FFA726' },
-    ];
+    // Payment method breakdown data - handled dynamically in the JSX breakdown section
 
     return (
         <div className="finances-page">
@@ -267,13 +256,16 @@ export const FinancesDesktop = () => {
                     </div>
                     <div className="card-amount amount-green">{formatCurrency(totalIncome)}</div>
                     <div className="card-breakdown">
-                        {incomeMethods.filter(m => m.value > 0).map((m, i) => (
-                            <div key={i} className="breakdown-item">
-                                <m.icon size={12} style={{ color: m.color }} />
-                                <span>{m.label}</span>
-                                <strong>{formatCurrency(m.value)}</strong>
-                            </div>
-                        ))}
+                        {Object.entries(transactionsByMethod).filter(([_, val]: any) => val.income > 0).map(([method, val]: any) => {
+                            const methodConfig = shopInfo.paymentMethods?.find(m => m.name === method || m.id === method);
+                            return (
+                                <div key={method} className="breakdown-item">
+                                    {methodConfig?.type === 'cash' ? <Banknote size={12} style={{ color: '#4CAF50' }} /> : <CreditCard size={12} style={{ color: '#3B82F6' }} />}
+                                    <span>{methodConfig?.name || method}</span>
+                                    <strong>{formatCurrency(val.income)}</strong>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -288,13 +280,16 @@ export const FinancesDesktop = () => {
                     </div>
                     <div className="card-amount amount-red">{formatCurrency(totalExpense)}</div>
                     <div className="card-breakdown">
-                        {expenseMethods.filter(m => m.value > 0).map((m, i) => (
-                            <div key={i} className="breakdown-item">
-                                <m.icon size={12} style={{ color: m.color }} />
-                                <span>{m.label}</span>
-                                <strong>{formatCurrency(m.value)}</strong>
-                            </div>
-                        ))}
+                        {Object.entries(transactionsByMethod).filter(([_, val]: any) => val.expense > 0).map(([method, val]: any) => {
+                            const methodConfig = shopInfo.paymentMethods?.find(m => m.name === method || m.id === method);
+                            return (
+                                <div key={method} className="breakdown-item">
+                                    {methodConfig?.type === 'cash' ? <Banknote size={12} style={{ color: '#E57373' }} /> : <CreditCard size={12} style={{ color: '#FFA726' }} />}
+                                    <span>{methodConfig?.name || method}</span>
+                                    <strong>{formatCurrency(val.expense)}</strong>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -480,10 +475,18 @@ export const FinancesDesktop = () => {
                                     <label>Medio de pago</label>
                                     <select
                                         value={expenseForm.method}
-                                        onChange={e => setExpenseForm({ ...expenseForm, method: e.target.value as any })}
+                                        onChange={e => setExpenseForm({ ...expenseForm, method: e.target.value })}
                                     >
-                                        <option value="cash">Efectivo</option>
-                                        <option value="transfer">Transferencia</option>
+                                        {(shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0) ? (
+                                            shopInfo.paymentMethods.map(m => (
+                                                <option key={m.id} value={m.name}>{m.name}</option>
+                                            ))
+                                        ) : (
+                                            <>
+                                                <option value="cash">Efectivo</option>
+                                                <option value="transfer">Transferencia</option>
+                                            </>
+                                        )}
                                     </select>
                                 </div>
                             </div>
@@ -514,7 +517,7 @@ export const FinancesDesktop = () => {
 
             {/* Payment Modal */}
             {paymentModal.isOpen && (
-                <div className="modal-overlay" onClick={() => setPaymentModal({ isOpen: false, customerId: '', amount: '' })}>
+                <div className="modal-overlay" onClick={() => setPaymentModal({ ...paymentModal, isOpen: false, customerId: '', amount: '' })}>
                     <div className="modal-container modal-sm" onClick={e => e.stopPropagation()}>
                         <div className="modal-header-custom">
                             <div className="modal-title-wrap">
@@ -526,7 +529,7 @@ export const FinancesDesktop = () => {
                                     <p>Registrá el pago del cliente</p>
                                 </div>
                             </div>
-                            <button className="modal-close" onClick={() => setPaymentModal({ isOpen: false, customerId: '', amount: '' })}>
+                            <button className="modal-close" onClick={() => setPaymentModal({ ...paymentModal, isOpen: false, customerId: '', amount: '' })}>
                                 <X size={20} />
                             </button>
                         </div>
@@ -548,8 +551,24 @@ export const FinancesDesktop = () => {
                                 </div>
                             </div>
 
+                            <div className="form-field">
+                                <label>Cuenta de cobro</label>
+                                <select
+                                    value={paymentModal.method}
+                                    onChange={e => setPaymentModal({ ...paymentModal, method: e.target.value })}
+                                >
+                                    {(shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0) ? (
+                                        shopInfo.paymentMethods.map(m => (
+                                            <option key={m.id} value={m.name}>{m.name}</option>
+                                        ))
+                                    ) : (
+                                        <option value="cash">Efectivo</option>
+                                    )}
+                                </select>
+                            </div>
+
                             <div className="modal-actions">
-                                <button type="button" className="btn-cancel" onClick={() => setPaymentModal({ isOpen: false, customerId: '', amount: '' })}>
+                                <button type="button" className="btn-cancel" onClick={() => setPaymentModal({ ...paymentModal, isOpen: false, customerId: '', amount: '' })}>
                                     Cancelar
                                 </button>
                                 <button type="submit" className="btn-submit">

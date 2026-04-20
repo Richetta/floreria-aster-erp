@@ -79,6 +79,7 @@ export type Order = {
     guestName?: string;
     guestPhone?: string;
     cardMessage?: string;
+    payment_method?: string;
 };
 
 export type Sale = {
@@ -86,7 +87,7 @@ export type Sale = {
     total: number;
     date: string;
     items: any[];
-    method: 'cash' | 'card' | 'transfer';
+    method: string;
     notes?: string;
     customerId?: string;
 };
@@ -97,7 +98,7 @@ export type TransactionLocal = {
     category: string;
     amount: number;
     date: string;
-    method: 'cash' | 'card' | 'transfer';
+    method: string;
     description: string;
     relatedId?: string;
     metadata?: Record<string, any>;
@@ -148,6 +149,15 @@ export type ShopInfo = {
     address: string;
     instagram?: string;
     currency: string;
+    paymentMethods?: PaymentMethod[];
+};
+
+export type PaymentMethod = {
+    id: string;
+    name: string;
+    type: 'cash' | 'transfer' | 'debit' | 'credit' | 'other';
+    last_digits?: string;
+    is_active: boolean;
 };
 
 // Full Store State (Intersection of all slices)

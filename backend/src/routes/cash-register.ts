@@ -143,6 +143,19 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
+    // Get payment methods configuration
+    const settings = await db
+      .selectFrom('app_settings')
+      .select('value')
+      .where('business_id', '=', user.business_id)
+      .where('key', '=', 'payment_methods')
+      .executeTakeFirst();
+    
+    const paymentMethods = settings ? (typeof settings.value === 'string' ? JSON.parse(settings.value) : settings.value) : [];
+    const cashMethodNames = paymentMethods.filter((m: any) => m.type === 'cash').map((m: any) => m.name);
+    // Include the legacy 'cash' key just in case
+    if (!cashMethodNames.includes('cash')) cashMethodNames.push('cash');
+
     const startDate = new Date(date);
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(date);
@@ -163,28 +176,23 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
       date,
       sales: {
         total: 0,
-        cash: 0,
-        card: 0,
-        transfer: 0,
+        by_method: {} as { [key: string]: number },
         count: 0
       },
       payments_received: {
         total: 0,
-        cash: 0,
-        card: 0,
-        transfer: 0,
+        by_method: {} as { [key: string]: number },
         count: 0
       },
       expenses: {
         total: 0,
-        cash: 0,
-        transfer: 0,
+        by_method: {} as { [key: string]: number },
         count: 0,
         by_category: {} as { [key: string]: number }
       },
       supplier_payments: {
         total: 0,
-        transfer: 0,
+        by_method: {} as { [key: string]: number },
         count: 0
       },
       balance: 0,
@@ -194,24 +202,20 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
 
     transactions.forEach(t => {
       const amount = Number(t.amount);
+      const method = t.payment_method || 'unknown';
 
       if (t.type === 'sale') {
         summary.sales.total += amount;
         summary.sales.count++;
-        if (t.payment_method === 'cash') summary.sales.cash += amount;
-        if (t.payment_method === 'card') summary.sales.card += amount;
-        if (t.payment_method === 'transfer') summary.sales.transfer += amount;
+        summary.sales.by_method[method] = (summary.sales.by_method[method] || 0) + amount;
       } else if (t.type === 'payment_received') {
         summary.payments_received.total += amount;
         summary.payments_received.count++;
-        if (t.payment_method === 'cash') summary.payments_received.cash += amount;
-        if (t.payment_method === 'card') summary.payments_received.card += amount;
-        if (t.payment_method === 'transfer') summary.payments_received.transfer += amount;
+        summary.payments_received.by_method[method] = (summary.payments_received.by_method[method] || 0) + amount;
       } else if (t.type === 'expense') {
         summary.expenses.total += amount;
         summary.expenses.count++;
-        if (t.payment_method === 'cash') summary.expenses.cash += amount;
-        if (t.payment_method === 'transfer') summary.expenses.transfer += amount;
+        summary.expenses.by_method[method] = (summary.expenses.by_method[method] || 0) + amount;
         
         // Group by category
         const category = t.category || 'Otros';
@@ -219,7 +223,7 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
       } else if (t.type === 'supplier_payment') {
         summary.supplier_payments.total += amount;
         summary.supplier_payments.count++;
-        if (t.payment_method === 'transfer') summary.supplier_payments.transfer += amount;
+        summary.supplier_payments.by_method[method] = (summary.supplier_payments.by_method[method] || 0) + amount;
       }
     });
 
@@ -279,6 +283,18 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
       const endDate = new Date(body.date);
       endDate.setHours(23, 59, 59, 999);
 
+      // Get payment methods configuration
+      const settingsResult = await db
+        .selectFrom('app_settings')
+        .select('value')
+        .where('business_id', '=', user.business_id)
+        .where('key', '=', 'payment_methods')
+        .executeTakeFirst();
+      
+      const paymentMethods = settingsResult ? (typeof settingsResult.value === 'string' ? JSON.parse(settingsResult.value) : settingsResult.value) : [];
+      const cashMethodNames = paymentMethods.filter((m: any) => m.type === 'cash').map((m: any) => m.name);
+      if (!cashMethodNames.includes('cash')) cashMethodNames.push('cash');
+
       // Get transactions for the day
       const transactions = await db
         .selectFrom('transactions')
@@ -293,10 +309,10 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
 
       transactions.forEach(t => {
         const amount = Number(t.amount);
-        if (t.payment_method === 'cash') {
-          if (t.type === 'sale' || t.type === 'payment_received') {
+        if (cashMethodNames.includes(t.payment_method || '')) {
+          if (t.type === 'sale' || t.type === 'payment_received' || t.type === 'income') {
             expected_cash += amount;
-          } else if (t.type === 'expense') {
+          } else if (t.type === 'expense' || t.type === 'supplier_payment') {
             expected_cash -= amount;
           }
         }
@@ -462,10 +478,22 @@ export const cashRegisterRoutes: FastifyPluginAsync = async (fastify) => {
       .where('created_at', '>=', startDate)
       .execute();
 
+    // Get payment methods configuration
+    const settingsRes = await db
+      .selectFrom('app_settings')
+      .select('value')
+      .where('business_id', '=', user.business_id)
+      .where('key', '=', 'payment_methods')
+      .executeTakeFirst();
+    
+    const paymentMethods = settingsRes ? (typeof settingsRes.value === 'string' ? JSON.parse(settingsRes.value) : settingsRes.value) : [];
+    const cashMethodNames = paymentMethods.filter((m: any) => m.type === 'cash').map((m: any) => m.name);
+    if (!cashMethodNames.includes('cash')) cashMethodNames.push('cash');
+
     let cash_in_drawer = opening_balance;
 
     transactions.forEach(t => {
-      if (t.payment_method === 'cash') {
+      if (cashMethodNames.includes(t.payment_method || '')) {
         const amount = Number(t.amount);
         if (t.type === 'sale' || t.type === 'payment_received' || t.type === 'income') {
           cash_in_drawer += amount;

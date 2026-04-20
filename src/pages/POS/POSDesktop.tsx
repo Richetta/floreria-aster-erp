@@ -57,6 +57,7 @@ export const POSDesktop = () => {
     const updateCustomer = useStore((state) => state.updateCustomer);
     const addOrder = useStore((state) => state.addOrder);
     const addTransaction = useStore((state) => state.addTransaction);
+    const shopInfo = useStore((state) => state.shopInfo);
     const navigate = useNavigate();
     const isMobile = useMediaQuery('(max-width: 768px)');
 
@@ -379,7 +380,7 @@ export const POSDesktop = () => {
     const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
     const finalTotalSale = Math.max(0, total - (total * (quickSaleDiscount / 100)));
 
-    const handleCheckout = async (method: 'cash' | 'card') => {
+    const handleCheckout = async (method: string) => {
         if (cart.length === 0) return;
 
         // Final Stock Validation before processing
@@ -541,7 +542,7 @@ export const POSDesktop = () => {
                     setLastSaleData({
                         id: saleId,
                         total: finalTotalSale,
-                        method: method === 'cash' ? 'Efectivo' : 'Tarjeta/Transferencia',
+                        method: (shopInfo.paymentMethods?.find(m => m.name === method || m.id === method)?.name) || method,
                         items: [...cart],
                         date: new Date().toISOString()
                     });
@@ -1576,23 +1577,40 @@ export const POSDesktop = () => {
 
                                 <div className="order-payment-buttons">
                                     <p className="text-micro text-muted mb-2">Método de pago {advancePayment > 0 ? 'de la seña' : ''}:</p>
-                                    <div className="payment-buttons-compact">
-                                        <button
-                                            className="payment-btn-compact payment-cash"
-                                            disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
-                                            onClick={() => handleCheckout('cash')}
-                                        >
-                                            <Banknote size={18} />
-                                            <span>Efectivo</span>
-                                        </button>
-                                        <button
-                                            className="payment-btn-compact payment-card"
-                                            disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
-                                            onClick={() => handleCheckout('card')}
-                                        >
-                                            <CreditCard size={18} />
-                                            <span>Tarjeta</span>
-                                        </button>
+                                    <div className="payment-buttons-compact flex-wrap">
+                                        {(shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0) ? (
+                                            shopInfo.paymentMethods.filter((m: any) => m.is_active).map((m: any) => (
+                                                <button
+                                                    key={m.id}
+                                                    className="payment-btn-compact"
+                                                    style={{ border: '1px solid var(--color-border)', minWidth: '100px' }}
+                                                    disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
+                                                    onClick={() => handleCheckout(m.name)}
+                                                >
+                                                    {m.type === 'cash' ? <Banknote size={18} /> : <CreditCard size={18} />}
+                                                    <span>{m.name}</span>
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <>
+                                                <button
+                                                    className="payment-btn-compact payment-cash"
+                                                    disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
+                                                    onClick={() => handleCheckout('cash')}
+                                                >
+                                                    <Banknote size={18} />
+                                                    <span>Efectivo</span>
+                                                </button>
+                                                <button
+                                                    className="payment-btn-compact payment-card"
+                                                    disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
+                                                    onClick={() => handleCheckout('card')}
+                                                >
+                                                    <CreditCard size={18} />
+                                                    <span>Tarjeta</span>
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1653,25 +1671,43 @@ export const POSDesktop = () => {
                                 </div>
 
 
-                                <div className="payment-buttons-compact mt-2">
-                                    <button
-                                        className="payment-btn-compact payment-cash"
-                                        disabled={cart.length === 0}
-                                        onClick={() => handleCheckout('cash')}
-                                        title="Pagar en efectivo"
-                                    >
-                                        <Banknote size={20} />
-                                        <span>Efectivo</span>
-                                    </button>
-                                    <button
-                                        className="payment-btn-compact payment-card"
-                                        disabled={cart.length === 0}
-                                        onClick={() => handleCheckout('card')}
-                                        title="Pagar con tarjeta o transferencia"
-                                    >
-                                        <CreditCard size={20} />
-                                        <span>Tarjeta</span>
-                                    </button>
+                                <div className="payment-buttons-compact mt-2 flex-wrap">
+                                    {(shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0) ? (
+                                        shopInfo.paymentMethods.filter((m: any) => m.is_active).map((m: any) => (
+                                            <button
+                                                key={m.id}
+                                                className="payment-btn-compact"
+                                                style={{ border: '1px solid var(--color-border)', minWidth: '100px' }}
+                                                disabled={cart.length === 0}
+                                                onClick={() => handleCheckout(m.name)}
+                                                title={`Pagar con ${m.name}`}
+                                            >
+                                                {m.type === 'cash' ? <Banknote size={20} /> : <CreditCard size={20} />}
+                                                <span>{m.name}</span>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <>
+                                            <button
+                                                className="payment-btn-compact payment-cash"
+                                                disabled={cart.length === 0}
+                                                onClick={() => handleCheckout('cash')}
+                                                title="Pagar en efectivo"
+                                            >
+                                                <Banknote size={20} />
+                                                <span>Efectivo</span>
+                                            </button>
+                                            <button
+                                                className="payment-btn-compact payment-card"
+                                                disabled={cart.length === 0}
+                                                onClick={() => handleCheckout('card')}
+                                                title="Pagar con tarjeta o transferencia"
+                                            >
+                                                <CreditCard size={20} />
+                                                <span>Tarjeta</span>
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>

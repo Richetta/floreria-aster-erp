@@ -7,7 +7,7 @@ export interface FinanceSlice {
     transactions: TransactionLocal[];
     loadTransactions: () => Promise<void>;
     addTransaction: (transaction: TransactionLocal) => Promise<void>;
-    processPurchase: (purchase: { supplierId: string, items: any[], method: 'cash' | 'transfer', notes?: string }) => Promise<boolean>;
+    processPurchase: (purchase: { supplierId: string, items: any[], method: string, notes?: string }) => Promise<boolean>;
 }
 
 export const createFinanceSlice: StateCreator<AppState, [], [], FinanceSlice> = (set, get) => ({

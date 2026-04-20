@@ -7,6 +7,7 @@ import './SalesMobile.css';
 export const SalesMobile = () => {
     const transactions = useStore((state) => state.transactions);
     const customers = useStore((state) => state.customers);
+    const shopInfo = useStore((state) => state.shopInfo);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('today');
@@ -102,7 +103,8 @@ export const SalesMobile = () => {
                                     <span className="material-symbols-rounded">
                                         {sale.method === 'cash' ? 'payments' : 'credit_card'}
                                     </span>
-                                    {sale.method === 'cash' ? 'Efectivo' : 'Tarjeta'}
+                                    {(shopInfo.paymentMethods?.find(m => m.name === sale.method || m.id === sale.method)?.name) || 
+                                     (sale.method === 'cash' ? 'Efectivo' : sale.method === 'card' ? 'Tarjeta' : sale.method)}
                                 </div>
                             </div>
                             <div className="m-sale-body">

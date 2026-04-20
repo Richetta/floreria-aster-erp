@@ -1,5 +1,5 @@
 import { type StateCreator } from 'zustand';
-import type { TeamNote, Toast, ShopInfo } from './types';
+import type { TeamNote, Toast, ShopInfo, PaymentMethod } from './types';
 import type { AppState } from '../useStore';
 import { api } from '../../services/api';
 
@@ -17,6 +17,7 @@ export interface UiSlice {
     deleteTeamNote: (id: string) => void;
     loadShopInfo: () => Promise<void>;
     updateShopInfo: (info: Partial<ShopInfo>) => Promise<void>;
+    updatePaymentMethods: (methods: PaymentMethod[]) => Promise<void>;
     markNotificationsAsSeen: (count: number) => void;
 }
 
@@ -78,7 +79,8 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
                     phone: data.phone,
                     address: data.address,
                     instagram: data.settings?.instagram || '',
-                    currency: data.currency
+                    currency: data.currency,
+                    paymentMethods: data.settings?.payment_methods || []
                 }
             });
         } catch (error) {
@@ -88,19 +90,45 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
     updateShopInfo: async (info) => {
         try {
+            const currentSettings = (await api.getBusinessInfo()).settings || {};
             await api.updateBusinessInfo({
                 name: info.name,
                 address: info.address,
                 phone: info.phone,
                 logo_url: info.logo,
                 currency: info.currency,
-                settings: info.instagram ? { instagram: info.instagram } : undefined
+                settings: {
+                    ...currentSettings,
+                    instagram: info.instagram ?? currentSettings.instagram
+                }
             });
             set(state => ({ shopInfo: { ...state.shopInfo, ...info } }));
             get().addNotification('Información del negocio actualizada', 'success');
         } catch (error) {
             get().addNotification('Error al actualizar información del negocio', 'error');
             console.error('Error updating shop info:', error);
+        }
+    },
+
+    updatePaymentMethods: async (methods) => {
+        try {
+            const currentSettings = (await api.getBusinessInfo()).settings || {};
+            await api.updateBusinessInfo({
+                settings: {
+                    ...currentSettings,
+                    payment_methods: methods
+                }
+            });
+            set(state => ({
+                shopInfo: {
+                    ...state.shopInfo,
+                    paymentMethods: methods
+                }
+            }));
+            get().addNotification('Métodos de pago actualizados', 'success');
+        } catch (error) {
+            get().addNotification('Error al actualizar métodos de pago', 'error');
+            console.error('Error updating payment methods:', error);
         }
     },
 

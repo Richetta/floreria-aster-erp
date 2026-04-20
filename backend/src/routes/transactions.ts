@@ -10,7 +10,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
   const createTransactionSchema = z.object({
     type: z.enum(['sale', 'payment_received', 'expense', 'supplier_payment', 'adjustment']),
     amount: z.number().positive(),
-    payment_method: z.enum(['cash', 'card', 'transfer']).optional(),
+    payment_method: z.string().optional(),
     category: z.string(),
     description: z.string().optional(),
     reference_id: z.string().uuid().optional(),
@@ -141,34 +141,28 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       .execute();
 
     // Calculate totals
-    const summary = {
+    const summary: any = {
       income: {
         total: 0,
-        cash: 0,
-        card: 0,
-        transfer: 0
+        by_method: {}
       },
       expense: {
         total: 0,
-        cash: 0,
-        transfer: 0
+        by_method: {}
       },
       balance: 0
     };
 
     result.forEach(row => {
       const amount = Number(row.total_amount);
-      const method = row.payment_method as string;
+      const method = (row.payment_method as string) || 'unknown';
 
       if (row.type === 'sale' || row.type === 'payment_received') {
         summary.income.total += amount;
-        if (method === 'cash') summary.income.cash += amount;
-        if (method === 'card') summary.income.card += amount;
-        if (method === 'transfer') summary.income.transfer += amount;
+        summary.income.by_method[method] = (summary.income.by_method[method] || 0) + amount;
       } else if (row.type === 'expense' || row.type === 'supplier_payment') {
         summary.expense.total += amount;
-        if (method === 'cash') summary.expense.cash += amount;
-        if (method === 'transfer') summary.expense.transfer += amount;
+        summary.expense.by_method[method] = (summary.expense.by_method[method] || 0) + amount;
       }
     });
 
@@ -236,7 +230,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const body = z.object({
       total: z.number().positive(),
-      payment_method: z.enum(['cash', 'card', 'transfer']),
+      payment_method: z.string(),
       customer_id: z.string().uuid().optional(),
       items: z.array(z.object({
         product_id: z.string().uuid().optional(),
@@ -490,7 +484,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       console.log('[PURCHASE] Raw body received:', JSON.stringify(request.body, null, 2));
       const body = z.object({
         supplier_id: z.string().uuid(),
-        payment_method: z.enum(['cash', 'transfer']),
+        payment_method: z.string(),
         items: z.array(z.object({
           product_id: z.string().uuid(),
           quantity: z.coerce.number().int().positive(),
@@ -626,7 +620,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const body = z.object({
       amount: z.number().positive(),
       category: z.string(),
-      payment_method: z.enum(['cash', 'transfer']),
+      payment_method: z.string(),
       description: z.string(),
       notes: z.string().optional()
     }).parse(request.body);

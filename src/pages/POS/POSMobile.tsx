@@ -13,6 +13,7 @@ export const POSMobile = () => {
     // --- Store & Global State ---
     const products = useStore((state) => state.products);
     const categories = useStore((state) => state.categories);
+    const shopInfo = useStore((state) => state.shopInfo);
     const customers = useStore((state) => state.customers);
     const cart = useStore((state) => state.cart);
     const addToCart = useStore((state) => state.addToCart);
@@ -33,7 +34,7 @@ export const POSMobile = () => {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
-    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
+    const [paymentMethod, setPaymentMethod] = useState<string>(shopInfo.paymentMethods?.[0]?.name || 'Efectivo');
     const [isProcessing, setIsProcessing] = useState(false);
     const [inStockOnly, setInStockOnly] = useState(false);
     const [sortBy, setSortBy] = useState<'name' | 'price' | 'stock'>('name');
@@ -508,21 +509,39 @@ export const POSMobile = () => {
                     </div>
 
                     <div className="m-sheet-footer">
-                        <div className="m-payment-options">
-                            <button
-                                className={paymentMethod === 'cash' ? 'active' : ''}
-                                onClick={() => setPaymentMethod('cash')}
-                            >
-                                <span className="material-symbols-rounded">payments</span>
-                                Efectivo
-                            </button>
-                            <button
-                                className={paymentMethod === 'card' ? 'active' : ''}
-                                onClick={() => setPaymentMethod('card')}
-                            >
-                                <span className="material-symbols-rounded">credit_card</span>
-                                Tarjeta
-                            </button>
+                        <div className="m-payment-options" style={{ overflowX: 'auto', gap: '0.5rem', paddingBottom: '0.5rem' }}>
+                            {(shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0) ? (
+                                shopInfo.paymentMethods.filter(m => m.is_active).map(m => (
+                                    <button
+                                        key={m.id}
+                                        className={paymentMethod === m.name ? 'active' : ''}
+                                        onClick={() => setPaymentMethod(m.name)}
+                                        style={{ minWidth: '100px', flex: '0 0 auto' }}
+                                    >
+                                        <span className="material-symbols-rounded">
+                                            {m.type === 'cash' ? 'payments' : 'credit_card'}
+                                        </span>
+                                        {m.name}
+                                    </button>
+                                ))
+                            ) : (
+                                <>
+                                    <button
+                                        className={paymentMethod === 'cash' ? 'active' : ''}
+                                        onClick={() => setPaymentMethod('cash')}
+                                    >
+                                        <span className="material-symbols-rounded">payments</span>
+                                        Efectivo
+                                    </button>
+                                    <button
+                                        className={paymentMethod === 'card' ? 'active' : ''}
+                                        onClick={() => setPaymentMethod('card')}
+                                    >
+                                        <span className="material-symbols-rounded">credit_card</span>
+                                        Tarjeta
+                                    </button>
+                                </>
+                            )}
                         </div>
 
                         <div className="m-summary-row">

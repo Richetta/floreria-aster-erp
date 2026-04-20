@@ -3,11 +3,12 @@ import {
     Store, Smartphone, MapPin, Instagram, Database, Download, Upload,
     Shield, Palette, Save, Share2, LogOut, Users, Plus, Edit2, Trash2,
     Check, X, Eye, EyeOff, CreditCard, Key, Cloud, HardDrive,
-    BarChart3, Zap
+    BarChart3, Zap, Wallet, Banknote
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
 import { api, type User } from '../../services/api';
+import type { PaymentMethod } from '../../store/slices/types';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import { SubscriptionTab } from './SubscriptionTab';
@@ -27,7 +28,7 @@ export const SettingsDesktop = () => {
 
     const [formData, setFormData] = useState(shopInfo);
     const [isSaved, setIsSaved] = useState(false);
-    const [activeTab, setActiveTab] = useState<'general' | 'data' | 'users' | 'subscription'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'payments' | 'data' | 'users' | 'subscription'>('general');
     const [theme, setTheme] = useState('violet');
 
     const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
@@ -313,6 +314,13 @@ export const SettingsDesktop = () => {
                     <span>General</span>
                 </button>
                 <button
+                    className={`settings-tab ${activeTab === 'payments' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('payments')}
+                >
+                    <Wallet size={18} />
+                    <span>Métodos de Pago</span>
+                </button>
+                <button
                     className={`settings-tab ${activeTab === 'data' ? 'active' : ''}`}
                     onClick={() => setActiveTab('data')}
                 >
@@ -493,6 +501,13 @@ export const SettingsDesktop = () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* PAYMENTS TAB */}
+                {activeTab === 'payments' && (
+                    <div className="settings-tab-content animate-fade-in">
+                        <PaymentMethodsManager />
                     </div>
                 )}
 
@@ -772,6 +787,224 @@ export const SettingsDesktop = () => {
 
             {alertModal && <AlertModal {...alertModal} />}
             {confirmModal && <ConfirmModal {...confirmModal} />}
+        </div>
+    );
+};
+
+// --- Sub-component for Payment Methods Management ---
+const PaymentMethodsManager = () => {
+    const shopInfo = useStore(state => state.shopInfo);
+    const updatePaymentMethods = useStore(state => state.updatePaymentMethods);
+    const { showAlert, showConfirm } = useModal();
+
+    const [methods, setMethods] = useState<PaymentMethod[]>(shopInfo.paymentMethods || []);
+    const [isEditing, setIsEditing] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState<Partial<PaymentMethod>>({});
+
+    useEffect(() => {
+        setMethods(shopInfo.paymentMethods || []);
+    }, [shopInfo.paymentMethods]);
+
+    const handleAdd = () => {
+        const newMethod: PaymentMethod = {
+            id: crypto.randomUUID(),
+            name: '',
+            type: 'cash',
+            is_active: true
+        };
+        setMethods([...methods, newMethod]);
+        setIsEditing(newMethod.id);
+        setEditForm(newMethod);
+    };
+
+    const handleSave = async (id: string) => {
+        if (!editForm.name?.trim()) {
+            showAlert({ title: 'Atención', message: 'El nombre es obligatorio', variant: 'warning' });
+            return;
+        }
+
+        const updatedMethods = methods.map(m => m.id === id ? { ...m, ...editForm } as PaymentMethod : m);
+        await updatePaymentMethods(updatedMethods);
+        setIsEditing(null);
+        setEditForm({});
+    };
+
+    const handleDelete = async (id: string) => {
+        if (await showConfirm({
+            title: '¿Eliminar método?',
+            message: 'Esta acción no se puede deshacer.',
+            confirmText: 'Eliminar',
+            variant: 'danger'
+        })) {
+            const updatedMethods = methods.filter(m => m.id !== id);
+            await updatePaymentMethods(updatedMethods);
+        }
+    };
+
+    const getTypeIcon = (type: string) => {
+        switch (type) {
+            case 'cash': return <Banknote size={16} />;
+            case 'bank': return <HardDrive size={16} />;
+            case 'card': return <CreditCard size={16} />;
+            default: return <Wallet size={16} />;
+        }
+    };
+
+    return (
+        <div className="settings-card settings-card-wide">
+            <div className="card-header">
+                <div className="card-header-icon card-header-icon-primary">
+                    <Wallet size={24} />
+                </div>
+                <div className="card-header-text">
+                    <h2>Gestión de Cobros</h2>
+                    <p>Configurá las cuentas o cajas donde recibís dinero</p>
+                </div>
+                <button className="btn btn-primary btn-compact" onClick={handleAdd}>
+                    <Plus size={16} />
+                    <span>Nuevo Método</span>
+                </button>
+            </div>
+
+            <div className="pm-list">
+                {methods.length === 0 ? (
+                    <div className="pm-empty">
+                        <Wallet size={48} />
+                        <p>No tenés métodos de pago configurados.</p>
+                        <button className="btn btn-secondary" onClick={handleAdd}>Agregar el primero</button>
+                    </div>
+                ) : (
+                    <div className="pm-grid">
+                        {methods.map(method => (
+                            <div key={method.id} className={`pm-item ${!method.is_active ? 'inactive' : ''}`}>
+                                {isEditing === method.id ? (
+                                    <div className="pm-edit-form">
+                                        <div className="form-group">
+                                            <label>Nombre Personalizado</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.name}
+                                                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                                                placeholder="Ej: Mercado Pago Personal"
+                                            />
+                                        </div>
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label>Tipo</label>
+                                                <select
+                                                    value={editForm.type}
+                                                    onChange={e => setEditForm({ ...editForm, type: e.target.value as any })}
+                                                >
+                                                    <option value="cash">Efectivo / Caja</option>
+                                                    <option value="transfer">Transferencia / Banco</option>
+                                                    <option value="debit">Débito</option>
+                                                    <option value="credit">Crédito</option>
+                                                    <option value="other">Otro / Billetera Virtual</option>
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Últimos 4 (opcional)</label>
+                                                <input
+                                                    type="text"
+                                                    maxLength={4}
+                                                    value={editForm.last_digits || ''}
+                                                    onChange={e => setEditForm({ ...editForm, last_digits: e.target.value.replace(/\D/g, '') })}
+                                                    placeholder="1234"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="pm-edit-actions">
+                                            <button className="btn btn-primary" onClick={() => handleSave(method.id)}>Guardar</button>
+                                            <button className="btn btn-secondary" onClick={() => { setIsEditing(null); setEditForm({}); if (!method.name) handleDelete(method.id); }}>Cancelar</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="pm-info">
+                                            <div className="pm-type-icon">{getTypeIcon(method.type)}</div>
+                                            <div className="pm-details">
+                                                <span className="pm-name">{method.name}</span>
+                                                <span className="pm-meta">
+                                                    {method.type.toUpperCase()} 
+                                                    {method.last_digits && ` •••• ${method.last_digits}`}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="pm-actions">
+                                            <button className="btn-icon" onClick={() => { setIsEditing(method.id); setEditForm(method); }}>
+                                                <Edit2 size={16} />
+                                            </button>
+                                            <button className="btn-icon text-danger" onClick={() => handleDelete(method.id)}>
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <style>{`
+                .pm-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                    gap: 1rem;
+                    padding: 1rem 0;
+                }
+                .pm-item {
+                    background: var(--color-bg-secondary);
+                    border: 1px solid var(--color-border);
+                    border-radius: 12px;
+                    padding: 1rem;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    transition: all 0.2s;
+                }
+                .pm-item:hover {
+                    border-color: var(--color-primary);
+                    transform: translateY(-2px);
+                }
+                .pm-item.inactive { opacity: 0.5; }
+                .pm-info { display: flex; gap: 1rem; align-items: center; }
+                .pm-type-icon {
+                    width: 40px;
+                    height: 40px;
+                    background: var(--color-primary-light);
+                    color: var(--color-primary);
+                    border-radius: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .pm-details { display: flex; flex-direction: column; }
+                .pm-name { font-weight: 600; color: var(--color-text-primary); }
+                .pm-meta { font-size: 0.75rem; color: var(--color-text-secondary); }
+                .pm-actions { display: flex; gap: 0.5rem; }
+                .btn-icon {
+                    background: none;
+                    border: none;
+                    padding: 0.5rem;
+                    cursor: pointer;
+                    color: var(--color-text-secondary);
+                    border-radius: 8px;
+                    transition: background 0.2s;
+                }
+                .btn-icon:hover { background: var(--color-bg-primary); color: var(--color-primary); }
+                .pm-edit-form { width: 100%; display: flex; flex-direction: column; gap: 0.75rem; }
+                .pm-edit-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+                .pm-empty {
+                    text-align: center;
+                    padding: 3rem;
+                    color: var(--color-text-secondary);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 1rem;
+                }
+            `}</style>
         </div>
     );
 };

@@ -21,6 +21,7 @@ import './Sales.css';
 export const SalesDesktop = () => {
     const transactions = useStore((state) => state.transactions);
     const customers = useStore((state) => state.customers);
+    const shopInfo = useStore((state) => state.shopInfo);
 
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -210,7 +211,8 @@ export const SalesDesktop = () => {
                                     <div className="sale-payment-info">
                                         <div className={`payment-tag ${sale.method}`}>
                                             {sale.method === 'cash' ? <Banknote size={14} /> : <CreditCard size={14} />}
-                                            {sale.method === 'cash' ? 'Efectivo' : 'Tarjeta'}
+                                            {(shopInfo.paymentMethods?.find(m => m.name === sale.method || m.id === sale.method)?.name) || 
+                                             (sale.method === 'cash' ? 'Efectivo' : sale.method === 'card' ? 'Tarjeta' : sale.method)}
                                         </div>
                                         <div className="sale-amount">
                                             ${sale.amount.toLocaleString()}
