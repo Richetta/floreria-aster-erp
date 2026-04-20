@@ -59,7 +59,6 @@ export const POSDesktop = () => {
     const isMobile = useMediaQuery('(max-width: 768px)');
 
     const addCustomer = useStore((state) => state.addCustomer);
-    const tags = useStore((state) => state.tags);
     const brands = useStore((state) => state.brands);
     const loadProducts = useStore((state) => state.loadProducts);
     const loadPackages = useStore((state) => state.loadPackages);
@@ -120,9 +119,7 @@ export const POSDesktop = () => {
     const [activeTags, setActiveTags] = useState<string[]>([]);
     const [stockFilter, setStockFilter] = useState<'all' | 'in' | 'out' | 'low'>('all');
     const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
-    const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
     const [productView, setProductView] = useState<ProductView>('all');
-    const [showFilters, setShowFilters] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
     const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
@@ -135,6 +132,13 @@ export const POSDesktop = () => {
 
     const [showTicketPrinter, setShowTicketPrinter] = useState(false);
     const [ticketData, setTicketData] = useState<TicketData | null>(null);
+
+    // Missing states for success modals and templates
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [lastSaleData, setLastSaleData] = useState<any>(null);
+    const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
+    const [lastOrderData, setLastOrderData] = useState<any>(null);
+    const [showTemplatesModal, setShowTemplatesModal] = useState(false);
 
     // Filter Dropdown state
     const [activeDropdown, setActiveDropdown] = useState<'stock' | 'category' | 'brand' | 'tag' | null>(null);
@@ -676,11 +680,6 @@ export const POSDesktop = () => {
         );
     };
 
-    const toggleTag = (tagName: string) => {
-        setActiveTags(prev =>
-            prev.includes(tagName) ? prev.filter(t => t !== tagName) : [...prev, tagName]
-        );
-    };
 
     const getActiveFilterCount = () => {
         let count = activeCategories.length + activeBrands.length + activeTags.length;
@@ -695,7 +694,6 @@ export const POSDesktop = () => {
         setActiveTags([]);
         setStockFilter('all');
         setActiveFolderId(null);
-        setExpandedFolders([]);
     };
 
     return (
@@ -1710,7 +1708,7 @@ export const POSDesktop = () => {
                                         type: 'sale',
                                         id: lastSaleData.id,
                                         date: lastSaleData.date,
-                                        items: lastSaleData.items.map(item => ({
+                                        items: lastSaleData.items.map((item: any) => ({
                                             name: item.name,
                                             quantity: item.qty,
                                             unitPrice: item.price,
@@ -1775,12 +1773,12 @@ export const POSDesktop = () => {
                             <div className="order-success-items mt-3 pt-3 border-t border-border">
                                 <span className="text-micro font-bold uppercase text-muted mb-2 block">Productos</span>
                                 <div className="space-y-1">
-                                    {lastOrderData?.items.map((item, i) => (
-                                        <div key={i} className="flex justify-between text-small">
-                                            <span>{item.qty}x {item.name}</span>
-                                            <span className="text-muted">${(item.price * item.qty).toLocaleString()}</span>
-                                        </div>
-                                    ))}
+                                {lastOrderData?.items.map((item: any, i: number) => (
+                                    <div key={i} className="flex justify-between text-small">
+                                        <span>{item.qty}x {item.name}</span>
+                                        <span className="text-muted">${(item.price * item.qty).toLocaleString()}</span>
+                                    </div>
+                                ))}
                                 </div>
                             </div>
                         </div>
