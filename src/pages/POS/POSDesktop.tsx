@@ -1322,33 +1322,31 @@ export const POSDesktop = () => {
                             ) : (
                                 cart.map((item, idx) => (
                                     <div className="cart-line-item" key={`${item.id}-${idx}`}>
-                                        <div className="cart-item-info-row">
-                                            <div className="flex-1">
-                                                <h4 className="cart-item-name">{item.name}</h4>
-                                                <p className="cart-item-price-unit">${item.price?.toLocaleString()} c/u</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-body font-bold text-primary">${((item.price || 0) * item.qty).toLocaleString()}</span>
+                                        <div className="cart-item-main-info">
+                                            <h4 className="cart-item-name-compact">{item.name}</h4>
+                                            <div className="cart-item-pricing-compact">
+                                                <span className="text-muted text-xs">${item.price?.toLocaleString()} c/u</span>
+                                                <span className="cart-item-total-compact">${((item.price || 0) * item.qty).toLocaleString()}</span>
                                             </div>
                                         </div>
 
-                                        <div className="cart-item-actions-row">
-                                            <div className="qty-controls">
-                                                <button className="qty-btn" onClick={() => updateCartQty(item.id, -1)} title="Disminuir">
-                                                    <Minus size={14} />
+                                        <div className="cart-item-actions-compact">
+                                            <div className="qty-controls-compact">
+                                                <button className="qty-btn-mini" onClick={() => updateCartQty(item.id, -1)} title="Disminuir">
+                                                    <Minus size={12} />
                                                 </button>
-                                                <span className="qty-value">{item.qty}</span>
-                                                <button className="qty-btn" onClick={() => updateCartQty(item.id, 1)} title="Aumentar">
-                                                    <Plus size={14} />
+                                                <span className="qty-value-mini">{item.qty}</span>
+                                                <button className="qty-btn-mini" onClick={() => updateCartQty(item.id, 1)} title="Aumentar">
+                                                    <Plus size={12} />
                                                 </button>
                                             </div>
 
                                             <button
-                                                className="btn-icon text-danger opacity-50 hover:opacity-100"
+                                                className="btn-delete-mini"
                                                 onClick={() => removeFromCart(item.id)}
                                                 title="Quitar"
                                             >
-                                                <Trash2 size={16} />
+                                                <Trash2 size={14} />
                                             </button>
                                         </div>
                                     </div>
