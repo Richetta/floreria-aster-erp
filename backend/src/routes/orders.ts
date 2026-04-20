@@ -539,7 +539,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
     const { amount, payment_method = 'cash', notes } = request.body as { amount: number; payment_method?: string; notes?: string };
 
-    if (!amount || amount <= 0) {
+    if (amount < 0) {
       return reply.status(400).send({ error: 'Monto inválido' });
     }
 

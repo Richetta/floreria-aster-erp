@@ -9,7 +9,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
   // Create transaction schema
   const createTransactionSchema = z.object({
     type: z.enum(['sale', 'payment_received', 'expense', 'supplier_payment', 'adjustment']),
-    amount: z.number().positive(),
+    amount: z.number().min(0),
     payment_method: z.string().optional(),
     category: z.string(),
     description: z.string().optional(),
@@ -228,29 +228,29 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    const body = z.object({
-      total: z.number().positive(),
-      payment_method: z.string(),
-      customer_id: z.string().uuid().optional(),
-      items: z.array(z.object({
-        product_id: z.string().uuid().optional(),
-        package_id: z.string().uuid().optional(),
-        quantity: z.coerce.number().int().positive(),
-        unit_price: z.coerce.number().min(0)
-      })).min(1).refine(items => items.every(i => i.product_id || i.package_id), {
-        message: "Cada item debe tener product_id o package_id"
-      }),
-      notes: z.string().optional()
-    }).parse(request.body);
-
-    console.log('========================================');
-    console.log('[SALE] Starting sale process');
-    console.log('[SALE] Body:', JSON.stringify(body, null, 2));
-    console.log('[SALE] User ID:', user.sub);
-    console.log('[SALE] Business ID:', user.business_id);
-    console.log('========================================');
-
     try {
+      const body = z.object({
+        total: z.number().min(0),
+        payment_method: z.string(),
+        customer_id: z.string().uuid().optional(),
+        items: z.array(z.object({
+          product_id: z.string().uuid().optional(),
+          package_id: z.string().uuid().optional(),
+          quantity: z.coerce.number().int().positive(),
+          unit_price: z.coerce.number().min(0)
+        })).min(1).refine(items => items.every(i => i.product_id || i.package_id), {
+          message: "Cada item debe tener product_id o package_id"
+        }),
+        notes: z.string().optional()
+      }).parse(request.body);
+
+      console.log('========================================');
+      console.log('[SALE] Starting sale process');
+      console.log('[SALE] Body:', JSON.stringify(body, null, 2));
+      console.log('[SALE] User ID:', user.sub);
+      console.log('[SALE] Business ID:', user.business_id);
+      console.log('========================================');
+
       const result = await db.transaction().execute(async (trx) => {
         const saleTransactionId = randomUUID();
         console.log('[SALE] Generated saleTransactionId:', saleTransactionId);
@@ -455,10 +455,14 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       console.log('========================================');
       return reply.status(201).send(result);
     } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'Validation error', details: error.errors });
+      }
+
       console.error('========================================');
       console.error('[SALE] ERROR:', error.message);
       console.error('[SALE] Stack:', error.stack);
-      console.error('[SALE] Body was:', JSON.stringify(body, null, 2));
+      console.error('[SALE] Input was:', JSON.stringify(request.body, null, 2));
       console.error('========================================');
       return reply.status(500).send({
         error: 'Error processing sale',
