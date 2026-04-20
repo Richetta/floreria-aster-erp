@@ -143,6 +143,8 @@ export const POSDesktop = () => {
     const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
     const [lastOrderData, setLastOrderData] = useState<any>(null);
     const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
+    const [paymentSelectorOpen, setPaymentSelectorOpen] = useState(false);
 
     // Filter Dropdown state
     const [activeDropdown, setActiveDropdown] = useState<'stock' | 'category' | 'brand' | 'tag' | null>(null);
@@ -164,6 +166,112 @@ export const POSDesktop = () => {
 
     // Custom modal hook (replaces native alert/confirm)
     const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
+
+    // Effect to set initial payment method
+    useEffect(() => {
+        if (shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0 && !selectedPaymentMethod) {
+            const firstActive = shopInfo.paymentMethods.find((m: any) => m.is_active);
+            if (firstActive) setSelectedPaymentMethod(firstActive.name);
+        } else if (!selectedPaymentMethod && (!shopInfo.paymentMethods || shopInfo.paymentMethods.length === 0)) {
+            setSelectedPaymentMethod('cash');
+        }
+    }, [shopInfo.paymentMethods]);
+
+    const getPaymentIcon = (methodName: string) => {
+        const method = shopInfo.paymentMethods?.find((m: any) => m.name === methodName);
+        const name = (methodName || '').toLowerCase();
+
+        // Brand logic
+        if (name.includes('mercado pago') || name.includes('mercadopago') || name.includes('mp')) {
+            return <img src="https://www.mercadopago.com/org-rc/vendors/mptools/assets/logo.png" alt="MP" className="ps-brand-img" />;
+        }
+
+        if (method?.type === 'cash' || name.includes('efectivo')) return <Banknote size={20} />;
+        return <CreditCard size={20} />;
+    };
+
+    const renderPaymentSelector = (context: 'sale' | 'order' = 'sale') => {
+        const methods = (shopInfo.paymentMethods || []).filter((m: any) => m.is_active);
+        const selected = methods.find((m: any) => m.name === selectedPaymentMethod) || { name: selectedPaymentMethod, type: 'other' };
+        
+        const isDisabled = context === 'order' 
+            ? (cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim()))
+            : cart.length === 0;
+
+        return (
+            <div className="payment-selector-wrapper">
+                <div 
+                    className="payment-selector-trigger" 
+                    onClick={() => !isDisabled && setPaymentSelectorOpen(!paymentSelectorOpen)}
+                    style={{ opacity: isDisabled ? 0.6 : 1, cursor: isDisabled ? 'not-allowed' : 'pointer' }}
+                >
+                    <div className="ps-trigger-left">
+                        <div className="ps-selected-icon">
+                            {getPaymentIcon(selected.name)}
+                        </div>
+                        <div className="ps-selected-info">
+                            <span className="ps-selected-name">{selected.name || 'Seleccionar pago'}</span>
+                            <span className="ps-selected-type">{(selected as any).type || 'OTRO'}</span>
+                        </div>
+                    </div>
+                    <ChevronDown size={18} className={`transition-transform ${paymentSelectorOpen ? 'rotate-180' : ''}`} />
+                </div>
+
+                {paymentSelectorOpen && (
+                    <div className="payment-dropdown-menu">
+                        {methods.length > 0 ? (
+                            methods.map((m: any) => (
+                                <button 
+                                    key={m.id} 
+                                    className={`ps-option ${selectedPaymentMethod === m.name ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setSelectedPaymentMethod(m.name);
+                                        setPaymentSelectorOpen(false);
+                                    }}
+                                >
+                                    <div className="ps-option-left">
+                                        <div className="ps-option-icon">
+                                            {getPaymentIcon(m.name)}
+                                        </div>
+                                        <span className="ps-option-name">{m.name}</span>
+                                    </div>
+                                    {selectedPaymentMethod === m.name && <Check size={16} style={{ color: 'var(--color-primary)' }} />}
+                                </button>
+                            ))
+                        ) : (
+                            ['Efectivo', 'Tarjeta', 'Transferencia'].map(m => (
+                                <button 
+                                    key={m} 
+                                    className={`ps-option ${selectedPaymentMethod === m ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setSelectedPaymentMethod(m);
+                                        setPaymentSelectorOpen(false);
+                                    }}
+                                >
+                                    <div className="ps-option-left">
+                                        <div className="ps-option-icon">
+                                            {m === 'Efectivo' ? <Banknote size={18} /> : <CreditCard size={18} />}
+                                        </div>
+                                        <span className="ps-option-name">{m}</span>
+                                    </div>
+                                    {selectedPaymentMethod === m && <Check size={16} style={{ color: 'var(--color-primary)' }} />}
+                                </button>
+                            ))
+                        )}
+                    </div>
+                )}
+
+                <button 
+                    className="checkout-finalize-btn"
+                    disabled={isDisabled}
+                    onClick={() => handleCheckout(selectedPaymentMethod)}
+                >
+                    <Check size={22} />
+                    <span>{context === 'order' ? 'Confirmar Pedido' : 'Finalizar Venta'}</span>
+                </button>
+            </div>
+        );
+    };
 
     // Load data from backend on mount
     useEffect(() => {
@@ -1577,41 +1685,7 @@ export const POSDesktop = () => {
 
                                 <div className="order-payment-buttons">
                                     <p className="text-micro text-muted mb-2">Método de pago {advancePayment > 0 ? 'de la seña' : ''}:</p>
-                                    <div className="payment-buttons-compact flex-wrap">
-                                        {(shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0) ? (
-                                            shopInfo.paymentMethods.filter((m: any) => m.is_active).map((m: any) => (
-                                                <button
-                                                    key={m.id}
-                                                    className="payment-btn-compact"
-                                                    style={{ border: '1px solid var(--color-border)', minWidth: '100px' }}
-                                                    disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
-                                                    onClick={() => handleCheckout(m.name)}
-                                                >
-                                                    {m.type === 'cash' ? <Banknote size={18} /> : <CreditCard size={18} />}
-                                                    <span>{m.name}</span>
-                                                </button>
-                                            ))
-                                        ) : (
-                                            <>
-                                                <button
-                                                    className="payment-btn-compact payment-cash"
-                                                    disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
-                                                    onClick={() => handleCheckout('cash')}
-                                                >
-                                                    <Banknote size={18} />
-                                                    <span>Efectivo</span>
-                                                </button>
-                                                <button
-                                                    className="payment-btn-compact payment-card"
-                                                    disabled={cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim())}
-                                                    onClick={() => handleCheckout('card')}
-                                                >
-                                                    <CreditCard size={18} />
-                                                    <span>Tarjeta</span>
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
+                                    {renderPaymentSelector('order')}
                                 </div>
                             </div>
                         )}
@@ -1671,43 +1745,8 @@ export const POSDesktop = () => {
                                 </div>
 
 
-                                <div className="payment-buttons-compact mt-2 flex-wrap">
-                                    {(shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0) ? (
-                                        shopInfo.paymentMethods.filter((m: any) => m.is_active).map((m: any) => (
-                                            <button
-                                                key={m.id}
-                                                className="payment-btn-compact"
-                                                style={{ border: '1px solid var(--color-border)', minWidth: '100px' }}
-                                                disabled={cart.length === 0}
-                                                onClick={() => handleCheckout(m.name)}
-                                                title={`Pagar con ${m.name}`}
-                                            >
-                                                {m.type === 'cash' ? <Banknote size={20} /> : <CreditCard size={20} />}
-                                                <span>{m.name}</span>
-                                            </button>
-                                        ))
-                                    ) : (
-                                        <>
-                                            <button
-                                                className="payment-btn-compact payment-cash"
-                                                disabled={cart.length === 0}
-                                                onClick={() => handleCheckout('cash')}
-                                                title="Pagar en efectivo"
-                                            >
-                                                <Banknote size={20} />
-                                                <span>Efectivo</span>
-                                            </button>
-                                            <button
-                                                className="payment-btn-compact payment-card"
-                                                disabled={cart.length === 0}
-                                                onClick={() => handleCheckout('card')}
-                                                title="Pagar con tarjeta o transferencia"
-                                            >
-                                                <CreditCard size={20} />
-                                                <span>Tarjeta</span>
-                                            </button>
-                                        </>
-                                    )}
+                                <div className="payment-buttons-compact mt-2">
+                                    {renderPaymentSelector('sale')}
                                 </div>
                             </div>
                         </div>

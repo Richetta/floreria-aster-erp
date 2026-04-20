@@ -80,7 +80,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
                     address: data.address,
                     instagram: data.settings?.instagram || '',
                     currency: data.currency,
-                    paymentMethods: data.settings?.payment_methods || []
+                    paymentMethods: (data.settings?.payment_methods && data.settings.payment_methods.length > 0) 
+                        ? data.settings.payment_methods 
+                        : [{ id: 'default-cash', name: 'Efectivo', type: 'cash', is_active: true }]
                 }
             });
         } catch (error) {

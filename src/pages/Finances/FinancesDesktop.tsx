@@ -45,13 +45,36 @@ const formatDate = (dateString: string) => {
 const TransactionItem = ({ t }: { t: any }) => {
     const isIncome = t.type === 'income';
 
+    const getMethodIcon = (methodName: string) => {
+        const name = (methodName || '').toLowerCase();
+        if (name.includes('mercado pago') || name.includes('mercadopago') || name.includes('mp')) {
+            return <img src="https://www.mercadopago.com/org-rc/vendors/mptools/assets/logo.png" alt="MP" style={{ width: '14px', height: 'auto', marginRight: '4px' }} />;
+        }
+        if (name.includes('efectivo')) return <Banknote size={12} className="mr-1" />;
+        return <CreditCard size={12} className="mr-1" />;
+    };
+
     return (
         <div className={`transaction-item ${isIncome ? 'transaction-income' : 'transaction-expense'}`}>
             <div className="transaction-icon">
                 {isIncome ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
             </div>
             <div className="transaction-info">
-                <div className="transaction-category">{t.category}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="transaction-category">{t.category}</div>
+                    <div className="method-badge-sm" style={{ 
+                        fontSize: '0.65rem', 
+                        padding: '1px 6px', 
+                        background: '#f1f5f9', 
+                        borderRadius: '4px', 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        color: '#64748b'
+                    }}>
+                        {getMethodIcon(t.method)}
+                        {t.method || 'S/A'}
+                    </div>
+                </div>
                 <div className="transaction-desc">{t.description || 'Sin descripción'}</div>
             </div>
             <div className="transaction-amount">

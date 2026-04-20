@@ -841,12 +841,25 @@ const PaymentMethodsManager = () => {
         }
     };
 
-    const getTypeIcon = (type: string) => {
-        switch (type) {
-            case 'cash': return <Banknote size={16} />;
-            case 'bank': return <HardDrive size={16} />;
-            case 'card': return <CreditCard size={16} />;
-            default: return <Wallet size={16} />;
+    const getTypeIcon = (method: PaymentMethod) => {
+        const name = method.name.toLowerCase();
+        if (name.includes('mercado pago') || name.includes('mercadopago') || name.includes('mp')) {
+            return (
+                <div className="pm-brand-icon mp">
+                    <img src="https://www.mercadopago.com/org-rc/vendors/mptools/assets/logo.png" alt="MP" style={{ width: '24px', height: 'auto' }} />
+                </div>
+            );
+        }
+        if (name.includes('brubank') || name.includes('santander') || name.includes('galicia') || name.includes('nacion')) {
+            return <div className="pm-brand-icon bank"><div className="bank-dot"></div><Banknote size={20} /></div>;
+        }
+
+        switch (method.type) {
+            case 'cash': return <div className="pm-brand-icon cash"><Banknote size={20} /></div>;
+            case 'transfer': return <div className="pm-brand-icon bank"><HardDrive size={20} /></div>;
+            case 'debit':
+            case 'credit': return <div className="pm-brand-icon card"><CreditCard size={18} /></div>;
+            default: return <div className="pm-brand-icon other"><Wallet size={20} /></div>;
         }
     };
 
@@ -921,22 +934,31 @@ const PaymentMethodsManager = () => {
                                 ) : (
                                     <>
                                         <div className="pm-info">
-                                            <div className="pm-type-icon">{getTypeIcon(method.type)}</div>
+                                            <div className="pm-visual">{getTypeIcon(method)}</div>
                                             <div className="pm-details">
-                                                <span className="pm-name">{method.name}</span>
+                                                <div className="pm-header-row">
+                                                    <span className="pm-name">{method.name}</span>
+                                                    {method.name === 'Efectivo' && <span className="pm-badge-default">Default</span>}
+                                                </div>
                                                 <span className="pm-meta">
-                                                    {method.type.toUpperCase()} 
-                                                    {method.last_digits && ` •••• ${method.last_digits}`}
+                                                    <span className={`pm-type-tag ${method.type}`}>{method.type.toUpperCase()}</span>
+                                                    {method.last_digits && <span className="pm-digits">•••• {method.last_digits}</span>}
                                                 </span>
                                             </div>
                                         </div>
                                         <div className="pm-actions">
-                                            <button className="btn-icon" onClick={() => { setIsEditing(method.id); setEditForm(method); }}>
-                                                <Edit2 size={16} />
-                                            </button>
-                                            <button className="btn-icon text-danger" onClick={() => handleDelete(method.id)}>
-                                                <Trash2 size={16} />
-                                            </button>
+                                            <div className="pm-status-toggle">
+                                                <div className={`status-dot ${method.is_active ? 'active' : 'inactive'}`}></div>
+                                                <span>{method.is_active ? 'Activo' : 'Inactivo'}</span>
+                                            </div>
+                                            <div className="pm-action-buttons">
+                                                <button className="btn-icon-blur" onClick={() => { setIsEditing(method.id); setEditForm(method); }}>
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button className="btn-icon-blur text-danger" onClick={() => handleDelete(method.id)}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </>
                                 )}
@@ -949,60 +971,150 @@ const PaymentMethodsManager = () => {
             <style>{`
                 .pm-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                    gap: 1rem;
-                    padding: 1rem 0;
+                    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+                    gap: 1.25rem;
+                    padding: 1.25rem 0;
                 }
                 .pm-item {
-                    background: var(--color-bg-secondary);
-                    border: 1px solid var(--color-border);
-                    border-radius: 12px;
-                    padding: 1rem;
+                    background: white;
+                    border: 1px solid rgba(0,0,0,0.05);
+                    border-radius: 16px;
+                    padding: 1.25rem;
                     display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    transition: all 0.2s;
+                    flex-direction: column;
+                    gap: 1.25rem;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+                    position: relative;
+                    overflow: hidden;
                 }
                 .pm-item:hover {
-                    border-color: var(--color-primary);
-                    transform: translateY(-2px);
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                    transform: translateY(-4px);
+                    border-color: var(--color-primary-light);
                 }
-                .pm-item.inactive { opacity: 0.5; }
-                .pm-info { display: flex; gap: 1rem; align-items: center; }
-                .pm-type-icon {
-                    width: 40px;
-                    height: 40px;
-                    background: var(--color-primary-light);
-                    color: var(--color-primary);
-                    border-radius: 10px;
+                .pm-item.inactive { 
+                    opacity: 0.7;
+                    filter: grayscale(0.5);
+                }
+                .pm-item::after {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 4px;
+                    background: var(--color-primary);
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                }
+                .pm-item:hover::after { opacity: 1; }
+
+                .pm-info { display: flex; gap: 1.15rem; align-items: center; }
+                .pm-visual {
+                    width: 52px;
+                    height: 52px;
+                    border-radius: 14px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                    font-size: 1.25rem;
+                    flex-shrink: 0;
                 }
-                .pm-details { display: flex; flex-direction: column; }
-                .pm-name { font-weight: 600; color: var(--color-text-primary); }
-                .pm-meta { font-size: 0.75rem; color: var(--color-text-secondary); }
-                .pm-actions { display: flex; gap: 0.5rem; }
-                .btn-icon {
-                    background: none;
+                .pm-brand-icon {
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: inherit;
+                }
+                .pm-brand-icon.mp { background: #009EE315; color: #009EE3; }
+                .pm-brand-icon.cash { background: #10B98115; color: #10B981; }
+                .pm-brand-icon.bank { background: #3B82F615; color: #3B82F6; position: relative; }
+                .pm-brand-icon.card { background: #8B5CF615; color: #8B5CF6; }
+                .pm-brand-icon.other { background: #64748b15; color: #64748b; }
+                
+                .bank-dot {
+                    position: absolute;
+                    top: 12px;
+                    right: 12px;
+                    width: 6px;
+                    height: 6px;
+                    background: #3B82F6;
+                    border-radius: 50%;
+                }
+
+                .pm-details { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+                .pm-header-row { display: flex; align-items: center; gap: 0.5rem; }
+                .pm-name { font-size: 1.05rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .pm-badge-default {
+                    font-size: 0.65rem;
+                    background: #f1f5f9;
+                    color: #64748b;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                }
+
+                .pm-meta { display: flex; align-items: center; gap: 0.75rem; margin-top: 2px; }
+                .pm-type-tag {
+                    font-size: 0.7rem;
+                    font-weight: 600;
+                    padding: 1px 6px;
+                    border-radius: 9999px;
+                    background: #f8fafc;
+                    color: #94a3b8;
+                }
+                .pm-type-tag.cash { background: #10B98110; color: #10B981; }
+                .pm-type-tag.transfer { background: #3B82F610; color: #3B82F6; }
+                
+                .pm-digits { font-size: 0.75rem; color: #94a3b8; font-family: monospace; letter-spacing: 1px; }
+
+                .pm-actions { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: center; 
+                    padding-top: 1rem;
+                    border-top: 1px dashed #f1f5f9;
+                }
+                
+                .pm-status-toggle { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; font-weight: 500; color: #64748b; }
+                .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+                .status-dot.active { background: #10B981; box-shadow: 0 0 8px #10B98180; }
+                .status-dot.inactive { background: #cbd5e1; }
+
+                .pm-action-buttons { display: flex; gap: 0.4rem; }
+                .btn-icon-blur {
+                    background: #f8fafc;
                     border: none;
-                    padding: 0.5rem;
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 10px;
+                    color: #64748b;
                     cursor: pointer;
-                    color: var(--color-text-secondary);
-                    border-radius: 8px;
-                    transition: background 0.2s;
+                    transition: all 0.2s;
                 }
-                .btn-icon:hover { background: var(--color-bg-primary); color: var(--color-primary); }
-                .pm-edit-form { width: 100%; display: flex; flex-direction: column; gap: 0.75rem; }
-                .pm-edit-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+                .btn-icon-blur:hover { background: #f1f5f9; color: var(--color-primary); }
+                .btn-icon-blur.text-danger:hover { background: #fee2e2; color: #ef4444; }
+
+                .pm-edit-form { width: 100%; display: flex; flex-direction: column; gap: 1rem; padding: 0.25rem; }
+                .pm-edit-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
                 .pm-empty {
                     text-align: center;
-                    padding: 3rem;
+                    padding: 4rem 2rem;
                     color: var(--color-text-secondary);
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 1rem;
+                    gap: 1.25rem;
+                    background: #f8fafc;
+                    border-radius: 20px;
+                    border: 2px dashed #e2e8f0;
                 }
             `}</style>
         </div>

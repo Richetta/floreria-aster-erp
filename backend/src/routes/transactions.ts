@@ -236,7 +236,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
         product_id: z.string().uuid().optional(),
         package_id: z.string().uuid().optional(),
         quantity: z.coerce.number().int().positive(),
-        unit_price: z.coerce.number().positive()
+        unit_price: z.coerce.number().min(0)
       })).min(1).refine(items => items.every(i => i.product_id || i.package_id), {
         message: "Cada item debe tener product_id o package_id"
       }),

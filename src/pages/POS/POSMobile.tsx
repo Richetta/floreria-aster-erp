@@ -120,6 +120,18 @@ export const POSMobile = () => {
     useBarcodeScanner({ onScan: handleBarcodeScan, isActive: !isCameraScannerOpen && !isCartOpen });
 
     // --- Handlers ---
+
+    const getPaymentIconHTML = (methodName: string) => {
+        const name = (methodName || '').toLowerCase();
+        // Brand logic
+        if (name.includes('mercado pago') || name.includes('mercadopago') || name.includes('mp')) {
+            return <img src="https://www.mercadopago.com/org-rc/vendors/mptools/assets/logo.png" alt="MP" style={{ width: '18px', height: 'auto' }} />;
+        }
+        const method = shopInfo.paymentMethods?.find(m => m.name === methodName);
+        const iconName = method?.type === 'cash' || name.includes('efectivo') ? 'payments' : 'credit_card';
+        return <span className="material-symbols-rounded">{iconName}</span>;
+    };
+
     const handleCheckout = async () => {
         if (cart.length === 0) return;
         setIsProcessing(true);
@@ -509,36 +521,40 @@ export const POSMobile = () => {
                     </div>
 
                     <div className="m-sheet-footer">
-                        <div className="m-payment-options" style={{ overflowX: 'auto', gap: '0.5rem', paddingBottom: '0.5rem' }}>
+                        <div className="m-payment-options-grid">
                             {(shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0) ? (
                                 shopInfo.paymentMethods.filter(m => m.is_active).map(m => (
                                     <button
                                         key={m.id}
-                                        className={paymentMethod === m.name ? 'active' : ''}
+                                        className={`m-pay-card ${paymentMethod === m.name ? 'active' : ''}`}
                                         onClick={() => setPaymentMethod(m.name)}
-                                        style={{ minWidth: '100px', flex: '0 0 auto' }}
                                     >
-                                        <span className="material-symbols-rounded">
-                                            {m.type === 'cash' ? 'payments' : 'credit_card'}
-                                        </span>
-                                        {m.name}
+                                        <div className="m-pay-card-icon">
+                                            {getPaymentIconHTML(m.name)}
+                                        </div>
+                                        <span className="m-pay-card-name">{m.name}</span>
+                                        {paymentMethod === m.name && <span className="material-symbols-rounded m-pay-check">check_circle</span>}
                                     </button>
                                 ))
                             ) : (
                                 <>
                                     <button
-                                        className={paymentMethod === 'cash' ? 'active' : ''}
+                                        className={`m-pay-card ${paymentMethod === 'cash' ? 'active' : ''}`}
                                         onClick={() => setPaymentMethod('cash')}
                                     >
-                                        <span className="material-symbols-rounded">payments</span>
-                                        Efectivo
+                                        <div className="m-pay-card-icon">
+                                            <span className="material-symbols-rounded">payments</span>
+                                        </div>
+                                        <span className="m-pay-card-name">Efectivo</span>
                                     </button>
                                     <button
-                                        className={paymentMethod === 'card' ? 'active' : ''}
+                                        className={`m-pay-card ${paymentMethod === 'card' ? 'active' : ''}`}
                                         onClick={() => setPaymentMethod('card')}
                                     >
-                                        <span className="material-symbols-rounded">credit_card</span>
-                                        Tarjeta
+                                        <div className="m-pay-card-icon">
+                                            <span className="material-symbols-rounded">credit_card</span>
+                                        </div>
+                                        <span className="m-pay-card-name">Tarjeta</span>
                                     </button>
                                 </>
                             )}
