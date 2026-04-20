@@ -123,13 +123,30 @@ export const POSMobile = () => {
 
     const getPaymentIconHTML = (methodName: string) => {
         const name = (methodName || '').toLowerCase();
-        // Brand logic
-        if (name.includes('mercado pago') || name.includes('mercadopago') || name.includes('mp')) {
-            return <img src="https://www.mercadopago.com/org-rc/vendors/mptools/assets/logo.png" alt="MP" style={{ width: '18px', height: 'auto' }} />;
-        }
         const method = shopInfo.paymentMethods?.find(m => m.name === methodName);
-        const iconName = method?.type === 'cash' || name.includes('efectivo') ? 'payments' : 'credit_card';
-        return <span className="material-symbols-rounded">{iconName}</span>;
+        const iconId = method?.iconId;
+
+        // Custom icon mapping (material symbols approximation)
+        const getIconName = (id: string | undefined): string => {
+            switch(id) {
+                case 'cash': return 'payments';
+                case 'card': return 'credit_card';
+                case 'bank': return 'account_balance';
+                case 'mobile': return 'qr_code_2';
+                case 'wallet': return 'account_balance_wallet';
+                case 'coins': return 'monetization_on';
+                case 'building': return 'store';
+                case 'globe': return 'language';
+                case 'shield': return 'verified_user';
+                case 'other': return 'help';
+                default:
+                    if (name.includes('efectivo')) return 'payments';
+                    if (name.includes('tarjeta') || name.includes('débito') || name.includes('crédito')) return 'credit_card';
+                    return 'wallet';
+            }
+        };
+
+        return <span className="material-symbols-rounded">{getIconName(iconId)}</span>;
     };
 
     const handleCheckout = async () => {
@@ -522,8 +539,12 @@ export const POSMobile = () => {
 
                     <div className="m-sheet-footer">
                         <div className="m-payment-options-grid">
-                            {(shopInfo.paymentMethods && shopInfo.paymentMethods.length > 0) ? (
-                                shopInfo.paymentMethods.filter(m => m.is_active).map(m => (
+                            {(() => {
+                                const customMethods = (shopInfo.paymentMethods || []).filter(m => m.is_active);
+                                const hasEfectivo = customMethods.some(m => m.name.toLowerCase().includes('efectivo'));
+                                const methods = hasEfectivo ? customMethods : [{ id: 'default-cash', name: 'Efectivo', type: 'cash', iconId: 'cash' }, ...customMethods];
+                                
+                                return methods.map(m => (
                                     <button
                                         key={m.id}
                                         className={`m-pay-card ${paymentMethod === m.name ? 'active' : ''}`}
@@ -535,29 +556,8 @@ export const POSMobile = () => {
                                         <span className="m-pay-card-name">{m.name}</span>
                                         {paymentMethod === m.name && <span className="material-symbols-rounded m-pay-check">check_circle</span>}
                                     </button>
-                                ))
-                            ) : (
-                                <>
-                                    <button
-                                        className={`m-pay-card ${paymentMethod === 'cash' ? 'active' : ''}`}
-                                        onClick={() => setPaymentMethod('cash')}
-                                    >
-                                        <div className="m-pay-card-icon">
-                                            <span className="material-symbols-rounded">payments</span>
-                                        </div>
-                                        <span className="m-pay-card-name">Efectivo</span>
-                                    </button>
-                                    <button
-                                        className={`m-pay-card ${paymentMethod === 'card' ? 'active' : ''}`}
-                                        onClick={() => setPaymentMethod('card')}
-                                    >
-                                        <div className="m-pay-card-icon">
-                                            <span className="material-symbols-rounded">credit_card</span>
-                                        </div>
-                                        <span className="m-pay-card-name">Tarjeta</span>
-                                    </button>
-                                </>
-                            )}
+                                ));
+                            })()}
                         </div>
 
                         <div className="m-summary-row">

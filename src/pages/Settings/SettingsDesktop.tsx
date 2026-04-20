@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react';
-import {
-    Store, Smartphone, MapPin, Instagram, Database, Download, Upload,
-    Shield, Palette, Save, Share2, LogOut, Users, Plus, Edit2, Trash2,
-    Check, X, Eye, EyeOff, CreditCard, Key, Cloud, HardDrive,
-    BarChart3, Zap, Wallet, Banknote
+import { 
+    Save, Trash2, Edit2, Plus, 
+    Download, Users, Key, LogOut, 
+    MapPin, CreditCard, Banknote, HelpCircle,
+    Check, X, Shield, Wallet, HardDrive,
+    Smartphone, Coins, Landmark, Building2, Globe, ShieldCheck,
+    Store, Instagram, Database, Upload, Palette, Eye, EyeOff, Cloud,
+    BarChart3, Zap, Share2
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
-import { api, type User } from '../../services/api';
-import type { PaymentMethod } from '../../store/slices/types';
+import { type PaymentMethod } from '../../store/slices/types';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import { SubscriptionTab } from './SubscriptionTab';
+import { generateIdWithPrefix } from '../../utils/idGenerator';
+import { api, type User } from '../../services/api';
 import './Settings.css';
 
 type UserFormData = {
@@ -807,12 +811,13 @@ const PaymentMethodsManager = () => {
 
     const handleAdd = () => {
         const newMethod: PaymentMethod = {
-            id: crypto.randomUUID(),
+            id: generateIdWithPrefix('pm'),
             name: '',
-            type: 'cash',
-            is_active: true
+            type: 'other',
+            is_active: true,
+            iconId: 'other'
         };
-        setMethods([...methods, newMethod]);
+        setMethods([newMethod, ...methods]);
         setIsEditing(newMethod.id);
         setEditForm(newMethod);
     };
@@ -841,22 +846,26 @@ const PaymentMethodsManager = () => {
         }
     };
 
-    const getTypeIcon = (method: PaymentMethod) => {
-        const name = method.name.toLowerCase();
-        if (name.includes('mercado pago') || name.includes('mercadopago') || name.includes('mp')) {
-            return (
-                <div className="pm-brand-icon mp">
-                    <img src="https://www.mercadopago.com/org-rc/vendors/mptools/assets/logo.png" alt="MP" style={{ width: '24px', height: 'auto' }} />
-                </div>
-            );
-        }
-        if (name.includes('brubank') || name.includes('santander') || name.includes('galicia') || name.includes('nacion')) {
-            return <div className="pm-brand-icon bank"><div className="bank-dot"></div><Banknote size={20} /></div>;
-        }
+    const PAYMENT_ICONS = [
+        { id: 'cash', icon: <Banknote size={20} />, label: 'Efectivo' },
+        { id: 'card', icon: <CreditCard size={20} />, label: 'Tarjeta' },
+        { id: 'bank', icon: <Landmark size={20} />, label: 'Banco' },
+        { id: 'mobile', icon: <Smartphone size={20} />, label: 'Móvil / QR' },
+        { id: 'wallet', icon: <Wallet size={20} />, label: 'Billetera' },
+        { id: 'coins', icon: <Coins size={20} />, label: 'Céntimos / Cambio' },
+        { id: 'building', icon: <Building2 size={20} />, label: 'Local' },
+        { id: 'globe', icon: <Globe size={20} />, label: 'Online' },
+        { id: 'shield', icon: <ShieldCheck size={20} />, label: 'Seguro' },
+        { id: 'other', icon: <HelpCircle size={20} />, label: 'Otro' },
+    ];
+
+    const getTypeIcon = (method: any) => {
+        const iconObj = PAYMENT_ICONS.find(i => i.id === method.iconId);
+        if (iconObj) return <div className={`pm-brand-icon ${method.type}`}>{iconObj.icon}</div>;
 
         switch (method.type) {
             case 'cash': return <div className="pm-brand-icon cash"><Banknote size={20} /></div>;
-            case 'transfer': return <div className="pm-brand-icon bank"><HardDrive size={20} /></div>;
+            case 'transfer': return <div className="pm-brand-icon bank"><Landmark size={20} /></div>;
             case 'debit':
             case 'credit': return <div className="pm-brand-icon card"><CreditCard size={18} /></div>;
             default: return <div className="pm-brand-icon other"><Wallet size={20} /></div>;
@@ -892,43 +901,67 @@ const PaymentMethodsManager = () => {
                             <div key={method.id} className={`pm-item ${!method.is_active ? 'inactive' : ''}`}>
                                 {isEditing === method.id ? (
                                     <div className="pm-edit-form">
-                                        <div className="form-group">
-                                            <label>Nombre Personalizado</label>
-                                            <input
-                                                type="text"
-                                                value={editForm.name}
-                                                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                                                placeholder="Ej: Mercado Pago Personal"
-                                            />
-                                        </div>
-                                        <div className="form-row">
+                                        <div className="pm-form-main">
                                             <div className="form-group">
-                                                <label>Tipo</label>
-                                                <select
-                                                    value={editForm.type}
-                                                    onChange={e => setEditForm({ ...editForm, type: e.target.value as any })}
-                                                >
-                                                    <option value="cash">Efectivo / Caja</option>
-                                                    <option value="transfer">Transferencia / Banco</option>
-                                                    <option value="debit">Débito</option>
-                                                    <option value="credit">Crédito</option>
-                                                    <option value="other">Otro / Billetera Virtual</option>
-                                                </select>
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Últimos 4 (opcional)</label>
+                                                <label>Nombre Personalizado</label>
                                                 <input
                                                     type="text"
-                                                    maxLength={4}
-                                                    value={editForm.last_digits || ''}
-                                                    onChange={e => setEditForm({ ...editForm, last_digits: e.target.value.replace(/\D/g, '') })}
-                                                    placeholder="1234"
+                                                    value={editForm.name}
+                                                    onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                                                    placeholder="Ej: Mercado Pago Personal"
                                                 />
                                             </div>
+                                            <div className="form-row">
+                                                <div className="form-group">
+                                                    <label>Tipo de Pago</label>
+                                                    <select
+                                                        value={editForm.type}
+                                                        onChange={e => setEditForm({ ...editForm, type: e.target.value as any })}
+                                                    >
+                                                        <option value="cash">Efectivo / Caja</option>
+                                                        <option value="transfer">Transferencia / Banco</option>
+                                                        <option value="debit">Débito</option>
+                                                        <option value="credit">Crédito</option>
+                                                        <option value="other">Billetera Virtual / QR</option>
+                                                    </select>
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Dígitos (Opcional)</label>
+                                                    <input
+                                                        type="text"
+                                                        maxLength={4}
+                                                        value={editForm.last_digits || ''}
+                                                        onChange={e => setEditForm({ ...editForm, last_digits: e.target.value.replace(/\D/g, '') })}
+                                                        placeholder="Últimos 4"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
+
+                                        <div className="pm-icon-selector">
+                                            <label className="form-label-compact">Personalizar Icono</label>
+                                            <div className="icon-grid">
+                                                {PAYMENT_ICONS.map(i => (
+                                                    <button 
+                                                        key={i.id}
+                                                        className={`icon-option ${editForm.iconId === i.id ? 'selected' : ''}`}
+                                                        onClick={() => setEditForm({ ...editForm, iconId: i.id })}
+                                                        title={i.label}
+                                                    >
+                                                        {i.icon}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
                                         <div className="pm-edit-actions">
-                                            <button className="btn btn-primary" onClick={() => handleSave(method.id)}>Guardar</button>
-                                            <button className="btn btn-secondary" onClick={() => { setIsEditing(null); setEditForm({}); if (!method.name) handleDelete(method.id); }}>Cancelar</button>
+                                            <button className="btn btn-primary btn-full" onClick={() => handleSave(method.id)}>
+                                                <Save size={16} />
+                                                <span>Guardar Cambios</span>
+                                            </button>
+                                            <button className="btn btn-secondary btn-full" onClick={() => { setIsEditing(null); setEditForm({}); if (!method.name) handleDelete(method.id); }}>
+                                                Cancelar
+                                            </button>
                                         </div>
                                     </div>
                                 ) : (
@@ -986,7 +1019,7 @@ const PaymentMethodsManager = () => {
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
                     position: relative;
-                    overflow: hidden;
+                    min-height: 180px;
                 }
                 .pm-item:hover {
                     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -997,29 +1030,78 @@ const PaymentMethodsManager = () => {
                     opacity: 0.7;
                     filter: grayscale(0.5);
                 }
-                .pm-item::after {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 4px;
-                    background: var(--color-primary);
-                    opacity: 0;
-                    transition: opacity 0.3s;
+
+                .pm-edit-form { 
+                    width: 100%; 
+                    display: flex; 
+                    flex-direction: column; 
+                    gap: 1.25rem; 
+                    padding: 0.25rem;
+                    animation: fadeIn 0.2s ease;
                 }
-                .pm-item:hover::after { opacity: 1; }
+
+                .pm-form-main {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+
+                .pm-icon-selector {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+
+                .icon-grid {
+                    display: grid;
+                    grid-template-columns: repeat(5, 1fr);
+                    gap: 0.5rem;
+                }
+
+                .icon-option {
+                    width: 100%;
+                    aspect-ratio: 1;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 10px;
+                    border: 2px solid #f1f5f9;
+                    background: #f8fafc;
+                    color: #64748b;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .icon-option:hover {
+                    border-color: var(--color-primary-light);
+                    color: var(--color-primary);
+                }
+
+                .icon-option.selected {
+                    border-color: var(--color-primary);
+                    background: var(--color-primary-light);
+                    color: var(--color-primary);
+                }
+
+                .pm-edit-actions { 
+                    display: flex; 
+                    gap: 0.75rem; 
+                    margin-top: 0.5rem; 
+                }
+
+                .btn-full { flex: 1; justify-content: center; height: 42px; }
 
                 .pm-info { display: flex; gap: 1.15rem; align-items: center; }
                 .pm-visual {
-                    width: 52px;
-                    height: 52px;
+                    width: 54px;
+                    height: 54px;
                     border-radius: 14px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     font-size: 1.25rem;
                     flex-shrink: 0;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
                 }
                 .pm-brand-icon {
                     width: 100%;
@@ -1028,26 +1110,16 @@ const PaymentMethodsManager = () => {
                     align-items: center;
                     justify-content: center;
                     border-radius: inherit;
+                    color: white;
                 }
-                .pm-brand-icon.mp { background: #009EE315; color: #009EE3; }
-                .pm-brand-icon.cash { background: #10B98115; color: #10B981; }
-                .pm-brand-icon.bank { background: #3B82F615; color: #3B82F6; position: relative; }
-                .pm-brand-icon.card { background: #8B5CF615; color: #8B5CF6; }
-                .pm-brand-icon.other { background: #64748b15; color: #64748b; }
-                
-                .bank-dot {
-                    position: absolute;
-                    top: 12px;
-                    right: 12px;
-                    width: 6px;
-                    height: 6px;
-                    background: #3B82F6;
-                    border-radius: 50%;
-                }
+                .pm-brand-icon.cash { background: #10B981; }
+                .pm-brand-icon.transfer { background: #3B82F6; }
+                .pm-brand-icon.card { background: #6366F1; }
+                .pm-brand-icon.debit { background: #EC4899; }
+                .pm-brand-icon.credit { background: #8B5CF6; }
+                .pm-brand-icon.other { background: #64748B; }
 
-                .pm-details { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-                .pm-header-row { display: flex; align-items: center; gap: 0.5rem; }
-                .pm-name { font-size: 1.05rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .pm-name { font-size: 1.05rem; font-weight: 700; color: #1e293b; }
                 .pm-badge-default {
                     font-size: 0.65rem;
                     background: #f1f5f9;
@@ -1066,9 +1138,8 @@ const PaymentMethodsManager = () => {
                     border-radius: 9999px;
                     background: #f8fafc;
                     color: #94a3b8;
+                    text-transform: uppercase;
                 }
-                .pm-type-tag.cash { background: #10B98110; color: #10B981; }
-                .pm-type-tag.transfer { background: #3B82F610; color: #3B82F6; }
                 
                 .pm-digits { font-size: 0.75rem; color: #94a3b8; font-family: monospace; letter-spacing: 1px; }
 
@@ -1078,6 +1149,7 @@ const PaymentMethodsManager = () => {
                     align-items: center; 
                     padding-top: 1rem;
                     border-top: 1px dashed #f1f5f9;
+                    margin-top: auto;
                 }
                 
                 .pm-status-toggle { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; font-weight: 500; color: #64748b; }
@@ -1085,25 +1157,37 @@ const PaymentMethodsManager = () => {
                 .status-dot.active { background: #10B981; box-shadow: 0 0 8px #10B98180; }
                 .status-dot.inactive { background: #cbd5e1; }
 
-                .pm-action-buttons { display: flex; gap: 0.4rem; }
+                .pm-action-buttons { display: flex; gap: 0.5rem; }
                 .btn-icon-blur {
                     background: #f8fafc;
-                    border: none;
-                    width: 32px;
-                    height: 32px;
+                    border: 1px solid #e2e8f0;
+                    width: 36px;
+                    height: 36px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    border-radius: 10px;
+                    border-radius: 12px;
                     color: #64748b;
                     cursor: pointer;
                     transition: all 0.2s;
                 }
-                .btn-icon-blur:hover { background: #f1f5f9; color: var(--color-primary); }
-                .btn-icon-blur.text-danger:hover { background: #fee2e2; color: #ef4444; }
+                .btn-icon-blur:hover { 
+                    background: white; 
+                    color: var(--color-primary);
+                    border-color: var(--color-primary-light);
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                }
+                .btn-icon-blur.text-danger:hover { 
+                    background: #fff1f2; 
+                    color: #e11d48;
+                    border-color: #fecdd3;
+                }
 
-                .pm-edit-form { width: 100%; display: flex; flex-direction: column; gap: 1rem; padding: 0.25rem; }
-                .pm-edit-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(4px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+
                 .pm-empty {
                     text-align: center;
                     padding: 4rem 2rem;

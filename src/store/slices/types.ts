@@ -158,6 +158,7 @@ export type PaymentMethod = {
     type: 'cash' | 'transfer' | 'debit' | 'credit' | 'other';
     last_digits?: string;
     is_active: boolean;
+    iconId?: string;
 };
 
 // Full Store State (Intersection of all slices)

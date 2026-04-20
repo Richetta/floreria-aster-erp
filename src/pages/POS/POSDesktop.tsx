@@ -27,7 +27,15 @@ import {
     Minus,
     Package,
     ScanLine,
-    ChevronRight
+    ChevronRight,
+    Landmark,
+    Smartphone,
+    Coins,
+    Building2,
+    Globe,
+    ShieldCheck,
+    HelpCircle,
+    Wallet
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
@@ -177,22 +185,38 @@ export const POSDesktop = () => {
         }
     }, [shopInfo.paymentMethods]);
 
-    const getPaymentIcon = (methodName: string) => {
+    const getPaymentIconElement = (methodName: string) => {
         const method = shopInfo.paymentMethods?.find((m: any) => m.name === methodName);
-        const name = (methodName || '').toLowerCase();
-
-        // Brand logic
-        if (name.includes('mercado pago') || name.includes('mercadopago') || name.includes('mp')) {
-            return <img src="https://www.mercadopago.com/org-rc/vendors/mptools/assets/logo.png" alt="MP" className="ps-brand-img" />;
+        const iconId = method?.iconId;
+        
+        switch (iconId) {
+            case 'cash': return <Banknote size={20} />;
+            case 'card': return <CreditCard size={20} />;
+            case 'bank': return <Landmark size={20} />;
+            case 'mobile': return <Smartphone size={20} />;
+            case 'wallet': return <Wallet size={20} />;
+            case 'coins': return <Coins size={20} />;
+            case 'building': return <Building2 size={20} />;
+            case 'globe': return <Globe size={20} />;
+            case 'shield': return <ShieldCheck size={20} />;
+            case 'other': return <HelpCircle size={20} />;
+            default:
+                const name = (methodName || '').toLowerCase();
+                if (name.includes('efectivo')) return <Banknote size={20} />;
+                if (name.includes('tarjeta') || name.includes('débito') || name.includes('crédito')) return <CreditCard size={20} />;
+                if (name.includes('transferencia') || name.includes('banco')) return <Landmark size={20} />;
+                return <Wallet size={20} />;
         }
-
-        if (method?.type === 'cash' || name.includes('efectivo')) return <Banknote size={20} />;
-        return <CreditCard size={20} />;
     };
 
     const renderPaymentSelector = (context: 'sale' | 'order' = 'sale') => {
-        const methods = (shopInfo.paymentMethods || []).filter((m: any) => m.is_active);
-        const selected = methods.find((m: any) => m.name === selectedPaymentMethod) || { name: selectedPaymentMethod, type: 'other' };
+        const customMethods = (shopInfo.paymentMethods || []).filter((m: any) => m.is_active);
+        
+        // Ensure "Efectivo" is always available
+        const hasEfectivo = customMethods.some((m: any) => m.name.toLowerCase().includes('efectivo'));
+        const methods = hasEfectivo ? customMethods : [{ id: 'default-cash', name: 'Efectivo', type: 'cash', iconId: 'cash' }, ...customMethods];
+
+        const selected = methods.find((m: any) => m.name === selectedPaymentMethod) || (methods.length > 0 ? methods[0] : { name: selectedPaymentMethod, type: 'other' });
         
         const isDisabled = context === 'order' 
             ? (cart.length === 0 || (!selectedCustomer && !isGuest) || !deliveryDate || (isGuest && !guestName.trim()))
@@ -207,7 +231,7 @@ export const POSDesktop = () => {
                 >
                     <div className="ps-trigger-left">
                         <div className="ps-selected-icon">
-                            {getPaymentIcon(selected.name)}
+                            {getPaymentIconElement(selected.name)}
                         </div>
                         <div className="ps-selected-info">
                             <span className="ps-selected-name">{selected.name || 'Seleccionar pago'}</span>
@@ -219,45 +243,24 @@ export const POSDesktop = () => {
 
                 {paymentSelectorOpen && (
                     <div className="payment-dropdown-menu">
-                        {methods.length > 0 ? (
-                            methods.map((m: any) => (
-                                <button 
-                                    key={m.id} 
-                                    className={`ps-option ${selectedPaymentMethod === m.name ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setSelectedPaymentMethod(m.name);
-                                        setPaymentSelectorOpen(false);
-                                    }}
-                                >
-                                    <div className="ps-option-left">
-                                        <div className="ps-option-icon">
-                                            {getPaymentIcon(m.name)}
-                                        </div>
-                                        <span className="ps-option-name">{m.name}</span>
+                        {methods.map((m: any) => (
+                            <button 
+                                key={m.id} 
+                                className={`ps-option ${selectedPaymentMethod === m.name ? 'active' : ''}`}
+                                onClick={() => {
+                                    setSelectedPaymentMethod(m.name);
+                                    setPaymentSelectorOpen(false);
+                                }}
+                            >
+                                <div className="ps-option-left">
+                                    <div className="ps-option-icon">
+                                        {getPaymentIconElement(m.name)}
                                     </div>
-                                    {selectedPaymentMethod === m.name && <Check size={16} style={{ color: 'var(--color-primary)' }} />}
-                                </button>
-                            ))
-                        ) : (
-                            ['Efectivo', 'Tarjeta', 'Transferencia'].map(m => (
-                                <button 
-                                    key={m} 
-                                    className={`ps-option ${selectedPaymentMethod === m ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setSelectedPaymentMethod(m);
-                                        setPaymentSelectorOpen(false);
-                                    }}
-                                >
-                                    <div className="ps-option-left">
-                                        <div className="ps-option-icon">
-                                            {m === 'Efectivo' ? <Banknote size={18} /> : <CreditCard size={18} />}
-                                        </div>
-                                        <span className="ps-option-name">{m}</span>
-                                    </div>
-                                    {selectedPaymentMethod === m && <Check size={16} style={{ color: 'var(--color-primary)' }} />}
-                                </button>
-                            ))
-                        )}
+                                    <span className="ps-option-name">{m.name}</span>
+                                </div>
+                                {selectedPaymentMethod === m.name && <Check size={16} style={{ color: 'var(--color-primary)' }} />}
+                            </button>
+                        ))}
                     </div>
                 )}
 
