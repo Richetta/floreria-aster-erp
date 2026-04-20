@@ -717,7 +717,7 @@
    ============================================ */
 
 .cart-items-section {
-    padding: 0 0.75rem 0.5rem;
+    padding: 0 0.25rem 0.5rem;
     background: white;
 }
 
@@ -787,17 +787,17 @@
 .qty-controls-compact {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
     background: #f1f5f9;
-    border-radius: 6px;
-    padding: 2px;
+    border-radius: 9999px;
+    padding: 3px;
     border: 1px solid #e2e8f0;
 }
 
 .qty-btn-mini {
-    width: 24px !important;
-    height: 24px !important;
-    border-radius: 5px;
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 50% !important;
     background: #4F7A5A !important;
     border: none;
     color: #fff;
@@ -805,7 +805,7 @@
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background 0.15s, transform 0.1s;
     flex-shrink: 0;
     padding: 0;
     line-height: 1;
@@ -813,31 +813,32 @@
 
 .qty-btn-mini:hover {
     background: #3d6147 !important;
+    transform: scale(1.08);
 }
 
 .qty-btn-mini svg {
     display: block !important;
-    width: 12px !important;
-    height: 12px !important;
+    width: 13px !important;
+    height: 13px !important;
     pointer-events: none;
 }
 
 .qty-value-mini {
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: #334155;
-    min-width: 18px;
+    min-width: 22px;
     text-align: center;
     user-select: none;
 }
 
 .cart-item-total-compact {
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     font-weight: 800;
     color: #4F7A5A;
-    min-width: 54px;
+    min-width: 56px;
     text-align: right;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
 }
 
 .btn-delete-mini {
