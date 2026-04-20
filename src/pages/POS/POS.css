@@ -759,38 +759,43 @@
 .qty-controls {
     display: flex;
     align-items: center;
-    background: white;
+    background: #F6F4EF;
     border-radius: 10px;
-    padding: 2px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    padding: 4px;
+    border: 1px solid #EAE5D9;
 }
 
 .qty-btn {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
     border: none;
     background: white;
-    color: #64748b;
+    color: #3A3A3A;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .qty-btn:hover {
     background: #4F7A5A;
     color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(79, 122, 90, 0.2);
 }
 
 .qty-value {
-    width: 36px;
+    width: 40px;
     text-align: center;
     font-weight: 800;
     color: #1e293b;
-    font-size: 0.95rem;
+    font-size: 1rem;
 }
+
+.stock-badge {
     font-size: 0.7rem;
     font-weight: 700;
     padding: 0.25rem 0.625rem;

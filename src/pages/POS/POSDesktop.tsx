@@ -25,7 +25,9 @@ import {
     UserPlus,
     Plus,
     Minus,
-    Package
+    Package,
+    ScanLine,
+    ChevronRight
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
@@ -119,9 +121,11 @@ export const POSDesktop = () => {
     const [activeTags, setActiveTags] = useState<string[]>([]);
     const [stockFilter, setStockFilter] = useState<'all' | 'in' | 'out' | 'low'>('all');
     const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+    const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
     const [productView, setProductView] = useState<ProductView>('all');
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
+    const [orderStep, setOrderStep] = useState<1 | 2 | 3>(1);
     const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [isScanningEnabled, setIsScanningEnabled] = useState(true);
@@ -634,7 +638,14 @@ export const POSDesktop = () => {
         }
 
         return result;
-    }, [products, searchTerm, activeCategories, activeBrands, activeTags, productView]);
+    }, [products, searchTerm, activeCategories, activeBrands, activeTags, productView, stockFilter, activeFolderId, activeFolderDescendants]);
+
+    const toggleFolder = (folderId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedFolders(prev => 
+            prev.includes(folderId) ? prev.filter(id => id !== folderId) : [...prev, folderId]
+        );
+    };
 
     const getViewTitle = () => {
         if (productView === 'recent') return 'Recientes';
@@ -694,6 +705,7 @@ export const POSDesktop = () => {
         setActiveTags([]);
         setStockFilter('all');
         setActiveFolderId(null);
+        setExpandedFolders([]);
     };
 
     return (
@@ -861,20 +873,47 @@ export const POSDesktop = () => {
                                         <Check size={16} className="check-icon" />
                                     </button>
                                     <div className="folder-scroller" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                        {categoriesData.filter(c => !c.parent_id).map(folder => (
-                                            <div key={folder.id}>
-                                                <button className={`menu-item-premium ${activeFolderId === folder.id ? 'active' : ''}`} onClick={() => { setActiveFolderId(folder.id); setActiveDropdown(null); }}>
-                                                    <span style={{ fontWeight: 700 }}>{folder.name}</span>
-                                                    <Check size={16} className="check-icon" />
-                                                </button>
-                                                {folder.children?.map(sub => (
-                                                    <button key={sub.id} className={`menu-item-premium ${activeFolderId === sub.id ? 'active' : ''}`} onClick={() => { setActiveFolderId(sub.id); setActiveDropdown(null); }} style={{ paddingLeft: '2rem' }}>
-                                                        <span style={{ fontSize: '0.85rem' }}>{sub.name}</span>
-                                                        <Check size={14} className="check-icon" />
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        ))}
+                                        {categoriesData.filter(c => !c.parent_id).map(folder => {
+                                            const isExpanded = expandedFolders.includes(folder.id);
+                                            const hasChildren = folder.children && folder.children.length > 0;
+                                            return (
+                                                <div key={folder.id}>
+                                                    <div className="flex items-center">
+                                                        {hasChildren ? (
+                                                            <button 
+                                                                className="mr-2 text-muted hover:text-primary transition-colors"
+                                                                onClick={(e) => toggleFolder(folder.id, e)}
+                                                            >
+                                                                {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                                                            </button>
+                                                        ) : (
+                                                            <div style={{ width: '1.6rem' }}></div>
+                                                        )}
+                                                        <button 
+                                                            className={`menu-item-premium flex-1 ${activeFolderId === folder.id ? 'active' : ''}`} 
+                                                            onClick={() => { setActiveFolderId(folder.id); setActiveDropdown(null); }}
+                                                        >
+                                                            <span style={{ fontWeight: 700 }}>{folder.name}</span>
+                                                            <Check size={16} className="check-icon" />
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    {isExpanded && folder.children?.map(sub => (
+                                                        <div key={sub.id} className="flex items-center ml-6 mt-1">
+                                                            <div style={{ width: '1rem', borderLeft: '2px solid #EAE5D9', height: '1.5rem', marginRight: '0.5rem', borderBottom: '2px solid #EAE5D9' }}></div>
+                                                            <button 
+                                                                className={`menu-item-premium flex-1 ${activeFolderId === sub.id ? 'active' : ''}`} 
+                                                                onClick={() => { setActiveFolderId(sub.id); setActiveDropdown(null); }}
+                                                                style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
+                                                            >
+                                                                <span>{sub.name}</span>
+                                                                <Check size={14} className="check-icon" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
@@ -925,7 +964,7 @@ export const POSDesktop = () => {
                                 fontSize: '0.875rem'
                             }}
                         >
-                            <span style={{ fontSize: '1.25rem' }}>{isScanningEnabled ? '📡' : '🚫'}</span>
+                            {isScanningEnabled ? <ScanLine size={20} /> : <ScanLine size={20} opacity={0.5} />}
                             <span style={{ display: window.innerWidth > 768 ? 'inline' : 'none' }}>
                                 {isScanningEnabled ? 'Escáner ON' : 'Escáner OFF'}
                             </span>
@@ -1085,7 +1124,7 @@ export const POSDesktop = () => {
                                         </span>
 
                                         <div className="catalog-qty-controls">
-                                            {cart.find(i => i.id === item.id) ? (
+                                            {cart.find(i => i.id === item.id) && (
                                                 // Product is in cart - show - [qty] + controls
                                                 <>
                                                     <button className="qty-btn-catalog minus" onClick={(e) => {
@@ -1104,14 +1143,6 @@ export const POSDesktop = () => {
                                                         <Plus size={16} />
                                                     </button>
                                                 </>
-                                            ) : (
-                                                // Product not in cart - show only + button
-                                                <button className="add-to-cart-btn" onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleAddToCart(item);
-                                                }}>
-                                                    <Plus size={18} />
-                                                </button>
                                             )}
                                         </div>
                                     </div>
@@ -1238,10 +1269,38 @@ export const POSDesktop = () => {
                             )}
                         </div>
 
-                        {checkoutMode === 'order' && (
+                        {checkoutMode === 'order' && orderStep === 1 && cart.length > 0 && (
+                            <div className="p-4 bg-white border-t border-border mt-auto">
+                                <button 
+                                    className="btn btn-primary w-full py-3"
+                                    onClick={() => setOrderStep(2)}
+                                >
+                                    Siguiente: Datos del Cliente <ChevronRight size={18} className="ml-2" />
+                                </button>
+                            </div>
+                        )}
+
+                        {checkoutMode === 'order' && orderStep >= 2 && (
                             /* PEDIR PARA DESPUÉS - Formulario Premium sin Acordeón */
                             <div className="order-form-spacious">
-                                {/* Step 1: Customer */}
+                                {/* Step Header Navigation */}
+                                <div className="flex gap-2 p-3 bg-surface-hover border-b border-border mb-3 overflow-x-auto">
+                                    <button 
+                                        className={`px-3 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap ${orderStep === 2 ? 'bg-primary text-white' : 'bg-white text-muted border border-border'}`}
+                                        onClick={() => setOrderStep(2)}
+                                    >
+                                        1. Cliente
+                                    </button>
+                                    <button 
+                                        className={`px-3 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap ${orderStep === 3 ? 'bg-primary text-white' : 'bg-white text-muted border border-border'} ${(!selectedCustomer && !isGuest) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        onClick={() => { if (selectedCustomer || isGuest) setOrderStep(3); }}
+                                    >
+                                        2. Entrega y Pago
+                                    </button>
+                                </div>
+
+                                {/* Step 2: Customer */}
+                                {orderStep === 2 && (
                                 <div className="order-card-section">
                                     <div className="section-header-premium">
                                         <div className="section-title-wrapper">
@@ -1362,9 +1421,21 @@ export const POSDesktop = () => {
                                             </div>
                                         )}
                                     </div>
+                                    <div className="p-4 bg-white border-t border-border mt-auto rounded-b-2xl">
+                                        <button 
+                                            className="btn btn-primary w-full py-3"
+                                            onClick={() => setOrderStep(3)}
+                                            disabled={(!isGuest && !selectedCustomer) || (isGuest && !guestName.trim())}
+                                        >
+                                            Siguiente: Entrega y Pago <ChevronRight size={18} className="ml-2" />
+                                        </button>
+                                    </div>
                                 </div>
+                                )}
 
-                                {/* Step 2: Delivery */}
+                                {/* Step 3: Delivery */}
+                                {orderStep === 3 && (
+                                    <>
                                 <div className="order-card-section mt-4">
                                     <div className="section-header-premium">
                                         <div className="section-title-wrapper">
@@ -1589,6 +1660,8 @@ export const POSDesktop = () => {
                                         </button>
                                     </div>
                                 </div>
+                                </>
+                                )}
                             </div>
                         )}
                     </div>
