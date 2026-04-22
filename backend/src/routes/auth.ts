@@ -20,13 +20,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     password: z.string().min(1)
   });
 
-  // Google token schema - Simplified to debug validation issues
-  const googleTokenSchema = z.object({
-    credential: z.string().optional(),
-    code: z.string().optional(),
-  }).refine(data => data.credential || data.code, {
-    message: "Se requiere 'code' o 'credential'"
-  });
+  // Google token schema removed to simplify debugging
 
   // ============================================
   // TRADITIONAL EMAIL/PASSWORD LOGIN
@@ -116,26 +110,28 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       console.log('[DEBUG AUTH] Body received:', requestBody);
 
-      if (!requestBody || Object.keys(requestBody).length === 0) {
-        console.log('[DEBUG AUTH] Error: Empty body');
+      if (!requestBody || typeof requestBody !== 'object') {
+        console.log('[DEBUG AUTH] Error: Invalid body type');
         return reply.status(400).send({ 
           error: 'Validation error', 
-          message: 'No se recibió el cuerpo de la petición o está vacío' 
+          message: 'El cuerpo de la petición no es válido o está vacío',
+          received: typeof requestBody
         });
       }
 
-      const parseResult = googleTokenSchema.safeParse(requestBody);
-      
-      if (!parseResult.success) {
-        console.log('[DEBUG AUTH] Zod Validation failed:', parseResult.error.format());
+      // Manual validation instead of Zod to avoid "Required" issues
+      const body = requestBody as any;
+      const code = body.code;
+      const credential = body.credential;
+
+      if (!code && !credential) {
+        console.log('[DEBUG AUTH] Error: Missing both code and credential');
         return reply.status(400).send({ 
           error: 'Validation error', 
-          message: 'Los datos enviados no son válidos',
-          details: parseResult.error.errors 
+          message: 'Se requiere code o credential para iniciar sesión',
+          receivedBody: requestBody 
         });
       }
-
-      const body = parseResult.data;
 
       let googleId: string;
       let email: string;
