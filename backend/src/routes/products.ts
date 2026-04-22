@@ -70,15 +70,15 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
   const createProductSchema = z.object({
     code: z.string().min(1),
     name: z.string().min(2),
-    description: z.string().optional(),
+    description: z.string().optional().nullable(),
     category_id: z.string().uuid().or(z.literal('')).transform(v => v === '' ? null : v).optional().nullable(),
     brand_id: z.string().uuid().or(z.literal('')).transform(v => v === '' ? null : v).optional().nullable(),
     cost: z.number().nonnegative(),
     price: z.number().nonnegative(),
-    barcode: z.string().optional(),
+    barcode: z.string().optional().nullable(),
     stock_quantity: z.number().int().default(0),
     min_stock: z.number().int().positive().default(5),
-    max_stock: z.number().int().positive().optional(),
+    max_stock: z.number().int().positive().optional().nullable(),
     is_barcode: z.boolean().default(false),
     tags: z.array(z.string()).default([])
   });
