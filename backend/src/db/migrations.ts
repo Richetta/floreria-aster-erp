@@ -155,3 +155,45 @@ export async function runEmergencyMigrations() {
     console.error('❌ EMERGENCY MIGRATIONS FAILED:', error);
   }
 }
+
+/**
+ * Google Calendar Integration Migrations
+ * Adds required columns for storing Google OAuth tokens and Calendar event IDs.
+ * Safe to run multiple times (uses IF NOT EXISTS).
+ */
+export async function runGoogleCalendarMigrations() {
+  console.log('--- GOOGLE CALENDAR MIGRATIONS ---');
+  try {
+    // Columns on users table
+    const userColumns = [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS google_access_token TEXT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS google_refresh_token TEXT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS google_token_expiry BIGINT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS google_calendar_enabled BOOLEAN DEFAULT FALSE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS gcal_sync_on_create BOOLEAN DEFAULT TRUE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS gcal_sync_on_update BOOLEAN DEFAULT TRUE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS gcal_sync_on_cancel BOOLEAN DEFAULT FALSE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS gcal_reminder_24h_email BOOLEAN DEFAULT TRUE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS gcal_reminder_1h_popup BOOLEAN DEFAULT TRUE`,
+    ];
+
+    // Columns on orders table
+    const orderColumns = [
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS google_event_id TEXT`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS google_synced_at TIMESTAMP WITH TIME ZONE`,
+    ];
+
+    for (const stmt of [...userColumns, ...orderColumns]) {
+      try {
+        await sql`${sql.raw(stmt)}`.execute(db);
+      } catch (e) {
+        // Column already exists - safe to ignore
+      }
+    }
+
+    console.log('✔ Google Calendar columns verified/created');
+  } catch (error) {
+    console.error('❌ Google Calendar migrations failed (non-fatal):', error);
+  }
+}
+

@@ -175,6 +175,8 @@ console.log('Loading diagnostic.js...');
 await fastify.register(import('./routes/diagnostic.js'), { prefix: '/api/admin' });
 console.log('Loading subscription.js...');
 await fastify.register(import('./routes/subscription.js'), { prefix: '/api/subscription' });
+console.log('Loading calendar.js...');
+await fastify.register(import('./routes/calendar.js'), { prefix: '/api/calendar' });
 
 // Diagnostic Route — removed for security (was exposing config without auth)
 
@@ -216,8 +218,9 @@ const start = async () => {
     console.log('--- STARTING SERVER ---');
 
     // Run emergency migrations
-    const { runEmergencyMigrations } = await import('./db/migrations.js');
+    const { runEmergencyMigrations, runGoogleCalendarMigrations } = await import('./db/migrations.js');
     await runEmergencyMigrations();
+    await runGoogleCalendarMigrations();
 
     console.log(`Starting Fastify on port ${config.port}...`);
     await fastify.listen({ port: config.port, host: '0.0.0.0' });

@@ -988,6 +988,47 @@ class ApiClient {
   async getLogisticsDeliveries(): Promise<any> {
     return this.request('/logistics/deliveries');
   }
+
+  // ============================================
+  // GOOGLE CALENDAR ENDPOINTS
+  // ============================================
+
+  /** Devuelve si el usuario tiene Google Calendar conectado y habilitado */
+  async getCalendarStatus(): Promise<{ connected: boolean; enabled: boolean }> {
+    return this.request('/calendar/status');
+  }
+
+  /** Conecta Google Calendar con el authorization code del usuario */
+  async connectGoogleCalendar(code: string): Promise<{ success: boolean; message: string }> {
+    return this.request('/calendar/connect', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  }
+
+  /** Desconecta Google Calendar del usuario */
+  async disconnectGoogleCalendar(): Promise<{ success: boolean }> {
+    return this.request('/calendar/disconnect', { method: 'POST' });
+  }
+
+  /** Actualiza configuración de sincronización de Google Calendar */
+  async updateCalendarSettings(settings: {
+    gcal_sync_on_create?: boolean;
+    gcal_sync_on_update?: boolean;
+    gcal_sync_on_cancel?: boolean;
+    gcal_reminder_24h_email?: boolean;
+    gcal_reminder_1h_popup?: boolean;
+  }): Promise<{ success: boolean }> {
+    return this.request('/calendar/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  /** Fuerza la sincronización manual de un pedido a Google Calendar */
+  async syncOrderToCalendar(orderId: string): Promise<{ success: boolean; google_event_id?: string }> {
+    return this.request(`/calendar/sync/${orderId}`, { method: 'POST' });
+  }
 }
 
 // ============================================

@@ -20,9 +20,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     password: z.string().min(1)
   });
 
-  // Google token schema
+  // Google token schema - supports both legacy id_token flow and new auth-code flow
   const googleTokenSchema = z.object({
-    credential: z.string()
+    credential: z.string().optional(),  // legacy: id_token direct
+    code: z.string().optional(),        // new: authorization code flow
+  }).refine(data => data.credential || data.code, {
+    message: 'Either credential (id_token) or code (auth-code) is required'
   });
 
   // ============================================
@@ -102,36 +105,65 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = googleTokenSchema.parse(request.body);
 
-      // Verify Google token
-      const ticket = await googleClient.verifyIdToken({
-        idToken: body.credential,
-        audience: config.googleClientId,
-      });
+      let googleId: string;
+      let email: string;
+      let name: string | undefined;
+      let picture: string | undefined;
+      let accessToken: string | null = null;
+      let refreshToken: string | null = null;
+      let tokenExpiry: number | null = null;
 
-      const payload = ticket.getPayload();
-      if (!payload) {
-        return reply.status(401).send({ error: 'Invalid Google token' });
+      if (body.code) {
+        // ── NEW FLOW: Authorization Code → exchange for tokens ──
+        const { tokens } = await googleClient.getToken({
+          code: body.code,
+          redirect_uri: 'postmessage', // For auth-code flow from React
+        });
+
+        if (!tokens.id_token) {
+          return reply.status(401).send({ error: 'Invalid Google token response' });
+        }
+
+        accessToken  = tokens.access_token || null;
+        refreshToken = tokens.refresh_token || null;
+        tokenExpiry  = tokens.expiry_date   || null;
+
+        const ticket = await googleClient.verifyIdToken({
+          idToken: tokens.id_token,
+          audience: config.googleClientId,
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload) return reply.status(401).send({ error: 'Invalid Google payload' });
+
+        googleId = payload.sub;
+        email    = payload.email || '';
+        name     = payload.name;
+        picture  = payload.picture;
+
+      } else {
+        // ── LEGACY FLOW: id_token only (for users already logged in) ──
+        const ticket = await googleClient.verifyIdToken({
+          idToken: body.credential!,
+          audience: config.googleClientId,
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload) return reply.status(401).send({ error: 'Invalid Google token' });
+
+        googleId = payload.sub;
+        email    = payload.email || '';
+        name     = payload.name;
+        picture  = payload.picture;
       }
 
-      const googleId = payload.sub;
-      const email = payload.email || '';
-      const name = payload.name;
-      const picture = payload.picture;
-
       // STRICT: Only look up by Google ID
-      // This is the ONLY secure way to identify a Google user.
-      // Email-based fallback was causing different Google accounts to share data.
       let user: any = await db
         .selectFrom('users')
         .selectAll()
         .where('google_id' as any, '=', googleId)
         .executeTakeFirst();
 
-      // If found by Google ID → user exists, proceed normally.
-      // If NOT found → this is a brand new Google login.
-      //   SPECIAL CASE: If a user previously registered with email/password using
-      //   the SAME email and has NO google_id yet, link the Google account to them
-      //   (same business). Otherwise, always create a new isolated business.
       if (!user) {
         const existingByEmail = await db
           .selectFrom('users')
@@ -141,24 +173,18 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           .executeTakeFirst();
 
         if (existingByEmail && !(existingByEmail as any).google_id) {
-          // Safe to link: user registered with email/password, first Google login.
-          // Update their google_id so future logins use the strict google_id path.
           await db.updateTable('users')
             .set({ google_id: googleId, updated_at: new Date() } as any)
             .where('id', '=', existingByEmail.id)
             .execute();
           user = { ...existingByEmail, google_id: googleId };
         }
-        // If existingByEmail has a different google_id → different person with same email.
-        // Fall through to create a new business for the new Google user.
       }
 
-      // Create user and business if doesn't exist (brand new Google user)
       if (!user) {
-        // 1. Create a new unique business for this user
         const newBusinessId = randomUUID();
         const businessName = name || email.split('@')[0];
-        
+
         await db.insertInto('businesses')
           .values({
             id: newBusinessId,
@@ -169,7 +195,6 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           } as any)
           .execute();
 
-        // 2. Seed default categories for the new business
         const DEFAULT_CATEGORIES = ['Ramos', 'Flores', 'Macetas', 'Regalería', 'Plantas Interior', 'Plantas Exterior', 'Tierra', 'Insumos'];
         for (const catName of DEFAULT_CATEGORIES) {
           await db.insertInto('categories')
@@ -184,7 +209,6 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
             .execute();
         }
 
-        // 3. Create the user assigned to the new business
         user = await db
           .insertInto('users')
           .values({
@@ -193,7 +217,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
             name: name || email.split('@')[0],
             email: email,
             google_id: googleId,
-            role: 'admin', // First user of a business is admin
+            role: 'admin',
             is_active: true,
             created_at: new Date(),
             updated_at: new Date()
@@ -202,9 +226,18 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           .executeTakeFirst();
       }
 
-      // Update last login
+      // Update last login and save Google tokens if we have them (auth-code flow)
+      const updateData: any = { last_login: new Date() };
+      if (refreshToken) {
+        updateData.google_access_token  = accessToken;
+        updateData.google_refresh_token = refreshToken;
+        updateData.google_token_expiry  = tokenExpiry;
+        // Auto-enable Calendar if user connected with Calendar scope
+        updateData.google_calendar_enabled = true;
+      }
+
       await db.updateTable('users')
-        .set({ last_login: new Date() })
+        .set(updateData)
         .where('id', '=', user.id)
         .execute();
 
@@ -226,7 +259,8 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           role: user.role,
           business_id: user.business_id,
           google_id: user.google_id,
-          picture
+          picture,
+          google_calendar_connected: !!refreshToken,
         }
       });
     } catch (error: any) {

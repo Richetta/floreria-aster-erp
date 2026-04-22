@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { sql } from 'kysely';
 import { db } from '../db/index.js';
 import { randomUUID } from 'crypto';
+import { syncOrderToGoogleCalendar, deleteOrderFromGoogleCalendar } from './calendar.js';
 
 // Helper: Check subscription order limit
 async function checkOrderLimit(businessId: string, reply: any) {
@@ -409,6 +410,11 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
         return { ...order, items };
       });
 
+      // ── Google Calendar sync (fire-and-forget, non-blocking) ──
+      syncOrderToGoogleCalendar(result.id, user.sub).catch(err =>
+        console.warn('[GCal] Auto-sync on create failed:', err.message)
+      );
+
       return reply.status(201).send(result);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -451,6 +457,18 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (!result) {
         return reply.status(404).send({ error: 'Order not found' });
+      }
+
+      // ── Google Calendar: sync on update, delete on cancel ────
+      const updatedStatus = (body as any).status;
+      if (updatedStatus === 'cancelled') {
+        deleteOrderFromGoogleCalendar(id, user.sub).catch(err =>
+          console.warn('[GCal] Auto-delete on cancel failed:', err.message)
+        );
+      } else {
+        syncOrderToGoogleCalendar(id, user.sub).catch(err =>
+          console.warn('[GCal] Auto-sync on update failed:', err.message)
+        );
       }
 
       return reply.send(result);
