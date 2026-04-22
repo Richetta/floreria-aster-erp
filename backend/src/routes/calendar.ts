@@ -268,8 +268,8 @@ export const calendarRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ── GET /calendar/status ──────────────────────────────────────
   // Devuelve si el usuario tiene Google Calendar habilitado
-  fastify.get('/status', async (request, reply) => {
-    const user = request.user as any;
+  fastify.get('/status', async (request: any, reply) => {
+    const user = request.user;
 
     const userRow = await db
       .selectFrom('users')
@@ -290,8 +290,8 @@ export const calendarRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ── POST /calendar/connect ────────────────────────────────────
   // Recibe el auth-code de Google (Calendar scope) y guarda los tokens
-  fastify.post('/connect', async (request, reply) => {
-    const user = request.user as any;
+  fastify.post('/connect', async (request: any, reply) => {
+    const user = request.user;
     const { code } = request.body as { code: string };
 
     if (!code) {
@@ -335,8 +335,8 @@ export const calendarRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ── POST /calendar/disconnect ─────────────────────────────────
   // Desvincula Google Calendar del usuario
-  fastify.post('/disconnect', async (request, reply) => {
-    const user = request.user as any;
+  fastify.post('/disconnect', async (request: any, reply) => {
+    const user = request.user;
 
     await db
       .updateTable('users')
@@ -352,8 +352,8 @@ export const calendarRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ── PUT /calendar/settings ────────────────────────────────────
   // Actualiza configuración granular (qué eventos sincronizar)
-  fastify.put('/settings', async (request, reply) => {
-    const user = request.user as any;
+  fastify.put('/settings', async (request: any, reply) => {
+    const user = request.user;
     const {
       gcal_sync_on_create,
       gcal_sync_on_update,
@@ -380,8 +380,8 @@ export const calendarRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ── POST /calendar/sync/:orderId ──────────────────────────────
   // Fuerza la sincronización manual de un pedido específico
-  fastify.post('/sync/:orderId', async (request, reply) => {
-    const user = request.user as any;
+  fastify.post('/sync/:orderId', async (request: any, reply) => {
+    const user = request.user;
     const { orderId } = request.params as { orderId: string };
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);

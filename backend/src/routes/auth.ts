@@ -99,7 +99,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================
   // GOOGLE OAuth LOGIN
   // ============================================
-  fastify.post('/google', async (request, reply) => {
+  fastify.post('/google', async (request: any, reply) => {
     try {
       console.log('[DEBUG AUTH] Body received:', request.body);
       const body = googleTokenSchema.parse(request.body);
