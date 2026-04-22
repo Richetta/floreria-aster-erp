@@ -55,23 +55,24 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
                     case 'barcode': {
                         const barcodeValue = value as { value: string; autoGenerate: boolean };
                         if (barcodeValue.autoGenerate) {
-                            // Generate unique barcode: Seed + index + random
                             const uniquePart = (index++).toString().padStart(3, '0');
                             const randomPart = Math.floor(Math.random() * 10).toString();
-                            updates.barcode = `${now}${uniquePart}${randomPart}`; // 12 digits
-                        } else {
+                            updates.barcode = `${now}${uniquePart}${randomPart}`;
+                        } else if (barcodeValue.value) {
                             updates.barcode = barcodeValue.value;
                         }
                         break;
                     }
                     case 'category_id':
-                        updates.category_id = value.value;
+                        updates.category_id = value.value || null;
                         break;
                     case 'brand_id':
-                        updates.brand_id = value.value;
+                        updates.brand_id = value.value || null;
                         break;
                     case 'price': {
                         const priceVal = parseFloat(value.value);
+                        if (isNaN(priceVal)) break; // Skip if invalid number
+
                         const priceOp = ('operation' in value) ? (value as any).operation : 'set';
                         if (priceOp === 'set') {
                             updates.price = priceVal;
@@ -84,6 +85,8 @@ export const BulkEditModal: React.FC<BulkEditModalProps> = ({ selectedProducts, 
                     }
                     case 'cost': {
                         const costVal = parseFloat(value.value);
+                        if (isNaN(costVal)) break; // Skip if invalid number
+
                         const costOp = ('operation' in value) ? (value as any).operation : 'set';
                         if (costOp === 'set') {
                             updates.cost = costVal;
