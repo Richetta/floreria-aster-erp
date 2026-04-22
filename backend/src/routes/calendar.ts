@@ -394,6 +394,7 @@ export const calendarRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(422).send({
         error: 'No se pudo sincronizar. Verificar que Google Calendar esté conectado.',
       });
+    }
   });
 };
 

@@ -146,7 +146,7 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
         prompt: 'consent',        // ← fuerza la pantalla de consentimiento siempre
         onSuccess: handleGoogleSuccess,
         onError: handleGoogleError,
-    });
+    } as any);
 
     const displayError = localError || error;
 
