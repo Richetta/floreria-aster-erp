@@ -115,10 +115,14 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (body.code) {
         // ── NEW FLOW: Authorization Code → exchange for tokens ──
-        const { tokens } = await googleClient.getToken({
-          code: body.code,
-          redirect_uri: 'postmessage', // For auth-code flow from React
-        });
+        // Use a SEPARATE client with redirect_uri='postmessage' (popup flow)
+        // The main googleClient uses the server callback URI — can't share
+        const popupClient = new OAuth2Client(
+          config.googleClientId,
+          config.googleClientSecret,
+          'postmessage'  // special value for SPA popup flow
+        );
+        const { tokens } = await popupClient.getToken(body.code);
 
         if (!tokens.id_token) {
           return reply.status(401).send({ error: 'Invalid Google token response' });
@@ -234,6 +238,14 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         updateData.google_token_expiry  = tokenExpiry;
         // Auto-enable Calendar if user connected with Calendar scope
         updateData.google_calendar_enabled = true;
+        console.log('[GCal Auth] ✅ refresh_token received and saved for user:', user.email);
+      } else {
+        console.log('[GCal Auth] ⚠ NO refresh_token received for user:', user.email, '— Calendar sync will NOT work');
+        console.log('[GCal Auth]   tokens received:', { 
+          has_access_token: !!accessToken, 
+          has_refresh_token: !!refreshToken,
+          has_id_token: true 
+        });
       }
 
       await db.updateTable('users')
