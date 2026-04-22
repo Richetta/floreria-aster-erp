@@ -86,7 +86,10 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Error en autenticación con Google');
+                console.error('[GOOGLE AUTH ERROR] Full response:', data);
+                const errorMessage = data.message || data.error || 'Error en autenticación con Google';
+                const details = data.details ? ` (${JSON.stringify(data.details)})` : '';
+                throw new Error(`${errorMessage}${details}`);
             }
 
             if (data.token) {
@@ -101,7 +104,8 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
                 });
 
                 try {
-                    await fetch(`${import.meta.env.VITE_API_URL}/activity/log`, {
+                    // Use the same apiUrl logic for consistency
+                    await fetch(`${apiUrl}/activity/log`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

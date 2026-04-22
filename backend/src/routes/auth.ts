@@ -24,6 +24,8 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   const googleTokenSchema = z.object({
     credential: z.string().optional(),
     code: z.string().optional(),
+  }).refine(data => data.credential || data.code, {
+    message: "Se requiere 'code' o 'credential'"
   });
 
   // ============================================
@@ -101,13 +103,39 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================
   fastify.post('/google', async (request: any, reply) => {
     try {
-      console.log('[DEBUG AUTH] Body received:', request.body);
-      const body = googleTokenSchema.parse(request.body);
+      let requestBody = request.body;
 
-      if (!body.code && !body.credential) {
-        console.log('[DEBUG AUTH] Error: No code nor credential in body');
-        return reply.status(400).send({ error: 'Validation error', message: 'Se requiere code o credential' });
+      // Handle cases where body might be a string due to proxy issues
+      if (typeof requestBody === 'string') {
+        try {
+          requestBody = JSON.parse(requestBody);
+        } catch (e) {
+          fastify.log.warn('Failed to parse string body as JSON in /google');
+        }
       }
+
+      console.log('[DEBUG AUTH] Body received:', requestBody);
+
+      if (!requestBody || Object.keys(requestBody).length === 0) {
+        console.log('[DEBUG AUTH] Error: Empty body');
+        return reply.status(400).send({ 
+          error: 'Validation error', 
+          message: 'No se recibió el cuerpo de la petición o está vacío' 
+        });
+      }
+
+      const parseResult = googleTokenSchema.safeParse(requestBody);
+      
+      if (!parseResult.success) {
+        console.log('[DEBUG AUTH] Zod Validation failed:', parseResult.error.format());
+        return reply.status(400).send({ 
+          error: 'Validation error', 
+          message: 'Los datos enviados no son válidos',
+          details: parseResult.error.errors 
+        });
+      }
+
+      const body = parseResult.data;
 
       let googleId: string;
       let email: string;
@@ -169,7 +197,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       let user: any = await db
         .selectFrom('users')
         .selectAll()
-        .where('google_id' as any, '=', googleId)
+        .where('google_id', '=', googleId)
         .executeTakeFirst();
 
       if (!user) {
@@ -182,7 +210,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
         if (existingByEmail && !(existingByEmail as any).google_id) {
           await db.updateTable('users')
-            .set({ google_id: googleId, updated_at: new Date() } as any)
+            .set({ google_id: googleId, updated_at: new Date() })
             .where('id', '=', existingByEmail.id)
             .execute();
           user = { ...existingByEmail, google_id: googleId };
@@ -283,7 +311,11 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.log.error({ error }, 'Google OAuth error');
 
       if (error instanceof z.ZodError) {
-        return reply.status(400).send({ error: 'Validation error', details: error.errors });
+        return reply.status(400).send({ 
+          error: 'Validation error', 
+          message: 'Error de validación de datos de Google',
+          details: error.errors 
+        });
       }
 
       const isDev = config.nodeEnv === 'development';
@@ -329,7 +361,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       let user: any = await db
         .selectFrom('users')
         .selectAll()
-        .where('google_id' as any, '=', googleId)
+        .where('google_id', '=', googleId)
         .executeTakeFirst();
 
       if (!user) {
@@ -343,7 +375,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         if (existingByEmail && !(existingByEmail as any).google_id) {
           // Link existing email/password user to this Google account
           await db.updateTable('users')
-            .set({ google_id: googleId, updated_at: new Date() } as any)
+            .set({ google_id: googleId, updated_at: new Date() })
             .where('id', '=', existingByEmail.id)
             .execute();
           user = { ...existingByEmail, google_id: googleId };

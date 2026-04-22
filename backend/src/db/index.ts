@@ -64,6 +64,10 @@ interface UsersTable {
   email: string;
   password_hash: string | null;
   google_id: string | null;
+  google_access_token: string | null;
+  google_refresh_token: string | null;
+  google_token_expiry: number | null;
+  google_calendar_enabled: boolean | null;
   role: 'admin' | 'seller' | 'driver' | 'viewer';
   phone: string | null;
   is_active: boolean;
