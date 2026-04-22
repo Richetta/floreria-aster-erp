@@ -411,9 +411,11 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       // ── Google Calendar sync (fire-and-forget, non-blocking) ──
-      syncOrderToGoogleCalendar(result.id, user.sub).catch(err =>
-        console.warn('[GCal] Auto-sync on create failed:', err.message)
-      );
+      if (result && (result as any).id) {
+        syncOrderToGoogleCalendar((result as any).id, user.sub).catch(err =>
+          console.warn('[GCal] Auto-sync on create failed:', err.message)
+        );
+      }
 
       return reply.status(201).send(result);
     } catch (error: any) {

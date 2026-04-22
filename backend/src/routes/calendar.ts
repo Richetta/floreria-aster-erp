@@ -1,9 +1,11 @@
 import { FastifyPluginAsync } from 'fastify';
-import { OAuth2Client } from 'google-auth-library';
 import { google } from 'googleapis';
 import { db } from '../db/index.js';
 import { sql } from 'kysely';
 import { config } from '../config/index.js';
+
+// Use OAuth2 from googleapis to avoid type mismatches
+const OAuth2Client = google.auth.OAuth2;
 
 // ============================================
 // GOOGLE CALENDAR SERVICE
