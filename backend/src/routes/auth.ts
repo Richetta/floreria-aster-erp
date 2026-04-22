@@ -20,12 +20,10 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     password: z.string().min(1)
   });
 
-  // Google token schema - supports both legacy id_token flow and new auth-code flow
+  // Google token schema - Simplified to debug validation issues
   const googleTokenSchema = z.object({
-    credential: z.string().optional(),  // legacy: id_token direct
-    code: z.string().optional(),        // new: authorization code flow
-  }).refine(data => data.credential || data.code, {
-    message: 'Either credential (id_token) or code (auth-code) is required'
+    credential: z.string().optional(),
+    code: z.string().optional(),
   });
 
   // ============================================
@@ -103,7 +101,13 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================
   fastify.post('/google', async (request, reply) => {
     try {
+      console.log('[DEBUG AUTH] Body received:', request.body);
       const body = googleTokenSchema.parse(request.body);
+
+      if (!body.code && !body.credential) {
+        console.log('[DEBUG AUTH] Error: No code nor credential in body');
+        return reply.status(400).send({ error: 'Validation error', message: 'Se requiere code o credential' });
+      }
 
       let googleId: string;
       let email: string;
