@@ -12,7 +12,7 @@ Este documento detalla el plan para alinear la realidad técnica con el nuevo mo
 - [x] **Funciones:** POS, Dashboard básico, Kanban de pedidos.
 - [x] **Bloqueos:** Reportes, Caja, Mermas, OCR, CRM Full, Etiquetas.
 
-### 👑 Plan Profesional Completo ($15.000/mes) - *Foco: Control Total*
+### 👑 Plan Profesional Completo ($49.000/mes) - *Foco: Control Total*
 - [x] **Límites:** Usuarios, productos, pedidos y categorías ilimitados.
 - [x] **Historial:** Historial completo desde el primer día.
 - [x] **Funciones de Gestión:**

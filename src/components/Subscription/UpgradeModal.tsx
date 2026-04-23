@@ -10,8 +10,8 @@ import './UpgradeModal.css';
 // ============================================
 
 const NEXT_PLAN: Record<string, { slug: string; name: string; icon: React.ReactNode; price: string }> = {
-  gratis: { slug: 'completo', name: 'Profesional Completo', icon: <Star size={24} />, price: '$15.000/mes' },
-  completo: { slug: 'completo', name: 'Profesional Completo', icon: <Crown size={24} />, price: '$15.000/mes' },
+  gratis: { slug: 'completo', name: 'Profesional Completo', icon: <Star size={24} />, price: '$49.000/mes' },
+  completo: { slug: 'completo', name: 'Profesional Completo', icon: <Crown size={24} />, price: '$49.000/mes' },
 };
 
 export const UpgradeModal = () => {

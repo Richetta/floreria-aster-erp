@@ -66,10 +66,10 @@ const plans = [
   {
     slug: 'completo',
     name: 'Profesional Completo',
-    tagline: 'Todo el poder de gestión',
+    tagline: 'Control total de tu negocio y equipo',
     icon: <Star size={28} />,
-    priceMonthly: 15000,
-    priceAnnually: 150000,
+    priceMonthly: 49000,
+    priceAnnually: 490000,
     badge: '👑 RECOMENDADO',
     highlighted: true,
     limits: [
@@ -88,10 +88,11 @@ const plans = [
       'OCR de listas de precios',
       'Gestión de combos y paquetes',
       'CRM completo con historial',
+      'Soporte prioritario 24/7',
     ],
     missing: [],
-    cta: 'Contactar Ventas',
-    ctaVariant: 'outline' as const,
+    cta: 'Probar 14 Días Gratis',
+    ctaVariant: 'primary' as const,
   },
 ];
 
