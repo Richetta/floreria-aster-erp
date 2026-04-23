@@ -3,6 +3,8 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../Sidebar/Sidebar';
 import { MobileBottomNav } from '../MobileBottomNav/MobileBottomNav';
 import { NotificationsPanel } from '../Notifications/NotificationsPanel';
+import { TrialBanner } from '../Subscription/UsageWarning';
+import { useSubscription } from '../../store/useSubscription';
 import { useStore } from '../../store/useStore';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { Bell, X } from 'lucide-react';
@@ -14,6 +16,7 @@ export const Layout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const location = useLocation();
+    const { status, trialEndsAt, planName, showUpgradeModal } = useSubscription();
 
     const customers = useStore(state => state.customers);
     const products = useStore(state => state.products);
@@ -155,6 +158,14 @@ export const Layout = () => {
 
             <main className={`main-content ${location.pathname === '/pos' ? 'pos-page' : ''}`}>
                 <div className="page-container">
+                    {/* Trial / Cancellation banner */}
+                    {status === 'trial' && trialEndsAt && (
+                        <TrialBanner
+                            trialEndsAt={trialEndsAt}
+                            planName={planName}
+                            onUpgradeClick={() => showUpgradeModal('Actualizá tu plan para mantener todas las funciones activas.')}
+                        />
+                    )}
                     <Outlet />
                 </div>
             </main>

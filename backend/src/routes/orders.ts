@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
-import { db } from '../db/index.js';
+import { db, getBusinessPlan } from '../db/index.js';
 import { randomUUID } from 'crypto';
 import { syncOrderToGoogleCalendar, deleteOrderFromGoogleCalendar } from './calendar.js';
 
@@ -23,13 +23,13 @@ async function checkOrderLimit(businessId: string, reply: any) {
 
     // No subscription - apply free tier limit
     let maxOrders = 30; // Free tier
-    let planName = 'Semilla';
-    let planSlug = 'semilla';
+    let planName = 'Gratis';
+    let planSlug = 'gratis';
 
     if (subResult) {
       const subscriptionInfo = subResult;
       maxOrders = subscriptionInfo.max_orders_per_month || 999999; // NULL = unlimited
-      planName = subscriptionInfo.name_short || 'Semilla';
+      planName = subscriptionInfo.name_short || 'Gratis';
       planSlug = subscriptionInfo.slug;
     }
 
@@ -56,7 +56,7 @@ async function checkOrderLimit(businessId: string, reply: any) {
         limit: maxOrders,
         current: currentCount,
         resourceType: 'orders',
-        suggestedPlan: planSlug === 'semilla' ? 'florecer' : planSlug === 'florecer' ? 'crecimiento' : 'jardin',
+        suggestedPlan: planSlug === 'gratis' || planSlug === 'semilla' ? 'completo' : 'completo',
         upgradeUrl: '/subscription/upgrade'
       });
       return false;
@@ -136,11 +136,19 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     const {
       status,
       customer_id,
-      from_date,
-      to_date,
       delivery_method,
       limit = '100'
     } = request.query as any;
+    let { from_date, to_date } = request.query as any;
+
+    const plan = await getBusinessPlan(user.business_id);
+    if (plan.slug === 'semilla') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      if (!from_date || new Date(from_date) < thirtyDaysAgo) {
+        from_date = thirtyDaysAgo.toISOString();
+      }
+    }
 
     let query = db
       .selectFrom('orders')

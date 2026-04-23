@@ -493,6 +493,18 @@ export async function setBusinessId(businessId: string): Promise<void> {
   await sql`SELECT set_config('app.current_business_id', ${businessId}, true)`.execute(db);
 }
 
+export async function getBusinessPlan(businessId: string) {
+  const result = await db
+    .selectFrom('subscriptions as s')
+    .innerJoin('subscription_plans as p', 's.plan_id', 'p.id')
+    .select(['p.slug', 's.status', 's.trial_ends_at'])
+    .where('s.business_id', '=', businessId)
+    .where('s.status', 'in', ['active', 'trial'])
+    .executeTakeFirst();
+  
+  return result || { slug: 'semilla', status: 'free', trial_ends_at: null };
+}
+
 export async function checkDatabaseConnection(): Promise<boolean> {
   try {
     await sql`SELECT 1`.execute(db);

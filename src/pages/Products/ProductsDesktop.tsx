@@ -18,6 +18,7 @@ import { CategoryTree } from '../../components/CategoryTree/CategoryTree';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
+import { usePlanGuard, useFeatureGuard } from '../../store/useSubscription';
 import { BulkEditModal } from '../../components/BulkEditModal/BulkEditModal';
 import './Products.css';
 
@@ -80,6 +81,12 @@ export const ProductsDesktop = () => {
 
     // Modals state
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const { guard: guardProduct } = usePlanGuard('products');
+    const { requireFeature } = useFeatureGuard();
+
+    const handleNewProduct = () => {
+        guardProduct(() => { setProductToEdit(null); setIsModalOpen(true); });
+    };
     const [productToEdit, setProductToEdit] = useState<Product | null>(null);
     const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
     const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
@@ -322,14 +329,14 @@ export const ProductsDesktop = () => {
                                                 <button className="dropdown-item" onClick={() => { setIsPriceHistoryOpen(true); setShowMoreMenu(false); }}>
                                                     <TrendingUp size={18} /> Ver Historial de Precios
                                                 </button>
-                                                <button className="dropdown-item" onClick={() => { setShowImportModal(true); setShowMoreMenu(false); }}>
+                                                <button className="dropdown-item" onClick={() => requireFeature('importProducts', () => { setShowImportModal(true); setShowMoreMenu(false); })}>
                                                     <Upload size={18} /> Importar Productos
                                                 </button>
                                                 <div className="dropdown-divider"></div>
                                                 <button className="dropdown-item" onClick={() => { setIsBulkUpdateOpen(true); setShowMoreMenu(false); }}>
                                                     <Tag size={18} /> Actualizar Precios Masivamente
                                                 </button>
-                                                <button className="dropdown-item" onClick={() => { handlePrint(); setShowMoreMenu(false); }}>
+                                                <button className="dropdown-item" onClick={() => requireFeature('exportCsv', () => { handlePrint(); setShowMoreMenu(false); })}>
                                                     <FileDown size={18} /> Descargar Catálogo PDF
                                                 </button>
                                             </div>
@@ -344,7 +351,7 @@ export const ProductsDesktop = () => {
                                     <Settings size={20} />
                                     <span className="btn-text">Carpetas</span>
                                 </button>
-                                <button className="btn btn-primary" onClick={() => { setProductToEdit(null); setIsModalOpen(true); }}>
+                                <button className="btn btn-primary" onClick={handleNewProduct}>
                                     <Plus size={20} />
                                     <span className="btn-text">Nuevo Producto</span>
                                 </button>
@@ -566,7 +573,7 @@ export const ProductsDesktop = () => {
                                         : 'Comienza agregando tu primer producto al catálogo'}
                                 </p>
                                 {(!searchTerm && activeCategories.length === 0 && activeBrands.length === 0) && (
-                                    <button className="btn btn-primary btn-lg" onClick={() => { setProductToEdit(null); setIsModalOpen(true); }}>
+                                    <button className="btn btn-primary btn-lg" onClick={handleNewProduct}>
                                         <Plus size={20} />
                                         Agregar Producto
                                     </button>
@@ -638,7 +645,7 @@ export const ProductsDesktop = () => {
                                                             </button>
                                                             <button
                                                                 className="action-btn barcode"
-                                                                onClick={() => { setProductForBarcode(p); setShowBarcodePrinter(true); }}
+                                                                onClick={() => requireFeature('barcode', () => { setProductForBarcode(p); setShowBarcodePrinter(true); })}
                                                                 title="Código de barras"
                                                             >
                                                                 <Barcode size={18} strokeWidth={2} />
@@ -699,7 +706,7 @@ export const ProductsDesktop = () => {
                                                     </button>
                                                     <button
                                                         className="list-action-btn barcode"
-                                                        onClick={() => { setProductForBarcode(p); setShowBarcodePrinter(true); }}
+                                                        onClick={() => requireFeature('barcode', () => { setProductForBarcode(p); setShowBarcodePrinter(true); })}
                                                         title="Código de barras"
                                                     >
                                                         <Barcode size={18} strokeWidth={2} />

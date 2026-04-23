@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
-import { db } from '../db/index.js';
+import { db, getBusinessPlan } from '../db/index.js';
 import { config } from '../config/index.js';
 import { randomUUID } from 'crypto';
 
@@ -35,11 +35,19 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     const {
       type,
       category,
-      from_date,
-      to_date,
       payment_method,
       limit = '200'
     } = request.query as any;
+    let { from_date, to_date } = request.query as any;
+
+    const plan = await getBusinessPlan(user.business_id);
+    if (plan.slug === 'semilla') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      if (!from_date || new Date(from_date) < thirtyDaysAgo) {
+        from_date = thirtyDaysAgo.toISOString();
+      }
+    }
 
     let query = db
       .selectFrom('transactions')
@@ -117,7 +125,16 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    const { from_date, to_date } = request.query as { from_date?: string, to_date?: string };
+    let { from_date, to_date } = request.query as { from_date?: string, to_date?: string };
+
+    const plan = await getBusinessPlan(user.business_id);
+    if (plan.slug === 'semilla') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      if (!from_date || new Date(from_date) < thirtyDaysAgo) {
+        from_date = thirtyDaysAgo.toISOString();
+      }
+    }
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 

@@ -7,12 +7,15 @@ import {
     MessageCircle,
     CalendarDays,
     Wallet,
-    Users
+    Users,
+    Clock
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { CustomerModal } from '../../components/CustomerModal/CustomerModal';
+import { CustomerHistoryModal } from '../../components/CustomerHistoryModal/CustomerHistoryModal';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useModal } from '../../hooks/useModal';
+import { useFeatureGuard } from '../../store/useSubscription';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import './Customers.css';
 
@@ -37,8 +40,12 @@ export const CustomersDesktop = () => {
     const [customerToEdit, setCustomerToEdit] = useState<any>(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentData, setPaymentData] = useState({ customerId: '', amount: '' });
+    const [historyModal, setHistoryModal] = useState<{ open: boolean; customerId: string; customerName: string }>({
+        open: false, customerId: '', customerName: ''
+    });
 
     const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
+    const { requireFeature } = useFeatureGuard();
 
     // Advanced search logic
     const filteredCustomers = useMemo(() => {
@@ -85,6 +92,12 @@ export const CustomersDesktop = () => {
     const handleCollectDebt = (customer: any) => {
         setPaymentData({ customerId: customer.id, amount: customer.debtBalance.toString() });
         setShowPaymentModal(true);
+    };
+
+    const handleViewHistory = (customer: any) => {
+        requireFeature('crmFull', () => {
+            setHistoryModal({ open: true, customerId: customer.id, customerName: customer.name });
+        });
     };
 
     const processPayment = (e: React.FormEvent) => {
@@ -156,20 +169,32 @@ export const CustomersDesktop = () => {
                         {/* Red border accent for debt */}
                         {customer.debtBalance > 0 && <div className="debt-indicator-bar top"></div>}
 
-                        <div className="customer-card-header mb-4">
-                            <div className="avatar-large">{customer.name.charAt(0).toUpperCase()}</div>
-                            <div className="customer-info-header">
-                                <h3 className="text-h3">{customer.name}</h3>
-                                <p className="text-small text-muted font-mono">{customer.phone}</p>
+                        <div className="flex justify-between items-start mb-6">
+                            <div className="flex items-center gap-4">
+                                <div className="avatar-large">
+                                    {customer.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="customer-info-header">
+                                    <h3 className="text-h3">{customer.name}</h3>
+                                    <p className="text-small text-muted font-mono">{customer.phone}</p>
+                                </div>
                             </div>
-                            <div className="flex gap-1">
-                                <button 
+                            <div className="customer-actions flex gap-1">
+                                <button
+                                    className="btn-icon text-muted hover-primary"
+                                    onClick={() => handleViewHistory(customer)}
+                                    title="Ver Historial"
+                                >
+                                    <Clock size={18} />
+                                </button>
+                                <button
                                     className="btn-icon text-muted hover-primary"
                                     onClick={() => handleEdit(customer)}
+                                    title="Editar"
                                 >
                                     <Edit2 size={18} />
                                 </button>
-                                <button 
+                                <button
                                     className="btn-icon text-muted hover-danger"
                                     onClick={() => handleDelete(customer)}
                                 >
@@ -214,7 +239,7 @@ export const CustomersDesktop = () => {
                                         </button>
                                     </div>
                                 ) : (
-                                    <p className="text-success font-medium">Al día</p>
+                                    <p className="text-success font-medium text-h3">Al día</p>
                                 )}
                             </div>
                         </div>

@@ -11,6 +11,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
 import type { TicketData } from '../../components/TicketPrinter/TicketPrinter';
+import { usePlanGuard } from '../../store/useSubscription';
 import './Orders.css';
 
 export const OrdersDesktop = () => {
@@ -23,6 +24,11 @@ export const OrdersDesktop = () => {
     const loadCustomers = useStore((state) => state.loadCustomers);
     const loadProducts = useStore((state) => state.loadProducts);
     const deleteOrder = useStore((state) => state.deleteOrder);
+    const { guard: guardOrder } = usePlanGuard('orders');
+
+    const handleNewOrder = () => {
+        guardOrder(() => navigate('/pos', { state: { initialTab: 'agendar' } }));
+    };
     const updateOrder = useStore((state) => state.updateOrder);
     const shopInfo = useStore((state) => state.shopInfo);
     const addNotification = useStore((state) => state.addNotification);
@@ -518,7 +524,7 @@ export const OrdersDesktop = () => {
                 </div>
                 <button
                     className="btn btn-primary"
-                    onClick={() => navigate('/pos', { state: { initialTab: 'agendar' } })}
+                    onClick={handleNewOrder}
                 >
                     <Plus size={20} />
                     <span className="hidden-mobile">Nuevo Pedido</span>

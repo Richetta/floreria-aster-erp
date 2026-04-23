@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { SubscriptionProvider, FeatureRouteGuard } from './store/useSubscription';
+import { UpgradeModal } from './components/Subscription/UpgradeModal';
 import { useEffect } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 import { Toaster } from './components/Toaster/Toaster';
@@ -96,6 +98,7 @@ function App() {
         <ErrorBoundary>
             <Toaster />
             <BrowserRouter>
+            <SubscriptionProvider>
                 <Routes>
                     {/* Public Routes */}
                     <Route
@@ -121,26 +124,58 @@ function App() {
                         <Route path="ventas" element={<Sales />} />
                         <Route path="pedidos" element={<Orders />} />
                         <Route path="productos" element={<Products />} />
-                        <Route path="paquetes" element={<Packages />} />
+                        <Route 
+                            path="paquetes" 
+                            element={<FeatureRouteGuard feature="packages"><Packages /></FeatureRouteGuard>} 
+                        />
                         <Route path="clientes" element={<Customers />} />
                         <Route path="proveedores" element={<Suppliers />} />
-                        <Route path="mermas" element={<Waste />} />
-                        <Route path="logistica" element={<Logistics />} />
-                        <Route path="compras" element={<Purchases />} />
+                        <Route 
+                            path="mermas" 
+                            element={<FeatureRouteGuard feature="waste"><Waste /></FeatureRouteGuard>} 
+                        />
+                        <Route 
+                            path="logistica" 
+                            element={<FeatureRouteGuard feature="logistics"><Logistics /></FeatureRouteGuard>} 
+                        />
+                        <Route 
+                            path="compras" 
+                            element={<FeatureRouteGuard feature="purchases"><Purchases /></FeatureRouteGuard>} 
+                        />
                         <Route path="menu" element={<Menu />} />
                         <Route path="finanzas" element={<Finances />} />
-                        <Route path="reportes" element={<Reports />} />
-                        <Route path="caja" element={<CashRegister />} />
-                        <Route path="stock" element={<StockMovements />} />
-                        <Route path="reposicion" element={<Restock />} />
-                        <Route path="recordatorios" element={<Reminders />} />
-                        <Route path="calendario" element={<CalendarDesktop />} />
+                        <Route 
+                            path="reportes" 
+                            element={<FeatureRouteGuard feature="reports"><Reports /></FeatureRouteGuard>} 
+                        />
+                        <Route 
+                            path="caja" 
+                            element={<FeatureRouteGuard feature="cashRegister"><CashRegister /></FeatureRouteGuard>} 
+                        />
+                        <Route 
+                            path="stock" 
+                            element={<FeatureRouteGuard feature="stockMovements"><StockMovements /></FeatureRouteGuard>} 
+                        />
+                        <Route 
+                            path="reposicion" 
+                            element={<FeatureRouteGuard feature="restock"><Restock /></FeatureRouteGuard>} 
+                        />
+                        <Route 
+                            path="recordatorios" 
+                            element={<FeatureRouteGuard feature="reminders"><Reminders /></FeatureRouteGuard>} 
+                        />
+                        <Route 
+                            path="calendario" 
+                            element={<FeatureRouteGuard feature="calendar"><CalendarDesktop /></FeatureRouteGuard>} 
+                        />
                         <Route path="configuracion" element={<Settings />} />
                     </Route>
 
                     {/* 404 Route */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+                <UpgradeModal />
+            </SubscriptionProvider>
             </BrowserRouter>
         </ErrorBoundary>
     );

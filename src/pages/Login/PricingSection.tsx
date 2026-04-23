@@ -1,6 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Check, X, Star, Zap, Crown, Leaf } from 'lucide-react';
 import './PricingSection.css';
+
+// ============================================
+// FADE-IN HOOK
+// ============================================
+
+function useFadeIn() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.classList.add('is-visible');
+          observer.unobserve(el);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return ref;
+}
 
 // ============================================
 // PLANS DATA
@@ -8,9 +34,9 @@ import './PricingSection.css';
 
 const plans = [
   {
-    slug: 'semilla',
-    name: 'Semilla',
-    tagline: 'Para empezar',
+    slug: 'gratis',
+    name: 'Gratis',
+    tagline: 'Gestión básica para emprendedores',
     icon: <Leaf size={28} />,
     priceMonthly: 0,
     priceAnnually: 0,
@@ -38,97 +64,30 @@ const plans = [
     ctaVariant: 'outline' as const,
   },
   {
-    slug: 'florecer',
-    name: 'Florecer',
-    tagline: 'El más elegido',
+    slug: 'completo',
+    name: 'Profesional Completo',
+    tagline: 'Todo el poder de gestión',
     icon: <Star size={28} />,
-    priceMonthly: 18000,
-    priceAnnually: 180000,
-    badge: '⭐ MÁS POPULAR',
+    priceMonthly: 15000,
+    priceAnnually: 150000,
+    badge: '👑 RECOMENDADO',
     highlighted: true,
     limits: [
-      { label: 'Usuarios', value: '5' },
-      { label: 'Productos', value: '500' },
-      { label: 'Pedidos/mes', value: '200' },
-      { label: 'Categorías', value: '10' },
+      { label: 'Usuarios', value: 'Ilimitados' },
+      { label: 'Productos', value: 'Ilimitados' },
+      { label: 'Pedidos', value: 'Ilimitados' },
+      { label: 'Categorías', value: 'Ilimitadas' },
     ],
     features: [
-      'TODO del plan Semilla',
-      'Reportes completos (4 tabs)',
-      'Caja diaria con arqueos',
-      'Gestión de mermas',
-      'Código de barras (crear/imprimir)',
-      'Vista calendario de pedidos',
-      'Logística básica de entregas',
-      'Recordatorios (cumpleaños, deudas)',
-      'Exportación CSV',
-      'Importación de productos',
-    ],
-    missing: [
-      'Sin OCR de precios',
-      'Sin paquetes/ramos',
-      'Sin CRM completo',
-    ],
-    cta: 'Probar 14 Días Gratis',
-    ctaVariant: 'primary' as const,
-  },
-  {
-    slug: 'crecimiento',
-    name: 'Crecimiento',
-    tagline: 'Para crecer',
-    icon: <Zap size={28} />,
-    priceMonthly: 35000,
-    priceAnnually: 350000,
-    badge: null,
-    highlighted: false,
-    limits: [
-      { label: 'Usuarios', value: '15' },
-      { label: 'Productos', value: '2,000' },
-      { label: 'Pedidos/mes', value: '∞' },
-      { label: 'Categorías', value: '∞' },
-    ],
-    features: [
-      'TODO del plan Florecer',
+      'TODO del plan Gratis',
+      'Reportes avanzados y exportación',
+      'Caja diaria y arqueos',
+      'Gestión de mermas y auditoría',
+      'Código de barras y etiquetas',
+      'Vista calendario y logística',
       'OCR de listas de precios',
-      'Paquetes/Ramos (combos)',
-      'Compras a proveedores',
-      'Reposición automática',
+      'Gestión de combos y paquetes',
       'CRM completo con historial',
-      'Movimientos de stock (auditoría)',
-      'Logística completa con mapas',
-      'Facturación electrónica AFIP',
-      'Integración MercadoPago',
-      'Soporte prioritario WhatsApp',
-    ],
-    missing: [],
-    cta: 'Comenzar Prueba',
-    ctaVariant: 'secondary' as const,
-  },
-  {
-    slug: 'jardin',
-    name: 'Jardín',
-    tagline: 'Todo ilimitado',
-    icon: <Crown size={28} />,
-    priceMonthly: 65000,
-    priceAnnually: 650000,
-    badge: null,
-    highlighted: false,
-    limits: [
-      { label: 'Usuarios', value: '∞' },
-      { label: 'Productos', value: '∞' },
-      { label: 'Pedidos/mes', value: '∞' },
-      { label: 'Categorías', value: '∞' },
-    ],
-    features: [
-      'TODO del plan Crecimiento',
-      'Multi-sucursal (hasta 3)',
-      'Facturación AFIP ilimitada',
-      'API Access (integraciones)',
-      'White-label (tu marca)',
-      'Onboarding personalizado 1:1',
-      'Soporte 24/7 prioritario',
-      'Backups diarios automáticos',
-      'Training del equipo incluido',
     ],
     missing: [],
     cta: 'Contactar Ventas',
@@ -307,6 +266,7 @@ interface PricingSectionProps {
 
 export const PricingSection = ({ onPlanSelect }: PricingSectionProps) => {
   const [isAnnual, setIsAnnual] = useState(true);
+  const sectionRef = useFadeIn();
 
   const handlePlanSelect = (slug: string) => {
     if (onPlanSelect) {
@@ -318,7 +278,7 @@ export const PricingSection = ({ onPlanSelect }: PricingSectionProps) => {
   };
 
   return (
-    <section className="lp-section lp-pricing-section" id="pricing">
+    <section className="lp-section lp-pricing-section" id="pricing" ref={sectionRef}>
       <div className="lp-container">
         {/* Header */}
         <div className="lp-section__header fade-up">

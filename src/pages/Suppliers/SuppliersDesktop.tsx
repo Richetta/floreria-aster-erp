@@ -27,6 +27,7 @@ import { Card } from '../../components/ui/Card/Card';
 import { api } from '../../services/api';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../../components/ui/Modals';
+import { useFeatureGuard } from '../../store/useSubscription';
 import './Suppliers.css';
 
 export const SuppliersDesktop = () => {
@@ -36,6 +37,7 @@ export const SuppliersDesktop = () => {
     const addSupplier = useStore(state => state.addSupplier);
     const updateSupplier = useStore(state => state.updateSupplier);
     const loadSuppliers = useStore(state => state.loadSuppliers);
+    const { requireFeature } = useFeatureGuard();
 
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
@@ -212,7 +214,7 @@ export const SuppliersDesktop = () => {
                         variant="secondary"
                         size="md"
                         icon={<FileUp size={20} />}
-                        onClick={() => setIsMagicModalOpen(true)}
+                        onClick={() => requireFeature('ocr', () => setIsMagicModalOpen(true))}
                     >
                         <span className="hidden-mobile">Subir Lista</span>
                     </Button>

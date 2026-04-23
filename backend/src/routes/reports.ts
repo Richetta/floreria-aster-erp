@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
-import { db } from '../db/index.js';
+import { db, getBusinessPlan } from '../db/index.js';
 
 export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
   // Date range schema
@@ -25,7 +25,18 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    const { from_date, to_date } = dateRangeSchema.parse(request.query);
+    let { from_date, to_date } = dateRangeSchema.parse(request.query);
+
+    // Semilla Restriction: 30 days history only
+    const plan = await getBusinessPlan(user.business_id);
+    if (plan.slug === 'semilla') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      if (!from_date || new Date(from_date) < thirtyDaysAgo) {
+        from_date = thirtyDaysAgo.toISOString();
+      }
+    }
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
@@ -89,7 +100,16 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    const { from_date, to_date, group_by = 'day' } = request.query as any;
+    let { from_date, to_date, group_by = 'day' } = request.query as any;
+
+    const plan = await getBusinessPlan(user.business_id);
+    if (plan.slug === 'semilla') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      if (!from_date || new Date(from_date) < thirtyDaysAgo) {
+        from_date = thirtyDaysAgo.toISOString();
+      }
+    }
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
@@ -130,7 +150,16 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    const { from_date, to_date, limit = '10' } = request.query as any;
+    let { from_date, to_date, limit = '10' } = request.query as any;
+
+    const plan = await getBusinessPlan(user.business_id);
+    if (plan.slug === 'semilla') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      if (!from_date || new Date(from_date) < thirtyDaysAgo) {
+        from_date = thirtyDaysAgo.toISOString();
+      }
+    }
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
@@ -205,7 +234,16 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    const { from_date, to_date, limit = '10' } = request.query as any;
+    let { from_date, to_date, limit = '10' } = request.query as any;
+
+    const plan = await getBusinessPlan(user.business_id);
+    if (plan.slug === 'semilla') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      if (!from_date || new Date(from_date) < thirtyDaysAgo) {
+        from_date = thirtyDaysAgo.toISOString();
+      }
+    }
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
@@ -280,7 +318,16 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    const { from_date, to_date } = request.query as any;
+    let { from_date, to_date } = request.query as any;
+
+    const plan = await getBusinessPlan(user.business_id);
+    if (plan.slug === 'semilla') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      if (!from_date || new Date(from_date) < thirtyDaysAgo) {
+        from_date = thirtyDaysAgo.toISOString();
+      }
+    }
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
@@ -405,7 +452,16 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    const { from_date, to_date } = request.query as any;
+    let { from_date, to_date } = request.query as any;
+
+    const plan = await getBusinessPlan(user.business_id);
+    if (plan.slug === 'semilla') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      if (!from_date || new Date(from_date) < thirtyDaysAgo) {
+        from_date = thirtyDaysAgo.toISOString();
+      }
+    }
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
