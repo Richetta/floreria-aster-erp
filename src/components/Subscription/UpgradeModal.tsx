@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, X, AlertTriangle, Star, Zap, Crown } from 'lucide-react';
+import { ArrowUpRight, X, AlertTriangle, Star, Crown } from 'lucide-react';
 import { useSubscription } from '../../store/useSubscription';
 import './UpgradeModal.css';
 

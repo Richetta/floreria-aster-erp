@@ -314,6 +314,14 @@ export const CustomersDesktop = () => {
                 </div>
             )}
 
+            {historyModal.open && (
+                <CustomerHistoryModal 
+                    customerId={historyModal.customerId}
+                    customerName={historyModal.customerName}
+                    onClose={() => setHistoryModal({ ...historyModal, open: false })}
+                />
+            )}
+
             {alertModal && <AlertModal {...alertModal} />}
             {confirmModal && <ConfirmModal {...confirmModal} />}
         </div>

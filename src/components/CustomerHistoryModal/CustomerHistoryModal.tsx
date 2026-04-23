@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
     X, 
-    Calendar, 
     ShoppingBag, 
     TrendingUp, 
     Clock, 
-    ChevronRight,
-    Search,
     Package
 } from 'lucide-react';
 import './CustomerHistoryModal.css';
@@ -24,7 +21,7 @@ export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
 }) => {
     const [history, setHistory] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -97,7 +94,7 @@ export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                     
                     <div className="timeline">
                         {history?.orders?.length > 0 ? (
-                            history.orders.map((order: any, idx: number) => (
+                            history.orders.map((order: any) => (
                                 <div key={order.id} className="timeline-item">
                                     <div className="timeline-marker"></div>
                                     <div className="timeline-content">

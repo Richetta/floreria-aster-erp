@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Check, X, Star, Zap, Crown, Leaf } from 'lucide-react';
+import { Check, X, Star, Leaf } from 'lucide-react';
 import './PricingSection.css';
 
 // ============================================
