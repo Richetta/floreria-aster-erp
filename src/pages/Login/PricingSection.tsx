@@ -68,8 +68,8 @@ const plans = [
     name: 'Profesional Completo',
     tagline: 'Control total de tu negocio y equipo',
     icon: <Star size={28} />,
-    priceMonthly: 49000,
-    priceAnnually: 490000,
+    priceMonthly: 45000,
+    priceAnnually: 450000,
     badge: '👑 RECOMENDADO',
     highlighted: true,
     limits: [
@@ -91,7 +91,7 @@ const plans = [
       'Soporte prioritario 24/7',
     ],
     missing: [],
-    cta: 'Probar 14 Días Gratis',
+    cta: 'Probar 15 Días Gratis',
     ctaVariant: 'primary' as const,
   },
 ];
@@ -154,6 +154,9 @@ const PricingCard = ({ plan, isAnnual, onSelect }: PricingCardProps) => {
               <div className="pricing-card__annual-info">
                 <span className="pricing-card__annual-total">
                   {formatPrice(plan.priceAnnually)}/año
+                </span>
+                <span className="pricing-card__annual-clarification">
+                  (Un solo pago anual)
                 </span>
                 <span className="pricing-card__savings">
                   ¡Ahorrás {formatPrice(savings)}!
@@ -219,7 +222,7 @@ const faqs = [
   },
   {
     question: '¿Hay período de prueba?',
-    answer: 'Sí, todos los planes pagos incluyen 14 días de prueba gratis. No necesitás tarjeta de crédito para empezar.',
+    answer: 'Sí, todos los planes pagos incluyen 15 días de prueba gratis. No necesitás tarjeta de crédito para empezar.',
   },
   {
     question: '¿Cómo puedo pagar?',

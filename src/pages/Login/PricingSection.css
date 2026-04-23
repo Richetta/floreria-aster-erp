@@ -94,23 +94,18 @@
 /* ── Grid ── */
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-6);
-  max-width: 1280px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-8);
+  max-width: 900px;
   margin: 0 auto;
-  align-items: start;
-}
-
-@media (max-width: 1200px) {
-  .pricing-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  align-items: stretch;
 }
 
 @media (max-width: 768px) {
   .pricing-grid {
     grid-template-columns: 1fr;
-    max-width: 480px;
+    max-width: 450px;
+    padding: 0 var(--space-4);
   }
 }
 
@@ -133,16 +128,16 @@
 
 /* Highlighted card (most popular) */
 .pricing-card--highlighted {
-  border-color: var(--primary);
-  border-width: 3px;
+  border: 3px solid var(--primary);
   transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 12px 32px rgba(79, 122, 90, 0.2);
+  box-shadow: 0 20px 40px rgba(79, 122, 90, 0.2);
   z-index: 1;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f7f2 100%);
 }
 
 .pricing-card--highlighted:hover {
-  transform: translateY(-12px) scale(1.03);
-  box-shadow: 0 16px 40px rgba(79, 122, 90, 0.25);
+  transform: translateY(-12px) scale(1.05);
+  box-shadow: 0 25px 50px rgba(79, 122, 90, 0.3);
 }
 
 /* Badge */
@@ -233,8 +228,17 @@
 }
 
 .pricing-card__annual-total {
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 2px;
+}
+
+.pricing-card__annual-clarification {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-weight: 500;
+  margin-bottom: var(--space-1);
 }
 
 .pricing-card__savings {

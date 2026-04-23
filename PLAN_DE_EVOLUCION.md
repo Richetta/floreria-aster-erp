@@ -12,10 +12,14 @@ Este documento detalla el plan para alinear la realidad técnica con el nuevo mo
 - [x] **Funciones:** POS, Dashboard básico, Kanban de pedidos.
 - [x] **Bloqueos:** Reportes, Caja, Mermas, OCR, CRM Full, Etiquetas.
 
-### 👑 Plan Profesional Completo ($49.000/mes) - *Foco: Control Total*
+### 👑 Plan Profesional Completo ($45.000/mes) - *Foco: Control Total*
+- [x] **Prueba Gratis:** 15 días de acceso total al sistema.
+- [x] **Fallback:** Al terminar el trial, el negocio vuelve automáticamente a Plan Gratis hasta suscribirse.
 - [x] **Límites:** Usuarios, productos, pedidos y categorías ilimitados.
 - [x] **Historial:** Historial completo desde el primer día.
-- [x] **Funciones de Gestión:**
+- [x] **Opciones de Pago:**
+    - Mensual: $45.000.
+    - Anual: $450.000 (Pago único anual).
     - [x] Reportes avanzados y exportaciones.
     - [x] Caja diaria con arqueos.
     - [x] Gestión de mermas y auditoría.

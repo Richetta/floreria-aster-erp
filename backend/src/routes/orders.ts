@@ -51,12 +51,12 @@ async function checkOrderLimit(businessId: string, reply: any) {
     if (currentCount >= maxOrders) {
       reply.code(429).send({
         error: 'Limit Reached',
-        message: `Has alcanzado el límite de ${maxOrders} pedidos este mes en tu plan ${planName}`,
+        message: `Has alcanzado el límite de ${maxOrders} pedidos este mes en tu plan ${planName}. Pasate al plan Profesional para tener pedidos ilimitados.`,
         limitReached: true,
         limit: maxOrders,
         current: currentCount,
         resourceType: 'orders',
-        suggestedPlan: planSlug === 'gratis' || planSlug === 'semilla' ? 'completo' : 'completo',
+        suggestedPlan: 'completo',
         upgradeUrl: '/subscription/upgrade'
       });
       return false;
