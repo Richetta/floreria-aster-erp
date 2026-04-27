@@ -329,14 +329,14 @@ export const ProductsDesktop = () => {
                                                 <button className="dropdown-item" onClick={() => { setIsPriceHistoryOpen(true); setShowMoreMenu(false); }}>
                                                     <TrendingUp size={18} /> Ver Historial de Precios
                                                 </button>
-                                                <button className="dropdown-item" onClick={() => requireFeature('importProducts', () => { setShowImportModal(true); setShowMoreMenu(false); })}>
+                                                <button className="dropdown-item" onClick={() => { setShowImportModal(true); setShowMoreMenu(false); }}>
                                                     <Upload size={18} /> Importar Productos
                                                 </button>
                                                 <div className="dropdown-divider"></div>
                                                 <button className="dropdown-item" onClick={() => { setIsBulkUpdateOpen(true); setShowMoreMenu(false); }}>
                                                     <Tag size={18} /> Actualizar Precios Masivamente
                                                 </button>
-                                                <button className="dropdown-item" onClick={() => requireFeature('exportCsv', () => { handlePrint(); setShowMoreMenu(false); })}>
+                                                <button className="dropdown-item" onClick={() => { handlePrint(); setShowMoreMenu(false); }}>
                                                     <FileDown size={18} /> Descargar Catálogo PDF
                                                 </button>
                                             </div>
