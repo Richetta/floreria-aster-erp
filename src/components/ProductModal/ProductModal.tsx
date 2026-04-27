@@ -507,14 +507,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                         </button>
                     </footer>
                 </form>
-
-                {isScanOpen && (
-                    <CameraScanner
-                        onScan={handleCameraScan}
-                        onClose={() => setIsScanOpen(false)}
-                    />
-                )}
             </div>
+
+            {isScanOpen && (
+                <CameraScanner
+                    onScan={handleCameraScan}
+                    onClose={() => setIsScanOpen(false)}
+                />
+            )}
         </div>
     );
 };
