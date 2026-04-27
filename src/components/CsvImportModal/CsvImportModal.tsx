@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './CsvImportModal.css';
 
 interface CsvImportModalProps {
@@ -241,12 +243,91 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     };
 
     const handleDownloadTemplate = () => {
-        const csvContent = 'Código,Nombre,Precio,Costo,Stock,Categoría,Marca\nPROD001,Producto Ejemplo,1000,500,10,Plantas,Mi Jardín';
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'plantilla_productos.csv';
-        link.click();
+        const doc = new jsPDF();
+        
+        // Header
+        doc.setFontSize(22);
+        doc.setTextColor(79, 122, 90); // primary color
+        doc.text('MI JARDÍN ERP', 14, 22);
+        
+        doc.setFontSize(16);
+        doc.setTextColor(33, 37, 41);
+        doc.text('Plantilla de Importación de Productos', 14, 32);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text('Esta plantilla contiene el formato correcto para la carga masiva de inventario.', 14, 40);
+        doc.text('Asegurate de mantener el orden de las columnas para una importación exitosa.', 14, 45);
+        
+        // Table Data
+        const headers = [['Código', 'Nombre del Producto', 'Precio ($)', 'Costo ($)', 'Stock', 'Categoría', 'Marca']];
+        const data = [
+            ['PROD001', 'Rosa Roja Premium', '1500', '800', '25', 'Flores', 'Vivero Central'],
+            ['PROD002', 'Maceta Cerámica G', '3200', '1800', '12', 'Macetas', 'Artesanías'],
+            ['PROD003', 'Tierra Fértil 5kg', '850', '400', '50', 'Insumos', 'EcoTierra'],
+            ['PROD004', 'Orquídea Blanca', '4500', '2500', '8', 'Flores', 'Vivero Central'],
+            ['PROD005', 'Fertilizante Líquido', '1200', '650', '20', 'Insumos', 'BioGreen'],
+        ];
+        
+        autoTable(doc, {
+            head: headers,
+            body: data,
+            startY: 55,
+            theme: 'grid',
+            headStyles: { 
+                fillColor: [79, 122, 90], 
+                textColor: [255, 255, 255],
+                fontSize: 10,
+                fontStyle: 'bold',
+                halign: 'center'
+            },
+            bodyStyles: { 
+                fontSize: 9,
+                textColor: [50, 50, 50]
+            },
+            columnStyles: {
+                0: { cellWidth: 25 },
+                1: { cellWidth: 50 },
+                2: { halign: 'right' },
+                3: { halign: 'right' },
+                4: { halign: 'center' },
+            },
+            alternateRowStyles: { fillColor: [248, 249, 250] },
+            margin: { top: 20 },
+        });
+        
+        // Footer / Instructions
+        const finalY = (doc as any).lastAutoTable.finalY || 120;
+        
+        doc.setDrawColor(230, 230, 230);
+        doc.line(14, finalY + 10, 196, finalY + 10);
+        
+        doc.setFontSize(12);
+        doc.setTextColor(33, 37, 41);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Instrucciones para la importación:', 14, finalY + 20);
+        
+        doc.setFontSize(9);
+        doc.setTextColor(80);
+        doc.setFont('helvetica', 'normal');
+        const instructions = [
+            '1. Mantené los nombres de las columnas exactamente como aparecen arriba.',
+            '2. El Código es fundamental para actualizar productos existentes sin duplicarlos.',
+            '3. El Precio y el Costo deben ser números (usá punto para decimales si es necesario).',
+            '4. La Categoría ayuda al sistema a organizar tus productos en carpetas automáticamente.',
+            '5. Una vez completado, podés subir este archivo PDF o un Excel/CSV con esta misma estructura.'
+        ];
+        
+        instructions.forEach((line, i) => {
+            doc.text(line, 14, finalY + 30 + (i * 7));
+        });
+        
+        // Footer brand
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text('Generado automáticamente por Mi Jardín ERP - ' + new Date().toLocaleDateString(), 14, 285);
+        
+        doc.save('plantilla_productos_mijardin.pdf');
     };
 
     const handleClose = () => {
@@ -577,8 +658,8 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                             )}
 
                             <button className="csv-template-btn" onClick={handleDownloadTemplate}>
-                                <Download size={16} />
-                                <span>Descargar plantilla de ejemplo</span>
+                                <FileText size={16} />
+                                <span>Descargar Plantilla PDF de Ejemplo</span>
                             </button>
                         </div>
                     )}
