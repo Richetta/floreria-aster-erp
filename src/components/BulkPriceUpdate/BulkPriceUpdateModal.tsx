@@ -32,6 +32,7 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [importMode, setImportMode] = useState<'percentage' | 'margin' | 'csv' | 'manual'>('percentage');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [selectedBrand, setSelectedBrand] = useState<string>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
     const [percentageIncrease, setPercentageIncrease] = useState<number>(10);
@@ -46,14 +47,20 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
         [products]
     );
 
+    const brands = useMemo(() =>
+        ['all', ...Array.from(new Set(products.map(p => p.brand_name).filter(Boolean)))],
+        [products]
+    );
+
     const visibleProducts = useMemo(() =>
         products.filter(p => {
             const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+            const matchesBrand = selectedBrand === 'all' || p.brand_name === selectedBrand;
             const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (p.code || '').toLowerCase().includes(searchTerm.toLowerCase());
-            return matchesCategory && matchesSearch;
+            return matchesCategory && matchesBrand && matchesSearch;
         }),
-        [products, selectedCategory, searchTerm]
+        [products, selectedCategory, selectedBrand, searchTerm]
     );
 
     const handleToggleAll = () => {
@@ -459,17 +466,30 @@ export const BulkPriceUpdateModal = ({ isOpen, onClose }: BulkPriceUpdateModalPr
                                                     onChange={(e) => setSearchTerm(e.target.value)}
                                                 />
                                             </div>
-                                            <select
-                                                className="bulk-category-select"
-                                                value={selectedCategory}
-                                                onChange={(e) => setSelectedCategory(e.target.value)}
-                                            >
-                                                {categories.map(cat => (
-                                                    <option key={cat} value={cat}>
-                                                        {cat === 'all' ? 'Todas las categorías' : cat}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <div className="flex gap-2">
+                                                <select
+                                                    className="bulk-category-select"
+                                                    value={selectedCategory}
+                                                    onChange={(e) => setSelectedCategory(e.target.value)}
+                                                >
+                                                    {categories.map(cat => (
+                                                        <option key={cat} value={cat}>
+                                                            {cat === 'all' ? 'Todas las categorías' : cat}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <select
+                                                    className="bulk-category-select"
+                                                    value={selectedBrand}
+                                                    onChange={(e) => setSelectedBrand(e.target.value)}
+                                                >
+                                                    {brands.map(brand => (
+                                                        <option key={brand} value={brand}>
+                                                            {brand === 'all' ? 'Todas las marcas' : brand}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                         </div>
 
                                         {/* Product List */}

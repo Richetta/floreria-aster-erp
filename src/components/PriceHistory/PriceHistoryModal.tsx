@@ -110,7 +110,7 @@ export const PriceHistoryModal = ({ isOpen, onClose, productId }: PriceHistoryMo
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-content price-history-modal-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <div className="flex items-center gap-2">
                         <History size={24} className="text-primary" />
@@ -192,7 +192,7 @@ export const PriceHistoryModal = ({ isOpen, onClose, productId }: PriceHistoryMo
                 </div>
 
                 {selectedProduct !== 'all' && priceHistory.length > 0 && (
-                    <div className="chart-container mb-6 bg-surface p-4 rounded-xl border border-border" style={{ height: 200 }}>
+                    <div className="chart-container mb-6 bg-surface p-4 rounded-xl border border-border" style={{ height: 300 }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />

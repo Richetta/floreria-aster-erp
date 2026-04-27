@@ -757,7 +757,7 @@ export const ProductsDesktop = () => {
                 onClose={() => { setShowBulkEditModal(false); clearSelection(); }}
             />
 
-            <div style={{ display: 'none' }}>
+            <div style={{ position: 'absolute', top: '-10000px', left: '-10000px', width: '100%' }}>
                 <PrintableCatalog
                     ref={printRef}
                     products={filteredProducts}

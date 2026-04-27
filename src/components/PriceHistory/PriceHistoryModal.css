@@ -1,5 +1,13 @@
 /* Removed price-history-modal and modal-header as they are in index.css */
 
+.price-history-modal-content {
+    max-width: 1200px !important;
+    width: 95vw !important;
+    max-height: 90vh !important;
+    display: flex;
+    flex-direction: column;
+}
+
 .modal-filters {
     display: flex;
     gap: 2rem;
@@ -87,7 +95,9 @@
 
 /* History Table */
 .history-table-container {
+    flex: 1;
     padding: 2rem;
+    overflow-y: auto;
     overflow-x: auto;
 }
 
