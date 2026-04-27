@@ -419,11 +419,13 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       // ── Google Calendar sync (fire-and-forget, non-blocking) ──
+      /* Paused for now
       if (result && (result as any).id) {
         syncOrderToGoogleCalendar((result as any).id, user.sub).catch(err =>
           console.warn('[GCal] Auto-sync on create failed:', err.message)
         );
       }
+      */
 
       return reply.status(201).send(result);
     } catch (error: any) {
@@ -470,6 +472,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       // ── Google Calendar: sync on update, delete on cancel ────
+      /* Paused for now
       const updatedStatus = (body as any).status;
       if (updatedStatus === 'cancelled') {
         deleteOrderFromGoogleCalendar(id, user.sub).catch(err =>
@@ -480,6 +483,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
           console.warn('[GCal] Auto-sync on update failed:', err.message)
         );
       }
+      */
 
       return reply.send(result);
     } catch (error: any) {

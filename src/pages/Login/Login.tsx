@@ -140,7 +140,6 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
             'openid',
             'email',
             'profile',
-            'https://www.googleapis.com/auth/calendar.events',
         ].join(' '),
         access_type: 'offline',   // ← indispensable para recibir refresh_token
         prompt: 'consent',        // ← fuerza la pantalla de consentimiento siempre
