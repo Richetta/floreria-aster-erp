@@ -595,6 +595,7 @@ export const ProductsDesktop = () => {
                                                 </th>
                                                 <th className="col-code">CÓDIGO</th>
                                                 <th className="col-product">PRODUCTO</th>
+                                                <th className="col-category">CATEGORÍA</th>
                                                 <th className="col-cost text-right">COSTO</th>
                                                 <th className="col-price text-right">PRECIO</th>
                                                 <th className="col-stock text-center">STOCK</th>
@@ -622,6 +623,18 @@ export const ProductsDesktop = () => {
                                                                 <span className="product-brand">{p.brand_name}</span>
                                                             )}
                                                         </div>
+                                                    </td>
+                                                    <td className="col-category">
+                                                        {p.category_name || p.category ? (
+                                                            <span className="category-badge">
+                                                                <Folder size={12} />
+                                                                {p.category_name || p.category}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="category-badge" style={{ color: '#9CA3AF', background: '#F9FAFB' }}>
+                                                                Sin categoría
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="col-cost text-right">
                                                         <span className="cost-value">${p.cost?.toLocaleString() || '-'}</span>
@@ -684,6 +697,18 @@ export const ProductsDesktop = () => {
                                                             <span className="meta-item">
                                                                 <span className="meta-label">Código:</span>
                                                                 <span className="meta-value">{p.code}</span>
+                                                            </span>
+                                                            <span className="meta-item">
+                                                                {p.category_name || p.category ? (
+                                                                    <span className="category-badge">
+                                                                        <Folder size={12} />
+                                                                        {p.category_name || p.category}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="category-badge" style={{ color: '#9CA3AF', background: '#F9FAFB' }}>
+                                                                        Sin categoría
+                                                                    </span>
+                                                                )}
                                                             </span>
                                                             <span className="meta-item">
                                                                 <span className="meta-label">Costo:</span>
