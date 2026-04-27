@@ -35,8 +35,10 @@ import {
     Globe,
     ShieldCheck,
     HelpCircle,
-    Wallet
+    Wallet,
+    Camera
 } from 'lucide-react';
+import { CameraScanner } from '../../components/CameraScanner/CameraScanner';
 import { useStore } from '../../store/useStore';
 import { TicketPrinter } from '../../components/TicketPrinter/TicketPrinter';
 import { OrderTemplatesModal } from '../../components/OrderTemplates/OrderTemplatesModal';
@@ -137,6 +139,7 @@ export const POSDesktop = () => {
     const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [isScanningEnabled, setIsScanningEnabled] = useState(true);
+    const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
     const [quickSaleDiscount, setQuickSaleDiscount] = useState<number>(0);
 
     // Historial de escaneos para debugging
@@ -958,6 +961,33 @@ export const POSDesktop = () => {
                             <span style={{ display: window.innerWidth > 768 ? 'inline' : 'none' }}>
                                 {isScanningEnabled ? 'Escáner ON' : 'Escáner OFF'}
                             </span>
+                        </button>
+
+                        <button
+                            onClick={() => setIsCameraScannerOpen(true)}
+                            title="Abrir cámara"
+                            className="camera-toggle-btn"
+                            style={{
+                                padding: '0.5rem 1rem',
+                                background: '#F6F4EF',
+                                border: '1px solid #D1CDBF',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                color: '#6B6B6B',
+                                fontWeight: '500',
+                                fontSize: '0.875rem',
+                                transition: 'all 0.2s ease'
+                            }}
+                        >
+                            <Camera size={20} />
+                            {!isMobile && (
+                                <span>
+                                    Cámara
+                                </span>
+                            )}
                         </button>
                     </div>
 
@@ -2230,6 +2260,16 @@ export const POSDesktop = () => {
                     </div>
                 </div>
             </div>
+
+            {isCameraScannerOpen && (
+                <CameraScanner 
+                    onScan={(code) => {
+                        handleBarcodeScan(code);
+                        setIsCameraScannerOpen(false);
+                    }}
+                    onClose={() => setIsCameraScannerOpen(false)}
+                />
+            )}
         </div>
     );
 };
