@@ -625,10 +625,10 @@ export const ProductsDesktop = () => {
                                                         </div>
                                                     </td>
                                                     <td className="col-category">
-                                                        {p.category_name || p.category ? (
+                                                        {p.category ? (
                                                             <span className="category-badge">
                                                                 <Folder size={12} />
-                                                                {p.category_name || p.category}
+                                                                {p.category}
                                                             </span>
                                                         ) : (
                                                             <span className="category-badge" style={{ color: '#9CA3AF', background: '#F9FAFB' }}>
@@ -699,10 +699,10 @@ export const ProductsDesktop = () => {
                                                                 <span className="meta-value">{p.code}</span>
                                                             </span>
                                                             <span className="meta-item">
-                                                                {p.category_name || p.category ? (
+                                                                {p.category ? (
                                                                     <span className="category-badge">
                                                                         <Folder size={12} />
-                                                                        {p.category_name || p.category}
+                                                                        {p.category}
                                                                     </span>
                                                                 ) : (
                                                                     <span className="category-badge" style={{ color: '#9CA3AF', background: '#F9FAFB' }}>
