@@ -24,10 +24,11 @@ interface SupplierRestock {
 const RestockDesktop: React.FC = () => {
     const suppliers = useStore(state => state.suppliers);
     const loadSuppliers = useStore(state => state.loadSuppliers);
+    const products = useStore(state => state.products);
+    const loadProducts = useStore(state => state.loadProducts);
     const addNotification = useStore(state => state.addNotification);
 
     const [loading, setLoading] = useState(true);
-    const [restockData, setRestockData] = useState<SupplierRestock[]>([]);
     const [error, setError] = useState<string | null>(null);
 
     // Bulk assignment state
@@ -38,8 +39,7 @@ const RestockDesktop: React.FC = () => {
     const fetchRestock = async () => {
         try {
             setLoading(true);
-            const data = await api.getRestockItems();
-            setRestockData(data);
+            await loadProducts();
             setError(null);
         } catch (err: any) {
             setError('Error al obtener faltantes de stock');
@@ -48,6 +48,34 @@ const RestockDesktop: React.FC = () => {
             setLoading(false);
         }
     };
+
+    const restockData = React.useMemo(() => {
+        const lowStock = products.filter(p => p.stock <= p.min);
+        const grouped: Record<string, SupplierRestock> = {};
+
+        lowStock.forEach(p => {
+            const supplierId = p.supplierId || 'unassigned';
+            if (!grouped[supplierId]) {
+                const supplier = suppliers.find(s => s.id === supplierId);
+                grouped[supplierId] = {
+                    supplierId: supplierId === 'unassigned' ? null : supplierId,
+                    supplierName: supplier ? supplier.name : 'Sin Proveedor Asignado',
+                    supplierPhone: supplier ? supplier.phone : null,
+                    items: []
+                };
+            }
+            grouped[supplierId].items.push({
+                id: p.id,
+                code: p.code,
+                name: p.name,
+                stock: p.stock,
+                minStock: p.min,
+                cost: p.cost || 0
+            });
+        });
+
+        return Object.values(grouped).sort((a, b) => a.supplierName.localeCompare(b.supplierName));
+    }, [products, suppliers]);
 
     useEffect(() => {
         fetchRestock();
