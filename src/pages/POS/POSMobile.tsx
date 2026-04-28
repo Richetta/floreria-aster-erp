@@ -267,28 +267,7 @@ export const POSMobile = () => {
                 </button>
             </div>
 
-            {/* Sync Controls */}
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '0.5rem 1rem', background: '#fff', borderBottom: '1px solid #e2e8f0', justifyContent: 'center' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', background: isAutoSyncEnabled ? '#e0f2fe' : '#f1f5f9', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.875rem', border: isAutoSyncEnabled ? '1px solid #7dd3fc' : '1px solid #cbd5e1', transition: 'all 0.3s' }}>
-                    <input 
-                        type="checkbox" 
-                        checked={isAutoSyncEnabled} 
-                        onChange={(e) => setIsAutoSyncEnabled(e.target.checked)}
-                        style={{ cursor: 'pointer' }}
-                    />
-                    <span style={{ color: isAutoSyncEnabled ? '#0369a1' : '#475569', fontWeight: 500 }}>
-                        {isAutoSyncEnabled ? '📡 Sincronización Activa' : 'Sincronización en Vivo'}
-                    </span>
-                </label>
-                <button 
-                    onClick={() => syncCartWithServer()}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#64748b', cursor: 'pointer', fontSize: '0.875rem', padding: '0.25rem 0.5rem', borderRadius: '6px' }}
-                    title="Sincronizar ahora"
-                >
-                    <span className="material-symbols-rounded" style={{ fontSize: '18px' }}>sync</span>
-                    <span>Sincronizar</span>
-                </button>
-            </div>
+
 
             {checkoutMode === 'sale' ? (
                 <>
@@ -310,6 +289,20 @@ export const POSMobile = () => {
                                     </button>
                                 )}
                             </div>
+                            <button
+                                className="barcode-scan-btn"
+                                onClick={() => setIsAutoSyncEnabled(!isAutoSyncEnabled)}
+                                title={isAutoSyncEnabled ? "Desactivar sincronización automática" : "Activar sincronización automática"}
+                                style={{
+                                    background: isAutoSyncEnabled ? '#4F7A5A' : '#fee2e2',
+                                    color: isAutoSyncEnabled ? '#fff' : '#dc2626',
+                                    marginRight: '0.5rem'
+                                }}
+                            >
+                                <span className="material-symbols-rounded">
+                                    {isAutoSyncEnabled ? 'sync' : 'sync_disabled'}
+                                </span>
+                            </button>
                             <button
                                 className="barcode-scan-btn"
                                 onClick={() => setIsCameraScannerOpen(true)}

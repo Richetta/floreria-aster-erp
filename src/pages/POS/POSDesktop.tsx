@@ -872,28 +872,6 @@ export const POSDesktop = () => {
                     <div className="pos-title-section">
                         <h1 className="text-h2">Punto de Venta</h1>
                         <p className="text-body text-muted">Seleccioná productos y gestioná tus ventas diarias</p>
-                        
-                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '0.5rem' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', background: isAutoSyncEnabled ? '#e0f2fe' : '#f1f5f9', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.875rem', border: isAutoSyncEnabled ? '1px solid #7dd3fc' : '1px solid #cbd5e1', transition: 'all 0.3s' }}>
-                                <input 
-                                    type="checkbox" 
-                                    checked={isAutoSyncEnabled} 
-                                    onChange={(e) => setIsAutoSyncEnabled(e.target.checked)}
-                                    style={{ cursor: 'pointer' }}
-                                />
-                                <span style={{ color: isAutoSyncEnabled ? '#0369a1' : '#475569', fontWeight: 500 }}>
-                                    {isAutoSyncEnabled ? '📡 Sincronización Activa' : 'Sincronización en Vivo'}
-                                </span>
-                            </label>
-                            <button 
-                                onClick={() => syncCartWithServer()}
-                                style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#64748b', cursor: 'pointer', fontSize: '0.875rem', padding: '0.25rem 0.5rem', borderRadius: '6px' }}
-                                title="Sincronizar ahora"
-                            >
-                                <Smartphone size={16} />
-                                <span>Sincronizar</span>
-                            </button>
-                        </div>
                     </div>
 
                     {/* VIEW SWITCHER - Crítico para UX mobile */}
@@ -998,6 +976,29 @@ export const POSDesktop = () => {
                             {isScanningEnabled ? <ScanLine size={20} /> : <ScanLine size={20} opacity={0.5} />}
                             <span style={{ display: window.innerWidth > 768 ? 'inline' : 'none' }}>
                                 {isScanningEnabled ? 'Escáner ON' : 'Escáner OFF'}
+                            </span>
+                        </button>
+
+                        <button
+                            onClick={() => setIsAutoSyncEnabled(!isAutoSyncEnabled)}
+                            title={isAutoSyncEnabled ? "Desactivar sincronización automática" : "Activar sincronización automática"}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                background: isAutoSyncEnabled ? '#F6F4EF' : '#fee2e2',
+                                border: '1px solid #D1CDBF',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                color: isAutoSyncEnabled ? '#4F7A5A' : '#dc2626',
+                                fontWeight: '500',
+                                fontSize: '0.875rem'
+                            }}
+                        >
+                            <Smartphone size={20} />
+                            <span style={{ display: window.innerWidth > 768 ? 'inline' : 'none' }}>
+                                {isAutoSyncEnabled ? 'Sincronizar ON' : 'Sincronizar OFF'}
                             </span>
                         </button>
 
