@@ -86,7 +86,7 @@ const SLUG_MAP: Record<string, string> = {
 };
 
 
-const DEFAULT_FEATURES = PLAN_FEATURES['florecer']; // Permissive default during loading
+const DEFAULT_FEATURES = PLAN_FEATURES['completo']; // Permissive default during loading
 
 // ============================================
 // CONTEXT
