@@ -12,6 +12,7 @@ export type Product = {
     stock: number;
     min: number;
     tags: string[];
+    custom_filter_options?: string[];
     supplierId?: string;
     salesCount?: number;
     lastSaleDate?: string;
@@ -28,6 +29,23 @@ export type Category = {
 export type Brand = {
     id: string;
     name: string;
+};
+
+export type CustomFilterOption = {
+    id: string;
+    business_id: string;
+    custom_filter_id: string;
+    value: string;
+    created_at: string;
+};
+
+export type CustomFilter = {
+    id: string;
+    business_id: string;
+    name: string;
+    created_at: string;
+    updated_at: string;
+    options: CustomFilterOption[];
 };
 
 export type Customer = {

@@ -14,10 +14,13 @@ export const ProductsMobile = () => {
     const loadCategories = useStore((state) => state.loadCategories);
     const loadBrands = useStore((state) => state.loadBrands);
     const deleteProduct = useStore((state) => state.deleteProduct);
+    const customFilters = useStore((state) => state.customFilters);
+    const loadCustomFilters = useStore((state) => state.loadCustomFilters);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string>('Todos');
     const [activeBrand, setActiveBrand] = useState<string>('Todas');
+    const [activeCustomFilters, setActiveCustomFilters] = useState<Record<string, string[]>>({});
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Modal states
@@ -29,11 +32,12 @@ export const ProductsMobile = () => {
         loadProducts();
         loadCategories();
         loadBrands();
+        loadCustomFilters();
     }, []);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
-        await Promise.allSettled([loadProducts(), loadCategories(), loadBrands()]);
+        await Promise.allSettled([loadProducts(), loadCategories(), loadBrands(), loadCustomFilters()]);
         setIsRefreshing(false);
     };
 
@@ -66,9 +70,16 @@ export const ProductsMobile = () => {
                 (p.code || '').toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;  
             const matchesBrand = activeBrand === 'Todas' || (p.brand_id === activeBrand || (activeBrand === '' && !p.brand_id));
-            return matchesSearch && matchesCategory && matchesBrand;
+            
+            const matchesCustomFilters = Object.entries(activeCustomFilters).every(([, optionIds]) => {
+                if (!optionIds || optionIds.length === 0) return true;
+                const pOpts = (p as any).custom_filter_options || [];
+                return optionIds.some(optId => pOpts.includes(optId));
+            });
+
+            return matchesSearch && matchesCategory && matchesBrand && matchesCustomFilters;
         });
-    }, [products, searchTerm, activeCategory, activeBrand]);  
+    }, [products, searchTerm, activeCategory, activeBrand, activeCustomFilters]);  
 
     return (
         <div className="products-mobile-wrapper">
@@ -123,7 +134,38 @@ export const ProductsMobile = () => {
                             Sin Marca
                         </button>
                     </div>
-                </div>
+
+                    {/* Custom Filters Scroll Groups */}
+                    {(customFilters || []).map(cf => (
+                        <div key={cf.id} className="products-brands-scroll" style={{ marginTop: '8px' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#6B7280', padding: '0 4px', alignSelf: 'center' }}>{cf.name}:</span>
+                            <button
+                                className={`brand-pill ${(activeCustomFilters[cf.id] || []).length === 0 ? 'active' : ''}`}
+                                onClick={() => setActiveCustomFilters(prev => ({ ...prev, [cf.id]: [] }))}
+                            >
+                                Todos
+                            </button>
+                            {(cf.options || []).map(opt => {
+                                const activeOpts = activeCustomFilters[cf.id] || [];
+                                const isActive = activeOpts.includes(opt.id);
+                                return (
+                                    <button
+                                        key={opt.id}
+                                        className={`brand-pill ${isActive ? 'active' : ''}`}
+                                        onClick={() => {
+                                            const next = isActive 
+                                                ? activeOpts.filter(id => id !== opt.id)
+                                                : [...activeOpts, opt.id];
+                                            setActiveCustomFilters(prev => ({ ...prev, [cf.id]: next }));
+                                        }}
+                                    >
+                                        {opt.value}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ))}
+                    </div>
             </header>
 
             <div className="products-feed-list"> 

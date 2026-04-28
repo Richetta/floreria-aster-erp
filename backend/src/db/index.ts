@@ -35,6 +35,9 @@ export interface Database {
   subscription_usage_logs: SubscriptionUsageLogsTable;
   subscription_events: SubscriptionEventsTable;
   live_cart: LiveCartTable;
+  custom_filters: CustomFiltersTable;
+  custom_filter_options: CustomFilterOptionsTable;
+  product_custom_filter_values: ProductCustomFilterValuesTable;
 }
 
 // ============================================
@@ -401,6 +404,28 @@ interface LiveCartTable {
   user_id: string;
   cart_data: any;
   updated_at: Date;
+}
+
+interface CustomFiltersTable {
+  id: string;
+  business_id: string;
+  name: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+interface CustomFilterOptionsTable {
+  id: string;
+  business_id: string;
+  custom_filter_id: string;
+  value: string;
+  created_at: Date;
+}
+
+interface ProductCustomFilterValuesTable {
+  business_id: string;
+  product_id: string;
+  option_id: string;
 }
 
 // ============================================

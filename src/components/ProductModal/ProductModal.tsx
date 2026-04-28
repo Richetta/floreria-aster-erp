@@ -30,6 +30,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     const loadProducts = useStore((state: AppState) => state.loadProducts);
     const suppliers = useStore((state: AppState) => state.suppliers);
     const loadSuppliers = useStore((state: AppState) => state.loadSuppliers);
+    const customFilters = useStore((state: AppState) => state.customFilters);
+    const loadCustomFilters = useStore((state: AppState) => state.loadCustomFilters);
 
     const [formData, setFormData] = useState<any>({
         code: '',
@@ -42,7 +44,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         stock: 0,
         min: 5,
         supplierId: '',
-        tags: []
+        tags: [],
+        custom_filter_options: []
     });
 
     const [isAddingBrand, setIsAddingBrand] = useState(false);
@@ -60,6 +63,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         if (isOpen) {
             loadSuppliers();
             loadBrands();
+            loadCustomFilters();
             if (productToEdit) {
                 setFormData({
                     code: productToEdit.code || '',
@@ -72,7 +76,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     stock: productToEdit.stock || 0,
                     min: productToEdit.min || 5,
                     supplierId: productToEdit.supplierId || '',
-                    tags: productToEdit.tags || []
+                    tags: productToEdit.tags || [],
+                    custom_filter_options: productToEdit.custom_filter_options || []
                 });
             } else {
                 setFormData({
@@ -86,7 +91,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     stock: 0,
                     min: 5,
                     supplierId: '',
-                    tags: []
+                    tags: [],
+                    custom_filter_options: []
                 });
             }
         }
@@ -167,7 +173,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 price: validatedPrice!,
                 cost: validatedCost!,
                 stock: validatedStock!,
-                min: validatedMin!
+                min: validatedMin!,
+                custom_filter_options: formData.custom_filter_options
             });
         } else {
             const newProduct: Product = {
@@ -182,7 +189,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 cost: validatedCost!,
                 stock: validatedStock!,
                 min: validatedMin!,
-                tags: formData.tags || []
+                tags: formData.tags || [],
+                custom_filter_options: formData.custom_filter_options
             };
             await addProduct(newProduct);
         }
@@ -320,6 +328,38 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                 </div>
                             </div>
                         </div>
+
+                        {/* Custom Filters Fields */}
+                        {(customFilters || []).length > 0 && (
+                            <div className="grid grid-2 gap-4 mb-4" style={{ marginTop: '1rem' }}>
+                                {(customFilters || []).map(cf => (
+                                    <div key={cf.id} className="form-group">
+                                        <label className="form-label">{cf.name}</label>
+                                        <select
+                                            className="form-select"
+                                            value={(formData.custom_filter_options || []).find((optId: string) => 
+                                                (cf.options || []).some(o => o.id === optId)
+                                            ) || ''}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                const otherOpts = (formData.custom_filter_options || []).filter((optId: string) => 
+                                                    !(cf.options || []).some(o => o.id === optId)
+                                                );
+                                                setFormData({ 
+                                                    ...formData, 
+                                                    custom_filter_options: value ? [...otherOpts, value] : otherOpts 
+                                                });
+                                            }}
+                                        >
+                                            <option value="">Ninguno</option>
+                                            {(cf.options || []).map(opt => (
+                                                <option key={opt.id} value={opt.id}>{opt.value}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
                         <div className="grid grid-2 gap-4 mb-4">
                             <div className="form-group">

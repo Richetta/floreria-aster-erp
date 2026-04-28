@@ -80,7 +80,8 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     min_stock: z.number().int().positive().default(5),
     max_stock: z.number().int().positive().optional().nullable(),
     is_barcode: z.boolean().default(false),
-    tags: z.array(z.string()).default([])
+    tags: z.array(z.string()).default([]),
+    custom_filter_options: z.array(z.string().uuid()).optional()
   });
 
   // Update product schema (partial)
@@ -156,11 +157,24 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
         .limit(1000)
         .execute();
 
+      const filterValues = await trx
+        .selectFrom('product_custom_filter_values')
+        .selectAll()
+        .where('business_id', '=', user.business_id)
+        .execute();
+
+      const mappedProducts = results.map(p => ({
+        ...p,
+        custom_filter_options: filterValues
+          .filter(fv => fv.product_id === p.id)
+          .map(fv => fv.option_id)
+      }));
+
       if (low_stock === 'true') {
-        return results.filter(p => (p.stock_quantity || 0) <= (p.min_stock || 5));
+        return mappedProducts.filter(p => (Number(p.stock_quantity) || 0) <= (Number(p.min_stock) || 5));
       }
 
-      return results;
+      return mappedProducts;
     });
 
     return reply.send(products);
@@ -274,6 +288,16 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
             .execute();
         }
 
+        // Insert custom filter options if present
+        if (body.custom_filter_options && body.custom_filter_options.length > 0) {
+          const filterValuesToInsert = body.custom_filter_options.map(optionId => ({
+            business_id: user.business_id,
+            product_id: productId,
+            option_id: optionId
+          }));
+          await trx.insertInto('product_custom_filter_values').values(filterValuesToInsert).execute();
+        }
+
         return product;
       });
 
@@ -374,10 +398,33 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
             ? ((body.price - (currentProduct.cost)) / currentProduct.cost * 100)
             : null;
 
+        // Handle custom filter options
+        if (body.custom_filter_options !== undefined) {
+          // Delete old
+          await trx
+            .deleteFrom('product_custom_filter_values')
+            .where('business_id', '=', user.business_id)
+            .where('product_id', '=', id)
+            .execute();
+
+          // Insert new
+          if (body.custom_filter_options.length > 0) {
+            const filterValuesToInsert = body.custom_filter_options.map(optionId => ({
+              business_id: user.business_id,
+              product_id: id,
+              option_id: optionId
+            }));
+            await trx.insertInto('product_custom_filter_values').values(filterValuesToInsert).execute();
+          }
+        }
+
+        // Remove custom_filter_options from body to avoid DB error on products table
+        const { custom_filter_options, ...productData } = body;
+
         return await trx
           .updateTable('products')
           .set({
-            ...body,
+            ...productData,
             margin_percent: margin,
             updated_at: new Date()
           } as any)

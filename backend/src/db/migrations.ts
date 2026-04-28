@@ -107,6 +107,41 @@ export async function runEmergencyMigrations() {
       console.log('ℹ Table live_cart creation (error handled or already exists)');
     }
 
+    // 3.6. Ensure custom_filters tables exist
+    try {
+      await sql`
+        CREATE TABLE IF NOT EXISTS custom_filters (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+          name VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
+      `.execute(db);
+      
+      await sql`
+        CREATE TABLE IF NOT EXISTS custom_filter_options (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+          custom_filter_id UUID NOT NULL REFERENCES custom_filters(id) ON DELETE CASCADE,
+          value VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
+      `.execute(db);
+
+      await sql`
+        CREATE TABLE IF NOT EXISTS product_custom_filter_values (
+          business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+          product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+          option_id UUID NOT NULL REFERENCES custom_filter_options(id) ON DELETE CASCADE,
+          PRIMARY KEY (product_id, option_id)
+        )
+      `.execute(db);
+      console.log('✔ Custom filters tables verified/created');
+    } catch (err) {
+      console.log('ℹ Custom filters migration error handled');
+    }
+
     // 4. Ensure RLS (Row Level Security) is enabled and configured
     // This is CRITICAL for multi-tenant data isolation
     await sql`
@@ -124,7 +159,7 @@ export async function runEmergencyMigrations() {
       'users', 'categories', 'brands', 'customers', 'price_history', 'stock_movements',
       'stock_reservations', 'orders', 'packages', 'suppliers', 'package_components',
       'waste_logs', 'app_settings', 'transactions', 'user_activity', 'order_items',
-      'products', 'businesses', 'live_cart'
+      'products', 'businesses', 'live_cart', 'custom_filters', 'custom_filter_options', 'product_custom_filter_values'
     ];
 
     for (const table of tablesToEnableRls) {
@@ -151,6 +186,9 @@ export async function runEmergencyMigrations() {
       { table: 'categories', name: 'tenant_isolation_categories' },
       { table: 'users', name: 'tenant_isolation_users' },
       { table: 'live_cart', name: 'tenant_isolation_live_cart' },
+      { table: 'custom_filters', name: 'tenant_isolation_custom_filters' },
+      { table: 'custom_filter_options', name: 'tenant_isolation_custom_filter_options' },
+      { table: 'product_custom_filter_values', name: 'tenant_isolation_product_custom_filter_values' },
     ];
 
     for (const { table, name } of policyDefinitions) {

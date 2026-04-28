@@ -1,5 +1,5 @@
 import { type StateCreator } from 'zustand';
-import type { Product, Category, Brand } from './types';
+import type { Product, Category, Brand, CustomFilter } from './types';
 import type { AppState } from '../useStore';
 import { api } from '../../services/api';
 import { mapApiProductToFrontend, mapFrontendToApiProduct } from './mappers';
@@ -22,6 +22,11 @@ export interface ProductSlice {
     deleteCategory: (id: string, deleteProducts?: boolean) => Promise<void>;
     addBrand: (name: string) => Promise<Brand | null>;
     deleteBrand: (id: string) => Promise<void>;
+    
+    customFilters: CustomFilter[];
+    loadCustomFilters: () => Promise<void>;
+    addCustomFilter: (name: string) => Promise<void>;
+    addCustomFilterOption: (filterId: string, value: string) => Promise<void>;
 
     addTag: (tag: string) => void;
     removeTag: (tag: string) => void;
@@ -37,6 +42,7 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
     categoriesData: [],
     brands: [],
     tags: [],
+    customFilters: [],
 
     getPriceHistory: async (id: string) => {
         try {
@@ -76,6 +82,41 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
             set({ brands } as any);
         } catch (error: any) {
             console.error('Error loading brands:', error);
+        }
+    },
+
+    loadCustomFilters: async () => {
+        try {
+            const customFilters = await api.getCustomFilters();
+            set({ customFilters } as any);
+        } catch (error: any) {
+            console.error('Error loading custom filters:', error);
+        }
+    },
+
+    addCustomFilter: async (name) => {
+        try {
+            const newFilter = await api.createCustomFilter({ name });
+            set(state => ({
+                customFilters: [...state.customFilters, { ...newFilter, options: [] }]
+            }));
+            get().addNotification('Filtro creado', 'success');
+        } catch (error: any) {
+            get().addNotification(error.message || 'Error al crear filtro', 'error');
+        }
+    },
+
+    addCustomFilterOption: async (filterId, value) => {
+        try {
+            const newOption = await api.addFilterOption(filterId, { value });
+            set(state => ({
+                customFilters: state.customFilters.map(f =>
+                    f.id === filterId ? { ...f, options: [...f.options, newOption] } : f
+                )
+            }));
+            get().addNotification('Opción añadida', 'success');
+        } catch (error: any) {
+            get().addNotification('Error al añadir opción', 'error');
         }
     },
 

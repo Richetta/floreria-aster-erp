@@ -27,6 +27,23 @@ export type AuthResponse = {
   user: User;
 };
 
+export type CustomFilterOption = {
+  id: string;
+  business_id: string;
+  custom_filter_id: string;
+  value: string;
+  created_at: string;
+};
+
+export type CustomFilter = {
+  id: string;
+  business_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  options: CustomFilterOption[];
+};
+
 export type Product = {
   id: string;
   code: string;
@@ -46,6 +63,7 @@ export type Product = {
   is_barcode: boolean;
   supplier_id?: string;
   tags: string[];
+  custom_filter_options?: string[];
   created_at: string;
   updated_at: string;
 };
@@ -537,6 +555,28 @@ class ApiClient {
     return this.request<Category>(`/categories/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(category),
+    });
+  }
+
+  // ============================================
+  // CUSTOM FILTERS ENDPOINTS
+  // ============================================
+
+  async getCustomFilters(): Promise<CustomFilter[]> {
+    return this.request<CustomFilter[]>('/custom-filters');
+  }
+
+  async createCustomFilter(data: { name: string }): Promise<CustomFilter> {
+    return this.request<CustomFilter>('/custom-filters', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async addFilterOption(filterId: string, data: { value: string }): Promise<CustomFilterOption> {
+    return this.request<CustomFilterOption>(`/custom-filters/${filterId}/options`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   }
 

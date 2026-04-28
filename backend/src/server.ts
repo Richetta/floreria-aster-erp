@@ -156,6 +156,9 @@ await fastify.register(import('./routes/import-data.js'), { prefix: '/api/import
 console.log('Loading live-cart.js...');
 await fastify.register(import('./routes/live-cart.js'), { prefix: '/api/live-cart' });
 
+console.log('Loading custom-filters.js...');
+await fastify.register(import('./routes/custom-filters.js'), { prefix: '/api/custom-filters' });
+
 // EMERGENCY TEST ROUTE
 fastify.post('/api/import-data/direct-test', async () => ({ status: 'direct-ok' }));
 console.log('Loading cash-register.js...');

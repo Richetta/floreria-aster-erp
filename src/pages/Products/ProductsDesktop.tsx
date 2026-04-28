@@ -27,11 +27,13 @@ export const ProductsDesktop = () => {
     const products = useStore((state) => state.products);
     const categoriesData = useStore((state) => state.categoriesData);
     const brands = useStore((state) => state.brands);
+    const customFilters = useStore((state) => state.customFilters);
 
     const loadProducts = useStore((state) => state.loadProducts);
     const loadCategories = useStore((state) => state.loadCategories);
     const loadBrands = useStore((state) => state.loadBrands);
     const loadSuppliers = useStore((state) => state.loadSuppliers);
+    const loadCustomFilters = useStore((state) => state.loadCustomFilters);
 
     const addCategory = useStore((state) => state.addCategory);
     const renameCategory = useStore((state) => state.renameCategory);
@@ -49,7 +51,8 @@ export const ProductsDesktop = () => {
                     loadProducts(),
                     loadCategories(true), // Include hierarchy
                     loadBrands(),
-                    loadSuppliers()
+                    loadSuppliers(),
+                    loadCustomFilters()
                 ]);
             } catch (err) {
                 console.error("Error loading products data:", err);
@@ -65,6 +68,15 @@ export const ProductsDesktop = () => {
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
     const [activeCategories, setActiveCategories] = useState<string[]>([]);
     const [activeBrands, setActiveBrands] = useState<string[]>([]);
+    const [activeCustomFilters, setActiveCustomFilters] = useState<Record<string, string[]>>({});
+    const [openFilterDropdownId, setOpenFilterDropdownId] = useState<string | null>(null);
+    
+    // Custom filter creation state
+    const [isCreateFilterModalOpen, setIsCreateFilterModalOpen] = useState(false);
+    const [newFilterName, setNewFilterName] = useState('');
+    const [newOptionValue, setNewOptionValue] = useState('');
+    const addCustomFilter = useStore((state) => state.addCustomFilter);
+    const addCustomFilterOption = useStore((state) => state.addCustomFilterOption);
 
     // Modals visibility
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -129,7 +141,14 @@ export const ProductsDesktop = () => {
             const matchesBrand = activeBrands.length === 0 || (p.brand_id && activeBrands.includes(p.brand_id)) || (activeBrands.includes('Sin Marca') && isUnbranded);
             const matchesSearch = p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
                 (p.code || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-            return matchesCategory && matchesBrand && matchesSearch;
+
+            const matchesCustomFilters = Object.entries(activeCustomFilters).every(([, optionIds]) => {
+                if (!optionIds || optionIds.length === 0) return true;
+                const pOpts = (p as any).custom_filter_options || [];
+                return optionIds.some(optId => pOpts.includes(optId));
+            });
+
+            return matchesCategory && matchesBrand && matchesSearch && matchesCustomFilters;
         });
 
         result = [...result].sort((a, b) => {
@@ -144,7 +163,7 @@ export const ProductsDesktop = () => {
         });
 
         return result;
-    }, [products, activeCategories, activeBrands, debouncedSearchTerm, sortBy, sortOrder]);
+    }, [products, activeCategories, activeBrands, activeCustomFilters, debouncedSearchTerm, sortBy, sortOrder]);
 
     // Bulk selection helpers (must be after filteredProducts)
     const toggleSelectAll = () => {
@@ -496,6 +515,102 @@ export const ProductsDesktop = () => {
                                 )}
                             </div>
 
+                            {/* Custom Filters */}
+                            {(customFilters || []).map(cf => {
+                                const activeOpts = activeCustomFilters[cf.id] || [];
+                                const isOpen = openFilterDropdownId === cf.id;
+                                
+                                return (
+                                    <div key={cf.id} className="filter-dropdown-wrapper">
+                                        <button
+                                            className={`filter-dropdown-btn ${activeOpts.length > 0 ? 'active' : ''}`}
+                                            onClick={() => setOpenFilterDropdownId(isOpen ? null : cf.id)}
+                                        >
+                                            <Tag size={16} />
+                                            <span className="filter-label">
+                                                {activeOpts.length === 0 ? cf.name : `${cf.name} (${activeOpts.length})`}
+                                            </span>
+                                        </button>
+                                        {isOpen && (
+                                            <>
+                                                <div className="dropdown-overlay" onClick={() => setOpenFilterDropdownId(null)} />
+                                                <div className="filter-dropdown">
+                                                    <div className="filter-dropdown-header">
+                                                        <span>{cf.name}</span>
+                                                        <button
+                                                            className="clear-filter-btn"
+                                                            onClick={() => { 
+                                                                setActiveCustomFilters(prev => ({ ...prev, [cf.id]: [] })); 
+                                                                setOpenFilterDropdownId(null); 
+                                                            }}
+                                                        >
+                                                            Limpiar
+                                                        </button>
+                                                    </div>
+                                                    <div className="filter-dropdown-content">
+                                                        {(cf.options || []).map(opt => (
+                                                            <label key={opt.id} className="filter-option">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={activeOpts.includes(opt.id)}
+                                                                    onChange={(e) => {
+                                                                        const next = e.target.checked 
+                                                                            ? [...activeOpts, opt.id] 
+                                                                            : activeOpts.filter(o => o !== opt.id);
+                                                                        setActiveCustomFilters(prev => ({ ...prev, [cf.id]: next }));
+                                                                    }}
+                                                                />
+                                                                {activeOpts.includes(opt.id) ? (
+                                                                    <CheckSquare size={16} className="filter-checkbox checked" />
+                                                                ) : (
+                                                                    <Square size={16} className="filter-checkbox" />
+                                                                )}
+                                                                <span className="filter-option-text">{opt.value}</span>
+                                                            </label>
+                                                        ))}
+                                                        
+                                                        {/* Add Option */}
+                                                        <div style={{ padding: '0.5rem', borderTop: '1px solid #E5E7EB', display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                            <input 
+                                                                type="text" 
+                                                                placeholder="Nueva opción..."
+                                                                value={newOptionValue}
+                                                                onChange={(e) => setNewOptionValue(e.target.value)}
+                                                                style={{ padding: '0.25rem', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '0.875rem', width: '100%' }}
+                                                            />
+                                                            <button 
+                                                                onClick={async () => {
+                                                                    if (newOptionValue.trim()) {
+                                                                        await addCustomFilterOption(cf.id, newOptionValue.trim());
+                                                                        setNewOptionValue('');
+                                                                    }
+                                                                }}
+                                                                style={{ padding: '0.25rem 0.5rem', background: '#4F7A5A', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                                            >
+                                                                +
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })}
+
+                            {/* Add Custom Filter Button */}
+                            {(customFilters || []).length < 10 && (
+                                <button
+                                    className="filter-dropdown-btn"
+                                    onClick={() => setIsCreateFilterModalOpen(true)}
+                                    title="Agregar nuevo filtro"
+                                    style={{ borderStyle: 'dashed', borderColor: '#D1D5DB' }}
+                                >
+                                    <Plus size={16} />
+                                    <span className="filter-label">Filtro</span>
+                                </button>
+                            )}
+
                             {/* Sort Controls */}
                             <div className="sort-controls-wrapper">
                                 <select
@@ -781,7 +896,48 @@ export const ProductsDesktop = () => {
                 isOpen={showBulkEditModal}
                 onClose={() => { setShowBulkEditModal(false); clearSelection(); }}
             />
-
+            {/* Create Custom Filter Modal */}
+            {isCreateFilterModalOpen && (
+                <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div className="modal-container" style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', width: '100%', maxWidth: '400px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#111827' }}>Crear Filtro Personalizado</h3>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>Nombre del Filtro</label>
+                            <input 
+                                type="text" 
+                                value={newFilterName}
+                                onChange={(e) => setNewFilterName(e.target.value)}
+                                placeholder="Ej: Color, Tamaño, Temporada..."
+                                style={{ width: '100%', padding: '0.5rem', border: '1px solid #D1D5DB', borderRadius: '6px' }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                            <button 
+                                onClick={() => {
+                                    setIsCreateFilterModalOpen(false);
+                                    setNewFilterName('');
+                                }}
+                                style={{ padding: '0.5rem 1rem', background: '#F3F4F6', border: '1px solid #D1D5DB', borderRadius: '6px', cursor: 'pointer', color: '#374151' }}
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={async () => {
+                                    if (newFilterName.trim()) {
+                                        await addCustomFilter(newFilterName.trim());
+                                        setIsCreateFilterModalOpen(false);
+                                        setNewFilterName('');
+                                    }
+                                }}
+                                style={{ padding: '0.5rem 1rem', background: '#4F7A5A', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                disabled={!newFilterName.trim()}
+                            >
+                                Crear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div style={{ position: 'absolute', top: '-10000px', left: '-10000px', width: '100%' }}>
                 <PrintableCatalog
                     ref={printRef}
