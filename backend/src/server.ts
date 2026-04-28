@@ -153,6 +153,9 @@ await fastify.register(import('./routes/reports.js'), { prefix: '/api/reports' }
 console.log('Loading import-data.js...');
 await fastify.register(import('./routes/import-data.js'), { prefix: '/api/import-data' });
 
+console.log('Loading live-cart.js...');
+await fastify.register(import('./routes/live-cart.js'), { prefix: '/api/live-cart' });
+
 // EMERGENCY TEST ROUTE
 fastify.post('/api/import-data/direct-test', async () => ({ status: 'direct-ok' }));
 console.log('Loading cash-register.js...');

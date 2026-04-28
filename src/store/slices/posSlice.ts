@@ -6,6 +6,8 @@ import { logger } from '../../utils/logger';
 
 export interface PosSlice {
     cart: any[];
+    isAutoSyncEnabled: boolean;
+    cartLastUpdated: number;
     posOrderForm: {
         selectedCustomer: string;
         deliveryDate: string;
@@ -35,6 +37,10 @@ export interface PosSlice {
     updatePosOrderForm: (updates: any) => void;
     clearPosOrderForm: () => void;
     processSale: (sale: Sale) => Promise<boolean>;
+    
+    setIsAutoSyncEnabled: (enabled: boolean) => void;
+    syncCartWithServer: () => Promise<void>;
+    pushCartToServer: () => Promise<void>;
 }
 
 const initialPosOrderForm = {
@@ -60,43 +66,98 @@ const initialPosOrderForm = {
 
 export const createPosSlice: StateCreator<AppState, [], [], PosSlice> = (set, get) => ({
     cart: [],
+    isAutoSyncEnabled: localStorage.getItem('cart_auto_sync') === 'true',
+    cartLastUpdated: Date.now(),
     posOrderForm: initialPosOrderForm,
 
-    setCart: (cart) => set({ cart }),
+    setCart: (cart) => {
+        set({ cart, cartLastUpdated: Date.now() });
+        if (get().isAutoSyncEnabled) {
+            get().pushCartToServer();
+        }
+    },
     
     addToCart: (product) => {
         set(state => {
             const existing = state.cart.find(item => item.id === product.id);
             const qtyToAdd = (product as any).qty || 1;
-            if (existing) {
-                return {
-                    cart: state.cart.map(item =>
-                        item.id === product.id ? { ...item, qty: item.qty + qtyToAdd } : item
-                    )
-                };
-            }
-            return { cart: [...state.cart, { ...product, qty: qtyToAdd }] };
+            const newCart = existing
+                ? state.cart.map(item => item.id === product.id ? { ...item, qty: item.qty + qtyToAdd } : item)
+                : [...state.cart, { ...product, qty: qtyToAdd }];
+            return { cart: newCart, cartLastUpdated: Date.now() };
         });
+        if (get().isAutoSyncEnabled) {
+            get().pushCartToServer();
+        }
     },
 
     removeFromCart: (id) => {
-        set(state => ({
-            cart: state.cart.filter(item => item.id !== id)
-        }));
+        set(state => {
+            const newCart = state.cart.filter(item => item.id !== id);
+            return { cart: newCart, cartLastUpdated: Date.now() };
+        });
+        if (get().isAutoSyncEnabled) {
+            get().pushCartToServer();
+        }
     },
 
     updateCartQty: (id, delta) => {
-        set(state => ({
-            cart: state.cart.map(item => {
+        set(state => {
+            const newCart = state.cart.map(item => {
                 if (item.id === id) {
                     return { ...item, qty: Math.max(1, item.qty + delta) };
                 }
                 return item;
-            })
-        }));
+            });
+            return { cart: newCart, cartLastUpdated: Date.now() };
+        });
+        if (get().isAutoSyncEnabled) {
+            get().pushCartToServer();
+        }
     },
 
-    clearCart: () => set({ cart: [] }),
+    clearCart: () => {
+        set({ cart: [], cartLastUpdated: Date.now() });
+        if (get().isAutoSyncEnabled) {
+            get().pushCartToServer();
+        }
+    },
+
+    setIsAutoSyncEnabled: (enabled) => {
+        localStorage.setItem('cart_auto_sync', String(enabled));
+        set({ isAutoSyncEnabled: enabled });
+        if (enabled) {
+            get().syncCartWithServer();
+        }
+    },
+
+    pushCartToServer: async () => {
+        try {
+            const { cart } = get();
+            await api.updateLiveCart(cart);
+            set({ cartLastUpdated: Date.now() });
+        } catch (error) {
+            console.error('Error pushing cart to server:', error);
+        }
+    },
+
+    syncCartWithServer: async () => {
+        try {
+            const response = await api.getLiveCart();
+            if (response && response.cart_data) {
+                const serverCart = response.cart_data;
+                const localCart = get().cart;
+                
+                const isDifferent = JSON.stringify(serverCart) !== JSON.stringify(localCart);
+                
+                if (isDifferent) {
+                    set({ cart: serverCart, cartLastUpdated: Date.now() });
+                }
+            }
+        } catch (error) {
+            console.error('Error syncing cart from server:', error);
+        }
+    },
 
     updatePosOrderForm: (updates) => {
         set(state => ({
@@ -136,6 +197,12 @@ export const createPosSlice: StateCreator<AppState, [], [], PosSlice> = (set, ge
 
             get().addNotification('Venta procesada correctamente', 'success');
             logger.success('Venta procesada', { total: sale.total }, 'POS');
+            
+            // Si la venta fue exitosa, limpiamos el carrito en el servidor también
+            if (get().isAutoSyncEnabled) {
+                get().clearCart();
+            }
+            
             return true;
         } catch (error: any) {
             get().addNotification('Error al registrar la venta', 'error');

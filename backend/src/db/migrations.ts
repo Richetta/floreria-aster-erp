@@ -90,6 +90,23 @@ export async function runEmergencyMigrations() {
       console.log('ℹ Brands migration (already exists or error handled)');
     }
 
+    // 3.5. Ensure live_cart table exists
+    try {
+      await sql`
+        CREATE TABLE IF NOT EXISTS live_cart (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          cart_data JSONB NOT NULL DEFAULT '[]',
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          UNIQUE(business_id, user_id)
+        )
+      `.execute(db);
+      console.log('✔ Table live_cart verified/created');
+    } catch (err) {
+      console.log('ℹ Table live_cart creation (error handled or already exists)');
+    }
+
     // 4. Ensure RLS (Row Level Security) is enabled and configured
     // This is CRITICAL for multi-tenant data isolation
     await sql`
@@ -107,7 +124,7 @@ export async function runEmergencyMigrations() {
       'users', 'categories', 'brands', 'customers', 'price_history', 'stock_movements',
       'stock_reservations', 'orders', 'packages', 'suppliers', 'package_components',
       'waste_logs', 'app_settings', 'transactions', 'user_activity', 'order_items',
-      'products', 'businesses'
+      'products', 'businesses', 'live_cart'
     ];
 
     for (const table of tablesToEnableRls) {
@@ -133,6 +150,7 @@ export async function runEmergencyMigrations() {
       { table: 'order_items', name: 'tenant_isolation_order_items' },
       { table: 'categories', name: 'tenant_isolation_categories' },
       { table: 'users', name: 'tenant_isolation_users' },
+      { table: 'live_cart', name: 'tenant_isolation_live_cart' },
     ];
 
     for (const { table, name } of policyDefinitions) {

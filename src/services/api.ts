@@ -796,6 +796,21 @@ class ApiClient {
   }
 
   // ============================================
+  // LIVE CART ENDPOINTS
+  // ============================================
+
+  async getLiveCart(): Promise<{ cart_data: any[]; updated_at: string | null }> {
+    return this.request<{ cart_data: any[]; updated_at: string | null }>('/live-cart');
+  }
+
+  async updateLiveCart(cartData: any[]): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>('/live-cart', {
+      method: 'POST',
+      body: JSON.stringify({ cart_data: cartData }),
+    });
+  }
+
+  // ============================================
   // SUPPLIERS ENDPOINTS
   // ============================================
 

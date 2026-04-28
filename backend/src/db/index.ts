@@ -34,6 +34,7 @@ export interface Database {
   subscriptions: SubscriptionsTable;
   subscription_usage_logs: SubscriptionUsageLogsTable;
   subscription_events: SubscriptionEventsTable;
+  live_cart: LiveCartTable;
 }
 
 // ============================================
@@ -392,6 +393,14 @@ interface UserActivityTable {
   ip_address: string | null;
   user_agent: string | null;
   created_at: Date;
+}
+
+interface LiveCartTable {
+  id: string;
+  business_id: string;
+  user_id: string;
+  cart_data: any;
+  updated_at: Date;
 }
 
 // ============================================

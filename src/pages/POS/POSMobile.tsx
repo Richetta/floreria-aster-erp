@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { playBeep } from '../../utils/audio';
@@ -21,6 +21,10 @@ export const POSMobile = () => {
     const updateCartQty = useStore((state) => state.updateCartQty);
     const clearCart = useStore((state) => state.clearCart);
     const processSale = useStore((state) => state.processSale);
+    
+    const isAutoSyncEnabled = useStore((state) => state.isAutoSyncEnabled);
+    const setIsAutoSyncEnabled = useStore((state) => state.setIsAutoSyncEnabled);
+    const syncCartWithServer = useStore((state) => state.syncCartWithServer);
     const addOrder = useStore((state) => state.addOrder);
     const addTransaction = useStore((state) => state.addTransaction);
 
@@ -118,6 +122,17 @@ export const POSMobile = () => {
     };
 
     useBarcodeScanner({ onScan: handleBarcodeScan, isActive: !isCameraScannerOpen && !isCartOpen });
+
+    // Polling para sincronización del carrito
+    useEffect(() => {
+        if (!isAutoSyncEnabled) return;
+
+        const interval = setInterval(() => {
+            syncCartWithServer();
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [isAutoSyncEnabled, syncCartWithServer]);
 
     // --- Handlers ---
 
@@ -249,6 +264,29 @@ export const POSMobile = () => {
                 >
                     <span className="material-symbols-rounded">calendar_today</span>
                     Pedidos
+                </button>
+            </div>
+
+            {/* Sync Controls */}
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '0.5rem 1rem', background: '#fff', borderBottom: '1px solid #e2e8f0', justifyContent: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', background: isAutoSyncEnabled ? '#e0f2fe' : '#f1f5f9', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.875rem', border: isAutoSyncEnabled ? '1px solid #7dd3fc' : '1px solid #cbd5e1', transition: 'all 0.3s' }}>
+                    <input 
+                        type="checkbox" 
+                        checked={isAutoSyncEnabled} 
+                        onChange={(e) => setIsAutoSyncEnabled(e.target.checked)}
+                        style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ color: isAutoSyncEnabled ? '#0369a1' : '#475569', fontWeight: 500 }}>
+                        {isAutoSyncEnabled ? '📡 Sincronización Activa' : 'Sincronización en Vivo'}
+                    </span>
+                </label>
+                <button 
+                    onClick={() => syncCartWithServer()}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#64748b', cursor: 'pointer', fontSize: '0.875rem', padding: '0.25rem 0.5rem', borderRadius: '6px' }}
+                    title="Sincronizar ahora"
+                >
+                    <span className="material-symbols-rounded" style={{ fontSize: '18px' }}>sync</span>
+                    <span>Sincronizar</span>
                 </button>
             </div>
 
