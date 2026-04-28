@@ -24,6 +24,14 @@ export const mapApiProductToFrontend = (apiProduct: ApiProduct, categoriesData: 
     lastSaleDate: (apiProduct as any).last_sale_date || undefined,
 });
 
+const parseNumber = (val: any, fallback = 0): number => {
+    if (val === undefined || val === null) return fallback;
+    if (typeof val === 'number') return isNaN(val) || !isFinite(val) ? fallback : val;
+    const str = String(val).replace(',', '.').trim();
+    const num = Number(str);
+    return isNaN(num) || !isFinite(num) ? fallback : num;
+};
+
 // Map Frontend Product to API Product
 export const mapFrontendToApiProduct = (product: Partial<Product>, categoriesData: Category[]) => {
     let categoryId = product.category_id;
@@ -36,10 +44,10 @@ export const mapFrontendToApiProduct = (product: Partial<Product>, categoriesDat
         code: product.code,
         barcode: product.barcode,
         name: product.name,
-        cost: Number(product.cost || 0),
-        price: Number(product.price || 0),
-        min_stock: Number(product.min || 5),
-        stock_quantity: Number(product.stock || 0),
+        cost: parseNumber(product.cost, 0),
+        price: parseNumber(product.price, 0),
+        min_stock: parseNumber(product.min, 5),
+        stock_quantity: parseNumber(product.stock, 0),
         tags: product.tags || [],
         is_barcode: false,
         is_active: true,

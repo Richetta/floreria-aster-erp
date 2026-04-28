@@ -234,7 +234,7 @@ class ApiClient {
       ...options.headers,
     };
 
-    if (!(options.body instanceof FormData)) {
+    if (options.body && !(options.body instanceof FormData)) {
       (headers as any)['Content-Type'] = 'application/json';
     }
 
