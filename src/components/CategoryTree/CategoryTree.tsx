@@ -25,9 +25,26 @@ const CategoryItem: React.FC<{
     isFirst?: boolean;
     isLast?: boolean;
 }> = ({ category, level, activeCategory, onSelect, onAddSub, onRename, onDelete, onMoveUp, onMoveDown, isFirst, isLast }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
+    const hasActiveChild = React.useMemo(() => {
+        const checkActive = (cat: Category): boolean => {
+            if (cat.name === activeCategory) return true;
+            if (cat.children) {
+                return cat.children.some(c => checkActive(c));
+            }
+            return false;
+        };
+        return category.children?.some(c => checkActive(c)) || false;
+    }, [category, activeCategory]);
+
+    const [isExpanded, setIsExpanded] = useState(hasActiveChild || activeCategory === category.name);
     const hasChildren = category.children && category.children.length > 0;
     const isActive = activeCategory === category.name;
+
+    React.useEffect(() => {
+        if (hasActiveChild || isActive) {
+            setIsExpanded(true);
+        }
+    }, [hasActiveChild, isActive]);
 
     return (
         <div className="category-tree-item-container">

@@ -10,6 +10,7 @@ import { useStore } from '../../store/useStore';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './CsvImportModal.css';
+import { TreeSelect } from '../TreeSelect/TreeSelect';
 
 interface CsvImportModalProps {
     isOpen: boolean;
@@ -90,6 +91,7 @@ const parseDataIntoRows = (rawData: any[]): ParsedRow[] => {
 
 const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const categories = useStore(state => state.categories) || [];
+    const categoriesData = useStore(state => state.categoriesData) || [];
     const brands = useStore(state => state.brands) || [];
 
     const [step, setStep] = useState(1);
@@ -700,14 +702,13 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                 <span className="csv-bulk-label">Acciones masivas:</span>
 
                                 <div className="csv-bulk-group">
-                                    <select
-                                        className="csv-bulk-select"
+                                    <TreeSelect
+                                        categories={categoriesData}
                                         value={bulkCategory}
-                                        onChange={e => setBulkCategory(e.target.value)}
-                                    >
-                                        <option value="">Categoría...</option>
-                                        {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
+                                        onChange={(cat) => setBulkCategory(cat ? cat.name : '')}
+                                        placeholder="Categoría..."
+                                        className="csv-bulk-select-tree"
+                                    />
                                     <button
                                         className="csv-bulk-apply-btn"
                                         onClick={applyBulkCategory}

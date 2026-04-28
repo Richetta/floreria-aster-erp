@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, AlertCircle, TrendingUp, Plus, Check, Package, Truck, DollarSign, Edit2, Barcode } from 'lucide-react';
 import { useStore, type AppState } from '../../store/useStore';
-import type { Product, Category } from '../../store/slices/types';
+import type { Product } from '../../store/slices/types';
 import { generateIdWithPrefix, generateProductCode } from '../../utils/idGenerator';
 import { validatePrice, validateQuantity, clamp } from '../../utils/format';
 import './ProductModal.css';
+import { TreeSelect } from '../TreeSelect/TreeSelect';
 
 import { CameraScanner } from '../CameraScanner/CameraScanner';
 
@@ -249,27 +250,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                         <div className="grid grid-2 gap-4 mb-4">
                             <div className="form-group">
                                 <label className="form-label">Carpeta / Categoría *</label>
-                                <select
-                                    className="form-select"
+                                <TreeSelect
+                                    categories={categoriesData || []}
                                     value={formData.category}
-                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                    required
-                                >
-                                    <option value="">Seleccionar categoría...</option>
-                                    {(categoriesData || []).map(cat => {
-                                        // Recursive function to get full path for display
-                                        const getPath = (c: Category, all: Category[]): string => {
-                                            if (!c.parent_id) return c.name;
-                                            const parent = all.find(p => p.id === c.parent_id);
-                                            return parent ? `${getPath(parent, all)} > ${c.name}` : c.name;
-                                        };
-                                        return (
-                                            <option key={cat.id} value={cat.name}>
-                                                {getPath(cat, categoriesData)}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
+                                    onChange={(cat) => setFormData({ ...formData, category: cat ? cat.name : '' })}
+                                    placeholder="Seleccionar carpeta..."
+                                />
                             </div>
 
                             <div className="form-group">

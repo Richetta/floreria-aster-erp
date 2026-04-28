@@ -745,6 +745,10 @@
     transition: all 0.2s ease;
 }
 
+.csv-bulk-select-tree {
+    min-width: 160px;
+}
+
 .csv-bulk-select:focus {
     outline: none;
     border-color: #4F7A5A;

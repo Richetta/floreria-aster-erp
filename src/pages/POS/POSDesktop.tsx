@@ -25,9 +25,7 @@ import {
     UserPlus,
     Plus,
     Minus,
-    Package,
     ScanLine,
-    ChevronRight,
     Landmark,
     Smartphone,
     Coins,
@@ -53,6 +51,7 @@ import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import { api } from '../../services/api';
 import './POS.css';
 import './POS.mobile.css';
+import { TreeSelect } from '../../components/TreeSelect/TreeSelect';
 
 type ProductView = 'recent' | 'top' | 'all' | 'packages';
 
@@ -136,7 +135,6 @@ export const POSDesktop = () => {
     const [activeTags, setActiveTags] = useState<string[]>([]);
     const [stockFilter, setStockFilter] = useState<'all' | 'in' | 'out' | 'low'>('all');
     const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
-    const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
     const [productView, setProductView] = useState<ProductView>('all');
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
@@ -770,12 +768,7 @@ export const POSDesktop = () => {
         return result;
     }, [products, searchTerm, activeCategories, activeBrands, activeTags, productView, stockFilter, activeFolderId, activeFolderDescendants]);
 
-    const toggleFolder = (folderId: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setExpandedFolders(prev => 
-            prev.includes(folderId) ? prev.filter(id => id !== folderId) : [...prev, folderId]
-        );
-    };
+
 
     const getViewTitle = () => {
         if (productView === 'recent') return 'Recientes';
@@ -835,7 +828,6 @@ export const POSDesktop = () => {
         setActiveTags([]);
         setStockFilter('all');
         setActiveFolderId(null);
-        setExpandedFolders([]);
     };
 
     return (
@@ -1094,64 +1086,18 @@ export const POSDesktop = () => {
                             </div>
 
                             {/* Folders Dropdown */}
-                            <div className="filter-dropdown-wrapper">
-                                <button 
-                                    className={`dropdown-trigger ${activeFolderId ? 'active' : ''}`}
-                                    onClick={() => toggleDropdown('category')}
-                                >
-                                    <Package size={16} />
-                                    <span>{activeFolderId ? categoriesData.find(c => c.id === activeFolderId)?.name : 'Categoría'}</span>
-                                    <ChevronDown size={14} className={activeDropdown === 'category' ? 'rotate-180' : ''} />
-                                </button>
-                                <div className={`dropdown-menu-premium ${activeDropdown === 'category' ? 'show' : ''}`} style={{ width: '280px' }}>
-                                    <button className={`menu-item-premium ${!activeFolderId ? 'active' : ''}`} onClick={() => { setActiveFolderId(null); setActiveDropdown(null); }}>
-                                        <span>Todas</span>
-                                        <Check size={16} className="check-icon" />
-                                    </button>
-                                    <div className="folder-scroller" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                        {categoriesData.filter(c => !c.parent_id).map(folder => {
-                                            const isExpanded = expandedFolders.includes(folder.id);
-                                            const hasChildren = folder.children && folder.children.length > 0;
-                                            return (
-                                                <div key={folder.id}>
-                                                    <div className="flex items-center">
-                                                        {hasChildren ? (
-                                                            <button 
-                                                                className="mr-2 text-muted hover:text-primary transition-colors"
-                                                                onClick={(e) => toggleFolder(folder.id, e)}
-                                                            >
-                                                                {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                                                            </button>
-                                                        ) : (
-                                                            <div style={{ width: '1.6rem' }}></div>
-                                                        )}
-                                                        <button 
-                                                            className={`menu-item-premium flex-1 ${activeFolderId === folder.id ? 'active' : ''}`} 
-                                                            onClick={() => { setActiveFolderId(folder.id); setActiveDropdown(null); }}
-                                                        >
-                                                            <span style={{ fontWeight: 700 }}>{folder.name}</span>
-                                                            <Check size={16} className="check-icon" />
-                                                        </button>
-                                                    </div>
-                                                    
-                                                    {isExpanded && folder.children?.map(sub => (
-                                                        <div key={sub.id} className="flex items-center ml-6 mt-1">
-                                                            <div style={{ width: '1rem', borderLeft: '2px solid #EAE5D9', height: '1.5rem', marginRight: '0.5rem', borderBottom: '2px solid #EAE5D9' }}></div>
-                                                            <button 
-                                                                className={`menu-item-premium flex-1 ${activeFolderId === sub.id ? 'active' : ''}`} 
-                                                                onClick={() => { setActiveFolderId(sub.id); setActiveDropdown(null); }}
-                                                                style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
-                                                            >
-                                                                <span>{sub.name}</span>
-                                                                <Check size={14} className="check-icon" />
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
+                            <div className="filter-dropdown-wrapper" style={{ minWidth: '200px' }}>
+                                <TreeSelect
+                                    categories={categoriesData || []}
+                                    value={activeFolderId || undefined}
+                                    onChange={(cat) => {
+                                        setActiveFolderId(cat ? cat.id : null);
+                                        setActiveDropdown(null);
+                                    }}
+                                    placeholder="Carpeta"
+                                    allowClear={true}
+                                    clearLabel="Todas"
+                                />
                             </div>
 
                             {/* Brand Dropdown */}
