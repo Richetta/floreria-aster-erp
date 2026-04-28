@@ -392,11 +392,9 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
             .execute();
         }
 
-        const margin = body.cost
-          ? ((body.price ?? currentProduct.price) - body.cost) / body.cost * 100
-          : body.price
-            ? ((body.price - (currentProduct.cost)) / currentProduct.cost * 100)
-            : null;
+        const margin = (body.cost !== undefined ? body.cost : Number(currentProduct.cost)) > 0
+          ? (((body.price !== undefined ? body.price : Number(currentProduct.price)) - (body.cost !== undefined ? body.cost : Number(currentProduct.cost))) / (body.cost !== undefined ? body.cost : Number(currentProduct.cost)) * 100)
+          : null;
 
         // Handle custom filter options
         if (body.custom_filter_options !== undefined) {

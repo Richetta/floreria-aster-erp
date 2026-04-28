@@ -133,12 +133,51 @@ export const ProductsDesktop = () => {
     // Custom modal hook
     const { alertModal, confirmModal, showConfirm } = useModal();
 
+    // Helper to get all sub-categories recursively
+    const getAllSubCategoryNames = (catName: string): string[] => {
+        const result: string[] = [];
+        const findAndAddChildren = (list: Category[]) => {
+            for (const c of list) {
+                if (c.name.toLowerCase() === catName.toLowerCase()) {
+                    const addDescendants = (children: Category[]) => {
+                        for (const child of children) {
+                            result.push(child.name);
+                            if (child.children && child.children.length > 0) {
+                                addDescendants(child.children);
+                            }
+                        }
+                    };
+                    if (c.children && c.children.length > 0) {
+                        addDescendants(c.children);
+                    }
+                    return true;
+                }
+                if (c.children && c.children.length > 0) {
+                    if (findAndAddChildren(c.children)) return true;
+                }
+            }
+            return false;
+        };
+        findAndAddChildren(categoriesData);
+        return result;
+    };
+
+    const allActiveCategoriesWithSubs = useMemo(() => {
+        const allSet = new Set<string>();
+        for (const catName of activeCategories) {
+            allSet.add(catName);
+            const subs = getAllSubCategoryNames(catName);
+            subs.forEach(s => allSet.add(s));
+        }
+        return Array.from(allSet);
+    }, [activeCategories, categoriesData]);
+
     // Filtered Products
     const filteredProducts = useMemo(() => {
         if (!products) return [];
         let result = products.filter(p => {
             const isUncategorized = !p.category || p.category === '' || p.category === 'Sin Categoría';
-            const matchesCategory = activeCategories.length === 0 || activeCategories.includes(p.category) || (activeCategories.includes('Sin Categoría') && isUncategorized);
+            const matchesCategory = allActiveCategoriesWithSubs.length === 0 || allActiveCategoriesWithSubs.includes(p.category) || (allActiveCategoriesWithSubs.includes('Sin Categoría') && isUncategorized);
             const isUnbranded = !p.brand_id || p.brand_id === '';
             const matchesBrand = activeBrands.length === 0 || (p.brand_id && activeBrands.includes(p.brand_id)) || (activeBrands.includes('Sin Marca') && isUnbranded);
             const matchesSearch = p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||

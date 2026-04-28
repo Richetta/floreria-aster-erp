@@ -62,7 +62,7 @@ interface SubscriptionContextType extends SubscriptionState {
 
 const PLAN_FEATURES: Record<string, SubscriptionState['features']> = {
   gratis: {
-    reports: false, cashRegister: false, waste: false, barcode: false,
+    reports: false, cashRegister: false, waste: false, barcode: true,
     calendar: false, logistics: false, reminders: false, exportCsv: false,
     importProducts: false, ocr: false, packages: false, purchases: false,
     restock: false, stockMovements: false, crmFull: false,
