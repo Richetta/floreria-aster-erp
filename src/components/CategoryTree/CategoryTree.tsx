@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronDown, Folder, Plus, Edit2, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { ChevronRight, Folder, Plus, Edit2, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import type { Category } from '../../store/slices/types';
 import './CategoryTree.css';
 
@@ -54,24 +54,30 @@ const CategoryItem: React.FC<{
                 onClick={() => onSelect(category.name)}
             >
                 <div className="flex items-center gap-2 flex-1 overflow-hidden">
-                    {hasChildren ? (
-                        <button
-                            className="expand-btn"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsExpanded(!isExpanded);
-                            }}
-                        >
-                            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        </button>
-                    ) : (
-                        <span className="expand-placeholder" />
-                    )}
                     <Folder size={16} className={isActive ? 'text-primary' : 'text-muted'} />
                     <span className="category-name text-truncate">{category.name}</span>
                 </div>
 
                 <div className="category-actions">
+                    {hasChildren && (
+                        <button
+                            className={`action-btn expand-btn-right ${isExpanded ? 'expanded' : ''}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsExpanded(!isExpanded);
+                            }}
+                            title={isExpanded ? "Contraer carpeta" : "Expandir carpeta"}
+                            style={{
+                                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <ChevronRight size={14} />
+                        </button>
+                    )}
                     {onMoveUp && !isFirst && (
                         <button className="action-btn" onClick={(e) => { e.stopPropagation(); onMoveUp(category); }} title="Mover arriba en la lista">
                             <ArrowUp size={14} />

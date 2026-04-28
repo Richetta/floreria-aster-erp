@@ -807,13 +807,13 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                                         onChange={e => updateRow(row._id, 'name', e.target.value)}
                                                     />
                                                 </td>
-                                                <td className="csv-cell csv-category-cell">
-                                                    <input
-                                                        className="csv-cell-input"
+                                                <td className="csv-cell csv-category-cell" style={{ overflow: 'visible' }}>
+                                                    <TreeSelect
+                                                        categories={categoriesData}
                                                         value={row.category}
+                                                        onChange={(cat) => updateRow(row._id, 'category', cat ? cat.name : '')}
                                                         placeholder="Sin categoría"
-                                                        onChange={e => updateRow(row._id, 'category', e.target.value)}
-                                                        list="csv-categories-list"
+                                                        usePortal={true}
                                                     />
                                                 </td>
                                                 <td className="csv-cell csv-brand-cell">

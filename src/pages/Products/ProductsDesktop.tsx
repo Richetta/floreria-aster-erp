@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
     Plus, Search, Upload, FileDown, Folder, Tag, Grid3x3, List,
     MoreVertical, Edit2, Barcode, Trash2, Settings, X, CheckSquare,
-    Square, TrendingUp, Package, DollarSign, AlertTriangle, Check
+    Square, TrendingUp, Package, DollarSign, AlertTriangle, Check,
+    ChevronRight, ChevronDown
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { useStore } from '../../store/useStore';
@@ -70,6 +71,7 @@ export const ProductsDesktop = () => {
     const [activeBrands, setActiveBrands] = useState<string[]>([]);
     const [activeCustomFilters, setActiveCustomFilters] = useState<Record<string, string[]>>({});
     const [openFilterDropdownId, setOpenFilterDropdownId] = useState<string | null>(null);
+    const [expandedCategoryIds, setExpandedCategoryIds] = useState<string[]>([]);
     
     // Custom filter creation state
     const [isCreateFilterModalOpen, setIsCreateFilterModalOpen] = useState(false);
@@ -239,30 +241,78 @@ export const ProductsDesktop = () => {
         }
     };
 
-    // Render category options with hierarchy indentation
     const renderCategoryOptions = (categories: typeof categoriesData, level: number): React.ReactNode => {
-        return categories.map(cat => (
-            <React.Fragment key={cat.id}>
-                <label className="filter-option category-option" style={{ '--indent-level': level } as React.CSSProperties}>
-                    <input
-                        type="checkbox"
-                        checked={activeCategories.includes(cat.name)}
-                        onChange={(e) => {
-                            if (e.target.checked) setActiveCategories([...activeCategories, cat.name]);
-                            else setActiveCategories(activeCategories.filter(a => a !== cat.name));
-                        }}
-                    />
-                    {activeCategories.includes(cat.name) ? (
-                        <CheckSquare size={16} className="filter-checkbox checked" />
-                    ) : (
-                        <Square size={16} className="filter-checkbox" />
-                    )}
-                    {level > 0 && <span className="category-indent">└ </span>}
-                    <span className="filter-option-text">{cat.name}</span>
-                </label>
-                {cat.children && cat.children.length > 0 && renderCategoryOptions(cat.children, level + 1)}
-            </React.Fragment>
-        ));
+        return categories.map(cat => {
+            const hasChildren = cat.children && cat.children.length > 0;
+            const isExpanded = expandedCategoryIds.includes(cat.id);
+            
+            return (
+                <React.Fragment key={cat.id}>
+                    <div className="flex items-center w-full" style={{ paddingLeft: `${level * 12}px`, marginBottom: '2px' }}>
+                        {hasChildren ? (
+                            <button
+                                type="button"
+                                className="category-filter-toggle"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setExpandedCategoryIds(prev => 
+                                        prev.includes(cat.id) ? prev.filter(id => id !== cat.id) : [...prev, cat.id]
+                                    );
+                                }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '6px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#6B7280',
+                                    borderRadius: '6px',
+                                    transition: 'all 0.2s',
+                                    marginRight: '2px'
+                                }}
+                            >
+                                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            </button>
+                        ) : (
+                            <span style={{ width: '26px' }} />
+                        )}
+                        <label 
+                            className="filter-option flex-1" 
+                            style={{ 
+                                margin: 0, 
+                                padding: '0.5rem 0.75rem', 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s'
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={activeCategories.includes(cat.name)}
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                    if (e.target.checked) setActiveCategories([...activeCategories, cat.name]);
+                                    else setActiveCategories(activeCategories.filter(a => a !== cat.name));
+                                }}
+                            />
+                            {activeCategories.includes(cat.name) ? (
+                                <CheckSquare size={16} className="filter-checkbox checked" style={{ color: '#4F7A5A' }} />
+                            ) : (
+                                <Square size={16} className="filter-checkbox" style={{ color: '#9CA3AF' }} />
+                            )}
+                            <span className="filter-option-text" style={{ fontSize: '0.9rem', color: '#374151', fontWeight: 500 }}>{cat.name}</span>
+                        </label>
+                    </div>
+                    {hasChildren && isExpanded && renderCategoryOptions(cat.children || [], level + 1)}
+                </React.Fragment>
+            );
+        });
     };
 
     return (

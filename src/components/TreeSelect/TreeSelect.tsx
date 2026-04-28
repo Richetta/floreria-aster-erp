@@ -12,6 +12,7 @@ interface TreeSelectProps {
     className?: string;
     allowClear?: boolean;
     clearLabel?: string;
+    usePortal?: boolean;
 }
 
 interface TreeNodeProps {
@@ -81,7 +82,8 @@ export const TreeSelect: React.FC<TreeSelectProps> = ({
     disabled = false,
     className = '',
     allowClear = false,
-    clearLabel = 'Todas'
+    clearLabel = 'Todas',
+    usePortal = false
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -99,6 +101,23 @@ export const TreeSelect: React.FC<TreeSelectProps> = ({
     };
 
     const selectedCategory = value ? findCategory(categories) : null;
+    const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+    const triggerRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        if (isOpen && usePortal && triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setDropdownStyle({
+                position: 'fixed',
+                top: `${rect.bottom + 4}px`,
+                left: `${rect.left}px`,
+                width: `${rect.width}px`,
+                zIndex: 10000
+            });
+        } else {
+            setDropdownStyle({});
+        }
+    }, [isOpen, usePortal]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -107,9 +126,20 @@ export const TreeSelect: React.FC<TreeSelectProps> = ({
             }
         };
 
+        const handleScroll = () => {
+            if (isOpen && usePortal) {
+                setIsOpen(false);
+            }
+        };
+
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        window.addEventListener('scroll', handleScroll, true); // capture phase
+        
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('scroll', handleScroll, true);
+        };
+    }, [isOpen, usePortal]);
 
     const handleSelect = (category: Category) => {
         onChange(category);
@@ -120,6 +150,7 @@ export const TreeSelect: React.FC<TreeSelectProps> = ({
         <div className={`tree-select-container ${className}`} ref={dropdownRef}>
             <button
                 type="button"
+                ref={triggerRef}
                 className={`tree-select-trigger ${disabled ? 'disabled' : ''} ${isOpen ? 'active' : ''}`}
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
@@ -132,7 +163,7 @@ export const TreeSelect: React.FC<TreeSelectProps> = ({
             </button>
 
             {isOpen && (
-                <div className="tree-select-dropdown">
+                <div className="tree-select-dropdown" style={dropdownStyle}>
                     {categories.length === 0 ? (
                         <div className="tree-select-empty">No hay carpetas disponibles</div>
                     ) : (
