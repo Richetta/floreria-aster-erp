@@ -17,6 +17,21 @@ import { sql } from 'kysely';
 import { randomUUID } from 'crypto';
 
 export const importRoutes: FastifyPluginAsync = async (fastify) => {
+  const extractValue = (val: any): string => {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+    if (val instanceof Date) return val.toISOString();
+    if (typeof val === 'object') {
+      if (val.result !== undefined) return extractValue(val.result);
+      if (val.text !== undefined) return extractValue(val.text);
+      if (val.richText && Array.isArray(val.richText)) {
+        return val.richText.map((t: any) => t.text || '').join('');
+      }
+    }
+    return String(val);
+  };
+
   // Debug endpoint
   fastify.get('/debug', {
     preHandler: [async (request, reply) => {
@@ -374,18 +389,19 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
               headers.brand = findHeaderIndex(values, ['marca', 'brand', 'fabr']);
               return;
             }
-            const code = String(values[headers.code] || values[1] || '').trim();
+            const rawCode = extractValue(values[headers.code] || values[1]);
+            const code = rawCode.trim();
             if (!code || code === 'undefined' || code === 'null') return;
 
             parsedData.push({
               code,
-              name: values[headers.name] || values[2] || 'Producto sin nombre',
+              name: extractValue(values[headers.name] || values[2]) || 'Producto sin nombre',
               price: cleanPrice(values[headers.price]),
               cost: cleanPrice(values[headers.cost]),
               stock: cleanPrice(values[headers.stock]),
-              category: values[headers.category] || '',
-              subcategory: values[headers.subcategory] || '',
-              brand: values[headers.brand] || ''
+              category: extractValue(values[headers.category]) || '',
+              subcategory: extractValue(values[headers.subcategory]) || '',
+              brand: extractValue(values[headers.brand]) || ''
             });
           });
         }
