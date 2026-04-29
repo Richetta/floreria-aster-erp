@@ -117,6 +117,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
           stock: z.number().int().nonnegative().optional(),
           category_id: z.string().uuid().optional(),
           category_name: z.string().optional(),
+          subcategory_name: z.string().optional(),
           brand_id: z.string().uuid().optional(),
           brand_name: z.string().optional(),
           margin_percent: z.number().nonnegative().optional()
@@ -151,27 +152,82 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
         const categoryNames = [...new Set(body.data.map(r => r.category_name).filter(Boolean) as string[])];
         const brandNames = [...new Set(body.data.map(r => r.brand_name).filter(Boolean) as string[])];
 
-        // Resolve or create categories
-        const categoryMap = new Map<string, string>();
-        for (const name of categoryNames) {
-           const lower = name.toLowerCase().trim();
-           let cat = await trx.selectFrom('categories')
-             .where('business_id', '=', businessId)
-             .where('name', 'ilike', name.trim())
-             .select(['id'])
-             .executeTakeFirst();
-           
-           if (!cat) {
-             const newId = randomUUID();
-             await trx.insertInto('categories').values({
-               id: newId,
-               business_id: businessId,
-               name: name.trim(),
-               is_active: true
-             } as any).execute();
-             cat = { id: newId };
-           }
-           categoryMap.set(lower, cat.id as string);
+        const parentCategoryNames = [...new Set(body.data.map(r => r.category_name).filter(Boolean) as string[])];
+        
+        // Resolve or create parent categories
+        const categoryMap = new Map<string, string>(); // name -> id
+        
+        // Fetch ALL active categories for this business to check for global uniqueness
+        const allCategories = await trx.selectFrom('categories')
+          .where('business_id', '=', businessId)
+          .where('is_active', '=', true)
+          .select(['id', 'name', 'parent_id'])
+          .execute();
+          
+        const globalCategoryMap = new Map<string, any>(); // lower_name -> category
+        for (const cat of allCategories) {
+          globalCategoryMap.set(cat.name.toLowerCase().trim(), cat);
+        }
+
+        // Resolve or create Parents
+        for (const name of parentCategoryNames) {
+          const lower = name.toLowerCase().trim();
+          let catId = '';
+          
+          if (globalCategoryMap.has(lower)) {
+            catId = globalCategoryMap.get(lower).id;
+          } else {
+            const newId = randomUUID();
+            await trx.insertInto('categories').values({
+              id: newId,
+              business_id: businessId,
+              name: name.trim(),
+              is_active: true,
+              created_at: new Date(),
+              updated_at: new Date()
+            } as any).execute();
+            
+            catId = newId;
+            globalCategoryMap.set(lower, { id: newId, name: name.trim(), parent_id: null });
+          }
+          categoryMap.set(lower, catId);
+        }
+
+        // Resolve or create Subcategories
+        const subcategoryMap = new Map<string, string>(); // "parent_name > sub_name" -> id
+        
+        for (const row of body.data) {
+          if (row.category_name && row.subcategory_name) {
+            const parentLower = row.category_name.toLowerCase().trim();
+            const subLower = row.subcategory_name.toLowerCase().trim();
+            const parentId = categoryMap.get(parentLower);
+            
+            if (!parentId) continue;
+            
+            const pairKey = `${parentLower} > ${subLower}`;
+            if (subcategoryMap.has(pairKey)) continue;
+            
+            let subId = '';
+            if (globalCategoryMap.has(subLower)) {
+              const existingCat = globalCategoryMap.get(subLower);
+              subId = existingCat.id;
+            } else {
+              const newId = randomUUID();
+              await trx.insertInto('categories').values({
+                id: newId,
+                business_id: businessId,
+                name: row.subcategory_name.trim(),
+                parent_id: parentId,
+                is_active: true,
+                created_at: new Date(),
+                updated_at: new Date()
+              } as any).execute();
+              
+              subId = newId;
+              globalCategoryMap.set(subLower, { id: newId, name: row.subcategory_name.trim(), parent_id: parentId });
+            }
+            subcategoryMap.set(pairKey, subId);
+          }
         }
 
         // Resolve or create brands
@@ -201,7 +257,17 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
             const product = existingMap.get(row.code);
             
             // Resolve IDs
-            const categoryId = row.category_id || (row.category_name ? categoryMap.get(row.category_name.toLowerCase().trim()) : null) || null;
+            let categoryId = row.category_id || null;
+            if (!categoryId && row.category_name) {
+              const parentLower = row.category_name.toLowerCase().trim();
+              if (row.subcategory_name) {
+                const subLower = row.subcategory_name.toLowerCase().trim();
+                const pairKey = `${parentLower} > ${subLower}`;
+                categoryId = subcategoryMap.get(pairKey) || (globalCategoryMap.get(subLower)?.id || null);
+              } else {
+                categoryId = categoryMap.get(parentLower) || null;
+              }
+            }
             const brandId = row.brand_id || (row.brand_name ? brandMap.get(row.brand_name.toLowerCase().trim()) : null) || null;
 
             if (product) {
@@ -304,6 +370,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
               headers.cost = findHeaderIndex(values, ['cost', 'compra', 'p.c', 'costo', '($$)']);
               headers.stock = findHeaderIndex(values, ['stoc', 'cant', 'qty', 'units', 'stock', '(+)']);
               headers.category = findHeaderIndex(values, ['cate', 'rubro', 'carpe', 'grupo', 'seccion', 'categoría', 'categoria', 'carpeta']);
+              headers.subcategory = findHeaderIndex(values, ['subcate', 'subcarpeta', 'subcategoría', 'sub-categoria']);
               headers.brand = findHeaderIndex(values, ['marca', 'brand', 'fabr']);
               return;
             }
@@ -317,6 +384,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
               cost: cleanPrice(values[headers.cost]),
               stock: cleanPrice(values[headers.stock]),
               category: values[headers.category] || '',
+              subcategory: values[headers.subcategory] || '',
               brand: values[headers.brand] || ''
             });
           });

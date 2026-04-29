@@ -103,6 +103,18 @@ export const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
 
       await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
+      const existing = await db
+        .selectFrom('categories')
+        .where('business_id', '=', user.business_id)
+        .where('name', 'ilike', body.name.trim())
+        .where('is_active', '=', true)
+        .select(['id'])
+        .executeTakeFirst();
+
+      if (existing) {
+        return reply.status(400).send({ error: `Ya existe una carpeta o subcarpeta con el nombre "${body.name}"` });
+      }
+
       const result = await db
         .insertInto('categories')
         .values({
@@ -201,6 +213,19 @@ export const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
       const body = schema.parse(request.body);
 
       await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+
+      const existing = await db
+        .selectFrom('categories')
+        .where('business_id', '=', user.business_id)
+        .where('name', 'ilike', body.name.trim())
+        .where('id', '!=', id)
+        .where('is_active', '=', true)
+        .select(['id'])
+        .executeTakeFirst();
+
+      if (existing) {
+        return reply.status(400).send({ error: `Ya existe una carpeta o subcarpeta con el nombre "${body.name}"` });
+      }
 
       const result = await db
         .updateTable('categories')

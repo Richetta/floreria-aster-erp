@@ -29,6 +29,7 @@ interface ParsedRow {
     price: number;
     stock: number;
     category: string;
+    subcategory: string;
     brand: string;
     [key: string]: any; // Allow indexing
 }
@@ -56,6 +57,7 @@ const parseDataIntoRows = (rawData: any[]): ParsedRow[] => {
         const priceRaw = getVal(['precio', 'price', 'precio de venta', 'venta', '($)']);
         const stockRaw = getVal(['stock', 'cantidad', 'qty', 'quantity', '(+)']);
         const category = getVal(['categoría', 'categoria', 'category', 'rubro', 'carpeta', 'grupo']);
+        const subcategory = getVal(['subcategoría', 'subcategoria', 'subcategory', 'subcarpeta', 'sub-carpeta']);
         const brand = getVal(['marca', 'brand']);
 
         const cost = parseFloat(String(costRaw).replace(/[^0-9.-]+/g, "")) || 0;
@@ -85,6 +87,7 @@ const parseDataIntoRows = (rawData: any[]): ParsedRow[] => {
             price: Math.round(price),
             stock: parseInt(String(stockRaw)) || 0,
             category: String(category),
+            subcategory: String(subcategory),
             brand: String(brand)
         };
     });
@@ -203,19 +206,13 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
 
         try {
             const finalDataToImport = previewData.filter(r => r.selected).map(r => ({
-                Código: r.code,
-                Nombre: r.name,
-                Precio: r.price,
-                Costo: r.cost,
-                Stock: r.stock,
-                Categoría: r.category,
-                Marca: r.brand,
                 code: r.code,
                 name: r.name,
                 price: r.price,
                 cost: r.cost,
                 stock: r.stock,
                 category_name: r.category,
+                subcategory_name: r.subcategory || undefined,
                 brand_name: r.brand,
                 margin_percent: r.margin
             }));
@@ -246,11 +243,11 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     };
 
     const handleDownloadExcelTemplate = () => {
-        const header = [['Código', 'Nombre', 'Precio ($)', 'Costo ($$)', 'Stock (+)', 'Categoría', 'Marca']];
+        const header = [['Código', 'Nombre', 'Precio ($)', 'Costo ($$)', 'Stock (+)', 'Categoría', 'Subcategoría', 'Marca']];
         const data = [
-            ['PROD001', 'Rosas Rojas Premium', '1500', '800', '25', 'Flores', 'Vivero Central'],
-            ['PROD002', 'Maceta Cerámica G', '3200', '1800', '12', 'Macetas', 'Artesanías'],
-            ['PROD003', 'Tierra Fértil 5kg', '850', '400', '50', 'Insumos', 'EcoTierra']
+            ['PROD001', 'Rosas Rojas Premium', '1500', '800', '25', 'Flores', 'Rosas', 'Vivero Central'],
+            ['PROD002', 'Maceta Cerámica G', '3200', '1800', '12', 'Macetas', 'Barro', 'Artesanías'],
+            ['PROD003', 'Tierra Fértil 5kg', '850', '400', '50', 'Insumos', '', 'EcoTierra']
         ];
         
         const instructions = [
@@ -258,8 +255,9 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
             ['INSTRUCCIONES:'],
             ['1. El Código es fundamental para actualizar productos existentes sin duplicarlos.'],
             ['2. El Precio y el Costo deben ser números (usá punto para decimales si es necesario).'],
-            ['3. La Categoría que escribas se creará automáticamente si no existe.'],
-            ['4. Mantené los nombres de las columnas exactamente como aparecen en la primera fila.']
+            ['3. La Categoría y Subcategoría que escribas se crearán automáticamente si no existen.'],
+            ['4. Si la Subcategoría está vacía, el producto se asociará únicamente a la Categoría madre.'],
+            ['5. Mantené los nombres de las columnas exactamente como aparecen en la primera fila.']
         ];
         
         const worksheetData = [...header, ...data, ...instructions];
@@ -816,6 +814,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                             <th className="csv-col csv-code-col">CÓDIGO</th>
                                             <th className="csv-col csv-name-col">NOMBRE</th>
                                             <th className="csv-col csv-category-col">CATEGORÍA</th>
+                                            <th className="csv-col csv-subcategory-col">SUB CARPETA</th>
                                             <th className="csv-col csv-brand-col">MARCA</th>
                                             <th className="csv-col csv-stock-col">STOCK</th>
                                             <th className="csv-col csv-cost-col">COSTO ($)</th>
@@ -853,9 +852,17 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                                     <input
                                                         className="csv-cell-input"
                                                         value={row.category}
-                                                        placeholder="Sin categoría"
+                                                        placeholder="Carpeta"
                                                         onChange={e => updateRow(row._id, 'category', e.target.value)}
                                                         list="csv-categories-list"
+                                                    />
+                                                </td>
+                                                <td className="csv-cell csv-subcategory-cell">
+                                                    <input
+                                                        className="csv-cell-input"
+                                                        value={row.subcategory || ''}
+                                                        placeholder="Sub carpeta"
+                                                        onChange={e => updateRow(row._id, 'subcategory', e.target.value)}
                                                     />
                                                 </td>
                                                 <td className="csv-cell csv-brand-cell">
