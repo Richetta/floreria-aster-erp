@@ -23,11 +23,29 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     if (typeof val === 'number' || typeof val === 'boolean') return String(val);
     if (val instanceof Date) return val.toISOString();
     if (typeof val === 'object') {
-      if (val.result !== undefined) return extractValue(val.result);
+      if (val.result !== undefined) {
+        if (val.result && typeof val.result === 'object' && val.result.error) {
+           if (val.formula) {
+              const matches = String(val.formula).match(/"([^"]*)"/g);
+              if (matches && matches.length > 0) {
+                 return matches.map(m => m.replace(/"/g, '')).join('');
+              }
+           }
+           return '';
+        }
+        return extractValue(val.result);
+      }
+      if (val.formula) {
+        const matches = String(val.formula).match(/"([^"]*)"/g);
+        if (matches && matches.length > 0) {
+           return matches.map(m => m.replace(/"/g, '')).join('');
+        }
+      }
       if (val.text !== undefined) return extractValue(val.text);
       if (val.richText && Array.isArray(val.richText)) {
         return val.richText.map((t: any) => t.text || '').join('');
       }
+      if (val.error) return '';
     }
     return String(val);
   };
@@ -155,7 +173,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
         const codes = body.data.map(r => r.code).filter(Boolean);
         const existingProducts = codes.length > 0
           ? await trx.selectFrom('products')
-            .select(['id', 'code', 'cost', 'price', 'stock_quantity', 'category_id', 'brand_id'])
+            .select(['id', 'code', 'barcode', 'cost', 'price', 'stock_quantity', 'category_id', 'brand_id'])
             .where('code', 'in', codes)
             .where('business_id', '=', businessId)
             .where('deleted_at', 'is', null)
@@ -328,6 +346,11 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
                 hasChanges = true;
               }
 
+              if (!product.barcode && row.code) {
+                updateData.barcode = row.code;
+                hasChanges = true;
+              }
+
               if (hasChanges) {
                 await trx.updateTable('products').set(updateData).where('id', '=', product.id).execute();
                 stats.updated++;
@@ -337,6 +360,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
                 id: randomUUID(),
                 business_id: businessId,
                 code: row.code,
+                barcode: row.code,
                 name: row.name || "Producto sin nombre",
                 category_id: categoryId,
                 brand_id: brandId,

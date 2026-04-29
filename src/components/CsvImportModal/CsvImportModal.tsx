@@ -111,6 +111,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     const [bulkMargin, setBulkMargin] = useState<string>('');
     const [bulkCategory, setBulkCategory] = useState('');
     const [bulkBrand, setBulkBrand] = useState('');
+    const [bulkCodePrefix, setBulkCodePrefix] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
 
     const [textMode, setTextMode] = useState<'free' | 'grid'>('free'); // 'free' for raw text, 'grid' for excel-like
@@ -432,6 +433,21 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     const applyBulkBrand = () => {
         if (!bulkBrand) return;
         setPreviewData(prev => prev.map((r: ParsedRow) => r.selected ? { ...r, brand: bulkBrand } : r));
+    };
+
+    const applyBulkCodePrefix = () => {
+        if (!bulkCodePrefix) return;
+        setPreviewData(prev => {
+            let count = 1;
+            return prev.map(r => {
+                if (!r.selected) return r;
+                const formattedCount = String(count).padStart(2, '0');
+                const newCode = `${bulkCodePrefix}${formattedCount}`;
+                count++;
+                return { ...r, code: newCode };
+            });
+        });
+        setBulkCodePrefix('');
     };
 
     const categoryOptions = Array.from(new Set([...categories.map((c: any) => c?.name || c), ...previewData.map(r => r.category).filter(Boolean)]));
@@ -773,6 +789,24 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                         disabled={!bulkBrand}
                                     >
                                         Aplicar
+                                    </button>
+                                </div>
+
+                                <div className="csv-bulk-group">
+                                    <input
+                                        type="text"
+                                        className="csv-bulk-margin-input"
+                                        style={{ width: '120px' }}
+                                        placeholder="Prefijo Código..."
+                                        value={bulkCodePrefix}
+                                        onChange={e => setBulkCodePrefix(e.target.value)}
+                                    />
+                                    <button
+                                        className="csv-bulk-apply-btn"
+                                        onClick={applyBulkCodePrefix}
+                                        disabled={!bulkCodePrefix}
+                                    >
+                                        Generar
                                     </button>
                                 </div>
 
