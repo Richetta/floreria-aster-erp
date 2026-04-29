@@ -9,6 +9,7 @@ import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import './CsvImportModal.css';
 import { TreeSelect } from '../TreeSelect/TreeSelect';
 
@@ -242,6 +243,41 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleDownloadExcelTemplate = () => {
+        const header = [['Código', 'Nombre', 'Precio ($)', 'Costo ($$)', 'Stock (+)', 'Categoría', 'Marca']];
+        const data = [
+            ['PROD001', 'Rosas Rojas Premium', '1500', '800', '25', 'Flores', 'Vivero Central'],
+            ['PROD002', 'Maceta Cerámica G', '3200', '1800', '12', 'Macetas', 'Artesanías'],
+            ['PROD003', 'Tierra Fértil 5kg', '850', '400', '50', 'Insumos', 'EcoTierra']
+        ];
+        
+        const instructions = [
+            [],
+            ['INSTRUCCIONES:'],
+            ['1. El Código es fundamental para actualizar productos existentes sin duplicarlos.'],
+            ['2. El Precio y el Costo deben ser números (usá punto para decimales si es necesario).'],
+            ['3. La Categoría que escribas se creará automáticamente si no existe.'],
+            ['4. Mantené los nombres de las columnas exactamente como aparecen en la primera fila.']
+        ];
+        
+        const worksheetData = [...header, ...data, ...instructions];
+        const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+        
+        worksheet['!cols'] = [
+            { wch: 15 },
+            { wch: 30 },
+            { wch: 12 },
+            { wch: 12 },
+            { wch: 10 },
+            { wch: 25 },
+            { wch: 20 },
+        ];
+        
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Plantilla de Productos');
+        XLSX.writeFile(workbook, 'plantilla_productos_mijardin.xlsx');
     };
 
     const handleDownloadTemplate = () => {
@@ -659,10 +695,16 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                 </div>
                             )}
 
-                            <button className="csv-template-btn" onClick={handleDownloadTemplate}>
-                                <FileText size={16} />
-                                <span>Descargar Plantilla PDF de Ejemplo</span>
-                            </button>
+                            <div className="csv-template-actions" style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', width: '100%', justifyContent: 'center' }}>
+                                <button className="csv-template-btn" onClick={handleDownloadExcelTemplate} style={{ backgroundColor: '#e6f4ea', color: '#137333', borderColor: '#ceead6' }}>
+                                    <FileSpreadsheet size={16} />
+                                    <span>Descargar Plantilla Excel Usable</span>
+                                </button>
+                                <button className="csv-template-btn" onClick={handleDownloadTemplate}>
+                                    <FileText size={16} />
+                                    <span>Descargar PDF de Ejemplo</span>
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -807,13 +849,13 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                                         onChange={e => updateRow(row._id, 'name', e.target.value)}
                                                     />
                                                 </td>
-                                                <td className="csv-cell csv-category-cell" style={{ overflow: 'visible' }}>
-                                                    <TreeSelect
-                                                        categories={categoriesData}
+                                                <td className="csv-cell csv-category-cell">
+                                                    <input
+                                                        className="csv-cell-input"
                                                         value={row.category}
-                                                        onChange={(cat) => updateRow(row._id, 'category', cat ? cat.name : '')}
                                                         placeholder="Sin categoría"
-                                                        usePortal={true}
+                                                        onChange={e => updateRow(row._id, 'category', e.target.value)}
+                                                        list="csv-categories-list"
                                                     />
                                                 </td>
                                                 <td className="csv-cell csv-brand-cell">
