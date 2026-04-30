@@ -209,9 +209,18 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
           .select(['id', 'name', 'parent_id'])
           .execute();
           
-        const globalCategoryMap = new Map<string, any>(); // lower_name -> category
+        const categoryById = new Map<string, any>(allCategories.map(c => [c.id, c]));
+        const buildPath = (cat: any): string => {
+            if (!cat.parent_id) return cat.name.toLowerCase().trim();
+            const parent = categoryById.get(cat.parent_id);
+            if (!parent) return cat.name.toLowerCase().trim();
+            return `${buildPath(parent)} > ${cat.name.toLowerCase().trim()}`;
+        };
+
+        const globalCategoryPathMap = new Map<string, any>(); // full_path_lower -> category
         for (const cat of allCategories) {
-          globalCategoryMap.set(cat.name.toLowerCase().trim(), cat);
+          const path = buildPath(cat);
+          globalCategoryPathMap.set(path, cat);
         }
 
         // Resolve or create Parents
@@ -219,8 +228,8 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
           const lower = name.toLowerCase().trim();
           let catId = '';
           
-          if (globalCategoryMap.has(lower)) {
-            catId = globalCategoryMap.get(lower).id;
+          if (globalCategoryPathMap.has(lower)) {
+            catId = globalCategoryPathMap.get(lower).id;
           } else {
             const newId = randomUUID();
             await trx.insertInto('categories').values({
@@ -233,7 +242,9 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
             } as any).execute();
             
             catId = newId;
-            globalCategoryMap.set(lower, { id: newId, name: name.trim(), parent_id: null });
+            const newCat = { id: newId, name: name.trim(), parent_id: null };
+            categoryById.set(newId, newCat);
+            globalCategoryPathMap.set(lower, newCat);
           }
           categoryMap.set(lower, catId);
         }
@@ -260,8 +271,8 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
                 }
                 
                 let subId = '';
-                if (globalCategoryMap.has(subLower)) {
-                    const existingCat = globalCategoryMap.get(subLower);
+                if (globalCategoryPathMap.has(currentPathLower)) {
+                    const existingCat = globalCategoryPathMap.get(currentPathLower);
                     subId = existingCat.id;
                 } else {
                     const newId = randomUUID();
@@ -275,7 +286,9 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
                         updated_at: new Date()
                     } as any).execute();
                     subId = newId;
-                    globalCategoryMap.set(subLower, { id: newId, name: subName, parent_id: currentParentId });
+                    const newCat = { id: newId, name: subName, parent_id: currentParentId };
+                    categoryById.set(newId, newCat);
+                    globalCategoryPathMap.set(currentPathLower, newCat);
                 }
                 
                 subcategoryMap.set(currentPathLower, subId);
@@ -318,7 +331,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
                 const subNames = row.subcategory_name.split(' > ').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
                 if (subNames.length > 0) {
                    const fullPath = [parentLower, ...subNames].join(' > ');
-                   categoryId = subcategoryMap.get(fullPath) || (globalCategoryMap.get(subNames[subNames.length - 1])?.id || null);
+                   categoryId = subcategoryMap.get(fullPath) || (globalCategoryPathMap.get(fullPath)?.id || null);
                 } else {
                    categoryId = categoryMap.get(parentLower) || null;
                 }
