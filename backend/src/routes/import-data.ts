@@ -84,6 +84,18 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     });
   };
 
+  const findAllHeaderIndexes = (headersRow: any[], keywords: string[]) => {
+    const indexes: number[] = [];
+    headersRow.forEach((val, idx) => {
+      if (!val) return;
+      const s = String(val).toLowerCase();
+      if (keywords.some(k => s.includes(k.toLowerCase()))) {
+        indexes.push(idx);
+      }
+    });
+    return indexes;
+  };
+
   const smartParseText = (text: string) => {
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3);
     const results: any[] = [];
@@ -227,39 +239,48 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
         }
 
         // Resolve or create Subcategories
-        const subcategoryMap = new Map<string, string>(); // "parent_name > sub_name" -> id
+        const subcategoryMap = new Map<string, string>(); // full path "parent > sub1 > sub2" -> id
         
         for (const row of body.data) {
           if (row.category_name && row.subcategory_name) {
             const parentLower = row.category_name.toLowerCase().trim();
-            const subLower = row.subcategory_name.toLowerCase().trim();
-            const parentId = categoryMap.get(parentLower);
+            let currentParentId = categoryMap.get(parentLower);
+            if (!currentParentId) continue;
             
-            if (!parentId) continue;
+            let currentPathLower = parentLower;
+            const subNames = row.subcategory_name.split(' > ').map((s: string) => s.trim()).filter(Boolean);
             
-            const pairKey = `${parentLower} > ${subLower}`;
-            if (subcategoryMap.has(pairKey)) continue;
-            
-            let subId = '';
-            if (globalCategoryMap.has(subLower)) {
-              const existingCat = globalCategoryMap.get(subLower);
-              subId = existingCat.id;
-            } else {
-              const newId = randomUUID();
-              await trx.insertInto('categories').values({
-                id: newId,
-                business_id: businessId,
-                name: row.subcategory_name.trim(),
-                parent_id: parentId,
-                is_active: true,
-                created_at: new Date(),
-                updated_at: new Date()
-              } as any).execute();
-              
-              subId = newId;
-              globalCategoryMap.set(subLower, { id: newId, name: row.subcategory_name.trim(), parent_id: parentId });
+            for (const subName of subNames) {
+                const subLower = subName.toLowerCase();
+                currentPathLower += ` > ${subLower}`;
+                
+                if (subcategoryMap.has(currentPathLower)) {
+                    currentParentId = subcategoryMap.get(currentPathLower)!;
+                    continue;
+                }
+                
+                let subId = '';
+                if (globalCategoryMap.has(subLower)) {
+                    const existingCat = globalCategoryMap.get(subLower);
+                    subId = existingCat.id;
+                } else {
+                    const newId = randomUUID();
+                    await trx.insertInto('categories').values({
+                        id: newId,
+                        business_id: businessId,
+                        name: subName,
+                        parent_id: currentParentId,
+                        is_active: true,
+                        created_at: new Date(),
+                        updated_at: new Date()
+                    } as any).execute();
+                    subId = newId;
+                    globalCategoryMap.set(subLower, { id: newId, name: subName, parent_id: currentParentId });
+                }
+                
+                subcategoryMap.set(currentPathLower, subId);
+                currentParentId = subId;
             }
-            subcategoryMap.set(pairKey, subId);
           }
         }
 
@@ -294,9 +315,13 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
             if (!categoryId && row.category_name) {
               const parentLower = row.category_name.toLowerCase().trim();
               if (row.subcategory_name) {
-                const subLower = row.subcategory_name.toLowerCase().trim();
-                const pairKey = `${parentLower} > ${subLower}`;
-                categoryId = subcategoryMap.get(pairKey) || (globalCategoryMap.get(subLower)?.id || null);
+                const subNames = row.subcategory_name.split(' > ').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+                if (subNames.length > 0) {
+                   const fullPath = [parentLower, ...subNames].join(' > ');
+                   categoryId = subcategoryMap.get(fullPath) || (globalCategoryMap.get(subNames[subNames.length - 1])?.id || null);
+                } else {
+                   categoryId = categoryMap.get(parentLower) || null;
+                }
               } else {
                 categoryId = categoryMap.get(parentLower) || null;
               }
@@ -409,13 +434,17 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
               headers.cost = findHeaderIndex(values, ['cost', 'compra', 'p.c', 'costo', '($$)']);
               headers.stock = findHeaderIndex(values, ['stoc', 'cant', 'qty', 'units', 'stock', '(+)']);
               headers.category = findHeaderIndex(values, ['cate', 'rubro', 'carpe', 'grupo', 'seccion', 'categoría', 'categoria', 'carpeta']);
-              headers.subcategory = findHeaderIndex(values, ['subcate', 'subcarpeta', 'subcategoría', 'sub-categoria']);
+              headers.subcategories = findAllHeaderIndexes(values, ['subcate', 'subcarpeta', 'subcategoría', 'sub-categoria']);
               headers.brand = findHeaderIndex(values, ['marca', 'brand', 'fabr']);
               return;
             }
             const rawCode = extractValue(values[headers.code] || values[1]);
             const code = rawCode.trim();
             if (!code || code === 'undefined' || code === 'null') return;
+
+            const subcats = headers.subcategories && headers.subcategories.length > 0 
+              ? headers.subcategories.map((idx: number) => extractValue(values[idx])).filter(Boolean).join(' > ')
+              : '';
 
             parsedData.push({
               code,
@@ -424,7 +453,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
               cost: cleanPrice(values[headers.cost]),
               stock: cleanPrice(values[headers.stock]),
               category: extractValue(values[headers.category]) || '',
-              subcategory: extractValue(values[headers.subcategory]) || '',
+              subcategory: subcats,
               brand: extractValue(values[headers.brand]) || ''
             });
           });

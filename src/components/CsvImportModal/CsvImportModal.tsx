@@ -244,11 +244,11 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     };
 
     const handleDownloadExcelTemplate = () => {
-        const header = [['Código', 'Nombre', 'Precio ($)', 'Costo ($$)', 'Stock (+)', 'Categoría', 'Subcategoría', 'Marca']];
+        const header = [['Código', 'Nombre', 'Precio ($)', 'Costo ($$)', 'Stock (+)', 'Categoría', 'Subcarpeta 1', 'Subcarpeta 2', 'Subcarpeta 3', 'Marca']];
         const data = [
-            ['PROD001', 'Rosas Rojas Premium', '1500', '800', '25', 'Flores', 'Rosas', 'Vivero Central'],
-            ['PROD002', 'Maceta Cerámica G', '3200', '1800', '12', 'Macetas', 'Barro', 'Artesanías'],
-            ['PROD003', 'Tierra Fértil 5kg', '850', '400', '50', 'Insumos', '', 'EcoTierra']
+            ['PROD001', 'Rosas Rojas Premium', '1500', '800', '25', 'Flores', 'Rosas', 'Importadas', '', 'Vivero Central'],
+            ['PROD002', 'Maceta Cerámica G', '3200', '1800', '12', 'Macetas', 'Barro', '', '', 'Artesanías'],
+            ['PROD003', 'Tierra Fértil 5kg', '850', '400', '50', 'Insumos', '', '', '', 'EcoTierra']
         ];
         
         const instructions = [
@@ -256,22 +256,25 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
             ['INSTRUCCIONES:'],
             ['1. El Código es fundamental para actualizar productos existentes sin duplicarlos.'],
             ['2. El Precio y el Costo deben ser números (usá punto para decimales si es necesario).'],
-            ['3. La Categoría y Subcategoría que escribas se crearán automáticamente si no existen.'],
-            ['4. Si la Subcategoría está vacía, el producto se asociará únicamente a la Categoría madre.'],
-            ['5. Mantené los nombres de las columnas exactamente como aparecen en la primera fila.']
+            ['3. La Categoría y Subcarpetas que escribas se crearán automáticamente si no existen.'],
+            ['4. Podés agregar más columnas nombrándolas "Subcarpeta 4", "Subcarpeta 5", etc.'],
+            ['5. Mantené los nombres de las columnas base para una importación exitosa.']
         ];
         
         const worksheetData = [...header, ...data, ...instructions];
         const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
         
         worksheet['!cols'] = [
-            { wch: 15 },
-            { wch: 30 },
-            { wch: 12 },
-            { wch: 12 },
-            { wch: 10 },
-            { wch: 25 },
-            { wch: 20 },
+            { wch: 15 }, // Codigo
+            { wch: 30 }, // Nombre
+            { wch: 12 }, // Precio
+            { wch: 12 }, // Costo
+            { wch: 10 }, // Stock
+            { wch: 25 }, // Categoria
+            { wch: 20 }, // Sub 1
+            { wch: 20 }, // Sub 2
+            { wch: 20 }, // Sub 3
+            { wch: 20 }, // Marca
         ];
         
         const workbook = XLSX.utils.book_new();
