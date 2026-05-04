@@ -336,9 +336,10 @@
 
 @media (max-width: 640px) {
     .modal-content {
-        max-height: 95vh;
+        max-height: calc(100dvh - env(safe-area-inset-top) - 20px);
         border-radius: 2rem 2rem 0 0;
         margin-top: auto;
+        padding-bottom: env(safe-area-inset-bottom);
     }
 
     .modal-header,
