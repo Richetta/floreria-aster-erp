@@ -18,7 +18,6 @@ export const OrdersMobile = () => {
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [isFiltersOpen, setIsFiltersOpen] = useState(false);
     const [showPaymentPanel, setShowPaymentPanel] = useState(false);
     const [paymentAmount, setPaymentAmount] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<string>('');
@@ -142,66 +141,60 @@ export const OrdersMobile = () => {
                 <div className="orders-header-top">
                     <h2>Pedidos</h2>
                     <div className="header-actions">
-                        <button 
-                            className={`filter-toggle-btn ${isFiltersOpen ? 'active' : ''}`} 
-                            onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                        >
-                            <span className="material-symbols-rounded">filter_list</span>
-                        </button>
                         <button className={`refresh-btn ${isRefreshing ? 'spinning' : ''}`} onClick={handleRefresh}>
                             <span className="material-symbols-rounded">refresh</span>
                         </button>
                     </div>
                 </div>
 
-                <div className="orders-search-box">
-                    <span className="material-symbols-rounded">search</span>
-                    <input
-                        type="text"
-                        placeholder="Buscar cliente o ID..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
+                <div className="orders-search-box-container">
+                    <div className="orders-search-box">
+                        <span className="material-symbols-rounded search-icon">search</span>
+                        <input
+                            type="text"
+                            placeholder="Buscar cliente o ID..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                        {searchTerm && (
+                            <button className="clear-search" onClick={() => setSearchTerm('')}>
+                                <span className="material-symbols-rounded">close</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                {isFiltersOpen && (
-                    <div className="orders-filter-container retractable">
-                        <div className="orders-filter-scroll time-filters">
-                            {[
-                                { id: 'todos', label: 'Todo' },
-                                { id: 'hoy', label: 'Hoy' },
-                                { id: 'manana', label: 'Mañana' },
-                                { id: 'semana', label: 'Semana' }
-                            ].map(f => (
-                                <button
-                                    key={f.id}
-                                    className={`filter-chip time ${timeFilter === f.id ? 'active' : ''}`}
-                                    onClick={() => setTimeFilter(f.id)}
-                                >
-                                    {f.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="orders-filter-scroll status-filters">
-                            {[
-                                { id: 'active', label: 'Activos' },
-                                { id: 'pending', label: 'Pendientes' },
-                                { id: 'ready', label: 'Listos' },
-                                { id: 'delivered', label: 'Entregados' },
-                                { id: 'all', label: 'Todos' }
-                            ].map(f => (
-                                <button
-                                    key={f.id}
-                                    className={`filter-chip status ${statusFilter === f.id ? 'active' : ''}`}
-                                    onClick={() => setStatusFilter(f.id)}
-                                >
-                                    {f.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                <div className="orders-quick-filters">
+                    {[
+                        { id: 'todos', label: 'Todo' },
+                        { id: 'hoy', label: 'Hoy' },
+                        { id: 'manana', label: 'Mañana' },
+                        { id: 'semana', label: 'Semana' }
+                    ].map(f => (
+                        <button
+                            key={f.id}
+                            className={`quick-filter-chip ${timeFilter === f.id ? 'active' : ''}`}
+                            onClick={() => setTimeFilter(f.id)}
+                        >
+                            {f.label}
+                        </button>
+                    ))}
+                    <div className="divider-v" style={{ height: '20px', margin: '0 4px' }}></div>
+                    {[
+                        { id: 'active', label: 'Activos' },
+                        { id: 'pending', label: 'Ptes' },
+                        { id: 'ready', label: 'Listos' },
+                        { id: 'delivered', label: 'Entregados' }
+                    ].map(f => (
+                        <button
+                            key={f.id}
+                            className={`quick-filter-chip ${statusFilter === f.id ? 'active' : ''}`}
+                            onClick={() => setStatusFilter(f.id)}
+                        >
+                            {f.label}
+                        </button>
+                    ))}
+                </div>
             </header>
 
             <div className="orders-feed">
@@ -215,71 +208,37 @@ export const OrdersMobile = () => {
                         const s = getStatusInfo(order.status);
                         const dateObj = new Date(order.date);
                         const remaining = order.total - (order.advancePayment || 0);
-                        const hasAddress = order.deliveryMethod === 'delivery' && order.deliveryAddress?.street;
                         const hasItems = order.items && order.items.length > 0;
 
                         return (
                             <div
                                 key={order.id}
-                                className={`order-card status-${order.status}`}
+                                className="order-list-item animate-fade-in"
                                 onClick={() => handleOrderTap(order)}
-                                style={{ background: s.bg }}
                             >
-                                <div className="order-card-top">
-                                    <div className="order-main-row">
-                                        <div className="order-customer-row">
-                                            <span className="order-customer">{order.customerName}</span>
-                                            <span className="order-delivery-date">
-                                                {dateObj.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-                                            </span>
-                                        </div>
-                                        <div className="order-total">${order.total.toLocaleString()}</div>
+                                <div className="order-item-leading">
+                                    <div className="order-icon-circle" style={{ background: s.bg, color: 'white' }}>
+                                        <span className="material-symbols-rounded">{s.icon}</span>
                                     </div>
-
-                                    <div className="order-chips-payment-row">
-                                        <div className="order-card-chips">
-                                            {order.deliveryMethod && (
-                                                <span className="order-chip">
-                                                    <span className="material-symbols-rounded">
-                                                        {order.deliveryMethod === 'delivery' ? 'local_shipping' : 'storefront'}
-                                                    </span>
-                                                    {order.deliveryMethod === 'delivery' ? 'Envío' : 'Retiro'}
-                                                </span>
-                                            )}
-                                            {hasAddress && order.deliveryAddress && (
-                                                <span className="order-chip address">
-                                                    <span className="material-symbols-rounded">location_on</span>
-                                                    {order.deliveryAddress.street!.length > 20
-                                                        ? order.deliveryAddress.street!.slice(0, 20) + '…'
-                                                        : order.deliveryAddress.street
-                                                    }
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="order-payment-status">
-                                            {(!isNaN(remaining) && remaining > 1) ? (
-                                                <span className="order-chip debt">Debe ${Math.round(remaining).toLocaleString()}</span>
-                                            ) : (order.total > 0 && remaining <= 1) ? (
-                                                <span className="order-chip paid">Saldado</span>
-                                            ) : null}
-                                        </div>
+                                </div>
+                                <div className="order-item-content">
+                                    <div className="order-item-name">{order.customerName}</div>
+                                    <div className="order-item-meta">
+                                        {dateObj.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })} • #{order.id.slice(0, 5)}
                                     </div>
-
                                     {hasItems && (
-                                        <div className="order-mini-items">
-                                            {order.items.slice(0, 2).map((item: any, idx: number) => {
-                                                const itemName = item.name || item.product_name || 'Producto';
-                                                const itemQty = item.qty || item.quantity || 1;
-                                                return (
-                                                    <span key={idx} className="mini-item">
-                                                        {itemQty}x {itemName}
-                                                    </span>
-                                                );
-                                            })}
-                                            {order.items.length > 2 && (
-                                                <span className="mini-more">+{order.items.length - 2} más</span>
-                                            )}
+                                        <div className="order-item-desc">
+                                            {order.items.length} productos
                                         </div>
+                                    )}
+                                </div>
+                                <div className="order-item-trailing">
+                                    <div className="order-item-price">${order.total.toLocaleString()}</div>
+                                    <div className="order-clean-badge" style={{ color: s.bg, background: `${s.bg}15` }}>
+                                        {s.label}
+                                    </div>
+                                    {remaining > 0 && remaining <= order.total && (
+                                        <div className="order-debt-indicator">Resta ${remaining.toLocaleString()}</div>
                                     )}
                                 </div>
                             </div>

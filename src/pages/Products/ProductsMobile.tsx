@@ -90,30 +90,55 @@ export const ProductsMobile = () => {
                 <div className="products-header-top">
                     <h2>Inventario</h2>
                     <div className="header-actions">
-                        <button className="sync-btn" onClick={handleRefresh} title="Sincronizar con PC">
-                            <span className={`material-symbols-rounded ${isRefreshing ? 'spinning' : ''}`}>cloud_sync</span>
+                        <button className="icon-btn-ghost" onClick={() => setIsScannerOpen(true)}>
+                            <span className="material-symbols-rounded">qr_code_scanner</span>
+                        </button>
+                        <button className={`icon-btn-ghost ${isRefreshing ? 'spinning' : ''}`} onClick={handleRefresh}>
+                            <span className="material-symbols-rounded">refresh</span>
                         </button>
                     </div>
                 </div>
 
-                <div className="products-search-box">
-                    <span className="material-symbols-rounded search-icon">search</span>
-                    <input
-                        type="text"
-                        placeholder="Buscar o escanear..."
-                        value={searchTerm}       
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
-                    <button className="scanner-btn" onClick={() => setIsScannerOpen(true)}>
-                        <span className="material-symbols-rounded">qr_code_scanner</span>
-                    </button>
-                    <div className="divider-v"></div>
+                <div className="products-search-box-container">
+                    <div className="products-search-box">
+                        <span className="material-symbols-rounded search-icon">search</span>
+                        <input
+                            type="text"
+                            placeholder="Buscar producto..."
+                            value={searchTerm}       
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                        {searchTerm && (
+                            <button className="clear-search" onClick={() => setSearchTerm('')}>
+                                <span className="material-symbols-rounded">close</span>
+                            </button>
+                        )}
+                    </div>
                     <button className="filter-toggle-btn" onClick={() => setIsFiltersOpen(true)}>
                         <span className="material-symbols-rounded">tune</span>
                         {(activeCategory !== 'Todos' || activeBrand !== 'Todas' || Object.values(activeCustomFilters).some(f => f.length > 0)) && (
                             <span className="filter-badge-dot"></span>
                         )}
                     </button>
+                </div>
+
+                {/* Filter Chips row directly under search */}
+                <div className="products-quick-filters">
+                    <button
+                        className={`quick-filter-chip ${activeCategory === 'Todos' ? 'active' : ''}`}
+                        onClick={() => setActiveCategory('Todos')}
+                    >
+                        Todos
+                    </button>
+                    {(categories || []).map(cat => (
+                        <button
+                            key={cat}
+                            className={`quick-filter-chip ${activeCategory === cat ? 'active' : ''}`}
+                            onClick={() => setActiveCategory(cat)}
+                        >
+                            {cat}
+                        </button>
+                    ))}
                 </div>
             </header>
 
@@ -134,39 +159,28 @@ export const ProductsMobile = () => {
                     </div>
                 ) : (
                     filteredProducts.map(product => (
-                        <div key={product.id} className="product-item-card animate-fade-in" onClick={() => handleEdit(product)}>
-                            <div className="p-item-main">
-                                <div className="p-item-info">
-                                    <div className="flex flex-col">
-                                        <span className="p-item-cat">{product.category || 'Sin Categoría'}</span>
-                                        {product.brand_name && <span className="p-item-brand">{product.brand_name}</span>}
-                                    </div>
-                                    <h4 className="p-item-name">{product.name}</h4>
-                                    <span className="p-item-code">#{product.code}</span>
-                                </div>
-                                <div className="p-item-stock-box">
-                                    <div className={`stock-status ${product.stock <= product.min ? 'low' : 'ok'}`}>
-                                        <span className="stock-number">{product.stock}</span>     
-                                        <span className="stock-label">Stock</span>
-                                    </div>       
+                        <div key={product.id} className="inv-list-item animate-fade-in" onClick={() => handleEdit(product)}>
+                            <div className="inv-item-leading">
+                                <div className="inv-icon-circle">
+                                    <span className="material-symbols-rounded">
+                                        {product.category?.toLowerCase().includes('flor') ? 'local_florist' : 
+                                         product.category?.toLowerCase().includes('planta') ? 'potted_plant' : 
+                                         'inventory_2'}
+                                    </span>
                                 </div>
                             </div>
-                            <div className="p-item-footer">
-                                <div className="p-item-pricing">
-                                    <span className="p-item-cost">Costo: ${(product.cost || 0).toLocaleString('es-AR')}</span>
-                                    <span className="p-item-price">${product.price.toLocaleString('es-AR')}</span>
-                                </div>
-                                <div className="p-item-actions">
-                                    <button className="p-edit-mini" onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEdit(product);
-                                    }}>
-                                        <span className="material-symbols-rounded">edit</span>    
-                                    </button>    
-                                    <button className="p-delete-mini" onClick={(e) => handleDelete(e, product)}>
-                                        <span className="material-symbols-rounded">delete</span>  
-                                    </button>    
-                                </div>
+                            <div className="inv-item-content">
+                                <div className="inv-item-name">{product.name}</div>
+                                <div className="inv-item-stock">Stock: {product.stock}</div>
+                            </div>
+                            <div className="inv-item-trailing">
+                                <div className="inv-item-price">${product.price.toLocaleString('es-AR')}</div>
+                                <button className="inv-item-menu" onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(e, product); // Replacing three dots menu with delete for now since click edits
+                                }}>
+                                    <span className="material-symbols-rounded">delete_outline</span>
+                                </button>
                             </div>
                         </div>
                     ))
