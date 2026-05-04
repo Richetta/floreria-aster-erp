@@ -22,7 +22,6 @@ export const ProductsMobile = () => {
     const [activeCategory, setActiveCategory] = useState<string>('Todos');
     const [activeBrand, setActiveBrand] = useState<string>('Todas');
     const [activeCustomFilters, setActiveCustomFilters] = useState<Record<string, string[]>>({});
-    const [activeCustomFilters, setActiveCustomFilters] = useState<Record<string, string[]>>({});
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
     const [isScannerOpen, setIsScannerOpen] = useState(false);
