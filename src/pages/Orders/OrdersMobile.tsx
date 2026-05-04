@@ -140,19 +140,11 @@ export const OrdersMobile = () => {
             <header className="mobile-orders-header">
                 <div className="orders-header-top">
                     <h2>Pedidos</h2>
-                    <div className="header-actions">
-                        <button className={`refresh-btn ${isRefreshing ? 'spinning' : ''}`} onClick={handleRefresh}>
-                            <span className="material-symbols-rounded">refresh</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div className="orders-search-box-container">
-                    <div className="orders-search-box">
-                        <span className="material-symbols-rounded search-icon">search</span>
+                    <div className="orders-search-inline">
+                        <span className="material-symbols-rounded">search</span>
                         <input
                             type="text"
-                            placeholder="Buscar cliente o ID..."
+                            placeholder="Buscar..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
@@ -162,38 +154,47 @@ export const OrdersMobile = () => {
                             </button>
                         )}
                     </div>
+                    <button className={`refresh-btn ${isRefreshing ? 'spinning' : ''}`} onClick={handleRefresh}>
+                        <span className="material-symbols-rounded">refresh</span>
+                    </button>
                 </div>
 
-                <div className="orders-quick-filters">
-                    {[
-                        { id: 'todos', label: 'Todo' },
-                        { id: 'hoy', label: 'Hoy' },
-                        { id: 'manana', label: 'Mañana' },
-                        { id: 'semana', label: 'Semana' }
-                    ].map(f => (
-                        <button
-                            key={f.id}
-                            className={`quick-filter-chip ${timeFilter === f.id ? 'active' : ''}`}
-                            onClick={() => setTimeFilter(f.id)}
-                        >
-                            {f.label}
-                        </button>
-                    ))}
-                    <div className="divider-v" style={{ height: '20px', margin: '0 4px' }}></div>
-                    {[
-                        { id: 'active', label: 'Activos' },
-                        { id: 'pending', label: 'Ptes' },
-                        { id: 'ready', label: 'Listos' },
-                        { id: 'delivered', label: 'Entregados' }
-                    ].map(f => (
-                        <button
-                            key={f.id}
-                            className={`quick-filter-chip ${statusFilter === f.id ? 'active' : ''}`}
-                            onClick={() => setStatusFilter(f.id)}
-                        >
-                            {f.label}
-                        </button>
-                    ))}
+                <div className="orders-filter-rows">
+                    <div className="filter-row">
+                        <span className="filter-row-label">📅</span>
+                        {[
+                            { id: 'todos', label: 'Todo' },
+                            { id: 'hoy', label: 'Hoy' },
+                            { id: 'manana', label: 'Mañana' },
+                            { id: 'semana', label: 'Semana' }
+                        ].map(f => (
+                            <button
+                                key={f.id}
+                                className={`filter-pill ${timeFilter === f.id ? 'active' : ''}`}
+                                onClick={() => setTimeFilter(f.id)}
+                            >
+                                {f.label}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="filter-row">
+                        <span className="filter-row-label">📋</span>
+                        {[
+                            { id: 'active', label: 'Activos', color: '#10B981' },
+                            { id: 'pending', label: 'Ptes', color: '#f59e0b' },
+                            { id: 'ready', label: 'Listos', color: '#3b82f6' },
+                            { id: 'delivered', label: 'Entregados', color: '#64748b' }
+                        ].map(f => (
+                            <button
+                                key={f.id}
+                                className={`filter-pill ${statusFilter === f.id ? 'active' : ''}`}
+                                onClick={() => setStatusFilter(f.id)}
+                                style={statusFilter === f.id ? { background: f.color, borderColor: f.color } : {}}
+                            >
+                                {f.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </header>
 
