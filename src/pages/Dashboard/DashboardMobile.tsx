@@ -156,25 +156,25 @@ export const DashboardMobile = () => {
             {/* Quick Actions Grid */}
             <section className="mobile-quick-actions">
                 <button className="q-action-btn" onClick={() => navigate('/pos')}>
-                    <div className="q-icon-wrap pos-bg">
-                        <span className="material-symbols-rounded">add_shopping_cart</span>
+                    <div className="q-icon-wrap">
+                        <span className="material-symbols-rounded">point_of_sale</span>
                     </div>
-                    <span>Nueva Venta</span>
+                    <span>Vender</span>
                 </button>
                 <button className="q-action-btn" onClick={() => navigate('/pedidos')}>
-                    <div className="q-icon-wrap orders-bg">
-                        <span className="material-symbols-rounded">format_list_bulleted</span>
+                    <div className="q-icon-wrap">
+                        <span className="material-symbols-rounded">list_alt</span>
                     </div>
-                    <span>Ver Pedidos</span>
+                    <span>Pedidos</span>
                 </button>
                 <button className="q-action-btn" onClick={() => navigate('/productos')}>
-                    <div className="q-icon-wrap cat-bg">
-                        <span className="material-symbols-rounded">package_2</span>
+                    <div className="q-icon-wrap">
+                        <span className="material-symbols-rounded">inventory_2</span>
                     </div>
                     <span>Inventario</span>
                 </button>
                 <button className="q-action-btn" onClick={() => navigate('/caja')}>
-                    <div className="q-icon-wrap cash-bg">
+                    <div className="q-icon-wrap">
                         <span className="material-symbols-rounded">account_balance_wallet</span>
                     </div>
                     <span>Caja</span>

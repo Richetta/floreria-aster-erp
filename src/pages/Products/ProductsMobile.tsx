@@ -188,35 +188,20 @@ export const ProductsMobile = () => {
                         <div key={product.id} className="product-item-card animate-fade-in" onClick={() => handleEdit(product)}>
                             <div className="p-item-main">
                                 <div className="p-item-info">
-                                    <div className="flex flex-col">
-                                        <span className="p-item-cat">{product.category || 'Sin Categoría'}</span>
-                                        {product.brand_name && <span className="p-item-brand">{product.brand_name}</span>}
-                                    </div>
                                     <h4 className="p-item-name">{product.name}</h4>
-                                    <span className="p-item-code">#{product.code}</span>
-                                </div>
-                                <div className="p-item-stock-box">
-                                    <div className={`stock-status ${product.stock <= product.min ? 'low' : 'ok'}`}>
-                                        <span className="stock-number">{product.stock}</span>     
-                                        <span className="stock-label">Stock</span>
-                                    </div>       
+                                    <div className="p-item-meta">
+                                        <span className="p-item-code">#{product.code}</span>
+                                        <span className="p-item-cat">{product.category || 'Sin Categoría'}</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="p-item-footer">
+                            <div className="p-item-right">
                                 <div className="p-item-pricing">
-                                    <span className="p-item-cost">Costo: ${(product.cost || 0).toLocaleString('es-AR')}</span>
                                     <span className="p-item-price">${product.price.toLocaleString('es-AR')}</span>
+                                    <span className="p-item-cost">Costo: ${(product.cost || 0).toLocaleString('es-AR')}</span>
                                 </div>
-                                <div className="p-item-actions">
-                                    <button className="p-edit-mini" onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEdit(product);
-                                    }}>
-                                        <span className="material-symbols-rounded">edit</span>    
-                                    </button>    
-                                    <button className="p-delete-mini" onClick={(e) => handleDelete(e, product)}>
-                                        <span className="material-symbols-rounded">delete</span>  
-                                    </button>    
+                                <div className={`stock-status ${product.stock <= product.min ? 'low' : 'ok'}`}>
+                                    {product.stock}
                                 </div>
                             </div>
                         </div>

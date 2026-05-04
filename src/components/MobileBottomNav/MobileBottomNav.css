@@ -3,30 +3,16 @@
     bottom: 0;
     left: 0;
     width: 100vw;
-    background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    background: #FFFFFF !important;
+    border-top: 1px solid #E5E7EB;
     display: flex;
     justify-content: space-around;
     align-items: center;
-    padding: 0.25rem 0.5rem;
-    /* iOS safe area: use max() to ensure adequate padding on devices with home indicator */
-    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0.5rem));
+    padding: 0;
+    /* iOS safe area */
+    padding-bottom: max(0rem, env(safe-area-inset-bottom, 0rem));
     z-index: 500;
-    height: auto !important;
-    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08), 0 -2px 8px rgba(0, 0, 0, 0.04);
-}
-
-/* Divisor visual: línea sutil sobre la barra */
-.mobile-bottom-nav::before {
-    content: '';
-    position: absolute;
-    top: -1px;
-    left: 10%;
-    right: 10%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, rgba(155, 81, 224, 0.15) 50%, transparent 100%);
+    height: 64px;
 }
 
 /* ============================================
@@ -40,15 +26,10 @@
     justify-content: center;
     background: transparent;
     border: none;
-    color: #94a3b8;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 0.25rem 0.125rem;
+    color: #6B7280;
+    height: 100%;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-}
-
-.mobile-bottom-nav .nav-btn:active {
-    transform: scale(0.92);
 }
 
 /* ============================================
@@ -56,146 +37,53 @@
    ============================================ */
 .mobile-bottom-nav .icon-container {
     position: relative;
-    height: 32px;
-    width: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 2px;
 }
 
 .nav-btn .material-symbols-rounded {
     font-size: 24px;
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    transition: all 0.15s ease-in-out;
 }
 
 /* ============================================
    LABELS DE NAVEGACIÓN
    ============================================ */
 .mobile-bottom-nav .nav-label {
-    font-size: 0.6rem;
-    font-weight: 600;
-    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 500;
     letter-spacing: 0.01em;
-    transition: all 0.2s ease;
 }
 
 /* ============================================
    ESTADO ACTIVO
    ============================================ */
 .nav-btn.active {
-    color: var(--color-success);
-}
-
-.nav-btn.active .icon-container {
-    background: linear-gradient(135deg, var(--color-primary-light) 0%, rgba(79, 122, 90, 0.15) 100%);
-    box-shadow: 0 2px 8px rgba(26, 60, 42, 0.15);
+    color: #111827;
 }
 
 .nav-btn.active .material-symbols-rounded {
-    font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
-    color: var(--color-success);
+    font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+    color: #111827;
 }
 
 .nav-btn.active .nav-label {
     font-weight: 700;
-    color: var(--color-success);
-}
-
-/* ============================================
-   BOTÓN CENTRAL DESTACADO (VENDER)
-   ============================================ */
-.nav-btn.btn-center {
-    position: relative;
-    top: -15px;
-    /* Subir un poco más el botón central al achicar la barra */
-    flex: 1.15;
-}
-
-.icon-center-wrapper {
-    width: 50px;
-    height: 50px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    box-shadow: 0 4px 12px rgba(26, 60, 42, 0.35);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.nav-btn.btn-center:active .icon-center-wrapper {
-    transform: scale(0.9);
-    box-shadow: 0 2px 10px rgba(26, 60, 42, 0.3),
-        0 0 0 3px rgba(255, 255, 255, 0.95);
-}
-
-.icon-center-wrapper .material-symbols-rounded {
-    font-size: 26px;
-    font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
-    color: white;
-}
-
-.nav-btn.btn-center .nav-label {
-    margin-top: 3px;
-    color: var(--color-success);
-    font-weight: 700;
-}
-
-/* Cuando Vender está activo (gradiente más intenso) */
-.nav-btn.btn-center.active .icon-center-wrapper {
-    background: linear-gradient(135deg, var(--color-primary) 0%, #3d5e45 100%);
-    box-shadow: 0 6px 20px rgba(26, 60, 42, 0.5),
-        0 0 0 3px rgba(255, 255, 255, 0.95);
-}
-
-/* ============================================
-   ANIMACIÓN DE TRANSICIÓN
-   ============================================ */
-@media (prefers-reduced-motion: no-preference) {
-    .mobile-bottom-nav .nav-btn {
-        animation: fadeInUp 0.3s ease-out;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(8px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
+    color: #111827;
 }
 
 /* ============================================
    OPTIMIZACIÓN PARA DISPOSITIVOS PEQUEÑOS
    ============================================ */
 @media (max-width: 360px) {
-    .mobile-bottom-nav .nav-label {
-        font-size: 0.55rem;
-    }
-
-    .mobile-bottom-nav .icon-container {
-        width: 48px;
-        height: 36px;
-    }
-
     .nav-btn .material-symbols-rounded {
         font-size: 22px;
     }
-
-    .icon-center-wrapper {
-        width: 52px;
-        height: 52px;
+    
+    .mobile-bottom-nav .nav-label {
+        font-size: 9px;
     }
-
-    .icon-center-wrapper .material-symbols-rounded {
-        font-size: 24px;
-    }
-}
+}
