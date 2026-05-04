@@ -23,7 +23,7 @@ export const MobileBottomNav = ({ className = '' }: MobileBottomNavProps) => {
 
     return (
         <nav className={`mobile-bottom-nav ${className}`}>
-            {/* 1. INICIO - Dashboard principal */}
+            {/* 1. INICIO */}
             <button
                 className={`nav-btn ${isActive('/dashboard') ? 'active' : ''}`}
                 onClick={() => handleNav('/dashboard')}
@@ -35,50 +35,49 @@ export const MobileBottomNav = ({ className = '' }: MobileBottomNavProps) => {
                 <span className="nav-label">Inicio</span>
             </button>
 
-            {/* 2. PEDIDOS - Gestión de entregas */}
+            {/* 2. VENTAS */}
             <button
                 className={`nav-btn ${isActive('/pedidos') ? 'active' : ''}`}
                 onClick={() => handleNav('/pedidos')}
-                aria-label="Pedidos"
+                aria-label="Ventas"
             >
                 <div className="icon-container">
-                    <span className="material-symbols-rounded">receipt_long</span>
+                    <span className="material-symbols-rounded">local_mall</span>
                 </div>
-                <span className="nav-label">Pedidos</span>
+                <span className="nav-label">Ventas</span>
             </button>
 
-            {/* 3. VENDER - Acción principal (CENTRAL) */}
+            {/* 3. + (ACCIÓN PRINCIPAL) */}
             <button
-                className={`nav-btn btn-center ${isActive('/pos') ? 'active' : ''}`}
+                className="nav-btn btn-center"
                 onClick={() => handleNav('/pos')}
-                aria-label="Nueva Venta"
+                aria-label="Nueva Acción"
             >
                 <div className="icon-center-wrapper">
-                    <span className="material-symbols-rounded">shopping_cart</span>
+                    <span className="material-symbols-rounded">add</span>
                 </div>
-                <span className="nav-label">Vender</span>
             </button>
 
-            {/* 4. PRODUCTOS - Catálogo e inventario */}
+            {/* 4. ALERTAS */}
             <button
-                className={`nav-btn ${isActive('/productos') ? 'active' : ''}`}
-                onClick={() => handleNav('/productos')}
-                aria-label="Productos"
+                className={`nav-btn ${isActive('/alertas') ? 'active' : ''}`}
+                onClick={() => handleNav('/alertas')}
+                aria-label="Alertas"
             >
                 <div className="icon-container">
-                    <span className="material-symbols-rounded">inventory</span>
+                    <span className="material-symbols-rounded">notifications</span>
                 </div>
-                <span className="nav-label">Productos</span>
+                <span className="nav-label">Alertas</span>
             </button>
 
-            {/* 5. MÁS - Menú completo */}
+            {/* 5. MÁS */}
             <button
                 className={`nav-btn ${isActive('/menu') || isActive('/configuracion') ? 'active' : ''}`}
                 onClick={() => handleNav('/menu')}
                 aria-label="Más opciones"
             >
                 <div className="icon-container">
-                    <span className="material-symbols-rounded">grid_view</span>
+                    <span className="material-symbols-rounded">menu</span>
                 </div>
                 <span className="nav-label">Más</span>
             </button>

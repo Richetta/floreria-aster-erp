@@ -104,82 +104,95 @@ export const DashboardMobile = () => {
         <div className="dashboard-mobile-wrapper">
             {/* Header / Saludo */}
             <header className="mobile-dashboard-header">
-                <div className="header-top">
-                    <div className="user-info">
-                        <span className="welcome-text">¡Hola, {user?.name?.split(' ')[0]}! 👋</span>
-                        <h2 className="current-date">{formattedDate}</h2>
-                    </div>
+                <div className="header-nav-row">
+                    <button className="icon-btn-ghost" onClick={() => navigate('/menu')}>
+                        <span className="material-symbols-rounded">menu</span>
+                    </button>
+                    <h1 className="header-title">Dashboard</h1>
+                    <button className="icon-btn-ghost" onClick={() => navigate('/alertas')}>
+                        <span className="material-symbols-rounded">notifications_active</span>
+                    </button>
+                </div>
+                <div className="header-welcome-row">
+                    <span className="welcome-text">¡Hola, {user?.name?.split(' ')[0]}! 🌱</span>
+                    <h2 className="current-date">{formattedDate}</h2>
                 </div>
             </header>
 
-            {/* Métricas Apiladas (1 per row) */}
-            <div className="metrics-stack-container">
-                <div className="metrics-stack-track">
-                    {isAdmin && (
-                        <div className="metric-card income" onClick={() => navigate('/caja')}>
-                            <div className="m-card-content">
-                                <span className="m-card-label">Ingresos Hoy</span>
-                                <div className="m-card-value">${metrics.todaysSales.toLocaleString()}</div>
-                            </div>
-                            <span className="material-symbols-rounded m-card-icon">payments</span>
+            {/* Métricas Hero y Secundarias */}
+            <div className="metrics-dashboard-container">
+                {isAdmin && (
+                    <div className="hero-metric-card" onClick={() => navigate('/caja')}>
+                        <div className="hero-content">
+                            <span className="hero-label">Ventas de hoy</span>
+                            <div className="hero-value">${metrics.todaysSales.toLocaleString()}</div>
+                            <span className="hero-sub">{metrics.todaysOrders} pedidos</span>
                         </div>
-                    )}
-
-                    <div className="metric-card orders" onClick={() => navigate('/pedidos')}>
-                        <div className="m-card-content">
-                            <span className="m-card-label">Pedidos Hoy</span>
-                            <div className="m-card-value">{metrics.todaysOrders}</div>
+                        {/* Fake SVG wave background */}
+                        <div className="hero-wave-bg">
+                            <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
+                                <path fill="rgba(255,255,255,0.15)" fillOpacity="1" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                            </svg>
                         </div>
-                        <span className="material-symbols-rounded m-card-icon">local_shipping</span>
                     </div>
+                )}
 
-                    {isAdmin && metrics.totalDebt > 0 && (
-                        <div className="metric-card debt" onClick={() => navigate('/clientes')}>
-                            <div className="m-card-content">
-                                <span className="m-card-label">Cuentas Corrientes</span>
-                                <div className="m-card-value">${metrics.totalDebt.toLocaleString()}</div>
-                            </div>
-                            <span className="material-symbols-rounded m-card-icon">person_alert</span>
-                        </div>
-                    )}
-
-                    <div className="metric-card stock" onClick={() => navigate('/productos')}>
-                        <div className="m-card-content">
-                            <span className="m-card-label">Stock Crítico</span>
-                            <div className="m-card-value">{metrics.criticalProducts.length} Items</div>
-                        </div>
-                        <span className="material-symbols-rounded m-card-icon">warning</span>
+                <div className="secondary-metrics-row">
+                    <div className="secondary-metric-card" onClick={() => navigate('/pedidos')}>
+                        <span className="sec-label">Pedidos hoy</span>
+                        <div className="sec-value">{metrics.todaysOrders}</div>
+                        <span className="sec-sub">pendientes</span>
+                    </div>
+                    <div className="secondary-metric-card" onClick={() => navigate('/pedidos')}>
+                        <span className="sec-label">Entregas hoy</span>
+                        <div className="sec-value">{metrics.upcomingOrders.length}</div>
+                        <span className="sec-sub">programadas</span>
                     </div>
                 </div>
             </div>
 
             {/* Quick Actions Grid */}
-            <section className="mobile-quick-actions">
-                <button className="q-action-btn" onClick={() => navigate('/pos')}>
-                    <div className="q-icon-wrap pos-bg">
-                        <span className="material-symbols-rounded">add_shopping_cart</span>
-                    </div>
-                    <span>Nueva Venta</span>
-                </button>
-                <button className="q-action-btn" onClick={() => navigate('/pedidos')}>
-                    <div className="q-icon-wrap orders-bg">
-                        <span className="material-symbols-rounded">format_list_bulleted</span>
-                    </div>
-                    <span>Ver Pedidos</span>
-                </button>
-                <button className="q-action-btn" onClick={() => navigate('/productos')}>
-                    <div className="q-icon-wrap cat-bg">
-                        <span className="material-symbols-rounded">package_2</span>
-                    </div>
-                    <span>Inventario</span>
-                </button>
-                <button className="q-action-btn" onClick={() => navigate('/caja')}>
-                    <div className="q-icon-wrap cash-bg">
-                        <span className="material-symbols-rounded">account_balance_wallet</span>
-                    </div>
-                    <span>Caja</span>
-                </button>
-            </section>
+            <div className="quick-actions-section">
+                <h3 className="section-title-inline">Accesos rápidos</h3>
+                <section className="mobile-quick-actions">
+                    <button className="q-action-btn" onClick={() => navigate('/pos')}>
+                        <div className="q-icon-wrap line-icon">
+                            <span className="material-symbols-rounded">shopping_cart</span>
+                        </div>
+                        <span>Vender</span>
+                    </button>
+                    <button className="q-action-btn" onClick={() => navigate('/pedidos')}>
+                        <div className="q-icon-wrap line-icon">
+                            <span className="material-symbols-rounded">receipt_long</span>
+                        </div>
+                        <span>Pedidos</span>
+                    </button>
+                    <button className="q-action-btn" onClick={() => navigate('/productos')}>
+                        <div className="q-icon-wrap line-icon">
+                            <span className="material-symbols-rounded">inventory_2</span>
+                        </div>
+                        <span>Inventario</span>
+                    </button>
+                    <button className="q-action-btn" onClick={() => navigate('/clientes')}>
+                        <div className="q-icon-wrap line-icon">
+                            <span className="material-symbols-rounded">group</span>
+                        </div>
+                        <span>Clientes</span>
+                    </button>
+                    <button className="q-action-btn" onClick={() => navigate('/proveedores')}>
+                        <div className="q-icon-wrap line-icon">
+                            <span className="material-symbols-rounded">local_shipping</span>
+                        </div>
+                        <span>Proveedores</span>
+                    </button>
+                    <button className="q-action-btn" onClick={() => navigate('/reportes')}>
+                        <div className="q-icon-wrap line-icon">
+                            <span className="material-symbols-rounded">bar_chart</span>
+                        </div>
+                        <span>Reportes</span>
+                    </button>
+                </section>
+            </div>
 
             {/* List Sections */}
             <div className="mobile-dashboard-lists">

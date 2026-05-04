@@ -36,180 +36,186 @@
 }
 
 .icon-btn-ghost {
-    background: #F6F4EF;
+    background: transparent;
     width: 36px;
     height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #6B6B6B;
+    color: #10B981;
 }
 
-/* Vertical Metrics Stack - Compacto */
-.metrics-stack-container {
+.header-nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.header-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #3A3A3A;
+    margin: 0;
+}
+
+.header-welcome-row {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Metrics Hero and Secondary Cards */
+.metrics-dashboard-container {
     width: 100%;
-    padding: 0.5rem 1rem;
-    margin-top: 0.5rem;
-}
-
-.metrics-stack-track {
+    padding: 0 1rem;
+    margin-top: 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
 }
 
-.metric-card {
+.hero-metric-card {
     position: relative;
     width: 100%;
-    padding: 0.875rem 1.25rem;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-height: 70px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    padding: 1.5rem;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
     color: white;
     cursor: pointer;
-    transition: all 0.2s ease;
     overflow: hidden;
+    min-height: 120px;
 }
 
-.metric-card:active {
-    transform: scale(0.98);
-}
-
-.m-card-content {
+.hero-content {
+    position: relative;
+    z-index: 2;
     display: flex;
     flex-direction: column;
-    z-index: 2;
 }
 
-.m-card-label {
-    font-size: 0.6rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.8);
-    letter-spacing: 0.8px;
-    margin-bottom: 2px;
+.hero-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.9;
+    margin-bottom: 0.25rem;
 }
 
-.m-card-value {
-    font-size: 1.35rem;
+.hero-value {
+    font-size: 2.2rem;
     font-weight: 900;
-    color: white;
-    margin: 0;
-    line-height: 1;
+    margin-bottom: 0.25rem;
 }
 
-.m-card-icon {
+.hero-sub {
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.hero-wave-bg {
     position: absolute;
-    top: 50%;
-    right: -10px;
-    transform: translateY(-50%);
-    font-size: 64px !important;
-    opacity: 0.15;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
     z-index: 1;
-    pointer-events: none;
-    color: white !important;
+    line-height: 0;
 }
 
-.metric-card.income {
-    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+.secondary-metrics-row {
+    display: flex;
+    gap: 0.75rem;
 }
 
-.metric-card.orders {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+.secondary-metric-card {
+    flex: 1;
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid #D1CDBF;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    cursor: pointer;
 }
 
-.metric-card.debt {
-    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+.sec-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6B6B6B;
+    margin-bottom: 0.25rem;
 }
 
-.metric-card.stock {
-    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+.sec-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #3A3A3A;
+    margin-bottom: 0.15rem;
 }
 
-
-.income .material-symbols-rounded {
-    color: #22c55e;
+.sec-sub {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #94a3b8;
 }
 
-.orders .material-symbols-rounded {
-    color: #f59e0b;
+/* Quick Actions Section */
+.quick-actions-section {
+    padding: 0 1rem;
+    margin-top: 1.5rem;
 }
 
-.debt .material-symbols-rounded {
-    color: #ef4444;
+.section-title-inline {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #3A3A3A;
+    margin-bottom: 0.75rem;
 }
 
-.stock .material-symbols-rounded {
-    color: #4F7A5A;
-}
-
-/* Quick Actions Grid - Compacto */
 .mobile-quick-actions {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    padding: 0 1rem;
-    gap: 0.5rem;
-    margin-top: 1rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem 0.5rem;
 }
 
 .q-action-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.5rem;
     background: transparent;
+    border: none;
 }
 
-.q-icon-wrap {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+.q-icon-wrap.line-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid #D1CDBF;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
-}
-
-.pos-bg {
-    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-}
-
-.orders-bg {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-}
-
-.cat-bg {
-    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-}
-
-.cash-bg {
-    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    color: #10B981;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .q-action-btn:active .q-icon-wrap {
-    transform: scale(0.92);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: #F6F4EF;
+    transform: scale(0.95);
 }
 
 .q-action-btn span:not(.material-symbols-rounded) {
-    font-size: 0.6rem;
-    font-weight: 700;
+    font-size: 0.7rem;
+    font-weight: 600;
     color: #6B6B6B;
 }
 
 .q-icon-wrap .material-symbols-rounded {
-    font-size: 22px;
-    font-variation-settings: 'FILL' 1;
+    font-size: 24px;
+    font-variation-settings: 'FILL' 0;
 }
 
 /* List Sections - Compacto */
