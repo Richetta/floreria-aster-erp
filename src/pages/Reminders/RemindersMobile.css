@@ -1,6 +1,6 @@
 .reminders-mobile-wrapper {
-    display: flex; flex-direction: column; min-height: 100vh;
-    background: #F6F4EF; padding-bottom: 120px;
+    display: flex; flex-direction: column; min-height: 100dvh;
+    background: #F6F4EF; padding-bottom: 90px;
 }
 
 /* Header */

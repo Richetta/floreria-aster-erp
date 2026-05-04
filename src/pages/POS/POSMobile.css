@@ -2,10 +2,10 @@
 .pos-mobile-wrapper {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    background-color: #F6F4EF;
+    min-height: 100dvh;
+    background-color: #f8fafc;
     /* slate-50 */
-    padding-bottom: 120px;
+    padding-bottom: 90px;
     /* space for cart and nav */
     color: #3A3A3A;
     font-family: 'Inter', sans-serif;

@@ -3,9 +3,9 @@
 .packages-mobile-wrapper {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    min-height: 100dvh;
     background: #F6F4EF;
-    padding-bottom: 120px;
+    padding-bottom: 90px;
     color: #3A3A3A;
 }
 

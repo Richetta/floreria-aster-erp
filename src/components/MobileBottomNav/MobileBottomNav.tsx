@@ -11,14 +11,9 @@ export const MobileBottomNav = ({ className = '' }: MobileBottomNavProps) => {
 
     const isActive = (path: string) => {
         if (path === '/dashboard') {
-            // Dashboard es el route index ("/")
             return location.pathname === '/' || location.pathname === '/dashboard';
         }
         return location.pathname.startsWith(path);
-    };
-
-    const handleNav = (path: string) => {
-        navigate(path);
     };
 
     return (
@@ -26,59 +21,47 @@ export const MobileBottomNav = ({ className = '' }: MobileBottomNavProps) => {
             {/* 1. INICIO */}
             <button
                 className={`nav-btn ${isActive('/dashboard') ? 'active' : ''}`}
-                onClick={() => handleNav('/dashboard')}
-                aria-label="Inicio"
+                onClick={() => navigate('/dashboard')}
             >
-                <div className="icon-container">
-                    <span className="material-symbols-rounded">home</span>
-                </div>
+                <span className="material-symbols-rounded">home</span>
                 <span className="nav-label">Inicio</span>
             </button>
 
-            {/* 2. VENTAS */}
+            {/* 2. PEDIDOS */}
             <button
                 className={`nav-btn ${isActive('/pedidos') ? 'active' : ''}`}
-                onClick={() => handleNav('/pedidos')}
-                aria-label="Ventas"
+                onClick={() => navigate('/pedidos')}
             >
-                <div className="icon-container">
-                    <span className="material-symbols-rounded">local_mall</span>
-                </div>
-                <span className="nav-label">Ventas</span>
+                <span className="material-symbols-rounded">receipt_long</span>
+                <span className="nav-label">Pedidos</span>
             </button>
 
-            {/* 3. + (ACCIÓN PRINCIPAL) */}
+            {/* 3. VENDER (Central) */}
             <button
-                className="nav-btn btn-center"
-                onClick={() => handleNav('/pos')}
-                aria-label="Nueva Acción"
+                className={`nav-btn btn-center ${isActive('/pos') ? 'active' : ''}`}
+                onClick={() => navigate('/pos')}
             >
                 <div className="icon-center-wrapper">
-                    <span className="material-symbols-rounded">add</span>
+                    <span className="material-symbols-rounded">point_of_sale</span>
                 </div>
+                <span className="nav-label">Vender</span>
             </button>
 
-            {/* 4. ALERTAS */}
+            {/* 4. STOCK */}
             <button
-                className={`nav-btn ${isActive('/alertas') ? 'active' : ''}`}
-                onClick={() => handleNav('/alertas')}
-                aria-label="Alertas"
+                className={`nav-btn ${isActive('/productos') ? 'active' : ''}`}
+                onClick={() => navigate('/productos')}
             >
-                <div className="icon-container">
-                    <span className="material-symbols-rounded">notifications</span>
-                </div>
-                <span className="nav-label">Alertas</span>
+                <span className="material-symbols-rounded">inventory_2</span>
+                <span className="nav-label">Stock</span>
             </button>
 
             {/* 5. MÁS */}
             <button
                 className={`nav-btn ${isActive('/menu') || isActive('/configuracion') ? 'active' : ''}`}
-                onClick={() => handleNav('/menu')}
-                aria-label="Más opciones"
+                onClick={() => navigate('/menu')}
             >
-                <div className="icon-container">
-                    <span className="material-symbols-rounded">menu</span>
-                </div>
+                <span className="material-symbols-rounded">grid_view</span>
                 <span className="nav-label">Más</span>
             </button>
         </nav>

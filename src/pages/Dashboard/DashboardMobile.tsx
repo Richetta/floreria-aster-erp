@@ -100,176 +100,145 @@ export const DashboardMobile = () => {
     const formattedDate = new Intl.DateTimeFormat('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date());
     const isAdmin = user?.role === 'admin';
 
+    const quickActions = [
+        { label: 'Vender', icon: 'point_of_sale', path: '/pos', color: '#10B981', bg: '#ecfdf5' },
+        { label: 'Pedidos', icon: 'receipt_long', path: '/pedidos', color: '#3b82f6', bg: '#eff6ff' },
+        { label: 'Stock', icon: 'inventory_2', path: '/productos', color: '#f59e0b', bg: '#fffbeb' },
+        { label: 'Clientes', icon: 'group', path: '/clientes', color: '#8b5cf6', bg: '#f5f3ff' },
+        { label: 'Proveedores', icon: 'local_shipping', path: '/proveedores', color: '#ec4899', bg: '#fdf2f8' },
+        { label: 'Reportes', icon: 'bar_chart', path: '/reportes', color: '#06b6d4', bg: '#ecfeff' },
+        { label: 'Caja', icon: 'payments', path: '/caja', color: '#16a34a', bg: '#f0fdf4' },
+        { label: 'Ajustes', icon: 'settings', path: '/configuracion', color: '#64748b', bg: '#f8fafc' },
+    ];
+
     return (
         <div className="dashboard-mobile-wrapper">
-            {/* Header / Saludo */}
+            {/* Header - Solo saludo, sin hamburguesa ni campana (ya están en la bottom nav) */}
             <header className="mobile-dashboard-header">
-                <div className="header-nav-row">
-                    <button className="icon-btn-ghost" onClick={() => navigate('/menu')}>
-                        <span className="material-symbols-rounded">menu</span>
-                    </button>
-                    <h1 className="header-title">Dashboard</h1>
-                    <button className="icon-btn-ghost" onClick={() => navigate('/alertas')}>
-                        <span className="material-symbols-rounded">notifications_active</span>
-                    </button>
-                </div>
-                <div className="header-welcome-row">
-                    <span className="welcome-text">¡Hola, {user?.name?.split(' ')[0]}! 🌱</span>
-                    <h2 className="current-date">{formattedDate}</h2>
+                <div className="header-greeting">
+                    <div className="greeting-left">
+                        <span className="welcome-text">¡Hola, {user?.name?.split(' ')[0]}! 🌿</span>
+                        <span className="current-date">{formattedDate}</span>
+                    </div>
+                    <div className="greeting-avatar">
+                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
                 </div>
             </header>
 
-            {/* Métricas Hero y Secundarias */}
-            <div className="metrics-dashboard-container">
+            {/* Métricas */}
+            <div className="metrics-container">
                 {isAdmin && (
-                    <div className="hero-metric-card" onClick={() => navigate('/caja')}>
-                        <div className="hero-content">
-                            <span className="hero-label">Ventas de hoy</span>
-                            <div className="hero-value">${metrics.todaysSales.toLocaleString()}</div>
-                            <span className="hero-sub">{metrics.todaysOrders} pedidos</span>
+                    <div className="metric-hero" onClick={() => navigate('/caja')}>
+                        <div className="metric-hero-inner">
+                            <span className="material-symbols-rounded metric-hero-icon">trending_up</span>
+                            <div className="metric-hero-text">
+                                <span className="metric-hero-label">Ventas de hoy</span>
+                                <span className="metric-hero-value">${metrics.todaysSales.toLocaleString()}</span>
+                            </div>
                         </div>
-                        {/* Fake SVG wave background */}
                         <div className="hero-wave-bg">
                             <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
-                                <path fill="rgba(255,255,255,0.15)" fillOpacity="1" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                                <path fill="rgba(255,255,255,0.12)" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
                             </svg>
                         </div>
                     </div>
                 )}
-
-                <div className="secondary-metrics-row">
-                    <div className="secondary-metric-card" onClick={() => navigate('/pedidos')}>
-                        <span className="sec-label">Pedidos hoy</span>
-                        <div className="sec-value">{metrics.todaysOrders}</div>
-                        <span className="sec-sub">pendientes</span>
+                <div className="metrics-row">
+                    <div className="metric-card metric-orders" onClick={() => navigate('/pedidos')}>
+                        <span className="material-symbols-rounded mc-icon">local_mall</span>
+                        <span className="mc-value">{metrics.todaysOrders}</span>
+                        <span className="mc-label">Pedidos</span>
                     </div>
-                    <div className="secondary-metric-card" onClick={() => navigate('/pedidos')}>
-                        <span className="sec-label">Entregas hoy</span>
-                        <div className="sec-value">{metrics.upcomingOrders.length}</div>
-                        <span className="sec-sub">programadas</span>
+                    <div className="metric-card metric-deliveries" onClick={() => navigate('/pedidos')}>
+                        <span className="material-symbols-rounded mc-icon">local_shipping</span>
+                        <span className="mc-value">{metrics.upcomingOrders.length}</span>
+                        <span className="mc-label">Entregas</span>
                     </div>
+                    <div className="metric-card metric-stock" onClick={() => navigate('/productos')}>
+                        <span className="material-symbols-rounded mc-icon">warning</span>
+                        <span className="mc-value">{metrics.criticalProducts.length}</span>
+                        <span className="mc-label">Alertas</span>
+                    </div>
+                    {isAdmin && (
+                        <div className="metric-card metric-debt" onClick={() => navigate('/clientes?filter=debt')}>
+                            <span className="material-symbols-rounded mc-icon">account_balance</span>
+                            <span className="mc-value">${metrics.totalDebt > 999 ? Math.round(metrics.totalDebt / 1000) + 'k' : metrics.totalDebt.toLocaleString()}</span>
+                            <span className="mc-label">Deudas</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Quick Actions Grid */}
-            <div className="quick-actions-section">
-                <h3 className="section-title-inline">Accesos rápidos</h3>
-                <section className="mobile-quick-actions">
-                    <button className="q-action-btn" onClick={() => navigate('/pos')}>
-                        <div className="q-icon-wrap line-icon">
-                            <span className="material-symbols-rounded">shopping_cart</span>
-                        </div>
-                        <span>Vender</span>
-                    </button>
-                    <button className="q-action-btn" onClick={() => navigate('/pedidos')}>
-                        <div className="q-icon-wrap line-icon">
-                            <span className="material-symbols-rounded">receipt_long</span>
-                        </div>
-                        <span>Pedidos</span>
-                    </button>
-                    <button className="q-action-btn" onClick={() => navigate('/productos')}>
-                        <div className="q-icon-wrap line-icon">
-                            <span className="material-symbols-rounded">inventory_2</span>
-                        </div>
-                        <span>Inventario</span>
-                    </button>
-                    <button className="q-action-btn" onClick={() => navigate('/clientes')}>
-                        <div className="q-icon-wrap line-icon">
-                            <span className="material-symbols-rounded">group</span>
-                        </div>
-                        <span>Clientes</span>
-                    </button>
-                    <button className="q-action-btn" onClick={() => navigate('/proveedores')}>
-                        <div className="q-icon-wrap line-icon">
-                            <span className="material-symbols-rounded">local_shipping</span>
-                        </div>
-                        <span>Proveedores</span>
-                    </button>
-                    <button className="q-action-btn" onClick={() => navigate('/reportes')}>
-                        <div className="q-icon-wrap line-icon">
-                            <span className="material-symbols-rounded">bar_chart</span>
-                        </div>
-                        <span>Reportes</span>
-                    </button>
-                </section>
+            {/* Accesos Rápidos - Scroll Horizontal */}
+            <div className="quick-scroll-section">
+                <div className="quick-scroll-track">
+                    {quickActions.map(action => (
+                        <button key={action.label} className="qa-chip" onClick={() => navigate(action.path)}>
+                            <div className="qa-chip-icon" style={{ background: action.bg, color: action.color }}>
+                                <span className="material-symbols-rounded">{action.icon}</span>
+                            </div>
+                            <span className="qa-chip-label">{action.label}</span>
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {/* List Sections */}
-            <div className="mobile-dashboard-lists">
-                {/* ⚠️ Stock Crítico (solo si hay alertas) */}
+            {/* Listas */}
+            <div className="dashboard-lists">
+                {/* Stock Crítico */}
                 {isAdmin && metrics.criticalProducts.length > 0 && (
-                    <section className="mobile-section">
-                        <div className="section-head">
+                    <section className="dash-section">
+                        <div className="dash-section-head">
                             <h3>⚠️ Stock Crítico</h3>
                             <button onClick={() => navigate('/reposicion')}>Reponer</button>
                         </div>
-                        <div className="mobile-list-track">
-                            {metrics.criticalProducts.slice(0, 5).map(item => (
-                                <div key={item.id} className="mobile-list-item stock-alert-item" onClick={() => navigate('/reposicion')}>
-                                    <div className="item-leading">
-                                        <div className="initial-circle stock-alert-icon">
-                                            <span className="material-symbols-rounded" style={{ fontSize: '20px', color: '#ef4444' }}>warning</span>
-                                        </div>
+                        <div className="dash-list">
+                            {metrics.criticalProducts.slice(0, 4).map(item => (
+                                <div key={item.id} className="dash-list-item stock-alert" onClick={() => navigate('/reposicion')}>
+                                    <div className="dli-icon dli-icon-red">
+                                        <span className="material-symbols-rounded">warning</span>
                                     </div>
-                                    <div className="item-content">
-                                        <div className="item-title">{item.name}</div>
-                                        <div className="item-subtitle">
-                                            Stock: <strong>{item.stock}</strong> (Mín: {item.min})
-                                        </div>
+                                    <div className="dli-content">
+                                        <span className="dli-title">{item.name}</span>
+                                        <span className="dli-sub">Stock: <strong>{item.stock}</strong> / Mín: {item.min}</span>
                                     </div>
-                                    <div className="item-trailing-status critical">
-                                        {item.stock === 0 ? 'Agotado' : 'Bajo'}
-                                    </div>
+                                    <span className="dli-badge dli-badge-red">{item.stock === 0 ? 'Agotado' : 'Bajo'}</span>
                                 </div>
                             ))}
                         </div>
                     </section>
                 )}
 
-                {/* 💰 Deudores (solo si hay deudas) */}
+                {/* Deudores */}
                 {isAdmin && metrics.debtors.length > 0 && (
-                    <section className="mobile-section">
-                        <div className="section-head">
+                    <section className="dash-section">
+                        <div className="dash-section-head">
                             <h3>💰 Cuentas a Cobrar</h3>
                             <button onClick={() => navigate('/clientes?filter=debt')}>Ver Todos</button>
                         </div>
-                        <div className="mobile-list-track">
+                        <div className="dash-list">
                             {metrics.debtors.map(customer => (
-                                <div key={customer.id} className="mobile-list-item debtor-item">
-                                    <div className="item-leading">
-                                        <div className="initial-circle debtor-avatar">
-                                            {customer.name.charAt(0)}
-                                        </div>
+                                <div key={customer.id} className="dash-list-item">
+                                    <div className="dli-icon dli-icon-amber">
+                                        {customer.name.charAt(0)}
                                     </div>
-                                    <div className="item-content">
-                                        <div className="item-title">{customer.name}</div>
-                                        <div className="item-subtitle">
-                                            ${Number(customer.debtBalance).toLocaleString()}
-                                        </div>
+                                    <div className="dli-content">
+                                        <span className="dli-title">{customer.name}</span>
+                                        <span className="dli-sub">${Number(customer.debtBalance).toLocaleString()}</span>
                                     </div>
-                                    <div className="debtor-actions">
-                                        <button
-                                            className="debtor-action-btn collect-btn"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setDebtPaymentModal({
-                                                    open: true,
-                                                    customerId: customer.id,
-                                                    customerName: customer.name,
-                                                    maxAmount: Number(customer.debtBalance) || 0
-                                                });
-                                            }}
-                                        >
-                                            <span className="material-symbols-rounded" style={{ fontSize: '18px' }}>payments</span>
+                                    <div className="dli-actions">
+                                        <button className="dli-action-btn dli-collect" onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDebtPaymentModal({ open: true, customerId: customer.id, customerName: customer.name, maxAmount: Number(customer.debtBalance) || 0 });
+                                        }}>
+                                            <span className="material-symbols-rounded">payments</span>
                                         </button>
-                                        <button
-                                            className="debtor-action-btn whatsapp-btn"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                sendWhatsAppReminder(customer);
-                                            }}
-                                        >
-                                            <span className="material-symbols-rounded" style={{ fontSize: '18px' }}>chat</span>
+                                        <button className="dli-action-btn dli-wa" onClick={(e) => {
+                                            e.stopPropagation();
+                                            sendWhatsAppReminder(customer);
+                                        }}>
+                                            <span className="material-symbols-rounded">chat</span>
                                         </button>
                                     </div>
                                 </div>
@@ -278,38 +247,35 @@ export const DashboardMobile = () => {
                     </section>
                 )}
 
-                {/* Entregas Próximas */}
-                <section className="mobile-section">
-                    <div className="section-head">
+                {/* Próximas Entregas */}
+                <section className="dash-section">
+                    <div className="dash-section-head">
                         <h3>Próximas Entregas</h3>
                         <button onClick={() => navigate('/pedidos')}>Ver Todo</button>
                     </div>
-                    <div className="mobile-list-track">
+                    <div className="dash-list">
                         {metrics.upcomingOrders.length === 0 ? (
-                            <div className="empty-state-list">No hay entregas pendientes</div>
+                            <div className="dash-empty">Sin entregas pendientes 🎉</div>
                         ) : (
                             metrics.upcomingOrders.map(order => (
-                                <div key={order.id} className="mobile-list-item" onClick={() => navigate('/pedidos')}>
-                                    <div className="item-leading">
-                                        <div className="initial-circle">
-                                            {order.customerName.charAt(0)}
-                                        </div>
+                                <div key={order.id} className="dash-list-item" onClick={() => navigate('/pedidos')}>
+                                    <div className="dli-icon dli-icon-blue">
+                                        {order.customerName.charAt(0)}
                                     </div>
-                                    <div className="item-content">
-                                        <div className="item-title">{order.customerName}</div>
-                                        <div className="item-subtitle">
+                                    <div className="dli-content">
+                                        <span className="dli-title">{order.customerName}</span>
+                                        <span className="dli-sub">
                                             {new Date(order.date).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' })} • {order.deliveryTimeSlot}
-                                        </div>
+                                        </span>
                                     </div>
-                                    <div className={`item-trailing-status ${order.status}`}>
-                                        {order.status === 'pending' ? 'Pte' : 'Armando'}
-                                    </div>
+                                    <span className={`dli-badge dli-badge-${order.status}`}>
+                                        {order.status === 'pending' ? 'Pte' : order.status === 'assembling' ? 'Armando' : order.status === 'ready' ? 'Listo' : order.status}
+                                    </span>
                                 </div>
                             ))
                         )}
                     </div>
                 </section>
-
             </div>
 
             {/* Modal Cobro de Deuda */}
@@ -347,10 +313,7 @@ export const DashboardMobile = () => {
                             </button>
                         </div>
                         <div className="debt-modal-footer">
-                            <button
-                                className="debt-cancel-btn"
-                                onClick={() => setDebtPaymentModal({ open: false, customerId: '', customerName: '', maxAmount: 0 })}
-                            >
+                            <button className="debt-cancel-btn" onClick={() => setDebtPaymentModal({ open: false, customerId: '', customerName: '', maxAmount: 0 })}>
                                 Cancelar
                             </button>
                             <button

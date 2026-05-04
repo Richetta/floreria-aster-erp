@@ -1,9 +1,9 @@
 .products-mobile-wrapper {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    background: #F6F4EF;
-    padding-bottom: 120px;
+    min-height: 100dvh;
+    background: #f8fafc;
+    padding-bottom: 90px;
 }
 
 /* Header */
