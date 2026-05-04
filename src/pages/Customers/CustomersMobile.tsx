@@ -11,6 +11,7 @@ export const CustomersMobile = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filter, setFilter] = useState<'all' | 'debt'>('all');
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
     useEffect(() => {
         loadCustomers();
@@ -40,33 +41,27 @@ export const CustomersMobile = () => {
             <header className="mobile-customers-header">
                 <div className="customers-header-top">
                     <h2>Clientes</h2>
-                    <button className={`refresh-btn ${isRefreshing ? 'spinning' : ''}`} onClick={handleRefresh}>
-                        <span className="material-symbols-rounded">refresh</span>
-                    </button>
+                    <div className="header-actions">
+                        <button className="sync-btn" onClick={handleRefresh} title="Sincronizar">
+                            <span className={`material-symbols-rounded ${isRefreshing ? 'spinning' : ''}`}>cloud_sync</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="customers-search-box">
-                    <span className="material-symbols-rounded">search</span>
+                    <span className="material-symbols-rounded search-icon">search</span>
                     <input
                         type="text"
                         placeholder="Buscar por nombre o teléfono..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
-                </div>
-
-                <div className="customers-filter-scroll">
-                    <button
-                        className={`filter-chip ${filter === 'all' ? 'active' : ''}`}
-                        onClick={() => setFilter('all')}
-                    >
-                        Todos ({customers.length})
-                    </button>
-                    <button
-                        className={`filter-chip debt ${filter === 'debt' ? 'active' : ''}`}
-                        onClick={() => setFilter('debt')}
-                    >
-                        Con Deuda ({(customers || []).filter(c => (Number(c.debtBalance) || 0) > 0).length})
+                    <div className="divider-v"></div>
+                    <button className="filter-toggle-btn" onClick={() => setIsFiltersOpen(true)}>
+                        <span className="material-symbols-rounded">tune</span>
+                        {filter !== 'all' && (
+                            <span className="filter-badge-dot"></span>
+                        )}
                     </button>
                 </div>
             </header>
@@ -126,6 +121,43 @@ export const CustomersMobile = () => {
             <button className="mobile-fab-add" onClick={() => navigate('/clientes')}>
                 <span className="material-symbols-rounded">person_add</span>
             </button>
+
+            {/* Filters Bottom Sheet */}
+            <div className={`filters-bottom-sheet ${isFiltersOpen ? 'open' : ''}`}>
+                <div className="filters-sheet-overlay" onClick={() => setIsFiltersOpen(false)} />
+                <div className="filters-sheet-content">
+                    <div className="filters-sheet-header">
+                        <h3>Filtros</h3>
+                        <button className="close-sheet-btn" onClick={() => setIsFiltersOpen(false)}>
+                            <span className="material-symbols-rounded">close</span>
+                        </button>
+                    </div>
+                    <div className="filters-sheet-body">
+                        <div className="filter-group">
+                            <h4>Estado de Cuenta</h4>
+                            <div className="filter-chips">
+                                <button
+                                    className={`filter-chip ${filter === 'all' ? 'active' : ''}`}
+                                    onClick={() => setFilter('all')}
+                                >
+                                    Todos ({customers.length})
+                                </button>
+                                <button
+                                    className={`filter-chip ${filter === 'debt' ? 'active' : ''}`}
+                                    onClick={() => setFilter('debt')}
+                                >
+                                    Con Deuda ({(customers || []).filter(c => (Number(c.debtBalance) || 0) > 0).length})
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="filters-sheet-footer">
+                        <button className="apply-filters-btn" onClick={() => setIsFiltersOpen(false)}>
+                            Aplicar Filtros
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

@@ -47,14 +47,14 @@ export const MobileBottomNav = ({ className = '' }: MobileBottomNavProps) => {
                 <span className="nav-label">Pedidos</span>
             </button>
 
-            {/* 3. VENDER - Acción principal */}
+            {/* 3. VENDER - Acción principal (CENTRAL) */}
             <button
-                className={`nav-btn ${isActive('/pos') ? 'active' : ''}`}
+                className={`nav-btn btn-center ${isActive('/pos') ? 'active' : ''}`}
                 onClick={() => handleNav('/pos')}
                 aria-label="Nueva Venta"
             >
-                <div className="icon-container">
-                    <span className="material-symbols-rounded">point_of_sale</span>
+                <div className="icon-center-wrapper">
+                    <span className="material-symbols-rounded">shopping_cart</span>
                 </div>
                 <span className="nav-label">Vender</span>
             </button>

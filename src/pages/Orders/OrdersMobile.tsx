@@ -223,67 +223,65 @@ export const OrdersMobile = () => {
                                 key={order.id}
                                 className={`order-card status-${order.status}`}
                                 onClick={() => handleOrderTap(order)}
+                                style={{ background: s.bg }}
                             >
-                                <div className="order-main-row">
-                                    <div className="order-left">
-                                        <div className="order-status-icon" style={{ backgroundColor: s.bg, color: s.color }}>
-                                            <span className="material-symbols-rounded">{s.icon}</span>
-                                        </div>
+                                <div className="order-card-top">
+                                    <div className="order-main-row">
                                         <div className="order-customer-row">
                                             <span className="order-customer">{order.customerName}</span>
                                             <span className="order-delivery-date">
                                                 {dateObj.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
                                             </span>
                                         </div>
+                                        <div className="order-total">${order.total.toLocaleString()}</div>
                                     </div>
-                                    <div className="order-total">${order.total.toLocaleString()}</div>
-                                </div>
 
-                                <div className="order-chips-payment-row">
-                                    <div className="order-card-chips">
-                                        {order.deliveryMethod && (
-                                            <span className="order-chip">
-                                                <span className="material-symbols-rounded">
-                                                    {order.deliveryMethod === 'delivery' ? 'local_shipping' : 'storefront'}
+                                    <div className="order-chips-payment-row">
+                                        <div className="order-card-chips">
+                                            {order.deliveryMethod && (
+                                                <span className="order-chip">
+                                                    <span className="material-symbols-rounded">
+                                                        {order.deliveryMethod === 'delivery' ? 'local_shipping' : 'storefront'}
+                                                    </span>
+                                                    {order.deliveryMethod === 'delivery' ? 'Envío' : 'Retiro'}
                                                 </span>
-                                                {order.deliveryMethod === 'delivery' ? 'Envío' : 'Retiro'}
-                                            </span>
-                                        )}
-                                        {hasAddress && order.deliveryAddress && (
-                                            <span className="order-chip address">
-                                                <span className="material-symbols-rounded">location_on</span>
-                                                {order.deliveryAddress.street!.length > 20
-                                                    ? order.deliveryAddress.street!.slice(0, 20) + '…'
-                                                    : order.deliveryAddress.street
-                                                }
-                                            </span>
-                                        )}
+                                            )}
+                                            {hasAddress && order.deliveryAddress && (
+                                                <span className="order-chip address">
+                                                    <span className="material-symbols-rounded">location_on</span>
+                                                    {order.deliveryAddress.street!.length > 20
+                                                        ? order.deliveryAddress.street!.slice(0, 20) + '…'
+                                                        : order.deliveryAddress.street
+                                                    }
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="order-payment-status">
+                                            {(!isNaN(remaining) && remaining > 1) ? (
+                                                <span className="order-chip debt">Debe ${Math.round(remaining).toLocaleString()}</span>
+                                            ) : (order.total > 0 && remaining <= 1) ? (
+                                                <span className="order-chip paid">Saldado</span>
+                                            ) : null}
+                                        </div>
                                     </div>
-                                    <div className="order-payment-status">
-                                        {(!isNaN(remaining) && remaining > 1) ? (
-                                            <span className="order-chip debt">Debe ${Math.round(remaining).toLocaleString()}</span>
-                                        ) : (order.total > 0 && remaining <= 1) ? (
-                                            <span className="order-chip paid">Saldado</span>
-                                        ) : null}
-                                    </div>
-                                </div>
 
-                                {hasItems && (
-                                    <div className="order-mini-items">
-                                        {order.items.slice(0, 2).map((item: any, idx: number) => {
-                                            const itemName = item.name || item.product_name || 'Producto';
-                                            const itemQty = item.qty || item.quantity || 1;
-                                            return (
-                                                <span key={idx} className="mini-item">
-                                                    {itemQty}x {itemName}
-                                                </span>
-                                            );
-                                        })}
-                                        {order.items.length > 2 && (
-                                            <span className="mini-more">+{order.items.length - 2} más</span>
-                                        )}
-                                    </div>
-                                )}
+                                    {hasItems && (
+                                        <div className="order-mini-items">
+                                            {order.items.slice(0, 2).map((item: any, idx: number) => {
+                                                const itemName = item.name || item.product_name || 'Producto';
+                                                const itemQty = item.qty || item.quantity || 1;
+                                                return (
+                                                    <span key={idx} className="mini-item">
+                                                        {itemQty}x {itemName}
+                                                    </span>
+                                                );
+                                            })}
+                                            {order.items.length > 2 && (
+                                                <span className="mini-more">+{order.items.length - 2} más</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         );
                     })

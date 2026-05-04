@@ -93,9 +93,9 @@
 }
 
 .mobile-tab.active {
-    background: var(--color-primary);
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(155, 81, 224, 0.3);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .mobile-tab .material-symbols-rounded {
@@ -144,20 +144,20 @@
 }
 
 .barcode-scan-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: var(--color-primary);
-    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 10px rgba(155, 81, 224, 0.2);
     border: none;
     flex-shrink: 0;
 }
 
 .barcode-scan-btn:active {
+    background: #EAE6DB;
     transform: scale(0.95);
 }
 
@@ -235,7 +235,7 @@
 
 .filter-toggle.active {
     background: #d1fae5;
-    border-color: #4F7A5A;
+    border-color: #10B981;
     color: #059669;
 }
 
@@ -285,17 +285,17 @@
 .m-product-card {
     background: white;
     border-radius: 14px;
-    padding: 0.75rem;
+    padding: 0.65rem 0.75rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    border: 1px solid transparent;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    border: 1px solid #D1CDBF;
 }
 
 .m-product-card:active {
     transform: scale(0.96);
-    border-color: var(--color-primary);
+    border-color: #10B981;
 }
 
 .m-product-header {
@@ -345,13 +345,13 @@
 .m-add-icon {
     width: 28px;
     height: 28px;
-    background: var(--color-primary);
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
     color: white;
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 6px rgba(155, 81, 224, 0.4);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
 }
 
 .m-add-icon .material-symbols-rounded {
@@ -485,21 +485,20 @@
     font-size: 18px;
 }
 
-/* Floating Cart Bar - Compacto */
 .mobile-floating-cart {
     position: fixed;
     /* iOS safe area: account for bottom nav + home indicator */
     bottom: calc(75px + max(0px, env(safe-area-inset-bottom, 0px)));
     left: 0.75rem;
     right: 0.75rem;
-    background: var(--color-primary);
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
     color: white;
     padding: 0.75rem 1rem;
     border-radius: 100px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 10px 25px rgba(155, 81, 224, 0.4);
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
     z-index: 1000;
 }
 
@@ -741,10 +740,10 @@
 }
 
 .m-pay-card.active {
-    border-color: var(--color-primary);
+    border-color: #10B981;
     background: white;
-    color: var(--color-primary);
-    box-shadow: 0 4px 12px rgba(155, 81, 224, 0.1);
+    color: #10B981;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
 }
 
 .m-pay-card-icon {
@@ -771,7 +770,7 @@
     top: 6px;
     right: 6px;
     font-size: 16px !important;
-    color: var(--color-primary);
+    color: #10B981;
 }
 
 .m-pay-card:active {
