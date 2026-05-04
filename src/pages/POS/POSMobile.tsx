@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { playBeep } from '../../utils/audio';
@@ -18,7 +19,6 @@ export const POSMobile = () => {
     const cart = useStore((state) => state.cart);
     const addToCart = useStore((state) => state.addToCart);
     const removeFromCart = useStore((state) => state.removeFromCart);
-    const updateCartQty = useStore((state) => state.updateCartQty);
     const clearCart = useStore((state) => state.clearCart);
     const processSale = useStore((state) => state.processSale);
     
@@ -38,10 +38,10 @@ export const POSMobile = () => {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
-    const [paymentMethod, setPaymentMethod] = useState<string>(shopInfo.paymentMethods?.[0]?.name || 'Efectivo');
+    const paymentMethod = shopInfo.paymentMethods?.[0]?.name || 'Efectivo';
     const [isProcessing, setIsProcessing] = useState(false);
-    const [inStockOnly, setInStockOnly] = useState(false);
-    const [sortBy, setSortBy] = useState<'name' | 'price' | 'stock'>('name');
+    const inStockOnly = false;
+    const sortBy = 'name';
 
     const { showAlert } = useModal();
 
@@ -136,34 +136,6 @@ export const POSMobile = () => {
 
     // --- Handlers ---
 
-    const getPaymentIconHTML = (methodName: string) => {
-        const name = (methodName || '').toLowerCase();
-        const method = shopInfo.paymentMethods?.find(m => m.name === methodName);
-        const iconId = method?.iconId;
-
-        // Custom icon mapping (material symbols approximation)
-        const getIconName = (id: string | undefined): string => {
-            switch(id) {
-                case 'cash': return 'payments';
-                case 'card': return 'credit_card';
-                case 'bank': return 'account_balance';
-                case 'mobile': return 'qr_code_2';
-                case 'wallet': return 'account_balance_wallet';
-                case 'coins': return 'monetization_on';
-                case 'building': return 'store';
-                case 'globe': return 'language';
-                case 'shield': return 'verified_user';
-                case 'other': return 'help';
-                default:
-                    if (name.includes('efectivo')) return 'payments';
-                    if (name.includes('tarjeta') || name.includes('débito') || name.includes('crédito')) return 'credit_card';
-                    return 'wallet';
-            }
-        };
-
-        return <span className="material-symbols-rounded">{getIconName(iconId)}</span>;
-    };
-
     const handleCheckout = async () => {
         if (cart.length === 0) return;
         setIsProcessing(true);
@@ -247,130 +219,115 @@ export const POSMobile = () => {
         setIsProcessing(false);
     };
 
+    const navigate = useNavigate();
+
+    const getCategoryIcon = (catName: string) => {
+        const lower = catName.toLowerCase();
+        if (lower.includes('flor')) return 'local_florist';
+        if (lower.includes('planta')) return 'potted_plant';
+        if (lower.includes('regalo') || lower.includes('regaler')) return 'card_giftcard';
+        if (lower.includes('insumo') || lower.includes('maceta')) return 'inventory_2';
+        return 'category';
+    };
+
     return (
         <div className="pos-mobile-wrapper">
-            {/* Main Tabs */}
-            <div className="pos-mobile-tabs">
-                <button
-                    className={`mobile-tab ${checkoutMode === 'sale' ? 'active' : ''}`}
-                    onClick={() => setCheckoutMode('sale')}
-                >
-                    <span className="material-symbols-rounded">shopping_cart</span>
-                    Venta Rápida
+            {/* Header */}
+            <div className="pos-mobile-header">
+                <button className="icon-btn-ghost" onClick={() => navigate(-1)}>
+                    <span className="material-symbols-rounded">chevron_left</span>
                 </button>
-                <button
-                    className={`mobile-tab ${checkoutMode === 'order' ? 'active' : ''}`}
-                    onClick={() => setCheckoutMode('order')}
-                >
-                    <span className="material-symbols-rounded">calendar_today</span>
-                    Pedidos
-                </button>
+                <h2>POS - Venta</h2>
+                <div className="pos-header-actions">
+                    <button className="icon-btn-ghost" onClick={() => setIsAutoSyncEnabled(!isAutoSyncEnabled)}>
+                        <span className="material-symbols-rounded" style={{ color: isAutoSyncEnabled ? '#10B981' : '#6B6B6B' }}>
+                            {isAutoSyncEnabled ? 'cloud_sync' : 'cloud_off'}
+                        </span>
+                    </button>
+                    <button className="icon-btn-ghost" onClick={() => setCheckoutMode(checkoutMode === 'sale' ? 'order' : 'sale')}>
+                        <span className="material-symbols-rounded">
+                            {checkoutMode === 'sale' ? 'calendar_today' : 'shopping_cart'}
+                        </span>
+                    </button>
+                </div>
             </div>
-
 
 
             {checkoutMode === 'sale' ? (
                 <>
-                    {/* Search & Categories */}
-                    <div className="pos-mobile-controls">
-                        {/* Search Bar */}
-                        <div className="mobile-search-bar-wrapper">
-                            <div className="mobile-search-bar">
-                                <span className="material-symbols-rounded">search</span>
-                                <input
-                                    type="text"
-                                    placeholder="Buscar producto..."
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                />
-                                {searchTerm && (
-                                    <button className="clear-search" onClick={() => setSearchTerm('')}>
-                                        <span className="material-symbols-rounded">close</span>
-                                    </button>
-                                )}
-                            </div>
-                            <button
-                                className="barcode-scan-btn"
-                                onClick={() => setIsAutoSyncEnabled(!isAutoSyncEnabled)}
-                                title={isAutoSyncEnabled ? "Desactivar sincronización automática" : "Activar sincronización automática"}
-                                style={{
-                                    background: isAutoSyncEnabled ? '#4F7A5A' : '#fee2e2',
-                                    color: isAutoSyncEnabled ? '#fff' : '#dc2626',
-                                    marginRight: '0.5rem'
-                                }}
-                            >
-                                <span className="material-symbols-rounded">
-                                    {isAutoSyncEnabled ? 'sync' : 'sync_disabled'}
-                                </span>
-                            </button>
-                            <button
-                                className="barcode-scan-btn"
-                                onClick={() => setIsCameraScannerOpen(true)}
-                                title="Escanear producto"
-                            >
-                                <span className="material-symbols-rounded">photo_camera</span>
-                            </button>
-                        </div>
-
-                        {/* Category Pills - Horizontal Scroll */}
-                        <div className="mobile-cat-scroll">
-                            <button
-                                className={`cat-pill ${activeCategory === 'Todos' ? 'active' : ''}`}
-                                onClick={() => setActiveCategory('Todos')}
-                            >
-                                Todos
-                            </button>
-                            {(categories || []).map(cat => (
-                                <button
-                                    key={cat}
-                                    className={`cat-pill ${activeCategory === cat ? 'active' : ''}`}
-                                    onClick={() => setActiveCategory(cat)}
-                                >
-                                    {cat}
+                    {/* Search Bar */}
+                    <div className="pos-search-container">
+                        <div className="pos-search-box">
+                            <span className="material-symbols-rounded search-icon">search</span>
+                            <input
+                                type="text"
+                                placeholder="Buscar producto o escanear..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
+                            {searchTerm && (
+                                <button className="clear-search" onClick={() => setSearchTerm('')}>
+                                    <span className="material-symbols-rounded">close</span>
                                 </button>
-                            ))}
-                        </div>
-
-                        {/* Filter Row */}
-                        <div className="pos-filter-row">
-                            <button
-                                className={`filter-toggle ${inStockOnly ? 'active' : ''}`}
-                                onClick={() => setInStockOnly(!inStockOnly)}
-                            >
-                                <span className="material-symbols-rounded">inventory</span>
-                                <span>En stock</span>
-                                {inStockOnly && <span className="filter-badge">✓</span>}
+                            )}
+                            <button className="barcode-icon-btn" onClick={() => setIsCameraScannerOpen(true)}>
+                                <span className="material-symbols-rounded">barcode_scanner</span>
                             </button>
-
-                            <select
-                                className="filter-select"
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value as any)}
-                            >
-                                <option value="name">A-Z</option>
-                                <option value="price">💰 Precio</option>
-                                <option value="stock">📦 Stock</option>
-                            </select>
                         </div>
                     </div>
 
-                    {/* Products Grid */}
-                    <div className="pos-mobile-products-grid">
-                        {filteredProducts.map(product => (
-                            <div key={product.id} className="m-product-card" onClick={() => addToCart(product)}>
-                                <div className="m-product-header">
-                                    <span className="m-product-tag">{product.category}</span>
-                                    {product.stock <= 5 && <span className="m-product-stock-low">Bajó Stock</span>}
+                    {/* Categorías */}
+                    <div className="pos-categories-section">
+                        <h4>Categorías</h4>
+                        <div className="pos-categories-scroll">
+                            <div
+                                className={`cat-icon-item ${activeCategory === 'Todos' ? 'active' : ''}`}
+                                onClick={() => setActiveCategory('Todos')}
+                            >
+                                <div className="cat-icon-circle">
+                                    <span className="material-symbols-rounded">apps</span>
                                 </div>
-                                <h4 className="m-product-name">{product.name}</h4>
-                                <div className="m-product-footer">
-                                    <span className="m-product-price">${product.price.toLocaleString('es-AR')}</span>
-                                    <div className="m-add-icon">
-                                        <span className="material-symbols-rounded">add</span>
+                                <span>Todos</span>
+                            </div>
+                            {(categories || []).map(cat => (
+                                <div
+                                    key={cat}
+                                    className={`cat-icon-item ${activeCategory === cat ? 'active' : ''}`}
+                                    onClick={() => setActiveCategory(cat)}
+                                >
+                                    <div className="cat-icon-circle">
+                                        <span className="material-symbols-rounded">{getCategoryIcon(cat)}</span>
                                     </div>
+                                    <span>{cat}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Products List (Not Grid) */}
+                    <div className="pos-products-list-section">
+                        <h4>Productos populares</h4>
+                        <div className="pos-products-list">
+                        {filteredProducts.map(product => (
+                            <div key={product.id} className="pos-list-item" onClick={() => addToCart(product)}>
+                                <div className="pos-item-leading">
+                                    <div className="product-icon-circle">
+                                        <span className="material-symbols-rounded">{getCategoryIcon(product.category)}</span>
+                                    </div>
+                                </div>
+                                <div className="pos-item-content">
+                                    <div className="pos-item-name">{product.name}</div>
+                                    <div className="pos-item-price">${product.price.toLocaleString('es-AR')}</div>
+                                </div>
+                                <div className="pos-item-trailing">
+                                    <span className="pos-item-stock">Stock: {product.stock}</span>
+                                    <button className="pos-add-btn">
+                                        <span className="material-symbols-rounded">add</span>
+                                    </button>
                                 </div>
                             </div>
                         ))}
+                        </div>
                     </div>
                 </>
             ) : (
@@ -515,95 +472,93 @@ export const POSMobile = () => {
 
             {/* Global Bottom Actions (Cart Bar) */}
             {cart.length > 0 && (
-                <div className="mobile-floating-cart" onClick={() => setIsCartOpen(true)}>
-                    <div className="f-cart-left">
-                        <div className="f-cart-badge">{itemCount}</div>
-                        <span>Revisar Orden</span>
+                <div className="pos-sticky-cart-bar">
+                    <div className="sticky-cart-info">
+                        <span className="sticky-qty">{itemCount} productos</span>
+                        <span className="sticky-total">${total.toLocaleString('es-AR')}</span>
                     </div>
-                    <div className="f-cart-right">
-                        <span className="f-cart-total">${total.toLocaleString('es-AR')}</span>
-                        <span className="material-symbols-rounded">keyboard_arrow_up</span>
-                    </div>
+                    <button className="sticky-cart-btn" onClick={() => setIsCartOpen(true)}>
+                        Ver carrito
+                    </button>
                 </div>
             )}
 
-            {/* Bottom Sheet - Summary & Checkout */}
-            <div className={`m-bottom-sheet ${isCartOpen ? 'open' : ''}`}>
-                <div className="m-sheet-overlay" onClick={() => setIsCartOpen(false)} />
-                <div className="m-sheet-container">
-                    <div className="m-sheet-handle" />
-                    <div className="m-sheet-header">
-                        <h3>Tu Carrito</h3>
-                        <button onClick={() => setIsCartOpen(false)}>
-                            <span className="material-symbols-rounded">close</span>
-                        </button>
+            {/* Bottom Sheet - Summary & Checkout (Full screen like mockup) */}
+            <div className={`pos-cart-modal ${isCartOpen ? 'open' : ''}`}>
+                <div className="pos-cart-header">
+                    <button className="icon-btn-ghost" onClick={() => setIsCartOpen(false)}>
+                        <span className="material-symbols-rounded">chevron_left</span>
+                    </button>
+                    <h2>Carrito</h2>
+                    <div style={{ width: '36px' }}></div> {/* Spacer */}
+                </div>
+
+                <div className="pos-cart-body">
+                    {/* Client Section */}
+                    <div className="pos-cart-client-section">
+                        <div className="client-info-left">
+                            <span className="client-label">Cliente</span>
+                            <span className="client-name">{selectedCustomer ? customers.find(c => c.id === selectedCustomer)?.name : 'Consumidor Final'}</span>
+                        </div>
+                        <button className="client-change-btn" onClick={() => {
+                            setCheckoutMode('order');
+                            setIsCartOpen(false);
+                        }}>Cambiar</button>
                     </div>
 
-                    <div className="m-sheet-body">
-                        {cart.length === 0 ? (
-                            <div className="m-empty-cart">
-                                <span className="material-symbols-rounded">shopping_basket</span>
-                                <p>Tu carrito está vacío</p>
-                            </div>
-                        ) : (
-                            <div className="m-cart-items">
-                                {cart.map(item => (
-                                    <div key={item.id} className="m-cart-item">
-                                        <div className="m-item-info">
-                                            <span className="m-item-name">{item.name}</span>
-                                            <span className="m-item-price">${item.price.toLocaleString('es-AR')}</span>
-                                        </div>
-                                        <div className="m-item-actions">
-                                            <button onClick={() => item.qty === 1 ? removeFromCart(item.id) : updateCartQty(item.id, -1)}>
-                                                <span className="material-symbols-rounded">remove</span>
-                                            </button>
-                                            <span className="m-item-qty">{item.qty}</span>
-                                            <button onClick={() => updateCartQty(item.id, 1)}>
-                                                <span className="material-symbols-rounded">add</span>
-                                            </button>
-                                        </div>
+                    {/* Items */}
+                    <div className="pos-cart-items-list">
+                        {cart.map(item => (
+                            <div key={item.id} className="pos-cart-item">
+                                <div className="cart-item-icon">
+                                    <span className="material-symbols-rounded">{getCategoryIcon(item.category)}</span>
+                                </div>
+                                <div className="cart-item-details">
+                                    <div className="cart-item-name">{item.name}</div>
+                                    <div className="cart-item-price-calc">
+                                        ${item.price.toLocaleString('es-AR')} x {item.qty}
                                     </div>
-                                ))}
+                                </div>
+                                <div className="cart-item-total">
+                                    ${(item.price * item.qty).toLocaleString('es-AR')}
+                                </div>
+                                <button className="cart-item-delete" onClick={() => removeFromCart(item.id)}>
+                                    <span className="material-symbols-rounded">delete_outline</span>
+                                </button>
                             </div>
-                        )}
+                        ))}
                     </div>
 
-                    <div className="m-sheet-footer">
-                        <div className="m-payment-options-grid">
-                            {(() => {
-                                const customMethods = (shopInfo.paymentMethods || []).filter(m => m.is_active);
-                                const hasEfectivo = customMethods.some(m => m.name.toLowerCase().includes('efectivo'));
-                                const methods = hasEfectivo ? customMethods : [{ id: 'default-cash', name: 'Efectivo', type: 'cash', iconId: 'cash' }, ...customMethods];
-                                
-                                return methods.map(m => (
-                                    <button
-                                        key={m.id}
-                                        className={`m-pay-card ${paymentMethod === m.name ? 'active' : ''}`}
-                                        onClick={() => setPaymentMethod(m.name)}
-                                    >
-                                        <div className="m-pay-card-icon">
-                                            {getPaymentIconHTML(m.name)}
-                                        </div>
-                                        <span className="m-pay-card-name">{m.name}</span>
-                                        {paymentMethod === m.name && <span className="material-symbols-rounded m-pay-check">check_circle</span>}
-                                    </button>
-                                ));
-                            })()}
-                        </div>
-
-                        <div className="m-summary-row">
-                            <span>Total Final</span>
-                            <span className="m-summary-total">${total.toLocaleString('es-AR')}</span>
-                        </div>
-
-                        <button
-                            className="m-checkout-btn"
-                            disabled={cart.length === 0 || isProcessing}
-                            onClick={handleCheckout}
-                        >
-                            {isProcessing ? 'Procesando...' : (checkoutMode === 'order' ? 'Confirmar Pedido' : 'Finalizar Venta')}
-                        </button>
+                    <div className="pos-cart-add-note">
+                        <span className="material-symbols-rounded">edit_note</span>
+                        <input
+                            type="text"
+                            placeholder="Agregar nota al pedido"
+                            value={orderNotes}
+                            onChange={e => updatePosOrderForm({ orderNotes: e.target.value })}
+                        />
                     </div>
+                </div>
+
+                <div className="pos-cart-footer">
+                    <div className="cart-totals">
+                        <div className="cart-total-row">
+                            <span>Subtotal</span>
+                            <span>${total.toLocaleString('es-AR')}</span>
+                        </div>
+                        <div className="cart-total-row highlight">
+                            <span>Total</span>
+                            <span>${total.toLocaleString('es-AR')}</span>
+                        </div>
+                    </div>
+
+                    <button
+                        className="cart-checkout-btn-large"
+                        disabled={cart.length === 0 || isProcessing}
+                        onClick={handleCheckout}
+                    >
+                        {isProcessing ? 'Procesando...' : `Cobrar $${total.toLocaleString('es-AR')}`}
+                    </button>
                 </div>
             </div>
 
