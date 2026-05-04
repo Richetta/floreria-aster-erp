@@ -2,8 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../../store/useStore'; 
 import type { Product } from '../../store/useStore';
 import { ProductModal } from '../../components/ProductModal/ProductModal';
-import { ConfirmModal } from '../../components/ui/Modals';
-import { useModal } from '../../hooks/useModal'; 
+
 import './ProductsMobile.css';
 
 export const ProductsMobile = () => {
@@ -13,7 +12,7 @@ export const ProductsMobile = () => {
     const loadProducts = useStore((state) => state.loadProducts);
     const loadCategories = useStore((state) => state.loadCategories);
     const loadBrands = useStore((state) => state.loadBrands);
-    const deleteProduct = useStore((state) => state.deleteProduct);
+
     const customFilters = useStore((state) => state.customFilters);
     const loadCustomFilters = useStore((state) => state.loadCustomFilters);
 
@@ -26,7 +25,7 @@ export const ProductsMobile = () => {
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [productToEdit, setProductToEdit] = useState<Product | null>(null);
-    const { confirmModal, showConfirm } = useModal();
+
 
     useEffect(() => {
         loadProducts();
@@ -51,18 +50,6 @@ export const ProductsMobile = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (e: React.MouseEvent, product: Product) => {
-        e.stopPropagation();
-        const confirmed = await showConfirm({    
-            title: '¿Eliminar producto?',       
-            message: `¿Estás seguro de eliminar "${product.name}"? Esta acción no se puede deshacer.`,
-            confirmText: 'Eliminar',
-            variant: 'danger'
-        });
-        if (confirmed) {
-            deleteProduct(product.id);
-        }
-    };
 
     const filteredProducts = useMemo(() => {     
         return products.filter(p => {
@@ -220,7 +207,7 @@ export const ProductsMobile = () => {
                 initialCategory={activeCategory !== 'Todos' ? activeCategory : undefined}
             />
 
-            {confirmModal && <ConfirmModal {...confirmModal} />}
+
         </div>
     );
 };
