@@ -280,25 +280,44 @@ export const BarcodePrinter = () => {
                                 {(() => {
                                     const uncategorized = filteredProducts.filter(p => !p.category || p.category === '' || p.category === 'Sin Categoría');
                                     if (uncategorized.length === 0) return null;
+                                    const isUncatExpanded = expandedIds.has('uncategorized');
+                                    
+                                    const toggleUncat = () => {
+                                        const next = new Set(expandedIds);
+                                        if (isUncatExpanded) next.delete('uncategorized');
+                                        else next.add('uncategorized');
+                                        setExpandedIds(next);
+                                    };
+
                                     return (
                                         <div className="bp-cat-group uncategorized">
-                                            <label className="bp-cat-label">
-                                                <input type="checkbox"
-                                                    checked={uncategorized.length > 0 && uncategorized.every(p => isSelected(p.id))}
-                                                    onChange={() => toggleCategoryRecursive('Sin Categoría')}
-                                                />
-                                                <Folder size={18} />
-                                                Sin categoría <span className="bp-cat-count">({uncategorized.length})</span>
-                                            </label>
-                                            <div className="bp-cat-products">
-                                                {uncategorized.map(p => (
-                                                    <label key={p.id} className="bp-product-row">
-                                                        <input type="checkbox" checked={isSelected(p.id)} onChange={() => toggleProduct(p)} />
-                                                        <span className="bp-prod-name">{p.name}</span>
-                                                        <span className="bp-prod-code">{p.barcode || p.code || p.id}</span>
-                                                    </label>
-                                                ))}
+                                            <div className="bp-cat-header">
+                                                <button className="bp-expand-btn" onClick={toggleUncat}>
+                                                    {isUncatExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                                </button>
+                                                <label className="bp-cat-label">
+                                                    <input type="checkbox"
+                                                        checked={uncategorized.length > 0 && uncategorized.every(p => isSelected(p.id))}
+                                                        onChange={() => toggleCategoryRecursive('Sin Categoría')}
+                                                    />
+                                                    {isUncatExpanded ? <FolderOpen size={18} /> : <Folder size={18} />}
+                                                    Sin categoría <span className="bp-cat-count">({uncategorized.length})</span>
+                                                </label>
                                             </div>
+                                            {isUncatExpanded && (
+                                                <div className="bp-cat-products">
+                                                    {uncategorized.map(p => (
+                                                        <label key={p.id} className="bp-product-row">
+                                                            <input type="checkbox" checked={isSelected(p.id)} onChange={() => toggleProduct(p)} />
+                                                            <div className="bp-prod-info">
+                                                                <span className="bp-prod-name">{p.name}</span>
+                                                                <span className="bp-prod-code">{p.barcode || p.code || p.id}</span>
+                                                            </div>
+                                                            <span className="bp-prod-stock">Stock: {p.stock}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })()}
