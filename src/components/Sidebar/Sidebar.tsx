@@ -21,7 +21,8 @@ import {
   FileText,
   X,
   ChevronDown,
-  Calendar
+  Calendar,
+  Wrench
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { useStore } from '../../store/useStore';
@@ -106,6 +107,16 @@ const navItems: NavItem[] = [
       { path: '/ventas', label: 'Ventas', icon: FileText },
       { path: '/caja', label: 'Caja', icon: Vault },
       { path: '/reportes', label: 'Reportes', icon: BarChart3 },
+    ]
+  },
+  {
+    id: 'herramientas',
+    icon: Wrench,
+    label: 'Herramientas',
+    desc: 'Utilidades operativas',
+    children: [
+      { path: '/herramientas', label: 'Ver Todas' },
+      { path: '/herramientas/codigos', label: 'Códigos de Barra' },
     ]
   },
   {

@@ -26,6 +26,8 @@ import { StockMovements } from './pages/StockMovements';
 import Restock from './pages/Restock';
 import { Reminders } from './pages/Reminders';
 import { CalendarDesktop } from './pages/Calendar';
+import { ToolsHub } from './pages/Tools';
+import { BarcodePrinter } from './pages/Tools/BarcodePrinter/BarcodePrinter';
 import { useAuth } from './store/useAuth';
 
 // ============================================
@@ -169,6 +171,8 @@ function App() {
                             element={<FeatureRouteGuard feature="calendar"><CalendarDesktop /></FeatureRouteGuard>} 
                         />
                         <Route path="configuracion" element={<Settings />} />
+                        <Route path="herramientas" element={<ToolsHub />} />
+                        <Route path="herramientas/codigos" element={<BarcodePrinter />} />
                     </Route>
 
                     {/* 404 Route */}

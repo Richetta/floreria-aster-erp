@@ -1,0 +1,59 @@
+import { useNavigate } from 'react-router-dom';
+import './ToolsHub.css';
+
+const tools = [
+    {
+        id: 'barcode-printer',
+        title: 'Imprimir Códigos de Barra',
+        description: 'Generá e imprimí etiquetas de códigos de barra de manera masiva. Elegí productos, configurá el tamaño y formato, y lanzá la impresión.',
+        icon: 'barcode_scanner',
+        path: '/herramientas/codigos',
+        color: '#3b82f6',
+        bg: '#eff6ff',
+    },
+    {
+        id: 'coming-soon',
+        title: 'Más herramientas pronto',
+        description: 'Estamos trabajando en nuevas herramientas para mejorar tu operación diaria.',
+        icon: 'build',
+        path: '',
+        color: '#94a3b8',
+        bg: '#f8fafc',
+        disabled: true,
+    },
+];
+
+export const ToolsHub = () => {
+    const navigate = useNavigate();
+
+    return (
+        <div className="tools-hub-page">
+            <div className="tools-hub-header">
+                <h1>Herramientas</h1>
+                <p>Utilidades para optimizar tu operación diaria</p>
+            </div>
+
+            <div className="tools-grid">
+                {tools.map(tool => (
+                    <button
+                        key={tool.id}
+                        className={`tool-card ${tool.disabled ? 'tool-card-disabled' : ''}`}
+                        onClick={() => !tool.disabled && navigate(tool.path)}
+                        disabled={tool.disabled}
+                    >
+                        <div className="tool-card-icon" style={{ background: tool.bg, color: tool.color }}>
+                            <span className="material-symbols-rounded">{tool.icon}</span>
+                        </div>
+                        <div className="tool-card-content">
+                            <h3>{tool.title}</h3>
+                            <p>{tool.description}</p>
+                        </div>
+                        {!tool.disabled && (
+                            <span className="material-symbols-rounded tool-card-arrow">arrow_forward</span>
+                        )}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
