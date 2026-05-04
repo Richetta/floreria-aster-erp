@@ -61,15 +61,23 @@ export const BarcodePrinter = () => {
 
     // Build recursive category tree
     const catTree = useMemo(() => {
-        const buildTree = (parentId?: string): any[] => {
-            return (categoriesData || [])
-                .filter(c => c.parent_id === parentId)
+        if (!categoriesData || categoriesData.length === 0) return [];
+
+        // Check if data is already nested
+        const isAlreadyNested = categoriesData.some(c => c.children && c.children.length > 0);
+        if (isAlreadyNested) return categoriesData;
+
+        // Otherwise build tree from flat list
+        const buildTree = (parentId: string | null = null): any[] => {
+            return categoriesData
+                .filter(c => c.parent_id === parentId || (parentId === null && !c.parent_id))
+                .sort((a, b) => a.name.localeCompare(b.name))
                 .map(c => ({
                     ...c,
                     children: buildTree(c.id)
                 }));
         };
-        return buildTree();
+        return buildTree(null).sort((a, b) => a.name.localeCompare(b.name));
     }, [categoriesData]);
 
     // Products filtered by search
@@ -117,12 +125,18 @@ export const BarcodePrinter = () => {
     const getDescendants = (catName: string): string[] => {
         const result: string[] = [catName];
         const findChildren = (name: string) => {
-            const cat = categoriesData.find(c => c.name === name);
+            const cat = (categoriesData || []).find(c => c.name === name);
             if (cat) {
-                const children = categoriesData.filter(c => c.parent_id === cat.id);
-                children.forEach(ch => {
-                    result.push(ch.name);
-                    findChildren(ch.name);
+                const children = (categoriesData || []).filter(c => c.parent_id === cat.id);
+                // Also check if already nested
+                const nestedChildren = (cat as any).children || [];
+                
+                const allChildren = [...children, ...nestedChildren];
+                allChildren.forEach(ch => {
+                    if (!result.includes(ch.name)) {
+                        result.push(ch.name);
+                        findChildren(ch.name);
+                    }
                 });
             }
         };
