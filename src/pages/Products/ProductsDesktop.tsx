@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-    Plus, Search, Upload, FileDown, Folder, Tag, Grid3x3, List,
+    Plus, Upload, FileDown, Folder, Tag, Grid3x3, List,
     MoreVertical, Edit2, Barcode, Trash2, Settings, X, CheckSquare,
     Square, TrendingUp, Package, DollarSign, AlertTriangle, Check,
     ChevronRight, ChevronDown

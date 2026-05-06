@@ -1,9 +1,22 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
-    X, Upload, FileText, Check, AlertCircle,
-    ChevronRight, FileSpreadsheet,
-    Database, RefreshCw, PlusCircle, Sparkles,
-    Search, Percent, DollarSign, CheckSquare, Square
+    X,
+    Upload,
+    FileText,
+    Check,
+    AlertCircle,
+    AlertTriangle,
+    ChevronRight,
+    FileSpreadsheet,
+    Database,
+    RefreshCw,
+    PlusCircle,
+    Sparkles,
+    Search,
+    Percent,
+    DollarSign,
+    CheckSquare,
+    Square
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
