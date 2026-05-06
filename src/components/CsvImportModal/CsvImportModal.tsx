@@ -104,7 +104,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     const [error, setError] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [pasteText, setPasteText] = useState('');
-    const [importResult, setImportResult] = useState<{ updated: number, created: number } | null>(null);
+    const [importResult, setImportResult] = useState<{ updated: number, created: number, errors: any[] } | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
 
     const [previewData, setPreviewData] = useState<ParsedRow[]>([]);
@@ -227,13 +227,17 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                 body: JSON.stringify({
                     data: finalDataToImport,
                     update_prices: true,
-                    update_stock: true
+                    update_stock: true,
+                    update_costs: true,
+                    auto_margin: true,
+                    margin_percent: Number(bulkMargin) || 50
                 })
             });
 
             setImportResult({
                 updated: importResponse.updated || 0,
-                created: importResponse.created || 0
+                created: importResponse.created || 0,
+                errors: importResponse.errors || []
             });
             setStep(3);
         } catch (err: any) {
@@ -457,6 +461,21 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
     const brandOptions = Array.from(new Set([...brands.map((b: any) => b?.name || b), ...previewData.map(r => r.brand).filter(Boolean)]));
 
     const selectedCount = previewData.filter(r => r.selected).length;
+
+    const duplicateCodes = useMemo(() => {
+        const counts = new Map<string, number>();
+        previewData.forEach(r => {
+            if (r.code && r.selected) {
+                const code = String(r.code).trim().toLowerCase();
+                counts.set(code, (counts.get(code) || 0) + 1);
+            }
+        });
+        return new Set(
+            Array.from(counts.entries())
+                .filter(([, count]) => count > 1)
+                .map(([code]) => code)
+        );
+    }, [previewData]);
 
     return (
         <div className="csv-modal-overlay" onClick={handleClose}>
@@ -743,6 +762,12 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                     <span className="csv-selected-count">
                                         {selectedCount} seleccionados
                                     </span>
+                                    {duplicateCodes.size > 0 && (
+                                        <div className="csv-warning-badge" title="Hay códigos duplicados en el archivo. Esto causará que se sobrescriban.">
+                                            <AlertTriangle size={14} />
+                                            <span>{duplicateCodes.size} códigos duplicados</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="csv-toolbar-right">
                                     <button
@@ -873,9 +898,10 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                                 </td>
                                                 <td className="csv-cell csv-code-cell">
                                                     <input
-                                                        className="csv-cell-input"
+                                                        className={`csv-cell-input ${duplicateCodes.has(String(row.code).trim().toLowerCase()) ? 'has-duplicate-error' : ''}`}
                                                         value={row.code}
                                                         onChange={e => updateRow(row._id, 'code', e.target.value)}
+                                                        title={duplicateCodes.has(String(row.code).trim().toLowerCase()) ? "Este código está duplicado en el archivo" : ""}
                                                     />
                                                 </td>
                                                 <td className="csv-cell csv-name-cell">
@@ -981,7 +1007,7 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                 <div className="csv-success-icon-wrapper">
                                     <Check size={64} strokeWidth={3} />
                                 </div>
-                                <h2 className="csv-success-title">¡Importación Exitosa!</h2>
+                                <h2 className="csv-success-title">¡Proceso Finalizado!</h2>
                                 <p className="csv-success-subtitle">
                                     Se procesaron {importResult.created + importResult.updated} productos correctamente
                                 </p>
@@ -1000,6 +1026,62 @@ const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose, onSucc
                                         </div>
                                         <div className="csv-card-value">{importResult.updated}</div>
                                         <div className="csv-card-label">Actualizados</div>
+                                    </div>
+                                    {importResult.errors && importResult.errors.length > 0 && (
+                                        <div className="csv-success-card csv-error-card" style={{ backgroundColor: '#fff5f5', borderColor: '#feb2b2', color: '#c53030' }}>
+                                            <div className="csv-card-icon">
+                                                <AlertCircle size={32} />
+                                            </div>
+                                            <div className="csv-card-value">{importResult.errors.length}</div>
+                                            <div className="csv-card-label">Con errores</div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {importResult.errors && importResult.errors.length > 0 && (
+                                    <div className="csv-errors-log" style={{ marginTop: '2rem', textAlign: 'left', width: '100%', maxWidth: '600px', margin: '2rem auto 0' }}>
+                                        <h4 style={{ marginBottom: '1rem', color: '#c53030' }}>Detalle de errores:</h4>
+                                        <div className="csv-errors-list" style={{ backgroundColor: '#fdf2f2', padding: '1rem', borderRadius: '8px', maxHeight: '150px', overflowY: 'auto', border: '1px solid #fed7d7' }}>
+                                            {importResult.errors.slice(0, 10).map((err, i) => (
+                                                <div key={i} className="csv-error-item" style={{ fontSize: '0.85rem', marginBottom: '0.5rem', color: '#742a2a', display: 'flex', gap: '0.5rem' }}>
+                                                    <span className="error-code" style={{ fontWeight: 'bold' }}>[{err.code || 'S/C'}]</span>
+                                                    <span className="error-msg">{err.error}</span>
+                                                </div>
+                                            ))}
+                                            {importResult.errors.length > 10 && (
+                                                <div className="csv-error-more" style={{ fontSize: '0.8rem', color: '#9b2c2c', fontStyle: 'italic', marginTop: '0.5rem' }}>
+                                                    ...y otros {importResult.errors.length - 10} errores más.
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button 
+                                            className="csv-download-errors"
+                                            style={{ marginTop: '1rem', padding: '0.5rem 1rem', fontSize: '0.85rem', backgroundColor: '#fff', border: '1px solid #c53030', color: '#c53030', borderRadius: '6px', cursor: 'pointer' }}
+                                            onClick={() => {
+                                                const content = `REPORTE DE ERRORES DE IMPORTACION\nFecha: ${new Date().toLocaleString()}\n\n` + 
+                                                    importResult.errors.map(e => `Fila: ${e.code || 'S/C'} (${e.name || 'Sin nombre'}) - Error: ${e.error}`).join('\n');
+                                                const blob = new Blob([content], { type: 'text/plain' });
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = `errores_importacion_${new Date().getTime()}.txt`;
+                                                a.click();
+                                            }}
+                                        >
+                                            Descargar reporte completo (.txt)
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="csv-success-info-box" style={{ marginTop: '2.5rem', padding: '1.5rem', backgroundColor: '#ebf8ff', borderRadius: '12px', border: '1px solid #bee3f8', display: 'flex', gap: '1rem', alignItems: 'flex-start', textAlign: 'left', maxWidth: '600px', margin: '2.5rem auto 0' }}>
+                                    <div className="info-icon" style={{ color: '#3182ce', marginTop: '2px' }}>
+                                        <Search size={24} />
+                                    </div>
+                                    <div className="info-text">
+                                        <p style={{ fontWeight: 'bold', color: '#2a4365', marginBottom: '0.25rem' }}>¿No encontrás tus productos nuevos?</p>
+                                        <p style={{ color: '#2c5282', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                                            Asegurate de que no tengas ningún <strong>filtro activo</strong> (etiquetas de marcas, categorías o filtros personalizados como el de "Vidrio") que pueda estar ocultando los productos recién cargados.
+                                        </p>
                                     </div>
                                 </div>
                             </div>

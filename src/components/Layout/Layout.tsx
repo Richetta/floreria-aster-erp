@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../Sidebar/Sidebar';
 import { MobileBottomNav } from '../MobileBottomNav/MobileBottomNav';
@@ -7,7 +7,7 @@ import { TrialBanner } from '../Subscription/UsageWarning';
 import { useSubscription } from '../../store/useSubscription';
 import { useStore } from '../../store/useStore';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { Bell, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import '../../styles/mobile-compact-overrides.css';
 import './Layout.css';
 
@@ -21,7 +21,6 @@ export const Layout = () => {
     const customers = useStore(state => state.customers);
     const products = useStore(state => state.products);
     const suppliers = useStore(state => state.suppliers);
-    const notificationsLastSeenCount = useStore(state => state.notificationsLastSeenCount);
     const markNotificationsAsSeen = useStore(state => state.markNotificationsAsSeen);
     const loadShopInfo = useStore(state => state.loadShopInfo);
 
@@ -29,41 +28,6 @@ export const Layout = () => {
     useEffect(() => {
         loadShopInfo();
     }, [loadShopInfo]);
-
-    // Calculate total notifications count (same logic as NotificationsPanel)
-    const notificationCount = useMemo(() => {
-        let count = 0;
-
-        // Birthdays/Anniversaries (next 7 days)
-        const getDaysDiff = (dateStr: string) => {
-            if (!dateStr) return 999;
-            const today = new Date(); today.setHours(0, 0, 0, 0);
-            const target = new Date(dateStr); target.setHours(0, 0, 0, 0);
-            const nextTarget = new Date(today.getFullYear(), target.getMonth(), target.getDate());
-            if (nextTarget < today) nextTarget.setFullYear(today.getFullYear() + 1);
-            return Math.ceil((nextTarget.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        };
-
-        customers.forEach(c => {
-            if (c.birthday && getDaysDiff(c.birthday) <= 7) count++;
-            if (c.anniversary && getDaysDiff(c.anniversary) <= 7) count++;
-            if (c.debtBalance > 0) count++;
-        });
-
-        products.forEach(p => { if (p.stock <= p.min) count++; });
-
-        suppliers.forEach(s => {
-            if (s.lastVisit) {
-                const today = new Date(); today.setHours(0, 0, 0, 0);
-                const visitDate = new Date(s.lastVisit); visitDate.setHours(0, 0, 0, 0);
-                const daysUntil = Math.ceil((visitDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                if (daysUntil >= 0 && daysUntil <= 3) count++;
-            }
-        });
-
-        // Solo mostramos si el conteo actual es mayor al último visto
-        return count > notificationsLastSeenCount ? count : 0;
-    }, [customers, products, suppliers, notificationsLastSeenCount]);
 
     // Close overlays on route change (mobile)
     useEffect(() => {
@@ -100,6 +64,13 @@ export const Layout = () => {
         markNotificationsAsSeen(count);
     };
 
+    // Escuchar evento custom para abrir notificaciones desde DashboardMobile
+    useEffect(() => {
+        const handleOpen = () => handleOpenNotifications();
+        window.addEventListener('open-notifications', handleOpen);
+        return () => window.removeEventListener('open-notifications', handleOpen);
+    }, [handleOpenNotifications]);
+
     // Close sidebar on Escape key
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -115,20 +86,9 @@ export const Layout = () => {
 
     return (
         <div className="app-container">
-            {/* Botón Flotante de Notificaciones - Solo visible en mobile e Inicio */}
+            {/* Panel de Notificaciones Desplegable (botón movido al Dashboard) */}
             {isMobile && (location.pathname === '/' || location.pathname === '/dashboard') && (
                 <>
-                    <button
-                        className="floating-notification-bell"
-                        onClick={handleOpenNotifications}
-                    >
-                        <Bell size={22} />
-                        {notificationCount > 0 && (
-                            <span className="bell-badge">{notificationCount > 9 ? '9+' : notificationCount}</span>
-                        )}
-                    </button>
-
-                    {/* Panel de Notificaciones Desplegable */}
                     <div className={`global-notifications-overlay ${isNotificationsOpen ? 'open' : ''}`}>
                         <div className="notifications-overlay-header">
                             <h3>Notificaciones</h3>
@@ -170,8 +130,8 @@ export const Layout = () => {
                 </div>
             </main>
 
-            {/* Navegación Inferior - Solo visible en mobile */}
-            {isMobile && <MobileBottomNav />}
+            {/* Navegación Inferior - Solo visible en mobile (excepto en POS) */}
+            {isMobile && location.pathname !== '/pos' && <MobileBottomNav />}
         </div>
     );
 };

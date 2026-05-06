@@ -87,21 +87,24 @@ export const SalesMobile = () => {
 
             <div className="sales-list-content">
                 {filteredSales.length === 0 ? (
-                    <div className="empty-history">
+                    <div className="empty-history animate-fade-in">
                         <span className="material-symbols-rounded">receipt_long</span>
-                        <p>No se encontraron ventas</p>
+                        <p>No se encontraron ventas para este período</p>
                     </div>
                 ) : (
                     filteredSales.map(sale => (
-                        <div key={sale.id} className="m-sale-card" onClick={() => setSelectedSale(selectedSale?.id === sale.id ? null : sale)}>
+                        <div key={sale.id} className="m-sale-card animate-fade-in" onClick={() => setSelectedSale(selectedSale?.id === sale.id ? null : sale)}>
                             <div className="m-sale-header">
                                 <div className="m-sale-main">
-                                    <span className="m-sale-id">#{sale.id.slice(-6).toUpperCase()}</span>
-                                    <span className="m-sale-time">{new Date(sale.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span className="m-sale-id">ID: {sale.id.slice(-6).toUpperCase()}</span>
+                                    <span className="m-sale-time">
+                                        <span className="material-symbols-rounded" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: '4px' }}>schedule</span>
+                                        {new Date(sale.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
                                 </div>
                                 <div className={`m-sale-method ${sale.method}`}>
                                     <span className="material-symbols-rounded">
-                                        {sale.method === 'cash' ? 'payments' : 'credit_card'}
+                                        {sale.method === 'cash' ? 'payments' : sale.method === 'transfer' ? 'account_balance' : 'credit_card'}
                                     </span>
                                     {(shopInfo.paymentMethods?.find(m => m.name === sale.method || m.id === sale.method)?.name) || 
                                      (sale.method === 'cash' ? 'Efectivo' : sale.method === 'card' ? 'Tarjeta' : sale.method)}
@@ -112,7 +115,10 @@ export const SalesMobile = () => {
                                     <span className="m-sale-customer">
                                         {sale.metadata?.customer_id ? customers.find(c => c.id === sale.metadata!.customer_id)?.name : 'Venta Mostrador'}
                                     </span>
-                                    <span className="m-sale-items">{(sale.metadata?.items || []).length} productos</span>
+                                    <span className="m-sale-items">
+                                        <span className="material-symbols-rounded" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: '4px' }}>shopping_basket</span>
+                                        {(sale.metadata?.items || []).length} productos
+                                    </span>
                                 </div>
                                 <div className="m-sale-total">
                                     ${sale.amount.toLocaleString()}

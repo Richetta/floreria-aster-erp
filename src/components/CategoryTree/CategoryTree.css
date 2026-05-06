@@ -18,7 +18,7 @@
 }
 
 .category-tree-item:hover {
-    background: var(--bg-surface-hover);
+    background: var(--color-surface-hover);
 }
 
 .category-tree-item.active {
@@ -46,7 +46,7 @@
     border-radius: 4px;
     border: none;
     background: transparent;
-    color: var(--text-muted);
+    color: var(--color-text-muted);
     cursor: pointer;
     transition: background 0.2s;
 }
@@ -61,7 +61,7 @@
 
 .category-name {
     font-size: 0.95rem;
-    color: var(--text-main);
+    color: var(--color-text-main);
 }
 
 .category-actions {
@@ -90,7 +90,7 @@
 }
 
 .action-btn:hover {
-    background: var(--bg-surface-hover);
+    background: var(--color-surface-hover);
     color: var(--color-primary);
 }
 
@@ -127,6 +127,6 @@
 }
 
 .category-tree-list::-webkit-scrollbar-thumb {
-    background: var(--border-color);
+    background: var(--color-border);
     border-radius: 10px;
 }

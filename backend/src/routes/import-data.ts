@@ -22,9 +22,11 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
     if (typeof val === 'string') return val;
     if (typeof val === 'number' || typeof val === 'boolean') return String(val);
     if (val instanceof Date) return val.toISOString();
+    
     if (typeof val === 'object') {
+      // Handle ExcelJS Formula result
       if (val.result !== undefined) {
-        if (val.result && typeof val.result === 'object' && val.result.error) {
+        if (val.result && typeof val.result === 'object' && (val.result as any).error) {
            if (val.formula) {
               const matches = String(val.formula).match(/"([^"]*)"/g);
               if (matches && matches.length > 0) {
@@ -35,19 +37,27 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
         }
         return extractValue(val.result);
       }
-      if (val.formula) {
-        const matches = String(val.formula).match(/"([^"]*)"/g);
-        if (matches && matches.length > 0) {
-           return matches.map(m => m.replace(/"/g, '')).join('');
-        }
-      }
-      if (val.text !== undefined) return extractValue(val.text);
+      
+      // Handle ExcelJS Rich Text
       if (val.richText && Array.isArray(val.richText)) {
         return val.richText.map((t: any) => t.text || '').join('');
       }
-      if (val.error) return '';
+      
+      // Handle other common objects
+      if (val.text !== undefined) return extractValue(val.text);
+      if (val.formula && !val.result) {
+         // If formula but no result, try to extract strings from formula as last resort
+         const matches = String(val.formula).match(/"([^"]*)"/g);
+         if (matches && matches.length > 0) {
+            return matches.map(m => m.replace(/"/g, '')).join('');
+         }
+      }
+      
+      return ''; // Avoid [object Object]
     }
-    return String(val);
+    
+    const str = String(val);
+    return str === '[object Object]' ? '' : str;
   };
 
   // Debug endpoint
@@ -71,8 +81,36 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
   const cleanPrice = (val: any): number | undefined => {
     if (val === undefined || val === null || val === '') return undefined;
     if (typeof val === 'number') return val;
-    const cleaned = String(val).replace(/[^0-9.,]/g, '').replace(',', '.');
-    const parsed = parseFloat(cleaned);
+    
+    let s = String(val).trim();
+    // Remove currency symbols and non-numeric except , and .
+    s = s.replace(/[^0-9.,-]/g, '');
+    
+    if (!s) return undefined;
+
+    // Handle Argentine/European format: 1.234,56
+    // If it has both . and , and , comes after .
+    if (s.includes('.') && s.includes(',') && s.indexOf('.') < s.indexOf(',')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } 
+    // If it has only , and it looks like a decimal separator (e.g. 10,50)
+    else if (s.includes(',') && !s.includes('.')) {
+      // If it has multiple commas, it's likely a thousands separator (wrongly used)
+      if ((s.match(/,/g) || []).length === 1) {
+        s = s.replace(',', '.');
+      } else {
+        s = s.replace(/,/g, '');
+      }
+    }
+    // If it has only . and it looks like a thousands separator (e.g. 1.234)
+    else if (s.includes('.') && !s.includes(',')) {
+      // If the dot is followed by 3 digits at the end, or there are multiple dots
+      if ((s.match(/\./g) || []).length > 1 || (s.indexOf('.') === s.length - 4)) {
+        s = s.replace(/\./g, '');
+      }
+    }
+
+    const parsed = parseFloat(s);
     return isNaN(parsed) ? undefined : parsed;
   };
 
@@ -319,8 +357,29 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
            brandMap.set(lower, brand.id as string);
         }
 
+        const internalCodes = new Set<string>();
+        const internalDuplicates = new Set<string>();
+
+        for (const row of body.data) {
+          if (!row.code) continue;
+          const cleanCode = String(row.code).trim();
+          if (internalCodes.has(cleanCode)) {
+              internalDuplicates.add(cleanCode);
+          }
+          internalCodes.add(cleanCode);
+        }
+
+        if (internalDuplicates.size > 0) {
+            return reply.status(400).send({
+                error: 'El archivo contiene códigos duplicados internos',
+                duplicates: Array.from(internalDuplicates)
+            });
+        }
+
         for (const row of body.data) {
           try {
+            if (!row.code) continue;
+
             const product = existingMap.get(row.code);
             
             // Resolve IDs
@@ -328,7 +387,7 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
             if (!categoryId && row.category_name) {
               const parentLower = row.category_name.toLowerCase().trim();
               if (row.subcategory_name) {
-                const subNames = row.subcategory_name.split(' > ').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+                const subNames = String(row.subcategory_name).split(' > ').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
                 if (subNames.length > 0) {
                    const fullPath = [parentLower, ...subNames].join(' > ');
                    categoryId = subcategoryMap.get(fullPath) || (globalCategoryPathMap.get(fullPath)?.id || null);
@@ -345,16 +404,16 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
               const updateData: any = { updated_at: new Date() };
               let hasChanges = false;
 
-              if (body.update_costs && row.cost !== undefined && Number(row.cost) !== Number(product.cost)) {
+              if (body.update_costs && row.cost !== undefined && row.cost !== null && Number(row.cost) !== Number(product.cost)) {
                 updateData.cost = row.cost;
                 hasChanges = true;
               }
 
               if (body.update_prices) {
-                if (row.price !== undefined && Number(row.price) !== Number(product.price)) {
+                if (row.price !== undefined && row.price !== null && Number(row.price) !== Number(product.price)) {
                   updateData.price = row.price;
                   hasChanges = true;
-                } else if (body.auto_margin && row.cost !== undefined) {
+                } else if (body.auto_margin && row.cost !== undefined && row.cost !== null) {
                   const newPrice = Math.round(row.cost * (1 + body.margin_percent / 100));
                   if (newPrice !== Number(product.price)) {
                     updateData.price = newPrice;
@@ -363,12 +422,12 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
                 }
               }
 
-              if (body.update_stock && row.stock !== undefined) {
+              if (body.update_stock && row.stock !== undefined && row.stock !== null) {
                 const newStock = body.stock_action === 'add'
-                  ? (product.stock_quantity || 0) + row.stock
-                  : row.stock;
+                  ? (Number(product.stock_quantity) || 0) + Number(row.stock)
+                  : Number(row.stock);
 
-                if (newStock !== product.stock_quantity) {
+                if (newStock !== Number(product.stock_quantity)) {
                   updateData.stock_quantity = newStock;
                   hasChanges = true;
                 }
@@ -413,7 +472,10 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
               } as any).execute();
               stats.created++;
             }
-          } catch (e: any) { stats.errors.push({ code: row.code, error: e.message }); }
+          } catch (e: any) { 
+            console.error(`[BULK-IMPORT] Error processing row ${row.code}:`, e.message);
+            stats.errors.push({ code: row.code, name: row.name, error: e.message }); 
+          }
         }
         return stats;
       });
@@ -435,39 +497,72 @@ export const importRoutes: FastifyPluginAsync = async (fastify) => {
       if (filename.endsWith('.xlsx') || filename.endsWith('.xls')) {
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(buffer as any);
-        const worksheet = workbook.getWorksheet(1);
-        if (worksheet) {
-          let headers: any = {};
-          worksheet.eachRow((row, rowNumber) => {
-            const values = Array.isArray(row.values) ? row.values : [];
-            if (rowNumber === 1) {
-              headers.code = findHeaderIndex(values, ['cod', 'sku', 'ref', 'código', 'codigo']);
-              headers.name = findHeaderIndex(values, ['nom', 'prod', 'art', 'desc', 'nombre', 'producto', 'articulo', 'artículo']);
-              headers.price = findHeaderIndex(values, ['pre', 'venta', 'p.v', 'pvp', 'precio', '($)']);
-              headers.cost = findHeaderIndex(values, ['cost', 'compra', 'p.c', 'costo', '($$)']);
-              headers.stock = findHeaderIndex(values, ['stoc', 'cant', 'qty', 'units', 'stock', '(+)']);
-              headers.category = findHeaderIndex(values, ['cate', 'rubro', 'carpe', 'grupo', 'seccion', 'categoría', 'categoria', 'carpeta']);
-              headers.subcategories = findAllHeaderIndexes(values, ['subcate', 'subcarpeta', 'subcategoría', 'sub-categoria']);
-              headers.brand = findHeaderIndex(values, ['marca', 'brand', 'fabr']);
-              return;
+        
+        // Find first worksheet with data
+        let worksheet = workbook.getWorksheet(1);
+        for (let i = 1; i <= workbook.worksheets.length; i++) {
+            const ws = workbook.getWorksheet(i);
+            if (ws && ws.rowCount > 0) {
+                worksheet = ws;
+                break;
             }
-            const rawCode = extractValue(values[headers.code] || values[1]);
-            const code = rawCode.trim();
+        }
+
+        if (worksheet) {
+          let headers: any = { code: -1, name: -1, price: -1, cost: -1, stock: -1, category: -1, subcategories: [], brand: -1 };
+          let headerRowNumber = -1;
+
+          // Search for headers in first 10 rows
+          for (let i = 1; i <= Math.min(worksheet.rowCount, 10); i++) {
+              const row = worksheet.getRow(i);
+              const values = Array.isArray(row.values) ? row.values : [];
+              
+              const h_code = findHeaderIndex(values, ['cod', 'sku', 'ref', 'código', 'codigo']);
+              const h_name = findHeaderIndex(values, ['nom', 'prod', 'art', 'desc', 'nombre', 'producto', 'articulo', 'artículo']);
+              
+              if (h_code !== -1 || h_name !== -1) {
+                  headers.code = h_code;
+                  headers.name = h_name;
+                  headers.price = findHeaderIndex(values, ['pre', 'venta', 'p.v', 'pvp', 'precio', '($)']);
+                  headers.cost = findHeaderIndex(values, ['cost', 'compra', 'p.c', 'costo', '($$)']);
+                  headers.stock = findHeaderIndex(values, ['stoc', 'cant', 'qty', 'units', 'stock', '(+)']);
+                  headers.category = findHeaderIndex(values, ['cate', 'rubro', 'carpe', 'grupo', 'seccion', 'categoría', 'categoria', 'carpeta']);
+                  headers.subcategories = findAllHeaderIndexes(values, ['subcate', 'subcarpeta', 'subcategoría', 'sub-categoria']);
+                  headers.brand = findHeaderIndex(values, ['marca', 'brand', 'fabr']);
+                  headerRowNumber = i;
+                  break;
+              }
+          }
+
+          worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber <= headerRowNumber) return;
+            
+            // Use cell.text for text-based fields to get the evaluated result of formulas
+            const codeCell = row.getCell(headers.code !== -1 ? headers.code : 1);
+            const code = (codeCell.text || '').trim();
             if (!code || code === 'undefined' || code === 'null') return;
 
+            const nameCell = row.getCell(headers.name !== -1 ? headers.name : 2);
+            const name = nameCell.text || 'Producto sin nombre';
+
+            // For numbers, we prefer the raw value for cleaner parsing
+            const priceVal = headers.price !== -1 ? row.getCell(headers.price).value : undefined;
+            const costVal = headers.cost !== -1 ? row.getCell(headers.cost).value : undefined;
+            const stockVal = headers.stock !== -1 ? row.getCell(headers.stock).value : undefined;
+
             const subcats = headers.subcategories && headers.subcategories.length > 0 
-              ? headers.subcategories.map((idx: number) => extractValue(values[idx])).filter(Boolean).join(' > ')
+              ? headers.subcategories.map((idx: number) => row.getCell(idx).text).filter(Boolean).join(' > ')
               : '';
 
             parsedData.push({
               code,
-              name: extractValue(values[headers.name] || values[2]) || 'Producto sin nombre',
-              price: cleanPrice(values[headers.price]),
-              cost: cleanPrice(values[headers.cost]),
-              stock: cleanPrice(values[headers.stock]),
-              category: extractValue(values[headers.category]) || '',
+              name,
+              price: priceVal !== undefined ? cleanPrice(priceVal) : undefined,
+              cost: costVal !== undefined ? cleanPrice(costVal) : undefined,
+              stock: stockVal !== undefined ? cleanPrice(stockVal) : undefined,
+              category: headers.category !== -1 ? row.getCell(headers.category).text : '',
               subcategory: subcats,
-              brand: extractValue(values[headers.brand]) || ''
+              brand: headers.brand !== -1 ? row.getCell(headers.brand).text : ''
             });
           });
         }

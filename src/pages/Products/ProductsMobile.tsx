@@ -1,15 +1,17 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../../store/useStore'; 
 import type { Product } from '../../store/useStore';
+import type { Category } from '../../store/slices/types';
 import { ProductModal } from '../../components/ProductModal/ProductModal';
 import { ConfirmModal } from '../../components/ui/Modals';
 import { useModal } from '../../hooks/useModal'; 
 import { CameraScanner } from '../../components/CameraScanner/CameraScanner';
+import { CategoryTreeMobile } from '../../components/CategoryTree/CategoryTreeMobile';
 import './ProductsMobile.css';
 
 export const ProductsMobile = () => {
     const products = useStore((state) => state.products);
-    const categories = useStore((state) => state.categories);
+    const categoriesData = useStore((state) => state.categoriesData);
     const brands = useStore((state) => state.brands);
     const loadProducts = useStore((state) => state.loadProducts);
     const loadCategories = useStore((state) => state.loadCategories);
@@ -19,6 +21,7 @@ export const ProductsMobile = () => {
     const loadCustomFilters = useStore((state) => state.loadCustomFilters);
 
     const [searchTerm, setSearchTerm] = useState('');
+    // activeCategory stores category ID ('Todos' or the id)
     const [activeCategory, setActiveCategory] = useState<string>('Todos');
     const [activeBrand, setActiveBrand] = useState<string>('Todas');
     const [activeCustomFilters, setActiveCustomFilters] = useState<Record<string, string[]>>({});
@@ -33,15 +36,23 @@ export const ProductsMobile = () => {
 
     useEffect(() => {
         loadProducts();
-        loadCategories();
+        // Load with hierarchy so parent_id is available
+        loadCategories(true);
         loadBrands();
         loadCustomFilters();
     }, []);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
-        await Promise.allSettled([loadProducts(), loadCategories(), loadBrands(), loadCustomFilters()]);
+        await Promise.allSettled([loadProducts(), loadCategories(true), loadBrands(), loadCustomFilters()]);
         setIsRefreshing(false);
+    };
+
+
+    // Given a category ID, collect it + all its descendant IDs
+    const getDescendantIds = (catId: string, allCats: Category[]): string[] => {
+        const children = allCats.filter(c => c.parent_id === catId);
+        return [catId, ...children.flatMap(child => getDescendantIds(child.id, allCats))];
     };
 
     const handleEdit = (product: Product) => {   
@@ -67,11 +78,30 @@ export const ProductsMobile = () => {
         }
     };
 
-    const filteredProducts = useMemo(() => {     
+    const filteredProducts = useMemo(() => {
+        // Collect all category IDs that match the active selection (including subcategories)
+        const activeCatIds = activeCategory === 'Todos'
+            ? null
+            : getDescendantIds(activeCategory, categoriesData);
+
         return products.filter(p => {
             const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||      
                 (p.code || '').toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;  
+
+            let matchesCategory = activeCategory === 'Todos';
+            if (!matchesCategory && activeCatIds) {
+                // Match by category_id if available
+                if (p.category_id) {
+                    matchesCategory = activeCatIds.includes(p.category_id);
+                } else {
+                    // Fallback: match by name against any of the matching category names
+                    const matchingNames = categoriesData
+                        .filter(c => activeCatIds.includes(c.id))
+                        .map(c => c.name);
+                    matchesCategory = matchingNames.includes(p.category);
+                }
+            }
+
             const matchesBrand = activeBrand === 'Todas' || (p.brand_id === activeBrand || (activeBrand === '' && !p.brand_id));
             
             const matchesCustomFilters = Object.entries(activeCustomFilters).every(([, optionIds]) => {
@@ -82,7 +112,7 @@ export const ProductsMobile = () => {
 
             return matchesSearch && matchesCategory && matchesBrand && matchesCustomFilters;
         });
-    }, [products, searchTerm, activeCategory, activeBrand, activeCustomFilters]);  
+    }, [products, searchTerm, activeCategory, activeBrand, activeCustomFilters, categoriesData]);  
 
     return (
         <div className="products-mobile-wrapper">
@@ -122,68 +152,76 @@ export const ProductsMobile = () => {
                     </button>
                 </div>
 
-                {/* Filter Chips row directly under search */}
-                <div className="products-quick-filters">
-                    <button
-                        className={`quick-filter-chip ${activeCategory === 'Todos' ? 'active' : ''}`}
-                        onClick={() => setActiveCategory('Todos')}
-                    >
-                        Todos
-                    </button>
-                    {(categories || []).map(cat => (
-                        <button
-                            key={cat}
-                            className={`quick-filter-chip ${activeCategory === cat ? 'active' : ''}`}
-                            onClick={() => setActiveCategory(cat)}
-                        >
-                            {cat}
+                {/* Active category badge instead of horizontal chips */}
+                {activeCategory !== 'Todos' && (
+                    <div className="active-cat-badge-row">
+                        <span className="material-symbols-rounded" style={{ fontSize: '16px', color: '#5E9B7E' }}>folder_open</span>
+                        <span className="active-cat-badge-label">
+                            {categoriesData.find(c => c.id === activeCategory)?.name || activeCategory}
+                        </span>
+                        <button className="active-cat-clear" onClick={() => setActiveCategory('Todos')}>
+                            <span className="material-symbols-rounded">close</span>
                         </button>
-                    ))}
-                </div>
+                    </div>
+                )}
             </header>
 
             <div className="products-feed-list"> 
                 {filteredProducts.length === 0 ? (
                     <div className="empty-products">
                         <span className="material-symbols-rounded">inventory_2</span>
-                        <p>{searchTerm ? 'No se encontraron coincidencias' : 'No hay productos que coincidan con los filtros'}</p>
+                        <p>{searchTerm ? 'No hay coincidencias' : 'El inventario está vacío'}</p>
                         {(searchTerm || activeCategory !== 'Todos' || activeBrand !== 'Todas') && (
                             <button className="clear-search-btn" onClick={() => {
                                 setSearchTerm('');
                                 setActiveCategory('Todos');
                                 setActiveBrand('Todas');
                             }}>
-                                Limpiar filtros
+                                Limpiar Filtros
                             </button>
                         )}
                     </div>
                 ) : (
-                    filteredProducts.map(product => (
-                        <div key={product.id} className="inv-list-item animate-fade-in" onClick={() => handleEdit(product)}>
-                            <div className="inv-item-leading">
-                                <div className="inv-icon-circle">
-                                    <span className="material-symbols-rounded">
-                                        {product.category?.toLowerCase().includes('flor') ? 'local_florist' : 
-                                         product.category?.toLowerCase().includes('planta') ? 'potted_plant' : 
-                                         'inventory_2'}
-                                    </span>
+                    filteredProducts.map(product => {
+                        const isLowStock = product.stock <= (product.min || 5);
+                        const isNoStock = product.stock <= 0;
+                        
+                        return (
+                            <div key={product.id} className="inv-list-item animate-fade-in" onClick={() => handleEdit(product)}>
+                                <div className="inv-item-leading">
+                                    <div className="inv-icon-circle" style={{ 
+                                        color: isNoStock ? '#DFA6A0' : isLowStock ? '#D8C3A5' : '#5E9B7E',
+                                        background: isNoStock ? '#F2CFCB' : isLowStock ? '#ECE6DA' : '#F7F4EE'
+                                    }}>
+                                        <span className="material-symbols-rounded">
+                                            {product.category?.toLowerCase().includes('flor') ? 'local_florist' : 
+                                             product.category?.toLowerCase().includes('planta') ? 'potted_plant' : 
+                                             'inventory_2'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="inv-item-content">
+                                    <div className="inv-item-name">{product.name}</div>
+                                    <div className="inv-item-stock">
+                                        <span style={{ 
+                                            color: isNoStock ? '#DFA6A0' : isLowStock ? '#B8946E' : 'inherit',
+                                            fontWeight: (isLowStock || isNoStock) ? 800 : 600
+                                        }}>
+                                            Stock: {product.stock}
+                                        </span>
+                                        {isLowStock && !isNoStock && <span className="stock-alert-label"> • Bajo</span>}
+                                        {isNoStock && <span className="stock-alert-label"> • Agotado</span>}
+                                    </div>
+                                </div>
+                                <div className="inv-item-trailing">
+                                    <div className="inv-item-price">${product.price.toLocaleString('es-AR')}</div>
+                                    <button className="inv-item-menu" onClick={(e) => handleDelete(e, product)}>
+                                        <span className="material-symbols-rounded">delete_outline</span>
+                                    </button>
                                 </div>
                             </div>
-                            <div className="inv-item-content">
-                                <div className="inv-item-name">{product.name}</div>
-                                <div className="inv-item-stock">Stock: {product.stock}</div>
-                            </div>
-                            <div className="inv-item-trailing">
-                                <div className="inv-item-price">${product.price.toLocaleString('es-AR')}</div>
-                                <button className="inv-item-menu" onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(e, product); // Replacing three dots menu with delete for now since click edits
-                                }}>
-                                    <span className="material-symbols-rounded">delete_outline</span>
-                                </button>
-                            </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
 
@@ -211,20 +249,20 @@ export const ProductsMobile = () => {
                         </button>
                     </div>
                     <div className="filters-sheet-body">
-                        {/* Categories */}
+                        {/* Categories Tree */}
                         <div className="filter-group">
-                            <h4>Categorías</h4>
-                            <div className="filter-chips">
-                                {['Todos', ...(categories || [])].map(cat => (
-                                    <button
-                                        key={cat}
-                                        className={`filter-chip ${activeCategory === cat ? 'active' : ''}`}      
-                                        onClick={() => setActiveCategory(cat)}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-                            </div>
+                            <h4>
+                                <span className="material-symbols-rounded" style={{ fontSize: '18px', verticalAlign: 'middle', marginRight: '6px', color: '#5E9B7E' }}>account_tree</span>
+                                Categorías
+                            </h4>
+                            <CategoryTreeMobile
+                                categoriesData={categoriesData}
+                                activeCategory={activeCategory}
+                                onSelect={(id) => {
+                                    setActiveCategory(id);
+                                    setIsFiltersOpen(false);
+                                }}
+                            />
                         </div>
 
                         {/* Brands */}

@@ -17,12 +17,14 @@ export const OrdersMobile = () => {
     const [timeFilter, setTimeFilter] = useState<string>('todos'); // todos, hoy, manana, semana
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
-    const [isRefreshing, setIsRefreshing] = useState(false);
     const [showPaymentPanel, setShowPaymentPanel] = useState(false);
     const [paymentAmount, setPaymentAmount] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<string>('');
     const [paymentLoading, setPaymentLoading] = useState(false);
     const [paymentError, setPaymentError] = useState('');
+
+    const [viewMode, setViewMode] = useState<'feed' | 'calendar'>('feed');
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
     // Set default payment method when shopInfo loads
     useEffect(() => {
@@ -35,17 +37,16 @@ export const OrdersMobile = () => {
         loadOrders();
     }, []);
 
-    const handleRefresh = async () => {
-        setIsRefreshing(true);
-        await loadOrders();
-        setIsRefreshing(false);
-    };
-
     const filteredOrders = useMemo(() => {
         let base = (orders || []).filter(o =>
             o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             o.id.toLowerCase().includes(searchTerm.toLowerCase())
         );
+
+        if (viewMode === 'calendar') {
+            const dateStr = selectedDate.toISOString().split('T')[0];
+            return base.filter(o => new Date(o.date).toISOString().split('T')[0] === dateStr);
+        }
 
         // Filtro de Tiempo
         const today = new Date();
@@ -73,16 +74,16 @@ export const OrdersMobile = () => {
         }
 
         return base.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    }, [orders, searchTerm, statusFilter, timeFilter]);
+    }, [orders, searchTerm, statusFilter, timeFilter, viewMode, selectedDate]);
 
     const getStatusInfo = (status: string) => {
         switch (status) {
-            case 'pending': return { label: 'Pte', color: '#ffffff', bg: '#ef4444', icon: 'schedule' };
-            case 'assembling': return { label: 'Armando', color: '#ffffff', bg: '#a855f7', icon: 'auto_fix_high' };
-            case 'ready': return { label: 'Listo', color: '#ffffff', bg: '#3b82f6', icon: 'check_circle' };
-            case 'out_for_delivery': return { label: 'En Camino', color: '#ffffff', bg: '#f59e0b', icon: 'local_shipping' };
-            case 'delivered': return { label: 'Entregado', color: '#ffffff', bg: '#22c55e', icon: 'task_alt' };
-            default: return { label: status, color: '#ffffff', bg: '#6B6B6B', icon: 'help' };
+            case 'pending': return { label: 'Pte', color: '#ffffff', bg: '#DFA6A0', icon: 'schedule' };
+            case 'assembling': return { label: 'Armando', color: '#ffffff', bg: '#D8C3A5', icon: 'auto_fix_high' };
+            case 'ready': return { label: 'Listo', color: '#ffffff', bg: '#5E9B7E', icon: 'check_circle' };
+            case 'out_for_delivery': return { label: 'Camino', color: '#ffffff', bg: '#6FAE8D', icon: 'local_shipping' };
+            case 'delivered': return { label: 'Entregado', color: '#ffffff', bg: '#425149', icon: 'task_alt' };
+            default: return { label: status, color: '#ffffff', bg: '#ECE6DA', icon: 'help' };
         }
     };
 
@@ -135,6 +136,62 @@ export const OrdersMobile = () => {
 
     const statusFlow = ['pending', 'assembling', 'ready', 'out_for_delivery', 'delivered'];
 
+    // Simple Calendar Mini Component
+    const renderCalendar = () => {
+        const days = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+        const currentMonth = selectedDate.getMonth();
+        const currentYear = selectedDate.getFullYear();
+        
+        const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        
+        const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
+        
+        const calendarDays = [];
+        // Prev month days
+        for (let i = firstDayOfMonth - 1; i >= 0; i--) {
+            calendarDays.push({ day: prevMonthLastDay - i, month: 'prev' });
+        }
+        // Current month days
+        for (let i = 1; i <= daysInMonth; i++) {
+            calendarDays.push({ day: i, month: 'current' });
+        }
+        
+        return (
+            <div className="mini-calendar animate-fade-in">
+                <div className="calendar-header">
+                    <button onClick={() => setSelectedDate(new Date(currentYear, currentMonth - 1, 1))}>
+                        <span className="material-symbols-rounded">chevron_left</span>
+                    </button>
+                    <h3>{new Date(currentYear, currentMonth).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}</h3>
+                    <button onClick={() => setSelectedDate(new Date(currentYear, currentMonth + 1, 1))}>
+                        <span className="material-symbols-rounded">chevron_right</span>
+                    </button>
+                </div>
+                <div className="calendar-grid">
+                    {days.map(d => <div key={d} className="calendar-day-label">{d}</div>)}
+                    {calendarDays.map((d, idx) => {
+                        const isSelected = d.month === 'current' && selectedDate.getDate() === d.day;
+                        const dateToCheck = new Date(currentYear, d.month === 'current' ? currentMonth : currentMonth - 1, d.day);
+                        const dateStr = dateToCheck.toISOString().split('T')[0];
+                        const hasOrders = (orders || []).some(o => new Date(o.date).toISOString().split('T')[0] === dateStr);
+                        
+                        return (
+                            <div 
+                                key={idx} 
+                                className={`calendar-day ${d.month} ${isSelected ? 'selected' : ''} ${hasOrders ? 'has-orders' : ''}`}
+                                onClick={() => d.month === 'current' && setSelectedDate(new Date(currentYear, currentMonth, d.day))}
+                            >
+                                {d.day}
+                                {hasOrders && <div className="order-dot" />}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="orders-mobile-wrapper">
             <header className="mobile-orders-header">
@@ -144,7 +201,7 @@ export const OrdersMobile = () => {
                         <span className="material-symbols-rounded">search</span>
                         <input
                             type="text"
-                            placeholder="Buscar..."
+                            placeholder="Buscar cliente..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
@@ -154,61 +211,69 @@ export const OrdersMobile = () => {
                             </button>
                         )}
                     </div>
-                    <button className={`refresh-btn ${isRefreshing ? 'spinning' : ''}`} onClick={handleRefresh}>
-                        <span className="material-symbols-rounded">refresh</span>
+                    <button className={`refresh-btn ${viewMode === 'calendar' ? 'active-mode' : ''}`} onClick={() => setViewMode(viewMode === 'feed' ? 'calendar' : 'feed')}>
+                        <span className="material-symbols-rounded">{viewMode === 'feed' ? 'calendar_month' : 'view_list'}</span>
                     </button>
                 </div>
 
-                <div className="orders-filter-rows">
-                    <div className="filter-row">
-                        <span className="filter-row-label">📅</span>
-                        {[
-                            { id: 'todos', label: 'Todo' },
-                            { id: 'hoy', label: 'Hoy' },
-                            { id: 'manana', label: 'Mañana' },
-                            { id: 'semana', label: 'Semana' }
-                        ].map(f => (
-                            <button
-                                key={f.id}
-                                className={`filter-pill ${timeFilter === f.id ? 'active' : ''}`}
-                                onClick={() => setTimeFilter(f.id)}
-                            >
-                                {f.label}
-                            </button>
-                        ))}
+                {viewMode === 'feed' && (
+                    <div className="orders-filter-rows animate-fade-in">
+                        <div className="filter-row">
+                            {[
+                                { id: 'todos', label: 'Todo' },
+                                { id: 'hoy', label: 'Hoy' },
+                                { id: 'manana', label: 'Mañana' },
+                                { id: 'semana', label: 'Semana' }
+                            ].map(f => (
+                                <button
+                                    key={f.id}
+                                    className={`filter-pill ${timeFilter === f.id ? 'active' : ''}`}
+                                    onClick={() => setTimeFilter(f.id)}
+                                >
+                                    {f.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="filter-row">
+                            {[
+                                { id: 'active', label: 'Activos', color: '#5E9B7E' },
+                                { id: 'pending', label: 'Ptes', color: '#DFA6A0' },
+                                { id: 'ready', label: 'Listos', color: '#6FAE8D' },
+                                { id: 'delivered', label: 'Entregados', color: '#425149' }
+                            ].map(f => (
+                                <button
+                                    key={f.id}
+                                    className={`filter-pill ${statusFilter === f.id ? 'active' : ''}`}
+                                    onClick={() => setStatusFilter(f.id)}
+                                >
+                                    {f.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    <div className="filter-row">
-                        <span className="filter-row-label">📋</span>
-                        {[
-                            { id: 'active', label: 'Activos', color: '#10B981' },
-                            { id: 'pending', label: 'Ptes', color: '#f59e0b' },
-                            { id: 'ready', label: 'Listos', color: '#3b82f6' },
-                            { id: 'delivered', label: 'Entregados', color: '#64748b' }
-                        ].map(f => (
-                            <button
-                                key={f.id}
-                                className={`filter-pill ${statusFilter === f.id ? 'active' : ''}`}
-                                onClick={() => setStatusFilter(f.id)}
-                                style={statusFilter === f.id ? { background: f.color, borderColor: f.color } : {}}
-                            >
-                                {f.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                )}
             </header>
 
+            {viewMode === 'calendar' && renderCalendar()}
+
             <div className="orders-feed">
+                <div className="feed-header-info">
+                    {viewMode === 'calendar' && (
+                        <h4 className="selected-date-title">
+                            {selectedDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </h4>
+                    )}
+                </div>
+
                 {filteredOrders.length === 0 ? (
                     <div className="empty-orders">
                         <span className="material-symbols-rounded">receipt_long</span>
-                        <p>No se encontraron pedidos</p>
+                        <p>No hay pedidos para este periodo</p>
                     </div>
                 ) : (
                     filteredOrders.map(order => {
                         const s = getStatusInfo(order.status);
                         const dateObj = new Date(order.date);
-                        const remaining = order.total - (order.advancePayment || 0);
                         const hasItems = order.items && order.items.length > 0;
 
                         return (
@@ -218,18 +283,18 @@ export const OrdersMobile = () => {
                                 onClick={() => handleOrderTap(order)}
                             >
                                 <div className="order-item-leading">
-                                    <div className="order-icon-circle" style={{ background: s.bg, color: 'white' }}>
+                                    <div className="order-icon-circle" style={{ background: `${s.bg}20`, color: s.bg }}>
                                         <span className="material-symbols-rounded">{s.icon}</span>
                                     </div>
                                 </div>
                                 <div className="order-item-content">
                                     <div className="order-item-name">{order.customerName}</div>
                                     <div className="order-item-meta">
-                                        {dateObj.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })} • #{order.id.slice(0, 5)}
+                                        #{order.id.slice(0, 5).toUpperCase()} • {dateObj.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
                                     </div>
                                     {hasItems && (
                                         <div className="order-item-desc">
-                                            {order.items.length} productos
+                                            {order.items.length} {order.items.length === 1 ? 'producto' : 'productos'}
                                         </div>
                                     )}
                                 </div>
@@ -238,9 +303,6 @@ export const OrdersMobile = () => {
                                     <div className="order-clean-badge" style={{ color: s.bg, background: `${s.bg}15` }}>
                                         {s.label}
                                     </div>
-                                    {remaining > 0 && remaining <= order.total && (
-                                        <div className="order-debt-indicator">Resta ${remaining.toLocaleString()}</div>
-                                    )}
                                 </div>
                             </div>
                         );
@@ -263,17 +325,24 @@ export const OrdersMobile = () => {
                             <>
                                 <div className="sheet-order-header">
                                     <div className="sheet-order-info">
-                                        <div className="sheet-avatar" style={{ background: s.bg, color: s.color }}>
+                                        <div className="sheet-avatar" style={{ background: `${s.bg}20`, color: s.bg }}>
                                             {selectedOrder.customerName.charAt(0)}
                                         </div>
                                         <div>
                                             <h3>{selectedOrder.customerName}</h3>
-                                            <span className="sheet-order-id">#{selectedOrder.id.slice(0, 8)}</span>
+                                            <span className="sheet-order-id">#{selectedOrder.id.toUpperCase()}</span>
                                         </div>
                                     </div>
-                                    <button className="sheet-close" onClick={() => setIsSheetOpen(false)}>
-                                        <span className="material-symbols-rounded">close</span>
-                                    </button>
+                                    <div className="sheet-actions">
+                                        <button className="sheet-action-btn" onClick={() => {
+                                            window.location.href = `/pos?edit=${selectedOrder.id}`;
+                                        }}>
+                                            <span className="material-symbols-rounded">edit</span>
+                                        </button>
+                                        <button className="sheet-close" onClick={() => setIsSheetOpen(false)}>
+                                            <span className="material-symbols-rounded">close</span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="sheet-order-details">
@@ -300,12 +369,19 @@ export const OrdersMobile = () => {
                                         <div>
                                             <span className="detail-label">Entrega</span>
                                             <span className="detail-value">
-                                                {selectedOrder.deliveryMethod === 'delivery' ? 'Envío a domicilio' : 'Retiro en local'}
+                                                {selectedOrder.deliveryMethod === 'delivery' ? 'Envío' : 'Retiro'}
                                             </span>
                                         </div>
                                     </div>
+                                    <div className="detail-row">
+                                        <span className="material-symbols-rounded">payments</span>
+                                        <div>
+                                            <span className="detail-label">Método</span>
+                                            <span className="detail-value">{selectedOrder.paymentMethod || 'Efectivo'}</span>
+                                        </div>
+                                    </div>
                                     {selectedOrder.deliveryAddress?.street && (
-                                        <div className="detail-row">
+                                        <div className="detail-row notes-row">
                                             <span className="material-symbols-rounded">location_on</span>
                                             <div>
                                                 <span className="detail-label">Dirección</span>
@@ -325,7 +401,7 @@ export const OrdersMobile = () => {
                                 </div>
 
                                 <div className="sheet-order-items">
-                                    <h4>Productos ({selectedOrder.items?.length || 0})</h4>
+                                    <h4>Productos</h4>
                                     <div className="sheet-items-list">
                                         {(selectedOrder.items || []).map((item: any, idx: number) => {
                                             const itemName = item.name || item.product_name || 'Producto';
@@ -343,32 +419,32 @@ export const OrdersMobile = () => {
 
                                 <div className="sheet-order-summary">
                                     <div className="summary-row">
-                                        <span>Subtotal</span>
+                                        <span>Total</span>
                                         <span>${selectedOrder.total.toLocaleString()}</span>
                                     </div>
                                     {selectedOrder.advancePayment > 0 && (
                                         <div className="summary-row">
-                                            <span>Seña</span>
+                                            <span>Entregado</span>
                                             <span className="summary-advance">-${selectedOrder.advancePayment.toLocaleString()}</span>
                                         </div>
                                     )}
                                     <div className="summary-row total-row">
-                                        <span>{remaining > 0 ? 'Resta' : 'Total pagado'}</span>
-                                        <span style={{ color: remaining > 0 ? '#ef4444' : '#16a34a' }}>
+                                        <span>{remaining > 0 ? 'Saldo Pendiente' : 'Pagado'}</span>
+                                        <span style={{ color: remaining > 0 ? '#DFA6A0' : '#5E9B7E' }}>
                                             ${remaining > 0 ? remaining.toLocaleString() : selectedOrder.total.toLocaleString()}
                                         </span>
                                     </div>
 
                                     {/* Register Payment Panel Mobile */}
                                     {remaining > 0 && (
-                                        <div className="mobile-payment-section mt-4 pt-4 border-t border-dashed border-gray-200">
+                                        <div className="mobile-payment-section">
                                             {!showPaymentPanel ? (
                                                 <button
                                                     className="mobile-payment-trigger"
                                                     onClick={() => { setShowPaymentPanel(true); setPaymentAmount(String(Math.round(remaining))); }}
                                                 >
                                                     <span className="material-symbols-rounded">payments</span>
-                                                    Registrar Pago
+                                                    Cobrar Saldo
                                                 </button>
                                             ) : (
                                                 <div className="mobile-payment-form">
@@ -380,13 +456,12 @@ export const OrdersMobile = () => {
                                                             onChange={e => { setPaymentAmount(e.target.value); setPaymentError(''); }}
                                                         />
                                                     </div>
-                                                    <div className="payment-methods-grid scroll-horizontal" style={{ overflowX: 'auto', display: 'flex', gap: '0.5rem', paddingBottom: '0.5rem' }}>
+                                                    <div className="payment-methods-grid scroll-horizontal">
                                                         {(shopInfo.paymentMethods || []).map((m: any) => (
                                                             <button
                                                                 key={m.id}
                                                                 className={`pay-method-btn ${paymentMethod === m.name ? 'active' : ''}`}
                                                                 onClick={() => setPaymentMethod(m.name)}
-                                                                style={{ minWidth: '100px', flex: '0 0 auto' }}
                                                             >
                                                                 {m.name}
                                                             </button>
@@ -409,14 +484,14 @@ export const OrdersMobile = () => {
                                                             className="pay-cancel" 
                                                             onClick={() => { setShowPaymentPanel(false); setPaymentError(''); }}
                                                         >
-                                                            Cancelar
+                                                            Cerrar
                                                         </button>
                                                         <button 
                                                             className="pay-confirm"
                                                             onClick={handleRegisterPayment}
                                                             disabled={paymentLoading || !paymentAmount}
                                                         >
-                                                            {paymentLoading ? '...' : 'Confirmar'}
+                                                            {paymentLoading ? '...' : 'Registrar'}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -437,11 +512,15 @@ export const OrdersMobile = () => {
                                                 <button
                                                     key={status}
                                                     className={`status-change-btn ${isCurrent ? 'current' : ''} ${isPast ? 'past' : ''}`}
-                                                    style={{ borderColor: info.color, background: isCurrent ? info.bg : 'white' }}
+                                                    style={{ 
+                                                        color: isCurrent ? 'white' : info.bg,
+                                                        background: isCurrent ? info.bg : 'white',
+                                                        borderColor: isCurrent ? info.bg : 'rgba(216, 195, 165, 0.2)'
+                                                    }}
                                                     onClick={() => !isCurrent && handleStatusChange(selectedOrder.id, status)}
                                                     disabled={isCurrent}
                                                 >
-                                                    <span className="material-symbols-rounded" style={{ color: info.color }}>{info.icon}</span>
+                                                    <span className="material-symbols-rounded">{info.icon}</span>
                                                     <span>{info.label}</span>
                                                 </button>
                                             );

@@ -111,6 +111,7 @@ export const ProductsDesktop = () => {
 
     // Product selection for bulk operations
     const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     const toggleProductSelection = (productId: string) => {
         setSelectedProductIds(prev => {
@@ -364,7 +365,50 @@ export const ProductsDesktop = () => {
                     </div>
                 </div>
             )}
-            <div className="products-layout">
+            <div className={`products-layout ${isSidebarOpen ? 'with-sidebar' : ''}`}>
+                {/* Sidebar */}
+                <aside className={`products-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+                    <div className="sidebar-header">
+                        <h3 className="sidebar-title">Carpetas</h3>
+                        <button className="sidebar-toggle-inner" onClick={() => setIsSidebarOpen(false)}>
+                            <X size={18} />
+                        </button>
+                    </div>
+                    <div className="sidebar-content">
+                        <CategoryTree
+                            categories={categoriesData}
+                            activeCategory={activeCategories.length === 1 ? activeCategories[0] : 'Todos'}
+                            onSelect={(cat) => {
+                                if (cat === 'Todos') setActiveCategories([]);
+                                else setActiveCategories([cat]);
+                            }}
+                            onAddSub={handleAddSubCategory}
+                            onRename={handleRenameCategoryAction}
+                            onDelete={handleDeleteCategoryAction}
+                        />
+                        
+                        <div className="sidebar-extra-filters">
+                            <h3 className="sidebar-title mt-6">Otras Carpetas</h3>
+                            <label className="sidebar-filter-option">
+                                <input
+                                    type="checkbox"
+                                    checked={activeCategories.includes('Sin Categoría')}
+                                    onChange={(e) => {
+                                        if (e.target.checked) setActiveCategories([...activeCategories, 'Sin Categoría']);
+                                        else setActiveCategories(activeCategories.filter(a => a !== 'Sin Categoría'));
+                                    }}
+                                />
+                                {activeCategories.includes('Sin Categoría') ? (
+                                    <CheckSquare size={16} className="filter-checkbox checked" />
+                                ) : (
+                                    <Square size={16} className="filter-checkbox" />
+                                )}
+                                <span className="filter-option-text">Sin Categoría</span>
+                            </label>
+                        </div>
+                    </div>
+                </aside>
+
                 {/* Main Content */}
                 <main className="products-main">
                     {/* Stats Cards */}
@@ -409,15 +453,20 @@ export const ProductsDesktop = () => {
 
                     {/* Unified Toolbar */}
                     <div className="unified-toolbar">
-                        <div className="toolbar-header">
+                        <header className="toolbar-header">
                             <div className="toolbar-header-left">
                                 <div className="toolbar-title-wrapper">
                                     <h1 className="toolbar-title">
-                                        <Package size={28} className="toolbar-title-icon" />
-                                        Catálogo de Productos
+                                        {!isSidebarOpen && (
+                                            <button className="sidebar-toggle-btn" onClick={() => setIsSidebarOpen(true)}>
+                                                <Folder size={20} />
+                                            </button>
+                                        )}
+                                        <TrendingUp className="toolbar-title-icon" size={32} />
+                                        Stock de Productos
                                     </h1>
                                     <span className="toolbar-subtitle">
-                                        {filteredProducts.length} de {products?.length || 0} productos
+                                        Mostrando {filteredProducts.length} de {products.length} productos
                                     </span>
                                 </div>
                             </div>
@@ -464,19 +513,35 @@ export const ProductsDesktop = () => {
                                     <span className="btn-text">Nuevo Producto</span>
                                 </button>
                             </div>
-                        </div>
+                        </header>
 
                         {/* Filters Bar */}
                         <div className="toolbar-filters">
+                            {/* Clear All Filters Button */}
+                            {(searchTerm || activeCategories.length > 0 || activeBrands.length > 0 || Object.values(activeCustomFilters).some(v => v.length > 0)) && (
+                                <button 
+                                    className="clear-all-filters-btn"
+                                    onClick={() => {
+                                        setSearchTerm('');
+                                        setActiveCategories([]);
+                                        setActiveBrands([]);
+                                        setActiveCustomFilters({});
+                                        setOpenFilterDropdownId(null);
+                                    }}
+                                >
+                                    <X size={14} />
+                                    <span>Limpiar Filtros</span>
+                                </button>
+                            )}
+
                             {/* Search */}
                             <div className="search-input-wrapper">
-                                <Search size={18} className="search-icon" />
                                 <input
                                     type="text"
                                     placeholder="Buscar por nombre o código..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="search-input"
+                                    className="search-input no-icon"
                                 />
                                 {searchTerm && (
                                     <button className="clear-search" onClick={() => setSearchTerm('')}>
@@ -493,10 +558,18 @@ export const ProductsDesktop = () => {
                                 >
                                     <Folder size={16} />
                                     <span className="filter-label">
-                                        {activeCategories.length === 0 ? 'Categorías' : `${activeCategories.length}`}
+                                        {activeCategories.length === 0 ? 'Categorías' : `Carpetas (${activeCategories.length})`}
                                     </span>
                                     {activeCategories.length > 0 && (
-                                        <span className="filter-badge">{activeCategories.length}</span>
+                                        <div 
+                                            className="filter-quick-clear"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveCategories([]);
+                                            }}
+                                        >
+                                            <X size={12} />
+                                        </div>
                                     )}
                                 </button>
                                 {isCategoryDropdownOpen && (
@@ -544,10 +617,18 @@ export const ProductsDesktop = () => {
                                 >
                                     <Tag size={16} />
                                     <span className="filter-label">
-                                        {activeBrands.length === 0 ? 'Marcas' : `${activeBrands.length}`}
+                                        {activeBrands.length === 0 ? 'Marcas' : `Marcas (${activeBrands.length})`}
                                     </span>
                                     {activeBrands.length > 0 && (
-                                        <span className="filter-badge">{activeBrands.length}</span>
+                                        <div 
+                                            className="filter-quick-clear"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveBrands([]);
+                                            }}
+                                        >
+                                            <X size={12} />
+                                        </div>
                                     )}
                                 </button>
                                 {isBrandDropdownOpen && (
@@ -619,6 +700,17 @@ export const ProductsDesktop = () => {
                                             <span className="filter-label">
                                                 {activeOpts.length === 0 ? cf.name : `${cf.name} (${activeOpts.length})`}
                                             </span>
+                                            {activeOpts.length > 0 && (
+                                                <div 
+                                                    className="filter-quick-clear"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setActiveCustomFilters(prev => ({ ...prev, [cf.id]: [] }));
+                                                    }}
+                                                >
+                                                    <X size={12} />
+                                                </div>
+                                            )}
                                         </button>
                                         {isOpen && (
                                             <>

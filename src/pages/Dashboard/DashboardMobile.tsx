@@ -2,6 +2,7 @@ import { useMemo, useEffect, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { Bell } from 'lucide-react';
 import './DashboardMobile.css';
 
 export const DashboardMobile = () => {
@@ -11,7 +12,9 @@ export const DashboardMobile = () => {
     const orders = useStore(state => state.orders);
     const customers = useStore(state => state.customers);
     const transactions = useStore(state => state.transactions);
+    const suppliers = useStore(state => state.suppliers);
     const registerPayment = useStore(state => state.registerPayment);
+    const notificationsLastSeenCount = useStore(state => state.notificationsLastSeenCount);
 
     const loadProducts = useStore(state => state.loadProducts);
     const loadOrders = useStore(state => state.loadOrders);
@@ -39,6 +42,34 @@ export const DashboardMobile = () => {
         };
         loadData();
     }, []);
+
+    // Calculate total notifications count
+    const notificationCount = useMemo(() => {
+        let count = 0;
+        const getDaysDiff = (dateStr: string) => {
+            if (!dateStr) return 999;
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const target = new Date(dateStr); target.setHours(0, 0, 0, 0);
+            const nextTarget = new Date(today.getFullYear(), target.getMonth(), target.getDate());
+            if (nextTarget < today) nextTarget.setFullYear(today.getFullYear() + 1);
+            return Math.ceil((nextTarget.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        };
+        customers.forEach(c => {
+            if (c.birthday && getDaysDiff(c.birthday) <= 7) count++;
+            if (c.anniversary && getDaysDiff(c.anniversary) <= 7) count++;
+            if (c.debtBalance > 0) count++;
+        });
+        products.forEach(p => { if (p.stock <= p.min) count++; });
+        suppliers?.forEach(s => {
+            if (s.lastVisit) {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const visitDate = new Date(s.lastVisit); visitDate.setHours(0, 0, 0, 0);
+                const daysUntil = Math.ceil((visitDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                if (daysUntil >= 0 && daysUntil <= 3) count++;
+            }
+        });
+        return count > notificationsLastSeenCount ? count : 0;
+    }, [customers, products, suppliers, notificationsLastSeenCount]);
 
     const metrics = useMemo(() => {
         const isToday = (dateStr: string) => {
@@ -101,27 +132,38 @@ export const DashboardMobile = () => {
     const isAdmin = user?.role === 'admin';
 
     const quickActions = [
-        { label: 'Vender', icon: 'point_of_sale', path: '/pos', color: '#10B981', bg: '#ecfdf5' },
-        { label: 'Pedidos', icon: 'receipt_long', path: '/pedidos', color: '#3b82f6', bg: '#eff6ff' },
-        { label: 'Stock', icon: 'inventory_2', path: '/productos', color: '#f59e0b', bg: '#fffbeb' },
-        { label: 'Clientes', icon: 'group', path: '/clientes', color: '#8b5cf6', bg: '#f5f3ff' },
-        { label: 'Proveedores', icon: 'local_shipping', path: '/proveedores', color: '#ec4899', bg: '#fdf2f8' },
-        { label: 'Reportes', icon: 'bar_chart', path: '/reportes', color: '#06b6d4', bg: '#ecfeff' },
-        { label: 'Caja', icon: 'payments', path: '/caja', color: '#16a34a', bg: '#f0fdf4' },
-        { label: 'Ajustes', icon: 'settings', path: '/configuracion', color: '#64748b', bg: '#f8fafc' },
+        { label: 'Vender', icon: 'point_of_sale', path: '/pos', color: '#5E9B7E', bg: '#D7EFE1' },
+        { label: 'Pedidos', icon: 'receipt_long', path: '/pedidos', color: '#6FAE8D', bg: '#EAE7E0' },
+        { label: 'Stock', icon: 'inventory_2', path: '/productos', color: '#DFA6A0', bg: '#F6F5F1' },
+        { label: 'Clientes', icon: 'group', path: '/clientes', color: '#D8C3A5', bg: '#F6F5F1' },
+        { label: 'Proveedores', icon: 'local_shipping', path: '/proveedores', color: '#425149', bg: '#EAE7E0' },
+        { label: 'Reportes', icon: 'bar_chart', path: '/reportes', color: '#5E9B7E', bg: '#F6F5F1' },
+        { label: 'Caja', icon: 'payments', path: '/caja', color: '#6FAE8D', bg: '#D7EFE1' },
+        { label: 'Ajustes', icon: 'settings', path: '/configuracion', color: '#425149', bg: '#F6F5F1' },
     ];
 
     return (
-        <div className="dashboard-mobile-wrapper">
-            {/* Header - Solo saludo, sin hamburguesa ni campana (ya están en la bottom nav) */}
-            <header className="mobile-dashboard-header">
+        <div className="dashboard-mobile-wrapper bento-layout">
+            {/* Header - Bento Style */}
+            <header className="mobile-dashboard-header bento-header">
                 <div className="header-greeting">
                     <div className="greeting-left">
                         <span className="welcome-text">¡Hola, {user?.name?.split(' ')[0]}! 🌿</span>
                         <span className="current-date">{formattedDate}</span>
                     </div>
-                    <div className="greeting-avatar">
-                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    <div className="header-actions">
+                        <button 
+                            className="inline-notification-bell" 
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-notifications'))}
+                        >
+                            <Bell size={22} />
+                            {notificationCount > 0 && (
+                                <span className="bell-badge">{notificationCount > 9 ? '9+' : notificationCount}</span>
+                            )}
+                        </button>
+                        <div className="greeting-avatar">
+                            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
                     </div>
                 </div>
             </header>

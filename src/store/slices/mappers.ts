@@ -19,6 +19,7 @@ export const mapApiProductToFrontend = (apiProduct: ApiProduct, categoriesData: 
     min: Number(apiProduct.min_stock || 0),
     tags: apiProduct.tags || [],
     supplierId: apiProduct.supplier_id,
+    custom_filter_options: apiProduct.custom_filter_options || [],
     // Campos de ventas para tabs Recientes y Top
     salesCount: Number((apiProduct as any).sales_count || 0),
     lastSaleDate: (apiProduct as any).last_sale_date || undefined,
@@ -49,6 +50,7 @@ export const mapFrontendToApiProduct = (product: Partial<Product>, categoriesDat
         min_stock: parseNumber(product.min, 5),
         stock_quantity: parseNumber(product.stock, 0),
         tags: product.tags || [],
+        custom_filter_options: product.custom_filter_options || [],
         is_barcode: false,
         is_active: true,
         category_id: categoryId,
