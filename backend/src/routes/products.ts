@@ -154,7 +154,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const results = await query
         .orderBy('name', 'asc')
-        .limit(1000)
+        .limit(10000)
         .execute();
 
       const filterValues = await trx

@@ -111,7 +111,7 @@ export const ProductsDesktop = () => {
 
     // Product selection for bulk operations
     const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const toggleProductSelection = (productId: string) => {
         setSelectedProductIds(prev => {
@@ -365,50 +365,7 @@ export const ProductsDesktop = () => {
                     </div>
                 </div>
             )}
-            <div className={`products-layout ${isSidebarOpen ? 'with-sidebar' : ''}`}>
-                {/* Sidebar */}
-                <aside className={`products-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
-                    <div className="sidebar-header">
-                        <h3 className="sidebar-title">Carpetas</h3>
-                        <button className="sidebar-toggle-inner" onClick={() => setIsSidebarOpen(false)}>
-                            <X size={18} />
-                        </button>
-                    </div>
-                    <div className="sidebar-content">
-                        <CategoryTree
-                            categories={categoriesData}
-                            activeCategory={activeCategories.length === 1 ? activeCategories[0] : 'Todos'}
-                            onSelect={(cat) => {
-                                if (cat === 'Todos') setActiveCategories([]);
-                                else setActiveCategories([cat]);
-                            }}
-                            onAddSub={handleAddSubCategory}
-                            onRename={handleRenameCategoryAction}
-                            onDelete={handleDeleteCategoryAction}
-                        />
-                        
-                        <div className="sidebar-extra-filters">
-                            <h3 className="sidebar-title mt-6">Otras Carpetas</h3>
-                            <label className="sidebar-filter-option">
-                                <input
-                                    type="checkbox"
-                                    checked={activeCategories.includes('Sin Categoría')}
-                                    onChange={(e) => {
-                                        if (e.target.checked) setActiveCategories([...activeCategories, 'Sin Categoría']);
-                                        else setActiveCategories(activeCategories.filter(a => a !== 'Sin Categoría'));
-                                    }}
-                                />
-                                {activeCategories.includes('Sin Categoría') ? (
-                                    <CheckSquare size={16} className="filter-checkbox checked" />
-                                ) : (
-                                    <Square size={16} className="filter-checkbox" />
-                                )}
-                                <span className="filter-option-text">Sin Categoría</span>
-                            </label>
-                        </div>
-                    </div>
-                </aside>
-
+            <div className="products-layout">
                 {/* Main Content */}
                 <main className="products-main">
                     {/* Stats Cards */}
