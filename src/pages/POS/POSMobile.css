@@ -823,192 +823,171 @@
 }
 .order-advance-recap .material-symbols-rounded { color: #5E9B7E; font-size: 20px; }
 
-/* ── ADJUSTMENTS (COMPACT CHIPS & DRAWER) ── */
-.pos-mobile-adjustments-compact {
-    display: flex;
-    gap: 0.75rem;
+/* ── ADJUSTMENTS (UNIFIED BAR & DRAWER) ── */
+.pos-mobile-adjustment-unified {
     padding: 0 0.5rem;
     margin-bottom: 1.5rem;
 }
 
-.adj-chip {
-    flex: 1;
+.adj-bar-mobile {
+    display: flex;
+    align-items: center;
+    background: #F6F5F1;
+    border: 1px solid rgba(216, 195, 165, 0.2);
+    border-radius: 18px;
+    height: 54px;
+    padding: 4px;
+}
+
+.adj-mode-btn {
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    border-radius: 16px;
-    background: #F6F5F1;
-    border: 1px solid rgba(216, 195, 165, 0.2);
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #5E9B7E;
-    transition: all 0.2s;
+    font-size: 1.5rem;
+    font-weight: 800;
+    cursor: pointer;
 }
 
-.adj-chip.active {
+.adj-mode-btn.subtract {
     background: #D7EFE1;
-    border-color: #5E9B7E;
+    color: #5E9B7E;
 }
 
-.adj-chip.surcharge {
+.adj-mode-btn.add {
+    background: #fff1f2;
     color: #DFA6A0;
 }
 
-.adj-chip.surcharge.active {
-    background: #fff1f2;
-    border-color: #DFA6A0;
+.adj-input-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
 }
 
-.adj-chip .material-symbols-rounded {
-    font-size: 18px;
+.adj-value-display {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: #2F3A34;
 }
 
-/* Bottom Drawer for Adjustments */
-.adj-drawer-overlay {
+.adj-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.adj-config-btn {
+    width: 46px;
+    height: 46px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Mobile Config Modal */
+.mobile-config-modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(47, 58, 52, 0.4);
-    backdrop-filter: blur(4px);
-    z-index: 11000;
-    visibility: hidden;
-    opacity: 0;
-    transition: all 0.3s ease;
-}
-
-.adj-drawer-overlay.open {
-    visibility: visible;
-    opacity: 1;
-}
-
-.adj-drawer-content {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    background: white;
-    border-radius: 32px 32px 0 0;
-    padding: 1.5rem;
-    transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.adj-drawer-overlay.open .adj-drawer-content {
-    transform: translateY(0);
-}
-
-.drawer-handle {
-    width: 40px;
-    height: 4px;
-    background: #ECE6DA;
-    border-radius: 2px;
-    margin: -0.5rem auto 1.5rem;
-}
-
-.drawer-header-compact {
+    background: rgba(47, 58, 52, 0.6);
+    backdrop-filter: blur(8px);
+    z-index: 12000;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    justify-content: center;
+    padding: 2rem;
 }
 
-.drawer-header-compact h3 {
+.mobile-config-content {
+    background: white;
+    width: 100%;
+    max-width: 340px;
+    border-radius: 28px;
+    padding: 2rem;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.mobile-config-content h3 {
     font-family: 'Outfit', sans-serif;
-    font-size: 1.15rem;
+    font-size: 1.25rem;
     font-weight: 800;
     color: #2F3A34;
-    margin: 0;
+    margin-bottom: 1.5rem;
+    text-align: center;
 }
 
-.drawer-close-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #F6F5F1;
-    border: none;
+.config-grid {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #2F3A34;
-}
-
-.drawer-input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
     margin-bottom: 2rem;
 }
 
-.drawer-input-large {
-    width: 140px;
-    height: 70px;
+.config-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.config-item label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #94a3b8;
+    margin-left: 0.5rem;
+}
+
+.config-item input {
+    width: 100%;
+    padding: 1rem;
     background: #F6F5F1;
     border: 2px solid transparent;
-    border-radius: 20px;
+    border-radius: 16px;
     font-family: 'Outfit', sans-serif;
-    font-size: 2.5rem;
-    font-weight: 900;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #2F3A34;
     text-align: center;
-    color: #5E9B7E;
     outline: none;
 }
 
-.drawer-input-large.surcharge {
-    color: #DFA6A0;
-}
-
-.drawer-input-large:focus {
+.config-item input:focus {
     border-color: #5E9B7E;
     background: white;
 }
 
-.drawer-input-large.surcharge:focus {
-    border-color: #DFA6A0;
-}
-
-.input-suffix {
-    font-family: 'Outfit', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 800;
-    margin-left: 0.5rem;
-    color: #94a3b8;
-}
-
-.drawer-presets {
+.config-actions {
     display: flex;
     gap: 0.75rem;
-    margin-bottom: 2rem;
 }
 
-.drawer-preset-btn {
+.config-actions .btn-cancel {
     flex: 1;
     padding: 1rem;
     border-radius: 16px;
     background: #F6F5F1;
-    border: 1px solid transparent;
-    font-size: 1rem;
+    color: #94a3b8;
+    border: none;
     font-weight: 800;
-    color: #2F3A34;
 }
 
-.drawer-preset-btn.active {
-    background: #5E9B7E;
-    color: white;
-}
-
-.drawer-preset-btn.surcharge.active {
-    background: #DFA6A0;
-}
-
-.drawer-apply-btn {
-    width: 100%;
-    padding: 1.25rem;
-    border-radius: 20px;
+.config-actions .btn-save {
+    flex: 2;
+    padding: 1rem;
+    border-radius: 16px;
     background: #2F3A34;
     color: white;
     border: none;
-    font-family: 'Outfit', sans-serif;
-    font-size: 1rem;
     font-weight: 800;
 }
 

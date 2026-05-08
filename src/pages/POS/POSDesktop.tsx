@@ -142,12 +142,16 @@ export const POSDesktop = () => {
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [isScanningEnabled, setIsScanningEnabled] = useState(true);
     const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
-    const [quickSaleDiscount, setQuickSaleDiscount] = useState<number>(0);
-    const [quickSaleSurcharge, setQuickSaleSurcharge] = useState<number>(0);
-    const [surchargePresets] = useState<number[]>([10, 15, 20]);
-    const [discountPresets] = useState<number[]>([5, 10, 15]);
-    const [showDiscountPopover, setShowDiscountPopover] = useState(false);
-    const [showSurchargePopover, setShowSurchargePopover] = useState(false);
+    // --- NUEVO SISTEMA DE AJUSTE UNIFICADO ---
+    const [adjMode, setAdjMode] = useState<'subtract' | 'add'>('subtract'); // 'subtract' = Dcto, 'add' = Recargo
+    const [adjValue, setAdjValue] = useState<number>(0);
+    const [adjPresets, setAdjPresets] = useState<number[]>(() => {
+        const saved = localStorage.getItem('pos_adjustment_presets');
+        return saved ? JSON.parse(saved) : [5, 10, 15];
+    });
+    const [showPresetsMenu, setShowPresetsMenu] = useState(false);
+    const [showPresetsConfig, setShowPresetsConfig] = useState(false);
+    const [tempPresets, setTempPresets] = useState<number[]>([...adjPresets]);
 
     // Historial de escaneos para debugging
     const scanHistoryRef = useRef<{ code: string, timestamp: number, success: boolean, productName?: string }[]>([]);
@@ -512,10 +516,11 @@ export const POSDesktop = () => {
     const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
     
-    // Formula: Total - Discount + Surcharge
-    const discountAmount = total * (quickSaleDiscount / 100);
-    const surchargeAmount = total * (quickSaleSurcharge / 100);
-    const finalTotalSale = Math.max(0, total - discountAmount + surchargeAmount);
+    // Formula: Total +/- Adjustment
+    const adjAmount = total * (adjValue / 100);
+    const finalTotalSale = adjMode === 'subtract' 
+        ? Math.max(0, total - adjAmount) 
+        : total + adjAmount;
 
     const handleCheckout = async (method: string) => {
         if (cart.length === 0) return;
@@ -622,6 +627,7 @@ export const POSDesktop = () => {
                 clearCart();
                 clearPosOrderForm();
                 setCheckoutMode('sale');
+                setAdjValue(0);
             } catch (err) {
                 console.error("Failed to process order:", err);
                 // Notification is handled in addOrder
@@ -642,7 +648,7 @@ export const POSDesktop = () => {
                     total: item.price * item.qty
                 })),
                 subtotal: total,
-                total: total,
+                total: finalTotalSale,
                 advancePayment: advancePayment,
                 paymentMethod: method,
                 notes: orderNotes
@@ -689,8 +695,7 @@ export const POSDesktop = () => {
                     clearCart();
                     setCheckoutMode('sale');
                     clearPosOrderForm();
-                    setQuickSaleDiscount(0);
-                    setQuickSaleSurcharge(0);
+                    setAdjValue(0);
                 } else {
                     // processSale returned false - error notification already shown
                     console.warn('[POS] Venta fallida, no se resetea el carrito');
@@ -840,91 +845,103 @@ export const POSDesktop = () => {
         setActiveFolderId(null);
     };
 
-    // --- ADJUSTMENT BUTTONS RENDERER ---
-    const renderAdjustmentButtons = () => {
+    // --- AJUSTE UNIFICADO HELPERS ---
+    const savePresets = () => {
+        setAdjPresets([...tempPresets]);
+        localStorage.setItem('pos_adjustment_presets', JSON.stringify(tempPresets));
+        setShowPresetsConfig(false);
+    };
+
+    const renderUnifiedAdjustment = () => {
         return (
-            <div className="flex gap-2 relative">
-                {/* Discount Popover */}
-                <div className="relative">
+            <div className="unified-adj-container">
+                <div className="unified-adj-bar">
                     <button 
-                        className={`adjustment-trigger-btn ${quickSaleDiscount > 0 ? 'active' : ''}`}
-                        onClick={() => { setShowDiscountPopover(!showDiscountPopover); setShowSurchargePopover(false); }}
-                        title="Descuento"
+                        className={`adj-mode-toggle ${adjMode}`}
+                        onClick={() => setAdjMode(adjMode === 'subtract' ? 'add' : 'subtract')}
+                        title={adjMode === 'subtract' ? 'Modo: Descuento (-)' : 'Modo: Recargo (+)'}
                     >
-                        <span className="material-symbols-rounded">sell</span>
-                        {quickSaleDiscount > 0 && <span className="adj-badge discount">{quickSaleDiscount}%</span>}
+                        {adjMode === 'subtract' ? '-' : '+'}
                     </button>
                     
-                    {showDiscountPopover && (
-                        <div className="adjustment-popover animate-scale-in">
-                            <div className="popover-header">
-                                <span className="text-xs font-bold text-muted uppercase tracking-wider">Descuento %</span>
-                                <button onClick={() => setShowDiscountPopover(false)} className="close-popover-btn">&times;</button>
-                            </div>
-                            <input 
-                                type="number" 
-                                className="popover-input" 
-                                value={quickSaleDiscount || ''} 
-                                onChange={e => setQuickSaleDiscount(Number(e.target.value))}
-                                placeholder="0"
-                                autoFocus
-                            />
-                            <div className="popover-presets">
-                                {discountPresets.map(p => (
-                                    <button 
-                                        key={p} 
-                                        className={`popover-preset-btn ${quickSaleDiscount === p ? 'active' : ''}`}
-                                        onClick={() => setQuickSaleDiscount(p === quickSaleDiscount ? 0 : p)}
-                                    >
-                                        {p}%
-                                    </button>
-                                ))}
-                            </div>
+                    <div className="adj-input-wrapper">
+                        <input 
+                            type="number" 
+                            className="adj-input"
+                            value={adjValue || ''}
+                            onChange={e => setAdjValue(Number(e.target.value))}
+                            placeholder="0"
+                        />
+                        <span className="adj-percent-sign">%</span>
+                    </div>
+
+                    <button 
+                        className="adj-presets-trigger"
+                        onClick={() => setShowPresetsMenu(!showPresetsMenu)}
+                        title="Ver Presets"
+                    >
+                        <span className="material-symbols-rounded">more_vert</span>
+                    </button>
+
+                    {showPresetsMenu && (
+                        <div className="adj-presets-menu animate-scale-in">
+                            <div className="menu-header">Presets</div>
+                            {adjPresets.map((p, i) => (
+                                <button 
+                                    key={i} 
+                                    className="menu-item"
+                                    onClick={() => { setAdjValue(p); setShowPresetsMenu(false); }}
+                                >
+                                    {adjMode === 'subtract' ? '-' : '+'}{p}%
+                                </button>
+                            ))}
+                            <div className="menu-divider"></div>
+                            <button 
+                                className="menu-item config"
+                                onClick={() => { setShowPresetsConfig(true); setShowPresetsMenu(false); }}
+                            >
+                                <span className="material-symbols-rounded">settings</span>
+                                Configurar...
+                            </button>
                         </div>
                     )}
                 </div>
 
-                {/* Surcharge Popover */}
-                <div className="relative">
-                    <button 
-                        className={`adjustment-trigger-btn surcharge ${quickSaleSurcharge > 0 ? 'active' : ''}`}
-                        onClick={() => { setShowSurchargePopover(!showSurchargePopover); setShowDiscountPopover(false); }}
-                        title="Recargo"
-                    >
-                        <span className="material-symbols-rounded">trending_up</span>
-                        {quickSaleSurcharge > 0 && <span className="adj-badge surcharge">{quickSaleSurcharge}%</span>}
-                    </button>
-                    
-                    {showSurchargePopover && (
-                        <div className="adjustment-popover animate-scale-in">
-                            <div className="popover-header">
-                                <span className="text-xs font-bold text-muted uppercase tracking-wider">Recargo %</span>
-                                <button onClick={() => setShowSurchargePopover(false)} className="close-popover-btn">&times;</button>
-                            </div>
-                            <input 
-                                type="number" 
-                                className="popover-input surcharge" 
-                                value={quickSaleSurcharge || ''} 
-                                onChange={e => setQuickSaleSurcharge(Number(e.target.value))}
-                                placeholder="0"
-                                autoFocus
-                            />
-                            <div className="popover-presets">
-                                {surchargePresets.map(p => (
-                                    <button 
-                                        key={p} 
-                                        className={`popover-preset-btn surcharge ${quickSaleSurcharge === p ? 'active' : ''}`}
-                                        onClick={() => setQuickSaleSurcharge(p === quickSaleSurcharge ? 0 : p)}
-                                    >
-                                        {p}%
-                                    </button>
+                {showPresetsConfig && (
+                    <div className="presets-config-modal">
+                        <div className="modal-content animate-scale-in">
+                            <h4>Editar Presets</h4>
+                            <p>Asigna 3 porcentajes rápidos:</p>
+                            <div className="config-inputs">
+                                {tempPresets.map((p, i) => (
+                                    <div key={i} className="config-row">
+                                        <span>#{i+1}</span>
+                                        <input 
+                                            type="number" 
+                                            value={p}
+                                            onChange={e => {
+                                                const newP = [...tempPresets];
+                                                newP[i] = Number(e.target.value);
+                                                setTempPresets(newP);
+                                            }}
+                                        />
+                                        <span>%</span>
+                                    </div>
                                 ))}
                             </div>
+                            <div className="modal-actions">
+                                <button className="btn-cancel" onClick={() => setShowPresetsConfig(false)}>Cancelar</button>
+                                <button className="btn-save" onClick={savePresets}>Guardar</button>
+                            </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         );
+    };
+
+    const renderAdjustmentButtons = () => {
+        return renderUnifiedAdjustment();
     };
 
     return (

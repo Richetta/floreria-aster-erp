@@ -45,11 +45,15 @@ export const POSMobile = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     // Cart step: 'summary' | 'checkout' | 'payment'
     const [cartStep, setCartStep] = useState<'summary' | 'payment'>('summary');
-    const [quickSaleDiscount, setQuickSaleDiscount] = useState<number>(0);
-    const [quickSaleSurcharge, setQuickSaleSurcharge] = useState<number>(0);
-    const [discountPresets] = useState<number[]>([5, 10, 15]);
-    const [surchargePresets] = useState<number[]>([10, 15, 20]);
-    const [activeAdjustmentDrawer, setActiveAdjustmentDrawer] = useState<'discount' | 'surcharge' | null>(null);
+    const [adjMode, setAdjMode] = useState<'subtract' | 'add'>('subtract');
+    const [adjValue, setAdjValue] = useState<number>(0);
+    const [adjPresets, setAdjPresets] = useState<number[]>(() => {
+        const saved = localStorage.getItem('pos_adjustment_presets');
+        return saved ? JSON.parse(saved) : [5, 10, 15];
+    });
+    const [activeAdjustmentDrawer, setActiveAdjustmentDrawer] = useState<boolean>(false);
+    const [showPresetsConfig, setShowPresetsConfig] = useState(false);
+    const [tempPresets, setTempPresets] = useState<number[]>([...adjPresets]);
 
     const { showAlert } = useModal();
     const navigate = useNavigate();
@@ -76,9 +80,8 @@ export const POSMobile = () => {
     const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
-    const discountAmount = total * (quickSaleDiscount / 100);
-    const surchargeAmount = total * (quickSaleSurcharge / 100);
-    const finalTotal = Math.max(0, total - discountAmount + surchargeAmount);
+    const adjAmount = total * (adjValue / 100);
+    const finalTotal = adjMode === 'subtract' ? Math.max(0, total - adjAmount) : total + adjAmount;
 
     // Set default payment method
     useEffect(() => {
@@ -186,7 +189,7 @@ export const POSMobile = () => {
                 showAlert({ title: '¡Pedido Guardado! 🌸', message: 'El pedido se registró correctamente.', variant: 'success' });
                 clearCart(); clearPosOrderForm(); setIsCartOpen(false);
                 setCartStep('summary'); setCheckoutMode('sale');
-                setQuickSaleDiscount(0); setQuickSaleSurcharge(0);
+                setAdjValue(0);
             } catch {
                 showAlert({ title: 'Error', message: 'No se pudo guardar el pedido.', variant: 'error' });
             }
@@ -200,7 +203,7 @@ export const POSMobile = () => {
                 if (success) {
                     showAlert({ title: '¡Venta Exitosa! 🌿', message: 'La venta se registró correctamente.', variant: 'success' });
                     clearCart(); setIsCartOpen(false); setCartStep('summary');
-                    setQuickSaleDiscount(0); setQuickSaleSurcharge(0);
+                    setAdjValue(0);
                 }
             } catch {
                 showAlert({ title: 'Error', message: 'Error procesando la venta.', variant: 'error' });
@@ -585,21 +588,22 @@ export const POSMobile = () => {
                                 </div>
                             </div>
 
-                            <div className="pos-mobile-adjustments-compact">
-                                <button 
-                                    className={`adj-chip ${quickSaleDiscount > 0 ? 'active' : ''}`}
-                                    onClick={() => setActiveAdjustmentDrawer('discount')}
-                                >
-                                    <span className="material-symbols-rounded">sell</span>
-                                    <span>Dcto: {quickSaleDiscount}%</span>
-                                </button>
-                                <button 
-                                    className={`adj-chip surcharge ${quickSaleSurcharge > 0 ? 'active' : ''}`}
-                                    onClick={() => setActiveAdjustmentDrawer('surcharge')}
-                                >
-                                    <span className="material-symbols-rounded">trending_up</span>
-                                    <span>Recargo: {quickSaleSurcharge}%</span>
-                                </button>
+                            <div className="pos-mobile-adjustment-unified">
+                                <div className="adj-bar-mobile">
+                                    <button 
+                                        className={`adj-mode-btn ${adjMode}`}
+                                        onClick={() => setAdjMode(adjMode === 'subtract' ? 'add' : 'subtract')}
+                                    >
+                                        {adjMode === 'subtract' ? '-' : '+'}
+                                    </button>
+                                    <div className="adj-input-container" onClick={() => setActiveAdjustmentDrawer(true)}>
+                                        <span className="adj-value-display">{adjValue}%</span>
+                                        <span className="adj-label">{adjMode === 'subtract' ? 'Descuento' : 'Recargo'}</span>
+                                    </div>
+                                    <button className="adj-config-btn" onClick={() => setShowPresetsConfig(true)}>
+                                        <span className="material-symbols-rounded">settings</span>
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="payment-methods-section">
@@ -648,12 +652,12 @@ export const POSMobile = () => {
             )}
 
             {/* Adjustment Drawer */}
-            <div className={`adj-drawer-overlay ${activeAdjustmentDrawer ? 'open' : ''}`} onClick={() => setActiveAdjustmentDrawer(null)}>
+            <div className={`adj-drawer-overlay ${activeAdjustmentDrawer ? 'open' : ''}`} onClick={() => setActiveAdjustmentDrawer(false)}>
                 <div className="adj-drawer-content" onClick={e => e.stopPropagation()}>
                     <div className="drawer-handle"></div>
                     <div className="drawer-header-compact">
-                        <h3>{activeAdjustmentDrawer === 'discount' ? 'Configurar Descuento' : 'Configurar Recargo'}</h3>
-                        <button className="drawer-close-btn" onClick={() => setActiveAdjustmentDrawer(null)}>
+                        <h3>Ajustar Total (%)</h3>
+                        <button className="drawer-close-btn" onClick={() => setActiveAdjustmentDrawer(false)}>
                             <span className="material-symbols-rounded">close</span>
                         </button>
                     </div>
@@ -662,13 +666,9 @@ export const POSMobile = () => {
                         <div className="drawer-input-wrapper">
                             <input 
                                 type="number" 
-                                className={`drawer-input-large ${activeAdjustmentDrawer === 'surcharge' ? 'surcharge' : ''}`}
-                                value={activeAdjustmentDrawer === 'discount' ? (quickSaleDiscount || '') : (quickSaleSurcharge || '')}
-                                onChange={e => {
-                                    const val = Number(e.target.value);
-                                    if (activeAdjustmentDrawer === 'discount') setQuickSaleDiscount(val);
-                                    else setQuickSaleSurcharge(val);
-                                }}
+                                className={`drawer-input-large ${adjMode === 'add' ? 'surcharge' : ''}`}
+                                value={adjValue || ''}
+                                onChange={e => setAdjValue(Number(e.target.value))}
                                 placeholder="0"
                                 autoFocus
                             />
@@ -676,28 +676,56 @@ export const POSMobile = () => {
                         </div>
 
                         <div className="drawer-presets">
-                            {(activeAdjustmentDrawer === 'discount' ? discountPresets : surchargePresets).map(p => (
+                            {adjPresets.map(p => (
                                 <button 
                                     key={p} 
-                                    className={`drawer-preset-btn ${activeAdjustmentDrawer === 'surcharge' ? 'surcharge' : ''} ${
-                                        (activeAdjustmentDrawer === 'discount' ? quickSaleDiscount : quickSaleSurcharge) === p ? 'active' : ''
-                                    }`}
-                                    onClick={() => {
-                                        if (activeAdjustmentDrawer === 'discount') setQuickSaleDiscount(p === quickSaleDiscount ? 0 : p);
-                                        else setQuickSaleSurcharge(p === quickSaleSurcharge ? 0 : p);
-                                    }}
+                                    className={`drawer-preset-btn ${adjMode === 'add' ? 'surcharge' : ''} ${adjValue === p ? 'active' : ''}`}
+                                    onClick={() => setAdjValue(p === adjValue ? 0 : p)}
                                 >
                                     {p}%
                                 </button>
                             ))}
                         </div>
 
-                        <button className="drawer-apply-btn" onClick={() => setActiveAdjustmentDrawer(null)}>
+                        <button className="drawer-apply-btn" onClick={() => setActiveAdjustmentDrawer(false)}>
                             Aplicar
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* Presets Config Modal (Mobile) */}
+            {showPresetsConfig && (
+                <div className="mobile-config-modal-overlay" onClick={() => setShowPresetsConfig(false)}>
+                    <div className="mobile-config-content" onClick={e => e.stopPropagation()}>
+                        <h3>Configurar Presets</h3>
+                        <div className="config-grid">
+                            {tempPresets.map((p, i) => (
+                                <div key={i} className="config-item">
+                                    <label>Preset #{i+1}</label>
+                                    <input 
+                                        type="number" 
+                                        value={p}
+                                        onChange={e => {
+                                            const newP = [...tempPresets];
+                                            newP[i] = Number(e.target.value);
+                                            setTempPresets(newP);
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                        <div className="config-actions">
+                            <button className="btn-cancel" onClick={() => setShowPresetsConfig(false)}>Cancelar</button>
+                            <button className="btn-save" onClick={() => {
+                                setAdjPresets([...tempPresets]);
+                                localStorage.setItem('pos_adjustment_presets', JSON.stringify(tempPresets));
+                                setShowPresetsConfig(false);
+                            }}>Guardar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
