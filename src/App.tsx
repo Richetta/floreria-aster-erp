@@ -27,7 +27,7 @@ import Restock from './pages/Restock';
 import { Reminders } from './pages/Reminders';
 import { CalendarDesktop } from './pages/Calendar';
 import { ToolsHub } from './pages/Tools';
-import { BarcodePrinter } from './pages/Tools/BarcodePrinter/BarcodePrinter';
+import { BarcodePrinter } from './pages/Tools/BarcodePrinter';
 import { useAuth } from './store/useAuth';
 
 // ============================================

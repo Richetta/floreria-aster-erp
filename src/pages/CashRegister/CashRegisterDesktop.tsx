@@ -10,7 +10,8 @@ import {
     AlertCircle,
     Calendar,
     Unlock,
-    X
+    X,
+    ChevronDown
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
@@ -22,8 +23,12 @@ export const CashRegisterDesktop = () => {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [dailySummary, setDailySummary] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
     const [showClosingModal, setShowClosingModal] = useState(false);
     const [showOpeningModal, setShowOpeningModal] = useState(false);
+    const shopInfo = useStore((state) => state.shopInfo);
+    const products = useStore((state) => state.products);
+    const packages = useStore((state) => state.packages);
     const [openingData, setOpeningData] = useState({
         opening_balance: 0,
         notes: ''
@@ -36,7 +41,6 @@ export const CashRegisterDesktop = () => {
     const [closingResult, setClosingResult] = useState<any>(null);
     const [cashInDrawer, setCashInDrawer] = useState<any>(null);
     const [cashStatus, setCashStatus] = useState<{ is_open: boolean; is_closed: boolean; opening: any } | null>(null);
-    const shopInfo = useStore((state) => state.shopInfo);
 
     const { alertModal, showAlert } = useModal();
 
@@ -385,36 +389,97 @@ export const CashRegisterDesktop = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {(dailySummary.transactions || []).map((t: any) => (
-                                        <tr key={t.id}>
-                                            <td className="text-micro">
-                                                {new Date(t.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                                            </td>
-                                            <td>
-                                                <span className={`badge ${t.type === 'sale' || t.type === 'payment_received'
-                                                        ? 'badge-success'
-                                                        : 'badge-danger'
-                                                    }`}>
-                                                    {t.type === 'sale' ? 'Venta' :
-                                                        t.type === 'payment_received' ? 'Cobro' :
-                                                            t.type === 'expense' ? 'Gasto' : 'Pago Prov.'}
-                                                </span>
-                                            </td>
-                                            <td>{t.category}</td>
-                                            <td>
-                                                {(shopInfo.paymentMethods?.find(m => m.name === t.payment_method || m.id === t.payment_method)?.name) || 
-                                                 (t.payment_method === 'cash' ? 'Efectivo' : t.payment_method === 'card' ? 'Tarjeta' : t.payment_method || '-')}
-                                            </td>
-                                            <td>{t.description}</td>
-                                            <td className={`text-right font-bold ${t.type === 'sale' || t.type === 'payment_received'
-                                                    ? 'text-success'
-                                                    : 'text-danger'
-                                                }`}>
-                                                {t.type === 'sale' || t.type === 'payment_received' ? '+' : '-'}
-                                                {formatCurrency(t.amount)}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {(dailySummary.transactions || []).map((t: any) => {
+                                        const isExpanded = expandedRowId === t.id;
+                                        const items = t.metadata?.items || [];
+                                        const hasDetails = items.length > 0 || t.notes || (t.description && t.type === 'expense');
+
+                                        return (
+                                            <React.Fragment key={t.id}>
+                                                <tr 
+                                                    className={`mov-row ${isExpanded ? 'expanded' : ''} ${hasDetails ? 'clickable' : ''}`}
+                                                    onClick={() => hasDetails && setExpandedRowId(isExpanded ? null : t.id)}
+                                                >
+                                                    <td className="text-micro">
+                                                        {new Date(t.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                                    </td>
+                                                    <td>
+                                                        <span className={`badge ${t.type === 'sale' || t.type === 'payment_received'
+                                                                ? 'badge-success'
+                                                                : 'badge-danger'
+                                                            }`}>
+                                                            {t.type === 'sale' ? 'Venta' :
+                                                                t.type === 'payment_received' ? 'Cobro' :
+                                                                    t.type === 'expense' ? 'Gasto' : 'Pago Prov.'}
+                                                        </span>
+                                                    </td>
+                                                    <td>{t.category}</td>
+                                                    <td>
+                                                        {(shopInfo.paymentMethods?.find(m => m.name === t.payment_method || m.id === t.payment_method)?.name) || 
+                                                         (t.payment_method === 'cash' ? 'Efectivo' : t.payment_method === 'card' ? 'Tarjeta' : t.payment_method || '-')}
+                                                    </td>
+                                                    <td>
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <span className="truncate">{t.description}</span>
+                                                            {hasDetails && (
+                                                                <ChevronDown size={14} className={`text-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className={`text-right font-bold ${t.type === 'sale' || t.type === 'payment_received'
+                                                            ? 'text-success'
+                                                            : 'text-danger'
+                                                        }`}>
+                                                        {t.type === 'sale' || t.type === 'payment_received' ? '+' : '-'}
+                                                        {formatCurrency(t.amount)}
+                                                    </td>
+                                                </tr>
+                                                {isExpanded && (
+                                                    <tr className="detail-row">
+                                                        <td colSpan={6}>
+                                                            <div className="detail-content animate-fade-in">
+                                                                {items.length > 0 && (
+                                                                    <div className="items-breakdown mb-4">
+                                                                        <h4 className="text-micro font-bold uppercase text-muted mb-2">Desglose de Productos</h4>
+                                                                        <div className="items-list">
+                                                                            {items.map((item: any, idx: number) => (
+                                                                                <div key={idx} className="item-row flex justify-between py-1 border-b border-surface-hover last:border-0">
+                                                                                    <div className="flex gap-2">
+                                                                                        <span className="font-bold text-primary">{item.qty || item.quantity}x</span>
+                                                                                        <span className="text-small">
+                                                                                            {item.name || item.product_name || 
+                                                                                             (item.product_id ? products.find(p => p.id === item.product_id)?.name : null) ||
+                                                                                             (item.package_id ? packages.find(p => p.id === item.package_id)?.name : null) ||
+                                                                                             'Producto'}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <span className="text-small font-mono">
+                                                                                        {formatCurrency((item.price || item.unit_price) * (item.qty || item.quantity))}
+                                                                                    </span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                {(t.notes || (t.description && t.type === 'expense')) && (
+                                                                    <div className="notes-box bg-surface-hover p-3 rounded-lg">
+                                                                        <span className="text-micro font-bold text-muted uppercase block mb-1">Notas / Observaciones:</span>
+                                                                        <p className="text-small m-0">{t.notes || t.description}</p>
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                <div className="meta-info mt-3 flex gap-4 text-micro text-muted font-mono">
+                                                                    <span>TRANS_ID: {t.id.toUpperCase()}</span>
+                                                                    <span>HORA: {new Date(t.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

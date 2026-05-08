@@ -4,7 +4,9 @@ import type { Product } from '../../store/useStore';
 import type { Category } from '../../store/slices/types';
 import { ProductModal } from '../../components/ProductModal/ProductModal';
 import { ConfirmModal } from '../../components/ui/Modals';
+import { BarcodeViewMobile } from '../../components/BarcodeViewMobile/BarcodeViewMobile';
 import { useModal } from '../../hooks/useModal'; 
+import { useNavigate } from 'react-router-dom';
 import { CameraScanner } from '../../components/CameraScanner/CameraScanner';
 import { CategoryTreeMobile } from '../../components/CategoryTree/CategoryTreeMobile';
 import './ProductsMobile.css';
@@ -31,9 +33,11 @@ export const ProductsMobile = () => {
 
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isBarcodeOpen, setIsBarcodeOpen] = useState(false);
     const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+    const [productForBarcode, setProductForBarcode] = useState<Product | null>(null);
     const { confirmModal, showConfirm } = useModal();
-
+    const navigate = useNavigate();
     useEffect(() => {
         loadProducts();
         // Load with hierarchy so parent_id is available
@@ -63,6 +67,12 @@ export const ProductsMobile = () => {
     const handleCreate = () => {
         setProductToEdit(null);
         setIsModalOpen(true);
+    };
+
+    const handleBarcode = (e: React.MouseEvent, product: Product) => {
+        e.stopPropagation();
+        setProductForBarcode(product);
+        setIsBarcodeOpen(true);
     };
 
     const handleDelete = async (e: React.MouseEvent, product: Product) => {
@@ -120,6 +130,9 @@ export const ProductsMobile = () => {
                 <div className="products-header-top">
                     <h2>Inventario</h2>
                     <div className="header-actions">
+                        <button className="icon-btn-ghost" onClick={() => navigate('/herramientas/codigos')} title="Impresión masiva">
+                            <span className="material-symbols-rounded">print</span>
+                        </button>
                         <button className="icon-btn-ghost" onClick={() => setIsScannerOpen(true)}>
                             <span className="material-symbols-rounded">qr_code_scanner</span>
                         </button>
@@ -215,9 +228,14 @@ export const ProductsMobile = () => {
                                 </div>
                                 <div className="inv-item-trailing">
                                     <div className="inv-item-price">${product.price.toLocaleString('es-AR')}</div>
-                                    <button className="inv-item-menu" onClick={(e) => handleDelete(e, product)}>
-                                        <span className="material-symbols-rounded">delete_outline</span>
-                                    </button>
+                                    <div className="inv-item-actions">
+                                        <button className="inv-item-menu barcode-btn" onClick={(e) => handleBarcode(e, product)}>
+                                            <span className="material-symbols-rounded">barcode</span>
+                                        </button>
+                                        <button className="inv-item-menu delete-btn" onClick={(e) => handleDelete(e, product)}>
+                                            <span className="material-symbols-rounded">delete_outline</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -228,6 +246,12 @@ export const ProductsMobile = () => {
             <button className="mobile-fab-add" onClick={handleCreate}>
                 <span className="material-symbols-rounded">add</span>
             </button>
+
+            <BarcodeViewMobile
+                isOpen={isBarcodeOpen}
+                onClose={() => setIsBarcodeOpen(false)}
+                product={productForBarcode}
+            />
 
             <ProductModal
                 isOpen={isModalOpen}

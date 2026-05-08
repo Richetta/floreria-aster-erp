@@ -22,6 +22,8 @@ export const SalesDesktop = () => {
     const transactions = useStore((state) => state.transactions);
     const customers = useStore((state) => state.customers);
     const shopInfo = useStore((state) => state.shopInfo);
+    const products = useStore((state) => state.products);
+    const packages = useStore((state) => state.packages);
 
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -242,7 +244,12 @@ export const SalesDesktop = () => {
                                             </div>
                                             {(sale.metadata?.items || []).map((item: any, idx: number) => (
                                                 <div key={idx} className="table-row">
-                                                    <span className="item-name">{item.name || item.product_name || 'Producto'}</span>
+                                                    <span className="item-name">
+                                                        {item.name || item.product_name || 
+                                                         (item.product_id ? products.find(p => p.id === item.product_id)?.name : null) ||
+                                                         (item.package_id ? packages.find(p => p.id === item.package_id)?.name : null) ||
+                                                         'Producto'}
+                                                    </span>
                                                     <span className="text-center">{item.qty || item.quantity}</span>
                                                     <span className="text-right">${(item.price || item.unit_price).toLocaleString()}</span>
                                                     <span className="text-right">${((item.price || item.unit_price) * (item.qty || item.quantity)).toLocaleString()}</span>

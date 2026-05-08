@@ -11,10 +11,13 @@ export const CashRegisterMobile = () => {
     const [cashInDrawer, setCashInDrawer] = useState<any>(null);
     const [cashStatus, setCashStatus] = useState<any>(null);
     const shopInfo = useStore((state) => state.shopInfo);
+    const products = useStore((state) => state.products);
+    const packages = useStore((state) => state.packages);
 
     // Modal states
     const [showOpeningModal, setShowOpeningModal] = useState(false);
     const [showClosingModal, setShowClosingModal] = useState(false);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
     const [openingBalance, setOpeningBalance] = useState<string>('');
     const [observedCash, setObservedCash] = useState<string>('');
     const [notes, setNotes] = useState('');
@@ -166,27 +169,80 @@ export const CashRegisterMobile = () => {
                     <section className="cash-transactions-sec">
                         <h3>Movimientos Recientes</h3>
                         <div className="m-trans-list">
-                            {dailySummary.transactions.slice(0, 10).map((t: any) => (
-                                <div key={t.id} className="m-trans-item">
-                                    <div className={`m-trans-icon ${t.type}`}>
-                                        <span className="material-symbols-rounded">
-                                            {t.type === 'sale' ? 'shopping_cart' : t.type === 'expense' ? 'money_off' : 'payments'}
-                                        </span>
+                            {dailySummary.transactions.slice(0, 25).map((t: any) => {
+                                const isExpanded = expandedId === t.id;
+                                const items = t.metadata?.items || [];
+                                const hasDetails = items.length > 0 || t.notes;
+
+                                return (
+                                    <div 
+                                        key={t.id} 
+                                        className={`m-trans-item-container ${isExpanded ? 'expanded' : ''}`}
+                                        onClick={() => hasDetails && setExpandedId(isExpanded ? null : t.id)}
+                                    >
+                                        <div className="m-trans-item">
+                                            <div className={`m-trans-icon ${t.type}`}>
+                                                <span className="material-symbols-rounded">
+                                                    {t.type === 'sale' ? 'shopping_cart' : t.type === 'expense' ? 'money_off' : 'payments'}
+                                                </span>
+                                            </div>
+                                            <div className="m-trans-info">
+                                                <span className="m-trans-desc truncate">{t.description}</span>
+                                                <span className="m-trans-time">
+                                                    {new Date(t.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} • {
+                                                        (shopInfo.paymentMethods?.find(m => m.name === t.payment_method || m.id === t.payment_method)?.name) || 
+                                                        (t.payment_method === 'cash' ? 'Efectivo' : t.payment_method === 'card' ? 'Tarjeta' : t.payment_method || '-')
+                                                    }
+                                                </span>
+                                            </div>
+                                            <div className="m-trans-amount-wrap">
+                                                <div className={`m-trans-amount ${t.type.includes('sale') || t.type.includes('received') ? 'pos' : 'neg'}`}>
+                                                    {t.type.includes('sale') || t.type.includes('received') ? '+' : '-'}${t.amount.toLocaleString()}
+                                                </div>
+                                                {hasDetails && (
+                                                    <span className={`material-symbols-rounded m-expand-icon ${isExpanded ? 'rotated' : ''}`}>
+                                                        expand_more
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        {isExpanded && (
+                                            <div className="m-trans-details">
+                                                {items.length > 0 && (
+                                                    <div className="m-details-items">
+                                                        {items.map((item: any, idx: number) => (
+                                                            <div key={idx} className="m-detail-row">
+                                                                <div className="m-detail-main">
+                                                                    <span className="m-detail-qty">{item.qty || item.quantity}x</span>
+                                                                    <span className="m-detail-name">
+                                                                        {item.name || item.product_name || 
+                                                                         (item.product_id ? products.find(p => p.id === item.product_id)?.name : null) ||
+                                                                         (item.package_id ? packages.find(p => p.id === item.package_id)?.name : null) ||
+                                                                         'Producto'}
+                                                                    </span>
+                                                                </div>
+                                                                <span className="m-detail-total">${((item.price || item.unit_price) * (item.qty || item.quantity)).toLocaleString()}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {t.notes && (
+                                                    <div className="m-details-notes">
+                                                        <span className="notes-tag">Observaciones:</span>
+                                                        <p>{t.notes}</p>
+                                                    </div>
+                                                )}
+                                                <div className="m-details-meta">
+                                                    <span>REF: {t.id.slice(-6).toUpperCase()}</span>
+                                                    <span>•</span>
+                                                    <span>{new Date(t.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="m-trans-info">
-                                        <span className="m-trans-desc">{t.description}</span>
-                                        <span className="m-trans-time">
-                                            {new Date(t.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} • {
-                                                (shopInfo.paymentMethods?.find(m => m.name === t.payment_method || m.id === t.payment_method)?.name) || 
-                                                (t.payment_method === 'cash' ? 'Efectivo' : t.payment_method === 'card' ? 'Tarjeta' : t.payment_method || '-')
-                                            }
-                                        </span>
-                                    </div>
-                                    <div className={`m-trans-amount ${t.type.includes('sale') || t.type.includes('received') ? 'pos' : 'neg'}`}>
-                                        {t.type.includes('sale') || t.type.includes('received') ? '+' : '-'}${t.amount.toLocaleString()}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </section>
                 )}

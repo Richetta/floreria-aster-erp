@@ -14,7 +14,8 @@ import {
     X,
     Check,
     CreditCard,
-    Banknote
+    Banknote,
+    ChevronDown
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
@@ -43,7 +44,10 @@ const formatDate = (dateString: string) => {
 
 // --- TRANSACTION ITEM COMPONENT ---
 const TransactionItem = ({ t }: { t: any }) => {
-    const isIncome = t.type === 'income';
+    const isIncome = t.type === 'income' || t.type === 'sale' || t.type === 'payment_received';
+    const [isExpanded, setIsExpanded] = useState(false);
+    const products = useStore(state => state.products);
+    const packages = useStore(state => state.packages);
 
     const getMethodIcon = (methodName: string) => {
         const name = (methodName || '').toLowerCase();
@@ -54,35 +58,95 @@ const TransactionItem = ({ t }: { t: any }) => {
         return <CreditCard size={12} className="mr-1" />;
     };
 
+    const items = t.metadata?.items || [];
+    const hasDetails = items.length > 0 || t.notes || (t.description && !isIncome);
+
     return (
-        <div className={`transaction-item ${isIncome ? 'transaction-income' : 'transaction-expense'}`}>
-            <div className="transaction-icon">
-                {isIncome ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
+        <div className={`transaction-item-container ${isExpanded ? 'expanded' : ''}`}>
+            <div 
+                className={`transaction-item ${isIncome ? 'transaction-income' : 'transaction-expense'} ${hasDetails ? 'clickable' : ''}`}
+                onClick={() => hasDetails && setIsExpanded(!isExpanded)}
+            >
+                <div className="transaction-icon">
+                    {isIncome ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
+                </div>
+                <div className="transaction-info">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div className="transaction-category">{t.category}</div>
+                        <div className="method-badge-sm" style={{ 
+                            fontSize: '0.65rem', 
+                            padding: '1px 6px', 
+                            background: '#f1f5f9', 
+                            borderRadius: '4px', 
+                            display: 'flex', 
+                            alignItems: 'center',
+                            color: '#64748b'
+                        }}>
+                            {getMethodIcon(t.method)}
+                            {t.method || 'S/A'}
+                        </div>
+                    </div>
+                    <div className="transaction-desc">{t.description || 'Sin descripción'}</div>
+                </div>
+                <div className="transaction-amount-wrap">
+                    <div className="transaction-amount">
+                        <div className={`amount-value ${isIncome ? 'amount-positive' : 'amount-negative'}`}>
+                            {isIncome ? '+' : '-'}{formatCurrency(t.amount)}
+                        </div>
+                        <div className="amount-date">{formatDate(t.date)}</div>
+                    </div>
+                    {hasDetails && (
+                        <div className={`expand-arrow ${isExpanded ? 'rotated' : ''}`}>
+                            <ChevronDown size={16} />
+                        </div>
+                    )}
+                </div>
             </div>
-            <div className="transaction-info">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div className="transaction-category">{t.category}</div>
-                    <div className="method-badge-sm" style={{ 
-                        fontSize: '0.65rem', 
-                        padding: '1px 6px', 
-                        background: '#f1f5f9', 
-                        borderRadius: '4px', 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        color: '#64748b'
-                    }}>
-                        {getMethodIcon(t.method)}
-                        {t.method || 'S/A'}
+            
+            {isExpanded && (
+                <div className="transaction-details-expanded">
+                    {items.length > 0 && (
+                        <div className="details-items-table">
+                            <div className="details-table-header">
+                                <span>Producto</span>
+                                <span className="text-center">Cant.</span>
+                                <span className="text-right">Precio</span>
+                                <span className="text-right">Subtotal</span>
+                            </div>
+                            {items.map((item: any, idx: number) => (
+                                <div key={idx} className="details-table-row">
+                                    <span className="detail-name">
+                                        {item.name || item.product_name || 
+                                         (item.product_id ? products.find(p => p.id === item.product_id)?.name : null) ||
+                                         (item.package_id ? packages.find(p => p.id === item.package_id)?.name : null) ||
+                                         'Producto'}
+                                    </span>
+                                    <span className="text-center">{item.qty || item.quantity}</span>
+                                    <span className="text-right">{formatCurrency(item.price || item.unit_price)}</span>
+                                    <span className="text-right">{formatCurrency((item.price || item.unit_price) * (item.qty || item.quantity))}</span>
+                                </div>
+                            ))}
+                            <div className="details-table-footer">
+                                <span>Total Detallado</span>
+                                <span className="total-val">{formatCurrency(t.amount)}</span>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {(t.notes || (t.description && !items.length)) && (
+                        <div className="details-notes">
+                            <span className="notes-label">Notas / Info Adicional:</span>
+                            <p>{t.notes || t.description}</p>
+                        </div>
+                    )}
+                    
+                    <div className="details-meta">
+                        <span>ID: {t.id.toUpperCase()}</span>
+                        <span>•</span>
+                        <span>Fecha: {new Date(t.date).toLocaleString('es-AR')}</span>
                     </div>
                 </div>
-                <div className="transaction-desc">{t.description || 'Sin descripción'}</div>
-            </div>
-            <div className="transaction-amount">
-                <div className={`amount-value ${isIncome ? 'amount-positive' : 'amount-negative'}`}>
-                    {isIncome ? '+' : '-'}{formatCurrency(t.amount)}
-                </div>
-                <div className="amount-date">{formatDate(t.date)}</div>
-            </div>
+            )}
         </div>
     );
 };

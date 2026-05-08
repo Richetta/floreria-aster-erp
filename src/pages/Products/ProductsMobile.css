@@ -250,16 +250,37 @@
     color: #2F3A34;
 }
 
+.inv-item-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
 .inv-item-menu {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: #F2CFCB;
-    color: #2F3A34;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
+    transition: all 0.2s;
+}
+
+.inv-item-menu.barcode-btn {
+    background: #F7F4EE;
+    color: #5E9B7E;
+    border: 1px solid rgba(94, 155, 126, 0.2);
+}
+
+.inv-item-menu.delete-btn {
+    background: #F2CFCB;
+    color: #DFA6A0;
+}
+
+.inv-item-menu:active {
+    transform: scale(0.9);
+    filter: brightness(0.9);
 }
 
 /* FAB */

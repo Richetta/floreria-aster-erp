@@ -1,0 +1,185 @@
+.barcode-view-mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    display: flex;
+    align-items: flex-end;
+    animation: fadeIn 0.3s ease;
+}
+
+.barcode-view-mobile-sheet {
+    width: 100%;
+    background: #fff;
+    border-radius: 24px 24px 0 0;
+    padding: 20px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.barcode-view-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.barcode-view-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.close-btn, .action-icon-btn {
+    background: #f5f5f5;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4a4a4a;
+    cursor: pointer;
+}
+
+.barcode-view-content {
+    flex: 1;
+    overflow-y: auto;
+    text-align: center;
+}
+
+.product-brief {
+    margin-bottom: 24px;
+}
+
+.product-name {
+    margin: 0 0 4px 0;
+    font-size: 1.3rem;
+    color: #1a1a1a;
+    font-weight: 800;
+}
+
+.product-code {
+    margin: 0 0 4px 0;
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: 600;
+}
+
+.product-price {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #5E9B7E;
+    font-weight: 800;
+}
+
+.barcode-display-card {
+    background: #f9f9f9;
+    padding: 30px 20px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    border: 2px dashed #eee;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.printable-barcode {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.print-only-header {
+    display: none;
+}
+
+.barcode-hint {
+    font-size: 0.85rem;
+    color: #888;
+    line-height: 1.5;
+    padding: 0 20px;
+}
+
+.barcode-view-footer {
+    margin-top: 24px;
+}
+
+.print-btn-mobile {
+    width: 100%;
+    height: 56px;
+    background: #5E9B7E;
+    color: #fff;
+    border: none;
+    border-radius: 16px;
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(94, 155, 126, 0.3);
+    cursor: pointer;
+}
+
+.print-btn-mobile:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+}
+
+/* Print Specific Styles */
+@media print {
+    .barcode-view-mobile-overlay {
+        background: none;
+        position: static;
+    }
+    .barcode-view-mobile-sheet {
+        box-shadow: none;
+        padding: 0;
+        animation: none;
+    }
+    .barcode-view-header, .barcode-hint, .barcode-view-footer {
+        display: none !important;
+    }
+    .barcode-display-card {
+        background: none;
+        border: none;
+        padding: 0;
+    }
+    .printable-barcode {
+        box-shadow: none;
+        padding: 0;
+    }
+    .print-only-header {
+        display: block;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .print-only-header h3 {
+        font-size: 14pt;
+        margin: 0;
+    }
+    .print-only-header p {
+        font-size: 12pt;
+        margin: 5px 0;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}

@@ -253,6 +253,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
         items: z.array(z.object({
           product_id: z.string().uuid().optional(),
           package_id: z.string().uuid().optional(),
+          product_name: z.string().optional(),
           quantity: z.coerce.number().int().positive(),
           unit_price: z.coerce.number().min(0)
         })).min(1).refine(items => items.every(i => i.product_id || i.package_id), {
@@ -508,6 +509,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
         payment_method: z.string(),
         items: z.array(z.object({
           product_id: z.string().uuid(),
+          product_name: z.string().optional(),
           quantity: z.coerce.number().int().positive(),
           cost: z.coerce.number().nonnegative()
         })).min(1),

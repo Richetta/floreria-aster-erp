@@ -14,8 +14,11 @@ export const FinancesMobile = () => {
     const loadTransactions = useStore((state) => state.loadTransactions);
     const loadCustomers = useStore((state) => state.loadCustomers);
     const shopInfo = useStore((state) => state.shopInfo);
+    const products = useStore((state) => state.products);
+    const packages = useStore((state) => state.packages);
 
     const [showExpenseSheet, setShowExpenseSheet] = useState(false);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
     const [expenseForm, setExpenseForm] = useState({
         amount: '',
         category: 'Insumos',
@@ -116,22 +119,75 @@ export const FinancesMobile = () => {
                         <button onClick={loadTransactions}>Ver Todo</button>
                     </div>
                     <div className="m-history-list">
-                        {(transactions || []).slice(0, 15).reverse().map(t => (
-                            <div key={t.id} className="m-history-item">
-                                <div className={`m-h-icon ${t.type}`}>
-                                    <span className="material-symbols-rounded">
-                                        {t.type === 'income' ? 'arrow_upward' : 'arrow_downward'}
-                                    </span>
+                        {(transactions || []).slice(0, 20).reverse().map(t => {
+                            const isExpanded = expandedId === t.id;
+                            const items = t.metadata?.items || [];
+                            const hasDetails = items.length > 0 || t.notes;
+
+                            return (
+                                <div 
+                                    key={t.id} 
+                                    className={`m-history-item-container ${isExpanded ? 'expanded' : ''}`}
+                                    onClick={() => hasDetails && setExpandedId(isExpanded ? null : t.id)}
+                                >
+                                    <div className="m-history-item">
+                                        <div className={`m-h-icon ${t.type}`}>
+                                            <span className="material-symbols-rounded">
+                                                {t.type === 'income' ? 'arrow_upward' : 'arrow_downward'}
+                                            </span>
+                                        </div>
+                                        <div className="m-h-info">
+                                            <span className="m-h-cat">{t.category}</span>
+                                            <span className="m-h-desc">{t.description}</span>
+                                        </div>
+                                        <div className="m-h-amount-wrap">
+                                            <div className={`m-h-amount ${t.type}`}>
+                                                {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                                            </div>
+                                            {hasDetails && (
+                                                <span className={`material-symbols-rounded expand-icon ${isExpanded ? 'rotated' : ''}`}>
+                                                    expand_more
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    {isExpanded && (
+                                        <div className="m-history-details">
+                                            {items.length > 0 && (
+                                                <div className="m-details-items">
+                                                    {items.map((item: any, idx: number) => (
+                                                        <div key={idx} className="m-detail-row">
+                                                            <div className="m-detail-main">
+                                                                <span className="m-detail-qty">{item.qty || item.quantity}x</span>
+                                                                <span className="m-detail-name">
+                                                                    {item.name || item.product_name || 
+                                                                     (item.product_id ? products.find(p => p.id === item.product_id)?.name : null) ||
+                                                                     (item.package_id ? packages.find(p => p.id === item.package_id)?.name : null) ||
+                                                                     'Producto'}
+                                                                </span>
+                                                            </div>
+                                                            <span className="m-detail-total">{formatCurrency((item.price || item.unit_price) * (item.qty || item.quantity))}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {t.notes && (
+                                                <div className="m-details-notes">
+                                                    <span className="notes-tag">Nota:</span>
+                                                    <p>{t.notes}</p>
+                                                </div>
+                                            )}
+                                            <div className="m-details-meta">
+                                                <span>ID: {t.id.slice(-6).toUpperCase()}</span>
+                                                <span>•</span>
+                                                <span>{new Date(t.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}hs</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="m-h-info">
-                                    <span className="m-h-cat">{t.category}</span>
-                                    <span className="m-h-desc">{t.description}</span>
-                                </div>
-                                <div className={`m-h-amount ${t.type}`}>
-                                    {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </section>
             </div>

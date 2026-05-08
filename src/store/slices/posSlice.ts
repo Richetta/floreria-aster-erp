@@ -182,6 +182,7 @@ export const createPosSlice: StateCreator<AppState, [], [], PosSlice> = (set, ge
                 items: sale.items.map(i => ({
                     product_id: i.isPackage ? undefined : i.id,
                     package_id: i.isPackage ? i.id : undefined,
+                    product_name: i.name || 'Producto',
                     quantity: parseInt(String(i.qty), 10) || 1,
                     unit_price: parseFloat(String(i.price || 0))
                 })),
