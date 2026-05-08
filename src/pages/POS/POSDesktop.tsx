@@ -940,9 +940,7 @@ export const POSDesktop = () => {
         );
     };
 
-    const renderAdjustmentButtons = () => {
-        return renderUnifiedAdjustment();
-    };
+
 
     return (
         <div className="pos-container">
@@ -1775,16 +1773,17 @@ export const POSDesktop = () => {
                                         <div className="flex justify-between items-end mb-4">
                                             <div className="flex flex-col">
                                                 <span className="text-h4 text-muted">Total del Pedido</span>
-                                                {(quickSaleDiscount > 0 || quickSaleSurcharge > 0) && (
+                                                {adjValue > 0 && (
                                                     <div className="flex gap-2 items-center">
                                                         <span className="text-micro text-muted line-through">${(total || 0).toLocaleString()}</span>
-                                                        {quickSaleDiscount > 0 && <span className="text-micro text-green-600">-{quickSaleDiscount}%</span>}
-                                                        {quickSaleSurcharge > 0 && <span className="text-micro text-red-600">+{quickSaleSurcharge}%</span>}
+                                                        <span className={`text-micro ${adjMode === 'subtract' ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {adjMode === 'subtract' ? '-' : '+'}{adjValue}%
+                                                        </span>
                                                     </div>
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-4">
-                                                {renderAdjustmentButtons()}
+                                                {renderUnifiedAdjustment()}
                                                 <span className="text-h2 font-bold text-primary">${(finalTotalSale || 0).toLocaleString()}</span>
                                             </div>
                                         </div>
@@ -1870,17 +1869,18 @@ export const POSDesktop = () => {
                                 </div>
                                 <div className="cart-totals-compact">
                                     <div className="flex flex-col">
-                                        {(quickSaleDiscount > 0 || quickSaleSurcharge > 0) && (
+                                        {adjValue > 0 && (
                                             <div className="flex gap-2 items-center">
                                                 <span className="text-micro text-muted line-through">${(total || 0).toLocaleString()}</span>
-                                                {quickSaleDiscount > 0 && <span className="text-micro text-green-600">-{quickSaleDiscount}%</span>}
-                                                {quickSaleSurcharge > 0 && <span className="text-micro text-red-600">+{quickSaleSurcharge}%</span>}
+                                                <span className={`text-micro ${adjMode === 'subtract' ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {adjMode === 'subtract' ? '-' : '+'}{adjValue}%
+                                                </span>
                                             </div>
                                         )}
                                         <span className="total-label">Total a Pagar</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        {renderAdjustmentButtons()}
+                                        {renderUnifiedAdjustment()}
                                         <span className="total-amount">${(finalTotalSale || 0).toLocaleString()}</span>
                                     </div>
                                 </div>
@@ -1894,6 +1894,10 @@ export const POSDesktop = () => {
                     )}
                 </div>
             )}
+
+
+
+
 
             {/* Success Modal */}
             {showSuccessModal && lastSaleData && (
