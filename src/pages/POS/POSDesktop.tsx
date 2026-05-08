@@ -146,6 +146,8 @@ export const POSDesktop = () => {
     const [quickSaleSurcharge, setQuickSaleSurcharge] = useState<number>(0);
     const [surchargePresets] = useState<number[]>([10, 15, 20]);
     const [discountPresets] = useState<number[]>([5, 10, 15]);
+    const [showDiscountPopover, setShowDiscountPopover] = useState(false);
+    const [showSurchargePopover, setShowSurchargePopover] = useState(false);
 
     // Historial de escaneos para debugging
     const scanHistoryRef = useRef<{ code: string, timestamp: number, success: boolean, productName?: string }[]>([]);
@@ -571,7 +573,7 @@ export const POSDesktop = () => {
                     customerId: isGuest ? 'guest' : selectedCustomer,
                     guestName: isGuest ? guestName : undefined,
                     guestPhone: isGuest ? guestPhone : undefined,
-                    total: total,
+                    total: finalTotalSale,
                     status: 'pending',
                     date: localDeliveryDate.toISOString(),
                     items: cart,
@@ -836,6 +838,93 @@ export const POSDesktop = () => {
         setActiveTags([]);
         setStockFilter('all');
         setActiveFolderId(null);
+    };
+
+    // --- ADJUSTMENT BUTTONS RENDERER ---
+    const renderAdjustmentButtons = () => {
+        return (
+            <div className="flex gap-2 relative">
+                {/* Discount Popover */}
+                <div className="relative">
+                    <button 
+                        className={`adjustment-trigger-btn ${quickSaleDiscount > 0 ? 'active' : ''}`}
+                        onClick={() => { setShowDiscountPopover(!showDiscountPopover); setShowSurchargePopover(false); }}
+                        title="Descuento"
+                    >
+                        <span className="material-symbols-rounded">sell</span>
+                        {quickSaleDiscount > 0 && <span className="adj-badge discount">{quickSaleDiscount}%</span>}
+                    </button>
+                    
+                    {showDiscountPopover && (
+                        <div className="adjustment-popover animate-scale-in">
+                            <div className="popover-header">
+                                <span className="text-xs font-bold text-muted uppercase tracking-wider">Descuento %</span>
+                                <button onClick={() => setShowDiscountPopover(false)} className="close-popover-btn">&times;</button>
+                            </div>
+                            <input 
+                                type="number" 
+                                className="popover-input" 
+                                value={quickSaleDiscount || ''} 
+                                onChange={e => setQuickSaleDiscount(Number(e.target.value))}
+                                placeholder="0"
+                                autoFocus
+                            />
+                            <div className="popover-presets">
+                                {discountPresets.map(p => (
+                                    <button 
+                                        key={p} 
+                                        className={`popover-preset-btn ${quickSaleDiscount === p ? 'active' : ''}`}
+                                        onClick={() => setQuickSaleDiscount(p === quickSaleDiscount ? 0 : p)}
+                                    >
+                                        {p}%
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Surcharge Popover */}
+                <div className="relative">
+                    <button 
+                        className={`adjustment-trigger-btn surcharge ${quickSaleSurcharge > 0 ? 'active' : ''}`}
+                        onClick={() => { setShowSurchargePopover(!showSurchargePopover); setShowDiscountPopover(false); }}
+                        title="Recargo"
+                    >
+                        <span className="material-symbols-rounded">trending_up</span>
+                        {quickSaleSurcharge > 0 && <span className="adj-badge surcharge">{quickSaleSurcharge}%</span>}
+                    </button>
+                    
+                    {showSurchargePopover && (
+                        <div className="adjustment-popover animate-scale-in">
+                            <div className="popover-header">
+                                <span className="text-xs font-bold text-muted uppercase tracking-wider">Recargo %</span>
+                                <button onClick={() => setShowSurchargePopover(false)} className="close-popover-btn">&times;</button>
+                            </div>
+                            <input 
+                                type="number" 
+                                className="popover-input surcharge" 
+                                value={quickSaleSurcharge || ''} 
+                                onChange={e => setQuickSaleSurcharge(Number(e.target.value))}
+                                placeholder="0"
+                                autoFocus
+                            />
+                            <div className="popover-presets">
+                                {surchargePresets.map(p => (
+                                    <button 
+                                        key={p} 
+                                        className={`popover-preset-btn surcharge ${quickSaleSurcharge === p ? 'active' : ''}`}
+                                        onClick={() => setQuickSaleSurcharge(p === quickSaleSurcharge ? 0 : p)}
+                                    >
+                                        {p}%
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -1666,9 +1755,21 @@ export const POSDesktop = () => {
                                 {/* Order Summary and Payment Settings */}
                                 <div className="order-card-section mt-4 highlight-section">
                                     <div className="section-content-spacious p-4">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <span className="text-h4 text-muted">Total del Pedido</span>
-                                            <span className="text-h2 font-bold text-primary">${(total || 0).toLocaleString()}</span>
+                                        <div className="flex justify-between items-end mb-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-h4 text-muted">Total del Pedido</span>
+                                                {(quickSaleDiscount > 0 || quickSaleSurcharge > 0) && (
+                                                    <div className="flex gap-2 items-center">
+                                                        <span className="text-micro text-muted line-through">${(total || 0).toLocaleString()}</span>
+                                                        {quickSaleDiscount > 0 && <span className="text-micro text-green-600">-{quickSaleDiscount}%</span>}
+                                                        {quickSaleSurcharge > 0 && <span className="text-micro text-red-600">+{quickSaleSurcharge}%</span>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                {renderAdjustmentButtons()}
+                                                <span className="text-h2 font-bold text-primary">${(finalTotalSale || 0).toLocaleString()}</span>
+                                            </div>
                                         </div>
                                         
                                         <div className="advance-payment-lg">
@@ -1702,7 +1803,7 @@ export const POSDesktop = () => {
                                                     </div>
                                                     <div className="flex-1 text-right">
                                                         <span className="block text-xs text-muted mb-1">Resto Pendiente</span>
-                                                        <span className="text-h4 font-bold text-danger">${((total || 0) - (advancePayment || 0)).toLocaleString()}</span>
+                                                        <span className="text-h4 font-bold text-danger">${((finalTotalSale || 0) - (advancePayment || 0)).toLocaleString()}</span>
                                                     </div>
                                                 </div>
                                             )}
@@ -1722,7 +1823,7 @@ export const POSDesktop = () => {
                     {checkoutMode === 'sale' && (
                         <div className="cart-footer">
                             <div className="sale-checkout-compact">
-                                <div className="quick-sale-options mb-4">
+                                <div className="quick-sale-options mb-3">
                                     <div className="flex gap-4 mb-3">
                                         <div className="flex-1 form-group">
                                             <label className="form-label-compact" style={{fontSize: '0.7rem', color: '#94a3b8'}}>Cliente (Opcional)</label>
@@ -1738,56 +1839,12 @@ export const POSDesktop = () => {
                                                 ))}
                                             </select>
                                         </div>
-                                        <div className="form-group" style={{ width: '90px' }}>
-                                            <label className="form-label-compact" style={{fontSize: '0.7rem', color: '#94a3b8'}}>Dcto. %</label>
-                                            <input
-                                                type="number"
-                                                className="form-input"
-                                                value={quickSaleDiscount || ''}
-                                                onChange={(e) => setQuickSaleDiscount(Number(e.target.value))}
-                                                min="0" max="100"
-                                                style={{ padding: '0.6rem 0.5rem', fontSize: '0.9rem', height: '42px', width: '100%', background: '#f8fafc', textAlign: 'center' }}
-                                            />
-                                            <div className="preset-buttons">
-                                                {discountPresets.map(p => (
-                                                    <button 
-                                                        key={p} 
-                                                        className={`preset-btn ${quickSaleDiscount === p ? 'active' : ''}`}
-                                                        onClick={() => setQuickSaleDiscount(p === quickSaleDiscount ? 0 : p)}
-                                                    >
-                                                        {p}%
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="form-group" style={{ width: '90px' }}>
-                                            <label className="form-label-compact" style={{fontSize: '0.7rem', color: '#f87171'}}>Recargo %</label>
-                                            <input
-                                                type="number"
-                                                className="form-input"
-                                                value={quickSaleSurcharge || ''}
-                                                onChange={(e) => setQuickSaleSurcharge(Number(e.target.value))}
-                                                min="0"
-                                                style={{ padding: '0.6rem 0.5rem', fontSize: '0.9rem', height: '42px', width: '100%', background: '#fff1f2', border: '1px solid #fecaca', textAlign: 'center', color: '#b91c1c' }}
-                                            />
-                                            <div className="preset-buttons">
-                                                {surchargePresets.map(p => (
-                                                    <button 
-                                                        key={p} 
-                                                        className={`preset-btn surcharge ${quickSaleSurcharge === p ? 'active' : ''}`}
-                                                        onClick={() => setQuickSaleSurcharge(p === quickSaleSurcharge ? 0 : p)}
-                                                    >
-                                                        {p}%
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
                                     </div>
                                     <div className="form-group">
                                         <input
                                             type="text"
                                             className="form-input"
-                                            placeholder="Notas (opcional, ej: pago exacto)..."
+                                            placeholder="Notas (opcional)..."
                                             value={orderNotes}
                                             onChange={(e) => updatePosOrderForm({ orderNotes: e.target.value })}
                                             style={{ padding: '0.6rem 1rem', fontSize: '0.9rem', height: '42px', width: '100%', background: '#f8fafc' }}
@@ -1805,7 +1862,10 @@ export const POSDesktop = () => {
                                         )}
                                         <span className="total-label">Total a Pagar</span>
                                     </div>
-                                    <span className="total-amount">${(finalTotalSale || 0).toLocaleString()}</span>
+                                    <div className="flex items-center gap-3">
+                                        {renderAdjustmentButtons()}
+                                        <span className="total-amount">${(finalTotalSale || 0).toLocaleString()}</span>
+                                    </div>
                                 </div>
 
 

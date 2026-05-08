@@ -49,6 +49,7 @@ export const POSMobile = () => {
     const [quickSaleSurcharge, setQuickSaleSurcharge] = useState<number>(0);
     const [discountPresets] = useState<number[]>([5, 10, 15]);
     const [surchargePresets] = useState<number[]>([10, 15, 20]);
+    const [activeAdjustmentDrawer, setActiveAdjustmentDrawer] = useState<'discount' | 'surcharge' | null>(null);
 
     const { showAlert } = useModal();
     const navigate = useNavigate();
@@ -584,58 +585,21 @@ export const POSMobile = () => {
                                 </div>
                             </div>
 
-                            <div className="pos-mobile-adjustments">
-                                <div className="adjustment-group">
-                                    <div className="adjustment-header">
-                                        <span className="material-symbols-rounded">sell</span>
-                                        <span>Descuento %</span>
-                                    </div>
-                                    <div className="adjustment-controls">
-                                        <input 
-                                            type="number" 
-                                            value={quickSaleDiscount || ''} 
-                                            onChange={e => setQuickSaleDiscount(Number(e.target.value))}
-                                            placeholder="0"
-                                        />
-                                        <div className="adjustment-presets">
-                                            {discountPresets.map(p => (
-                                                <button 
-                                                    key={p} 
-                                                    className={quickSaleDiscount === p ? 'active' : ''}
-                                                    onClick={() => setQuickSaleDiscount(p === quickSaleDiscount ? 0 : p)}
-                                                >
-                                                    {p}%
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="adjustment-group surcharge">
-                                    <div className="adjustment-header">
-                                        <span className="material-symbols-rounded">trending_up</span>
-                                        <span>Recargo %</span>
-                                    </div>
-                                    <div className="adjustment-controls">
-                                        <input 
-                                            type="number" 
-                                            value={quickSaleSurcharge || ''} 
-                                            onChange={e => setQuickSaleSurcharge(Number(e.target.value))}
-                                            placeholder="0"
-                                        />
-                                        <div className="adjustment-presets">
-                                            {surchargePresets.map(p => (
-                                                <button 
-                                                    key={p} 
-                                                    className={quickSaleSurcharge === p ? 'active' : ''}
-                                                    onClick={() => setQuickSaleSurcharge(p === quickSaleSurcharge ? 0 : p)}
-                                                >
-                                                    {p}%
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
+                            <div className="pos-mobile-adjustments-compact">
+                                <button 
+                                    className={`adj-chip ${quickSaleDiscount > 0 ? 'active' : ''}`}
+                                    onClick={() => setActiveAdjustmentDrawer('discount')}
+                                >
+                                    <span className="material-symbols-rounded">sell</span>
+                                    <span>Dcto: {quickSaleDiscount}%</span>
+                                </button>
+                                <button 
+                                    className={`adj-chip surcharge ${quickSaleSurcharge > 0 ? 'active' : ''}`}
+                                    onClick={() => setActiveAdjustmentDrawer('surcharge')}
+                                >
+                                    <span className="material-symbols-rounded">trending_up</span>
+                                    <span>Recargo: {quickSaleSurcharge}%</span>
+                                </button>
                             </div>
 
                             <div className="payment-methods-section">
@@ -682,6 +646,58 @@ export const POSMobile = () => {
                     onClose={() => setIsCameraScannerOpen(false)}
                 />
             )}
+
+            {/* Adjustment Drawer */}
+            <div className={`adj-drawer-overlay ${activeAdjustmentDrawer ? 'open' : ''}`} onClick={() => setActiveAdjustmentDrawer(null)}>
+                <div className="adj-drawer-content" onClick={e => e.stopPropagation()}>
+                    <div className="drawer-handle"></div>
+                    <div className="drawer-header-compact">
+                        <h3>{activeAdjustmentDrawer === 'discount' ? 'Configurar Descuento' : 'Configurar Recargo'}</h3>
+                        <button className="drawer-close-btn" onClick={() => setActiveAdjustmentDrawer(null)}>
+                            <span className="material-symbols-rounded">close</span>
+                        </button>
+                    </div>
+                    
+                    <div className="drawer-body-compact">
+                        <div className="drawer-input-wrapper">
+                            <input 
+                                type="number" 
+                                className={`drawer-input-large ${activeAdjustmentDrawer === 'surcharge' ? 'surcharge' : ''}`}
+                                value={activeAdjustmentDrawer === 'discount' ? (quickSaleDiscount || '') : (quickSaleSurcharge || '')}
+                                onChange={e => {
+                                    const val = Number(e.target.value);
+                                    if (activeAdjustmentDrawer === 'discount') setQuickSaleDiscount(val);
+                                    else setQuickSaleSurcharge(val);
+                                }}
+                                placeholder="0"
+                                autoFocus
+                            />
+                            <span className="input-suffix">%</span>
+                        </div>
+
+                        <div className="drawer-presets">
+                            {(activeAdjustmentDrawer === 'discount' ? discountPresets : surchargePresets).map(p => (
+                                <button 
+                                    key={p} 
+                                    className={`drawer-preset-btn ${activeAdjustmentDrawer === 'surcharge' ? 'surcharge' : ''} ${
+                                        (activeAdjustmentDrawer === 'discount' ? quickSaleDiscount : quickSaleSurcharge) === p ? 'active' : ''
+                                    }`}
+                                    onClick={() => {
+                                        if (activeAdjustmentDrawer === 'discount') setQuickSaleDiscount(p === quickSaleDiscount ? 0 : p);
+                                        else setQuickSaleSurcharge(p === quickSaleSurcharge ? 0 : p);
+                                    }}
+                                >
+                                    {p}%
+                                </button>
+                            ))}
+                        </div>
+
+                        <button className="drawer-apply-btn" onClick={() => setActiveAdjustmentDrawer(null)}>
+                            Aplicar
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
