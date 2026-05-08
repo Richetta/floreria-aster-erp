@@ -903,6 +903,163 @@
     justify-content: center;
 }
 
+/* Bottom Drawer for Adjustments */
+.adj-drawer-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 11000;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.adj-drawer-overlay.open {
+    visibility: visible;
+    opacity: 1;
+}
+
+.adj-drawer-content {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: white;
+    border-radius: 32px 32px 0 0;
+    padding: 2rem;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.adj-drawer-overlay.open .adj-drawer-content {
+    transform: translateY(0);
+}
+
+.drawer-handle {
+    width: 40px;
+    height: 5px;
+    background: #E2E8F0;
+    border-radius: 3px;
+    margin: -0.75rem auto 2rem;
+}
+
+.drawer-header-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.drawer-header-compact h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: #1E293B;
+    margin: 0;
+}
+
+.drawer-close-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #F1F5F9;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1E293B;
+}
+
+.drawer-body-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.drawer-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.drawer-input-large {
+    width: 150px;
+    height: 80px;
+    background: #F8FAFC;
+    border: 2px solid transparent;
+    border-radius: 24px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 3rem;
+    font-weight: 900;
+    text-align: center;
+    color: #2F3A34;
+    outline: none;
+}
+
+.drawer-input-large.surcharge {
+    color: #E11D48;
+}
+
+.drawer-input-large:focus {
+    border-color: #4F7A5A;
+    background: white;
+}
+
+.drawer-input-large.surcharge:focus {
+    border-color: #E11D48;
+}
+
+.input-suffix {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 900;
+    margin-left: 0.75rem;
+    color: #CBD5E1;
+}
+
+.drawer-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.drawer-preset-btn {
+    padding: 1.25rem 0;
+    border-radius: 20px;
+    background: #F8FAFC;
+    border: 2px solid transparent;
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #1E293B;
+    transition: all 0.2s;
+}
+
+.drawer-preset-btn.active {
+    background: #D7EFE1;
+    border-color: #4F7A5A;
+    color: #2F3A34;
+}
+
+.drawer-preset-btn.surcharge.active {
+    background: #FFF1F2;
+    border-color: #E11D48;
+    color: #E11D48;
+}
+
+.drawer-apply-btn {
+    width: 100%;
+    padding: 1.25rem;
+    border-radius: 22px;
+    background: #2F3A34;
+    color: white;
+    border: none;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 900;
+    box-shadow: 0 4px 12px rgba(47, 58, 52, 0.2);
+}
+
+
 /* Mobile Config Modal Refined */
 .mobile-config-modal-overlay {
     position: fixed;
