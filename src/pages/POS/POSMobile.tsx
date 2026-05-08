@@ -118,6 +118,26 @@ export const POSMobile = () => {
     }, [products, searchTerm, activeCategory, categoriesData]);
 
     // --- Barcode Scanner ---
+    const renderUnifiedAdjustment = () => (
+        <div className="pos-mobile-adjustment-unified">
+            <div className="adj-bar-mobile">
+                <button 
+                    className={`adj-mode-btn ${adjMode}`}
+                    onClick={() => setAdjMode(adjMode === 'subtract' ? 'add' : 'subtract')}
+                >
+                    {adjMode === 'subtract' ? '-' : '+'}
+                </button>
+                <div className="adj-input-container" onClick={() => setActiveAdjustmentDrawer(true)}>
+                    <span className="adj-value-display">{adjValue}%</span>
+                    <span className="adj-label">{adjMode === 'subtract' ? 'Descuento' : 'Recargo'}</span>
+                </div>
+                <button className="adj-config-btn" onClick={() => setShowPresetsConfig(true)}>
+                    <span className="material-symbols-rounded">settings</span>
+                </button>
+            </div>
+        </div>
+    );
+
     const handleBarcodeScan = async (scannedCode: string) => {
         let product = products.find(p => p.code === scannedCode || p.barcode === scannedCode);
         if (!product) {
@@ -551,6 +571,8 @@ export const POSMobile = () => {
                             </div>
                         </div>
 
+                        {renderUnifiedAdjustment()}
+
                         <div className="pos-cart-footer">
                             <div className="cart-totals">
                                 {checkoutMode === 'order' && advancePayment > 0 && (
@@ -588,23 +610,11 @@ export const POSMobile = () => {
                                 </div>
                             </div>
 
-                            <div className="pos-mobile-adjustment-unified">
-                                <div className="adj-bar-mobile">
-                                    <button 
-                                        className={`adj-mode-btn ${adjMode}`}
-                                        onClick={() => setAdjMode(adjMode === 'subtract' ? 'add' : 'subtract')}
-                                    >
-                                        {adjMode === 'subtract' ? '-' : '+'}
-                                    </button>
-                                    <div className="adj-input-container" onClick={() => setActiveAdjustmentDrawer(true)}>
-                                        <span className="adj-value-display">{adjValue}%</span>
-                                        <span className="adj-label">{adjMode === 'subtract' ? 'Descuento' : 'Recargo'}</span>
-                                    </div>
-                                    <button className="adj-config-btn" onClick={() => setShowPresetsConfig(true)}>
-                                        <span className="material-symbols-rounded">settings</span>
-                                    </button>
-                                </div>
-                            </div>
+
+
+                            {renderUnifiedAdjustment()}
+
+                            <div className="payment-selector-mobile">
 
                             <div className="payment-methods-section">
                                 <h4>¿Cómo paga?</h4>
@@ -620,6 +630,8 @@ export const POSMobile = () => {
                                         </button>
                                     ))}
                                 </div>
+                            </div>
+
                             </div>
 
                             {checkoutMode === 'order' && (
