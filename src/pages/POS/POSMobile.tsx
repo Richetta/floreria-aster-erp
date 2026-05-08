@@ -45,6 +45,10 @@ export const POSMobile = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     // Cart step: 'summary' | 'checkout' | 'payment'
     const [cartStep, setCartStep] = useState<'summary' | 'payment'>('summary');
+    const [quickSaleDiscount, setQuickSaleDiscount] = useState<number>(0);
+    const [quickSaleSurcharge, setQuickSaleSurcharge] = useState<number>(0);
+    const [discountPresets] = useState<number[]>([5, 10, 15]);
+    const [surchargePresets] = useState<number[]>([10, 15, 20]);
 
     const { showAlert } = useModal();
     const navigate = useNavigate();
@@ -70,6 +74,10 @@ export const POSMobile = () => {
     // --- Derived Data ---
     const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
+
+    const discountAmount = total * (quickSaleDiscount / 100);
+    const surchargeAmount = total * (quickSaleSurcharge / 100);
+    const finalTotal = Math.max(0, total - discountAmount + surchargeAmount);
 
     // Set default payment method
     useEffect(() => {
@@ -160,7 +168,7 @@ export const POSMobile = () => {
                     id: orderId,
                     customerName: isGuest ? guestName : (customerObj ? customerObj.name : 'Desconocido'),
                     customerId: isGuest ? 'guest' : selectedCustomer,
-                    total, status: 'pending',
+                    total: finalTotal, status: 'pending',
                     date: new Date(deliveryDate).toISOString(),
                     items: cart, notes: orderNotes, cardMessage, advancePayment,
                     deliveryMethod, deliveryAddress: deliveryMethod === 'delivery' ? deliveryAddress : undefined,
@@ -177,6 +185,7 @@ export const POSMobile = () => {
                 showAlert({ title: '¡Pedido Guardado! 🌸', message: 'El pedido se registró correctamente.', variant: 'success' });
                 clearCart(); clearPosOrderForm(); setIsCartOpen(false);
                 setCartStep('summary'); setCheckoutMode('sale');
+                setQuickSaleDiscount(0); setQuickSaleSurcharge(0);
             } catch {
                 showAlert({ title: 'Error', message: 'No se pudo guardar el pedido.', variant: 'error' });
             }
@@ -184,12 +193,13 @@ export const POSMobile = () => {
             try {
                 const saleId = generateIdWithPrefix('v');
                 const success = await processSale({
-                    id: saleId, total, date: new Date().toISOString(),
+                    id: saleId, total: finalTotal, date: new Date().toISOString(),
                     items: cart, method: selectedPaymentMethod, notes: ''
                 });
                 if (success) {
                     showAlert({ title: '¡Venta Exitosa! 🌿', message: 'La venta se registró correctamente.', variant: 'success' });
                     clearCart(); setIsCartOpen(false); setCartStep('summary');
+                    setQuickSaleDiscount(0); setQuickSaleSurcharge(0);
                 }
             } catch {
                 showAlert({ title: 'Error', message: 'Error procesando la venta.', variant: 'error' });
@@ -421,7 +431,7 @@ export const POSMobile = () => {
                 <div className="pos-sticky-cart-bar animate-slide-up">
                     <div className="sticky-cart-info">
                         <span className="sticky-qty">{itemCount} {itemCount === 1 ? 'producto' : 'productos'}</span>
-                        <span className="sticky-total">${total.toLocaleString('es-AR')}</span>
+                        <span className="sticky-total">${finalTotal.toLocaleString('es-AR')}</span>
                     </div>
                     <button className="sticky-cart-btn" onClick={() => { setCartStep('summary'); setIsCartOpen(true); }}>
                         {checkoutMode === 'sale' ? 'Cobrar' : 'Confirmar Pedido'}
@@ -547,7 +557,7 @@ export const POSMobile = () => {
                                 )}
                                 <div className="cart-total-row highlight">
                                     <span>{checkoutMode === 'order' && advancePayment > 0 ? 'Saldo' : 'Total'}</span>
-                                    <span>${(checkoutMode === 'order' && advancePayment > 0 ? total - advancePayment : total).toLocaleString('es-AR')}</span>
+                                    <span>${(checkoutMode === 'order' && advancePayment > 0 ? finalTotal - advancePayment : finalTotal).toLocaleString('es-AR')}</span>
                                 </div>
                             </div>
                             <button
@@ -566,7 +576,66 @@ export const POSMobile = () => {
                         <div className="pos-cart-body">
                             <div className="payment-step-total">
                                 <span className="payment-step-label">Total a cobrar</span>
-                                <span className="payment-step-amount">${total.toLocaleString('es-AR')}</span>
+                                <div className="payment-step-total-box">
+                                    {finalTotal !== total && (
+                                        <span className="payment-step-subtotal">${total.toLocaleString('es-AR')}</span>
+                                    )}
+                                    <span className="payment-step-amount">${finalTotal.toLocaleString('es-AR')}</span>
+                                </div>
+                            </div>
+
+                            <div className="pos-mobile-adjustments">
+                                <div className="adjustment-group">
+                                    <div className="adjustment-header">
+                                        <span className="material-symbols-rounded">sell</span>
+                                        <span>Descuento %</span>
+                                    </div>
+                                    <div className="adjustment-controls">
+                                        <input 
+                                            type="number" 
+                                            value={quickSaleDiscount || ''} 
+                                            onChange={e => setQuickSaleDiscount(Number(e.target.value))}
+                                            placeholder="0"
+                                        />
+                                        <div className="adjustment-presets">
+                                            {discountPresets.map(p => (
+                                                <button 
+                                                    key={p} 
+                                                    className={quickSaleDiscount === p ? 'active' : ''}
+                                                    onClick={() => setQuickSaleDiscount(p === quickSaleDiscount ? 0 : p)}
+                                                >
+                                                    {p}%
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="adjustment-group surcharge">
+                                    <div className="adjustment-header">
+                                        <span className="material-symbols-rounded">trending_up</span>
+                                        <span>Recargo %</span>
+                                    </div>
+                                    <div className="adjustment-controls">
+                                        <input 
+                                            type="number" 
+                                            value={quickSaleSurcharge || ''} 
+                                            onChange={e => setQuickSaleSurcharge(Number(e.target.value))}
+                                            placeholder="0"
+                                        />
+                                        <div className="adjustment-presets">
+                                            {surchargePresets.map(p => (
+                                                <button 
+                                                    key={p} 
+                                                    className={quickSaleSurcharge === p ? 'active' : ''}
+                                                    onClick={() => setQuickSaleSurcharge(p === quickSaleSurcharge ? 0 : p)}
+                                                >
+                                                    {p}%
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="payment-methods-section">
@@ -599,7 +668,7 @@ export const POSMobile = () => {
                                 disabled={!selectedPaymentMethod || isProcessing}
                                 onClick={handleCheckout}
                             >
-                                {isProcessing ? 'Procesando...' : checkoutMode === 'sale' ? `Cobrar $${total.toLocaleString('es-AR')}` : 'Guardar Pedido 🌸'}
+                                {isProcessing ? 'Procesando...' : checkoutMode === 'sale' ? `Cobrar $${finalTotal.toLocaleString('es-AR')}` : 'Guardar Pedido 🌸'}
                             </button>
                         </div>
                     </>

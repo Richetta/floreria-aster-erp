@@ -143,6 +143,9 @@ export const POSDesktop = () => {
     const [isScanningEnabled, setIsScanningEnabled] = useState(true);
     const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
     const [quickSaleDiscount, setQuickSaleDiscount] = useState<number>(0);
+    const [quickSaleSurcharge, setQuickSaleSurcharge] = useState<number>(0);
+    const [surchargePresets] = useState<number[]>([10, 15, 20]);
+    const [discountPresets] = useState<number[]>([5, 10, 15]);
 
     // Historial de escaneos para debugging
     const scanHistoryRef = useRef<{ code: string, timestamp: number, success: boolean, productName?: string }[]>([]);
@@ -506,7 +509,11 @@ export const POSDesktop = () => {
 
     const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
-    const finalTotalSale = Math.max(0, total - (total * (quickSaleDiscount / 100)));
+    
+    // Formula: Total - Discount + Surcharge
+    const discountAmount = total * (quickSaleDiscount / 100);
+    const surchargeAmount = total * (quickSaleSurcharge / 100);
+    const finalTotalSale = Math.max(0, total - discountAmount + surchargeAmount);
 
     const handleCheckout = async (method: string) => {
         if (cart.length === 0) return;
@@ -681,6 +688,7 @@ export const POSDesktop = () => {
                     setCheckoutMode('sale');
                     clearPosOrderForm();
                     setQuickSaleDiscount(0);
+                    setQuickSaleSurcharge(0);
                 } else {
                     // processSale returned false - error notification already shown
                     console.warn('[POS] Venta fallida, no se resetea el carrito');
@@ -1730,16 +1738,49 @@ export const POSDesktop = () => {
                                                 ))}
                                             </select>
                                         </div>
-                                        <div className="form-group" style={{ width: '100px' }}>
+                                        <div className="form-group" style={{ width: '90px' }}>
                                             <label className="form-label-compact" style={{fontSize: '0.7rem', color: '#94a3b8'}}>Dcto. %</label>
                                             <input
                                                 type="number"
                                                 className="form-input"
-                                                value={quickSaleDiscount}
+                                                value={quickSaleDiscount || ''}
                                                 onChange={(e) => setQuickSaleDiscount(Number(e.target.value))}
                                                 min="0" max="100"
-                                                style={{ padding: '0.6rem 0.75rem', fontSize: '0.9rem', height: '42px', width: '100%', background: '#f8fafc' }}
+                                                style={{ padding: '0.6rem 0.5rem', fontSize: '0.9rem', height: '42px', width: '100%', background: '#f8fafc', textAlign: 'center' }}
                                             />
+                                            <div className="preset-buttons">
+                                                {discountPresets.map(p => (
+                                                    <button 
+                                                        key={p} 
+                                                        className={`preset-btn ${quickSaleDiscount === p ? 'active' : ''}`}
+                                                        onClick={() => setQuickSaleDiscount(p === quickSaleDiscount ? 0 : p)}
+                                                    >
+                                                        {p}%
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="form-group" style={{ width: '90px' }}>
+                                            <label className="form-label-compact" style={{fontSize: '0.7rem', color: '#f87171'}}>Recargo %</label>
+                                            <input
+                                                type="number"
+                                                className="form-input"
+                                                value={quickSaleSurcharge || ''}
+                                                onChange={(e) => setQuickSaleSurcharge(Number(e.target.value))}
+                                                min="0"
+                                                style={{ padding: '0.6rem 0.5rem', fontSize: '0.9rem', height: '42px', width: '100%', background: '#fff1f2', border: '1px solid #fecaca', textAlign: 'center', color: '#b91c1c' }}
+                                            />
+                                            <div className="preset-buttons">
+                                                {surchargePresets.map(p => (
+                                                    <button 
+                                                        key={p} 
+                                                        className={`preset-btn surcharge ${quickSaleSurcharge === p ? 'active' : ''}`}
+                                                        onClick={() => setQuickSaleSurcharge(p === quickSaleSurcharge ? 0 : p)}
+                                                    >
+                                                        {p}%
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="form-group">
@@ -1755,8 +1796,12 @@ export const POSDesktop = () => {
                                 </div>
                                 <div className="cart-totals-compact">
                                     <div className="flex flex-col">
-                                        {quickSaleDiscount > 0 && (
-                                            <span className="text-micro text-muted line-through">${(total || 0).toLocaleString()}</span>
+                                        {(quickSaleDiscount > 0 || quickSaleSurcharge > 0) && (
+                                            <div className="flex gap-2 items-center">
+                                                <span className="text-micro text-muted line-through">${(total || 0).toLocaleString()}</span>
+                                                {quickSaleDiscount > 0 && <span className="text-micro text-green-600">-{quickSaleDiscount}%</span>}
+                                                {quickSaleSurcharge > 0 && <span className="text-micro text-red-600">+{quickSaleSurcharge}%</span>}
+                                            </div>
                                         )}
                                         <span className="total-label">Total a Pagar</span>
                                     </div>
