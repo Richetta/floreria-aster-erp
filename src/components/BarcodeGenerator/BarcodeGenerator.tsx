@@ -19,12 +19,12 @@ export const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({
     format = 'CODE128',
     className = ''
 }) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const imgRef = useRef<HTMLImageElement>(null);
 
     useEffect(() => {
-        if (canvasRef.current && value) {
+        if (imgRef.current && value) {
             try {
-                JsBarcode(canvasRef.current, value, {
+                JsBarcode(imgRef.current, value, {
                     format,
                     width,
                     height,
@@ -47,7 +47,7 @@ export const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({
 
     return (
         <div className={`barcode-container ${className}`}>
-            <canvas ref={canvasRef} />
+            <img ref={imgRef} alt={`Barcode ${value}`} style={{ maxWidth: '100%', height: 'auto' }} />
         </div>
     );
 };
