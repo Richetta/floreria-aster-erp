@@ -112,11 +112,29 @@
 
 /* PRINT STYLES */
 @media print {
-    body * { visibility: hidden; }
-    #barcode-print-area, #barcode-print-area * { visibility: visible; }
-    #barcode-print-area { position: fixed; top: 0; left: 0; width: 100%; }
+    /* Hide desktop UI elements instead of globally hiding body * */
+    .bp-header, .bp-stepper, .bp-step1, .bp-step2, .bp-preview-toolbar, .bp-step-actions {
+        display: none !important;
+    }
+
+    /* Reset containers */
+    .barcode-printer-page, .bp-step3, .bp-preview-scroll {
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+        overflow: visible !important;
+        max-height: none !important;
+        max-width: none !important;
+    }
+
+    #barcode-print-area {
+        display: block !important;
+        visibility: visible !important;
+        position: static !important;
+    }
+
     .bp-page { box-shadow: none; border-radius: 0; page-break-after: always; margin: 0; }
     .bp-label { border: none; }
-    .bp-preview-scroll { background: transparent; padding: 0; border-radius: 0; }
     @page { margin: 0; }
 }
