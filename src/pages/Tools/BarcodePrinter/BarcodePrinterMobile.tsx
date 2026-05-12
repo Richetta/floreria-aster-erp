@@ -6,6 +6,8 @@ import {
     Printer, Eye
 } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
+import { getSavedLabelLayout } from '../../../components/LabelEditor/LabelLayoutConfig';
+import { PrintableLabel } from '../../../components/LabelEditor/PrintableLabel';
 import './BarcodePrinterMobile.css';
 
 type LabelConfig = {
@@ -243,28 +245,24 @@ export const BarcodePrinterMobile = () => {
 };
 
 const BarcodeLabel = ({ product, config }: { product: SelectedProduct; config: LabelConfig }) => {
-    const imgRef = useRef<HTMLImageElement>(null);
-
-    useEffect(() => {
-        if (imgRef.current && product.barcode) {
-            try {
-                JsBarcode(imgRef.current, product.barcode, {
-                    format: config.format,
-                    width: 1.5,
-                    height: config.labelH * 0.4 * 3.78,
-                    displayValue: false,
-                    margin: 0,
-                });
-            } catch { /* ignore */ }
-        }
-    }, [product.barcode, config.format, config.labelH]);
+    // We get the saved layout but override its dimensions with the selected paper label config
+    const baseLayout = getSavedLabelLayout();
+    const layout = {
+        ...baseLayout,
+        width: config.labelW,
+        height: config.labelH,
+        name: { ...baseLayout.name, visible: config.showName },
+        price: { ...baseLayout.price, visible: config.showPrice },
+        code: { ...baseLayout.code, visible: config.showCode },
+    };
 
     return (
-        <div className="bpm-label" style={{ width: `${config.labelW}mm`, height: `${config.labelH}mm` }}>
-            {config.showName && <div className="bpm-label-name">{product.name}</div>}
-            <img ref={imgRef} alt={product.barcode} />
-            <div className="bpm-label-code">{product.barcode}</div>
-            {config.showPrice && <div className="bpm-label-price">${product.price.toLocaleString()}</div>}
+        <div className="bpm-label-wrapper" style={{ width: `${config.labelW}mm`, height: `${config.labelH}mm`, overflow: 'hidden' }}>
+            <PrintableLabel 
+                product={{ name: product.name, code: product.barcode, price: product.price }} 
+                barcodeValue={product.barcode} 
+                layout={layout} 
+            />
         </div>
     );
 };

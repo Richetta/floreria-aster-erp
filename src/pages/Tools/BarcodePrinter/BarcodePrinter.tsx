@@ -8,6 +8,8 @@ import {
     X, Printer
 } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
+import { getSavedLabelLayout } from '../../../components/LabelEditor/LabelLayoutConfig';
+import { PrintableLabel } from '../../../components/LabelEditor/PrintableLabel';
 import './BarcodePrinter.css';
 
 type LabelConfig = {
@@ -591,37 +593,24 @@ const CategoryFolder = ({
 
 // Individual barcode label component
 const BarcodeLabel = ({ product, config }: { product: SelectedProduct; config: LabelConfig }) => {
-    const svgRef = useRef<SVGSVGElement>(null);
-
-    useEffect(() => {
-        if (svgRef.current && product.barcode) {
-            try {
-                JsBarcode(svgRef.current, product.barcode, {
-                    format: config.format,
-                    width: 1.5,
-                    height: config.labelH * 0.4 * 3.78, // mm to px approx
-                    displayValue: false,
-                    margin: 0,
-                });
-            } catch {
-                // fallback for invalid barcode
-                try {
-                    JsBarcode(svgRef.current, product.barcode, {
-                        format: 'CODE128', width: 1.5,
-                        height: config.labelH * 0.4 * 3.78,
-                        displayValue: false, margin: 0,
-                    });
-                } catch { /* ignore */ }
-            }
-        }
-    }, [product.barcode, config.format, config.labelH]);
+    // We get the saved layout but override its dimensions with the selected paper label config
+    const baseLayout = getSavedLabelLayout();
+    const layout = {
+        ...baseLayout,
+        width: config.labelW,
+        height: config.labelH,
+        name: { ...baseLayout.name, visible: config.showName },
+        price: { ...baseLayout.price, visible: config.showPrice },
+        code: { ...baseLayout.code, visible: config.showCode },
+    };
 
     return (
-        <div className="bp-label" style={{ width: `${config.labelW}mm`, height: `${config.labelH}mm` }}>
-            {config.showName && <div className="bp-label-name">{product.name}</div>}
-            <svg ref={svgRef} className="bp-label-barcode" />
-            <div className="bp-label-code-text">{product.barcode}</div>
-            {config.showPrice && <div className="bp-label-price">${product.price.toLocaleString()}</div>}
+        <div className="bp-label-wrapper" style={{ width: `${config.labelW}mm`, height: `${config.labelH}mm`, overflow: 'hidden' }}>
+            <PrintableLabel 
+                product={{ name: product.name, code: product.barcode, price: product.price }} 
+                barcodeValue={product.barcode} 
+                layout={layout} 
+            />
         </div>
     );
 };

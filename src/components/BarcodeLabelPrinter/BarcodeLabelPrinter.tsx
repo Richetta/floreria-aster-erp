@@ -1,7 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { Printer, X, Edit3, Check, X as XIcon } from 'lucide-react';
-import { BarcodeGenerator } from '../BarcodeGenerator/BarcodeGenerator';
+import { Printer, X, Edit3, Check, X as XIcon, Settings } from 'lucide-react';
+import { LabelEditor } from '../LabelEditor/LabelEditor';
+import { PrintableLabel } from '../LabelEditor/PrintableLabel';
+import { getSavedLabelLayout, LabelLayoutConfig } from '../LabelEditor/LabelLayoutConfig';
 import './BarcodeLabelPrinter.css';
 
 interface Product {
@@ -29,6 +31,8 @@ export const BarcodeLabelPrinter: React.FC<BarcodeLabelPrinterProps> = ({
     const [barcodeCode, setBarcodeCode] = useState(product?.code || '');
     const [isEditing, setIsEditing] = useState(false);
     const [tempCode, setTempCode] = useState('');
+    const [isDesigning, setIsDesigning] = useState(false);
+    const [layout, setLayout] = useState<LabelLayoutConfig>(getSavedLabelLayout());
 
     // Reset state when product changes
     useEffect(() => {
@@ -70,7 +74,26 @@ export const BarcodeLabelPrinter: React.FC<BarcodeLabelPrinterProps> = ({
         }
     };
 
+    const handleSaveDesign = () => {
+        setLayout(getSavedLabelLayout());
+        setIsDesigning(false);
+    };
+
     if (!isOpen || !product) return null;
+
+    if (isDesigning) {
+        return (
+            <div className="barcode-label-printer-overlay">
+                <div className="barcode-label-printer-modal" style={{ maxWidth: '900px' }}>
+                    <LabelEditor 
+                        product={{ name: product.name, code: barcodeCode, price: product.price }} 
+                        onSave={handleSaveDesign} 
+                        onCancel={() => setIsDesigning(false)} 
+                    />
+                </div>
+            </div>
+        );
+    }
 
     // Generate multiple labels
     const labels = Array.from({ length: quantity }, (_, i) => i);
@@ -94,7 +117,12 @@ export const BarcodeLabelPrinter: React.FC<BarcodeLabelPrinterProps> = ({
                 <div className="barcode-label-printer-body">
                     {/* Edit Controls */}
                     <div className="barcode-edit-section">
-                        <div className="edit-controls">
+                        <div className="edit-controls" style={{ justifyContent: 'space-between' }}>
+                            <button className="barcode-edit-btn" onClick={() => setIsDesigning(true)} style={{ color: '#4b5563', borderColor: '#d1d5db' }}>
+                                <Settings size={16} />
+                                <span>Diseño</span>
+                            </button>
+                            
                             {!isEditing ? (
                                 <button className="barcode-edit-btn" onClick={handleStartEdit}>
                                     <Edit3 size={16} />
@@ -126,37 +154,8 @@ export const BarcodeLabelPrinter: React.FC<BarcodeLabelPrinterProps> = ({
                     {/* Preview */}
                     <div ref={componentRef} className="labels-preview">
                         {labels.map((_, index) => (
-                            <div key={index} className="barcode-label">
-                                <div className="label-header">
-                                    <h4 className="label-product-name">{product.name}</h4>
-                                </div>
-
-                                <div className="label-barcode">
-                                    <BarcodeGenerator
-                                        value={barcodeCode}
-                                        width={2}
-                                        height={60}
-                                        format="CODE128"
-                                    />
-                                </div>
-
-                                <div className="label-code">
-                                    <span className="label-code-label">Código:</span>
-                                    <span className="label-code-value">{barcodeCode}</span>
-                                </div>
-
-                                <div className="label-footer">
-                                    <div className="label-price">
-                                        <span className="label-price-label">Precio:</span>
-                                        <span className="label-price-value">${product.price.toLocaleString()}</span>
-                                    </div>
-                                    {product.cost && (
-                                        <div className="label-cost">
-                                            <span className="label-cost-label">Costo:</span>
-                                            <span className="label-cost-value">${product.cost.toLocaleString()}</span>
-                                        </div>
-                                    )}
-                                </div>
+                            <div key={index} className="barcode-label-wrapper" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                                <PrintableLabel product={product} barcodeValue={barcodeCode} layout={layout} />
                             </div>
                         ))}
                     </div>
