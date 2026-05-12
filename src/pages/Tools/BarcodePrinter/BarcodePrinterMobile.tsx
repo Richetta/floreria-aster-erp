@@ -243,12 +243,12 @@ export const BarcodePrinterMobile = () => {
 };
 
 const BarcodeLabel = ({ product, config }: { product: SelectedProduct; config: LabelConfig }) => {
-    const svgRef = useRef<SVGSVGElement>(null);
+    const imgRef = useRef<HTMLImageElement>(null);
 
     useEffect(() => {
-        if (svgRef.current && product.barcode) {
+        if (imgRef.current && product.barcode) {
             try {
-                JsBarcode(svgRef.current, product.barcode, {
+                JsBarcode(imgRef.current, product.barcode, {
                     format: config.format,
                     width: 1.5,
                     height: config.labelH * 0.4 * 3.78,
@@ -262,7 +262,7 @@ const BarcodeLabel = ({ product, config }: { product: SelectedProduct; config: L
     return (
         <div className="bpm-label" style={{ width: `${config.labelW}mm`, height: `${config.labelH}mm` }}>
             {config.showName && <div className="bpm-label-name">{product.name}</div>}
-            <svg ref={svgRef} />
+            <img ref={imgRef} alt={product.barcode} />
             <div className="bpm-label-code">{product.barcode}</div>
             {config.showPrice && <div className="bpm-label-price">${product.price.toLocaleString()}</div>}
         </div>
