@@ -5,7 +5,6 @@ import {
     Plus, Search, ArrowLeft,
     Printer, Eye
 } from 'lucide-react';
-import JsBarcode from 'jsbarcode';
 import { getSavedLabelLayout } from '../../../components/LabelEditor/LabelLayoutConfig';
 import { PrintableLabel } from '../../../components/LabelEditor/PrintableLabel';
 import './BarcodePrinterMobile.css';

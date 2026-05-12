@@ -3,7 +3,8 @@ import { useReactToPrint } from 'react-to-print';
 import { Printer, X, Edit3, Check, X as XIcon, Settings } from 'lucide-react';
 import { LabelEditor } from '../LabelEditor/LabelEditor';
 import { PrintableLabel } from '../LabelEditor/PrintableLabel';
-import { getSavedLabelLayout, LabelLayoutConfig } from '../LabelEditor/LabelLayoutConfig';
+import { getSavedLabelLayout } from '../LabelEditor/LabelLayoutConfig';
+import type { LabelLayoutConfig } from '../LabelEditor/LabelLayoutConfig';
 import './BarcodeLabelPrinter.css';
 
 interface Product {

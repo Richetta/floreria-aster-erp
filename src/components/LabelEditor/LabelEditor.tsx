@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Rnd } from 'react-rnd';
 import { Settings, Save, RefreshCw, Eye, EyeOff } from 'lucide-react';
-import { LabelLayoutConfig, ElementLayout, getSavedLabelLayout, saveLabelLayout, defaultLabelLayout } from './LabelLayoutConfig';
+import { getSavedLabelLayout, saveLabelLayout, defaultLabelLayout } from './LabelLayoutConfig';
+import type { LabelLayoutConfig, ElementLayout } from './LabelLayoutConfig';
 import { BarcodeGenerator } from '../BarcodeGenerator/BarcodeGenerator';
 import './LabelEditor.css';
 
@@ -18,7 +19,7 @@ interface LabelEditorProps {
 export const LabelEditor: React.FC<LabelEditorProps> = ({ product, onSave, onCancel }) => {
     const [layout, setLayout] = useState<LabelLayoutConfig>(getSavedLabelLayout());
 
-    const handleDragStop = (key: keyof LabelLayoutConfig, d: any) => {
+    const handleDragStop = (key: keyof LabelLayoutConfig, d: { x: number; y: number }) => {
         if (key === 'width' || key === 'height') return;
         setLayout(prev => ({
             ...prev,
@@ -30,7 +31,7 @@ export const LabelEditor: React.FC<LabelEditorProps> = ({ product, onSave, onCan
         }));
     };
 
-    const handleResizeStop = (key: keyof LabelLayoutConfig, ref: any, position: any) => {
+    const handleResizeStop = (key: keyof LabelLayoutConfig, ref: any, position: { x: number; y: number }) => {
         if (key === 'width' || key === 'height') return;
         setLayout(prev => ({
             ...prev,
@@ -124,8 +125,8 @@ export const LabelEditor: React.FC<LabelEditorProps> = ({ product, onSave, onCan
                             <Rnd
                                 size={{ width: layout.name.w, height: layout.name.h }}
                                 position={{ x: layout.name.x, y: layout.name.y }}
-                                onDragStop={(e, d) => handleDragStop('name', d)}
-                                onResizeStop={(e, dir, ref, delta, position) => handleResizeStop('name', ref, position)}
+                                onDragStop={(_e, d) => handleDragStop('name', d)}
+                                onResizeStop={(_e, _dir, ref, _delta, position) => handleResizeStop('name', ref, position)}
                                 bounds="parent"
                                 className="rnd-element"
                             >
@@ -140,8 +141,8 @@ export const LabelEditor: React.FC<LabelEditorProps> = ({ product, onSave, onCan
                             <Rnd
                                 size={{ width: layout.barcode.w, height: layout.barcode.h }}
                                 position={{ x: layout.barcode.x, y: layout.barcode.y }}
-                                onDragStop={(e, d) => handleDragStop('barcode', d)}
-                                onResizeStop={(e, dir, ref, delta, position) => handleResizeStop('barcode', ref, position)}
+                                onDragStop={(_e, d) => handleDragStop('barcode', d)}
+                                onResizeStop={(_e, _dir, ref, _delta, position) => handleResizeStop('barcode', ref, position)}
                                 bounds="parent"
                                 className="rnd-element"
                             >
@@ -156,8 +157,8 @@ export const LabelEditor: React.FC<LabelEditorProps> = ({ product, onSave, onCan
                             <Rnd
                                 size={{ width: layout.code.w, height: layout.code.h }}
                                 position={{ x: layout.code.x, y: layout.code.y }}
-                                onDragStop={(e, d) => handleDragStop('code', d)}
-                                onResizeStop={(e, dir, ref, delta, position) => handleResizeStop('code', ref, position)}
+                                onDragStop={(_e, d) => handleDragStop('code', d)}
+                                onResizeStop={(_e, _dir, ref, _delta, position) => handleResizeStop('code', ref, position)}
                                 bounds="parent"
                                 className="rnd-element"
                             >
@@ -172,8 +173,8 @@ export const LabelEditor: React.FC<LabelEditorProps> = ({ product, onSave, onCan
                             <Rnd
                                 size={{ width: layout.price.w, height: layout.price.h }}
                                 position={{ x: layout.price.x, y: layout.price.y }}
-                                onDragStop={(e, d) => handleDragStop('price', d)}
-                                onResizeStop={(e, dir, ref, delta, position) => handleResizeStop('price', ref, position)}
+                                onDragStop={(_e, d) => handleDragStop('price', d)}
+                                onResizeStop={(_e, _dir, ref, _delta, position) => handleResizeStop('price', ref, position)}
                                 bounds="parent"
                                 className="rnd-element"
                             >

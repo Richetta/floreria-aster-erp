@@ -1,5 +1,5 @@
 import React from 'react';
-import { LabelLayoutConfig } from './LabelLayoutConfig';
+import type { LabelLayoutConfig } from './LabelLayoutConfig';
 import { BarcodeGenerator } from '../BarcodeGenerator/BarcodeGenerator';
 
 interface PrintableLabelProps {
