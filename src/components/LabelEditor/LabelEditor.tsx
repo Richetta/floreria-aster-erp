@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Rnd } from 'react-rnd';
-import { Settings, Save, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Settings, Save, RefreshCw, Eye, EyeOff, Maximize2 } from 'lucide-react';
 import { getSavedLabelLayout, saveLabelLayout, defaultLabelLayout } from './LabelLayoutConfig';
 import type { LabelLayoutConfig, ElementLayout } from './LabelLayoutConfig';
 import { BarcodeGenerator } from '../BarcodeGenerator/BarcodeGenerator';
@@ -12,12 +12,32 @@ interface LabelEditorProps {
         code: string;
         price: number;
     };
-    onSave?: () => void;
+    labelWidth?: number;   // mm, can be overridden
+    labelHeight?: number;  // mm, can be overridden
+    onSave?: (layout: LabelLayoutConfig) => void;
     onCancel?: () => void;
 }
 
-export const LabelEditor: React.FC<LabelEditorProps> = ({ product, onSave, onCancel }) => {
-    const [layout, setLayout] = useState<LabelLayoutConfig>(getSavedLabelLayout());
+// Scale factor: how many px per mm in the editor canvas
+const SCALE = 4; // 4px per mm
+
+export const LabelEditor: React.FC<LabelEditorProps> = ({ product, labelWidth, labelHeight, onSave, onCancel }) => {
+    const [layout, setLayout] = useState<LabelLayoutConfig>(() => {
+        const saved = getSavedLabelLayout();
+        return {
+            ...saved,
+            width: labelWidth ?? saved.width,
+            height: labelHeight ?? saved.height,
+        };
+    });
+
+    const canvasWidthPx = layout.width * SCALE;
+    const canvasHeightPx = layout.height * SCALE;
+
+    // Convert % to px for Rnd (editor coordinates)
+    const pctToPx = useCallback((pct: number, dimension: number) => (pct / 100) * dimension, []);
+    // Convert px back to %
+    const pxToPct = useCallback((px: number, dimension: number) => Math.max(0, Math.min(100, (px / dimension) * 100)), []);
 
     const handleDragStop = (key: keyof LabelLayoutConfig, d: { x: number; y: number }) => {
         if (key === 'width' || key === 'height') return;
@@ -25,22 +45,22 @@ export const LabelEditor: React.FC<LabelEditorProps> = ({ product, onSave, onCan
             ...prev,
             [key]: {
                 ...(prev[key] as ElementLayout),
-                x: d.x,
-                y: d.y
+                x: pxToPct(d.x, canvasWidthPx),
+                y: pxToPct(d.y, canvasHeightPx),
             }
         }));
     };
 
-    const handleResizeStop = (key: keyof LabelLayoutConfig, ref: any, position: { x: number; y: number }) => {
+    const handleResizeStop = (key: keyof LabelLayoutConfig, ref: HTMLElement, position: { x: number; y: number }) => {
         if (key === 'width' || key === 'height') return;
         setLayout(prev => ({
             ...prev,
             [key]: {
                 ...(prev[key] as ElementLayout),
-                w: parseInt(ref.style.width, 10),
-                h: parseInt(ref.style.height, 10),
-                x: position.x,
-                y: position.y
+                w: pxToPct(parseInt(ref.style.width, 10), canvasWidthPx),
+                h: pxToPct(parseInt(ref.style.height, 10), canvasHeightPx),
+                x: pxToPct(position.x, canvasWidthPx),
+                y: pxToPct(position.y, canvasHeightPx),
             }
         }));
     };
@@ -56,21 +76,43 @@ export const LabelEditor: React.FC<LabelEditorProps> = ({ product, onSave, onCan
         }));
     };
 
+    const changeFontSize = (key: 'name' | 'code' | 'price', delta: number) => {
+        setLayout(prev => ({
+            ...prev,
+            [key]: {
+                ...(prev[key] as ElementLayout),
+                fontSize: Math.max(4, Math.min(20, ((prev[key] as ElementLayout).fontSize || 7) + delta))
+            }
+        }));
+    };
+
+    const changeLabelSize = (field: 'width' | 'height', value: number) => {
+        setLayout(prev => ({ ...prev, [field]: Math.max(10, value) }));
+    };
+
     const handleSave = () => {
         saveLabelLayout(layout);
-        if (onSave) onSave();
+        if (onSave) onSave(layout);
     };
 
     const handleReset = () => {
         setLayout(defaultLabelLayout);
     };
 
-    // The editor operates in a virtual canvas. Let's assume the canvas is e.g. 50mm x 25mm scaled up to look good on screen.
-    // 50mm = ~189px, so we scale it up. Let's use a standard 200px width.
-    const canvasWidth = 189; // 50mm * 3.78
-    const canvasHeight = 94.5; // 25mm * 3.78
+    const ELEMENT_LABELS: Record<string, string> = {
+        name: 'Nombre',
+        barcode: 'Código de Barras',
+        code: 'Texto Código',
+        price: 'Precio',
+    };
 
-    // Wait, let's just make the container relative and scale it with CSS transform for viewing.
+    const elements: Array<{ key: 'name' | 'barcode' | 'code' | 'price'; el: ElementLayout }> = [
+        { key: 'name', el: layout.name },
+        { key: 'barcode', el: layout.barcode },
+        { key: 'code', el: layout.code },
+        { key: 'price', el: layout.price },
+    ];
+
     return (
         <div className="label-editor-container">
             <div className="label-editor-toolbar">
@@ -80,114 +122,138 @@ export const LabelEditor: React.FC<LabelEditorProps> = ({ product, onSave, onCan
                 </div>
                 <div className="toolbar-actions">
                     <button onClick={handleReset} className="btn-secondary" title="Restaurar por defecto">
-                        <RefreshCw size={16} /> Restaurar
+                        <RefreshCw size={15} /> Restaurar
                     </button>
                     <button onClick={handleSave} className="btn-primary">
-                        <Save size={16} /> Guardar Diseño
+                        <Save size={15} /> Guardar Diseño
                     </button>
                 </div>
             </div>
 
             <div className="label-editor-main">
+                {/* Left sidebar: controls */}
                 <div className="label-editor-sidebar">
-                    <h4>Elementos</h4>
-                    <div className="element-toggle">
-                        <span>Nombre</span>
-                        <button onClick={() => toggleVisibility('name')} className={layout.name.visible ? 'active' : ''}>
-                            {layout.name.visible ? <Eye size={18} /> : <EyeOff size={18} />}
-                        </button>
+                    {/* Label size */}
+                    <div className="sidebar-section">
+                        <h5 className="sidebar-section-title">
+                            <Maximize2 size={13} /> Tamaño Etiqueta
+                        </h5>
+                        <div className="size-inputs">
+                            <label>
+                                <span>Ancho (mm)</span>
+                                <input
+                                    type="number"
+                                    min={10}
+                                    max={200}
+                                    value={layout.width}
+                                    onChange={e => changeLabelSize('width', +e.target.value)}
+                                />
+                            </label>
+                            <label>
+                                <span>Alto (mm)</span>
+                                <input
+                                    type="number"
+                                    min={5}
+                                    max={200}
+                                    value={layout.height}
+                                    onChange={e => changeLabelSize('height', +e.target.value)}
+                                />
+                            </label>
+                        </div>
                     </div>
-                    <div className="element-toggle">
-                        <span>Código de Barras</span>
-                        <button onClick={() => toggleVisibility('barcode')} className={layout.barcode.visible ? 'active' : ''}>
-                            {layout.barcode.visible ? <Eye size={18} /> : <EyeOff size={18} />}
-                        </button>
+
+                    {/* Elements */}
+                    <div className="sidebar-section">
+                        <h5 className="sidebar-section-title">Elementos</h5>
+                        {elements.map(({ key, el }) => (
+                            <div key={key} className={`element-row ${!el.visible ? 'hidden-el' : ''}`}>
+                                <span className="el-label">{ELEMENT_LABELS[key]}</span>
+                                <div className="el-controls">
+                                    {key !== 'barcode' && (
+                                        <div className="font-stepper">
+                                            <button onClick={() => changeFontSize(key as any, -0.5)}>−</button>
+                                            <span>{el.fontSize || 7}pt</span>
+                                            <button onClick={() => changeFontSize(key as any, 0.5)}>+</button>
+                                        </div>
+                                    )}
+                                    <button
+                                        className={`vis-btn ${el.visible ? 'active' : ''}`}
+                                        onClick={() => toggleVisibility(key)}
+                                        title={el.visible ? 'Ocultar' : 'Mostrar'}
+                                    >
+                                        {el.visible ? <Eye size={15} /> : <EyeOff size={15} />}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                    <div className="element-toggle">
-                        <span>Texto Código</span>
-                        <button onClick={() => toggleVisibility('code')} className={layout.code.visible ? 'active' : ''}>
-                            {layout.code.visible ? <Eye size={18} /> : <EyeOff size={18} />}
-                        </button>
-                    </div>
-                    <div className="element-toggle">
-                        <span>Precio</span>
-                        <button onClick={() => toggleVisibility('price')} className={layout.price.visible ? 'active' : ''}>
-                            {layout.price.visible ? <Eye size={18} /> : <EyeOff size={18} />}
-                        </button>
-                    </div>
-                    <p className="sidebar-hint">Arrastra y redimensiona los elementos en el lienzo. Los cambios se guardarán para todas tus impresiones.</p>
+
+                    <p className="sidebar-hint">
+                        Arrastrá y redimensioná los elementos en el lienzo. El diseño se aplica en todas tus impresiones.
+                    </p>
                 </div>
 
+                {/* Canvas */}
                 <div className="label-editor-canvas-wrapper">
-                    <div className="label-editor-canvas" style={{ width: canvasWidth, height: canvasHeight, transform: 'scale(1.5)', transformOrigin: 'top left' }}>
-                        {/* NAME */}
-                        {layout.name.visible && (
+                    <div className="canvas-zoom-label">
+                        Vista real: {layout.width}×{layout.height}mm (zoom ×{SCALE})
+                    </div>
+                    <div
+                        className="label-editor-canvas"
+                        style={{ width: canvasWidthPx, height: canvasHeightPx }}
+                    >
+                        {elements.map(({ key, el }) => el.visible && (
                             <Rnd
-                                size={{ width: layout.name.w, height: layout.name.h }}
-                                position={{ x: layout.name.x, y: layout.name.y }}
-                                onDragStop={(_e, d) => handleDragStop('name', d)}
-                                onResizeStop={(_e, _dir, ref, _delta, position) => handleResizeStop('name', ref, position)}
+                                key={key}
+                                size={{
+                                    width: pctToPx(el.w, canvasWidthPx),
+                                    height: pctToPx(el.h, canvasHeightPx)
+                                }}
+                                position={{
+                                    x: pctToPx(el.x, canvasWidthPx),
+                                    y: pctToPx(el.y, canvasHeightPx)
+                                }}
+                                onDragStop={(_e, d) => handleDragStop(key, d)}
+                                onResizeStop={(_e, _dir, ref, _delta, position) => handleResizeStop(key, ref, position)}
                                 bounds="parent"
-                                className="rnd-element"
+                                minWidth={10}
+                                minHeight={8}
+                                className={`rnd-element rnd-${key}`}
                             >
-                                <div style={{ fontSize: layout.name.fontSize, fontWeight: layout.name.fontWeight, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', overflow: 'hidden' }}>
-                                    {product.name}
-                                </div>
+                                {key === 'name' && (
+                                    <div className="rnd-inner" style={{ fontSize: `${el.fontSize || 7}pt`, fontWeight: el.fontWeight || 700 }}>
+                                        {product.name}
+                                    </div>
+                                )}
+                                {key === 'barcode' && (
+                                    <div className="rnd-inner rnd-barcode">
+                                        <BarcodeGenerator value={product.code} displayValue={false} height={pctToPx(el.h, canvasHeightPx) * 0.75} width={1} margin={0} />
+                                    </div>
+                                )}
+                                {key === 'code' && (
+                                    <div className="rnd-inner rnd-code" style={{ fontSize: `${el.fontSize || 6}pt`, fontWeight: el.fontWeight || 500 }}>
+                                        {product.code}
+                                    </div>
+                                )}
+                                {key === 'price' && (
+                                    <div className="rnd-inner" style={{ fontSize: `${el.fontSize || 7}pt`, fontWeight: el.fontWeight || 800 }}>
+                                        ${product.price.toLocaleString()}
+                                    </div>
+                                )}
+                                <div className="rnd-label">{ELEMENT_LABELS[key]}</div>
                             </Rnd>
-                        )}
-
-                        {/* BARCODE */}
-                        {layout.barcode.visible && (
-                            <Rnd
-                                size={{ width: layout.barcode.w, height: layout.barcode.h }}
-                                position={{ x: layout.barcode.x, y: layout.barcode.y }}
-                                onDragStop={(_e, d) => handleDragStop('barcode', d)}
-                                onResizeStop={(_e, _dir, ref, _delta, position) => handleResizeStop('barcode', ref, position)}
-                                bounds="parent"
-                                className="rnd-element"
-                            >
-                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <BarcodeGenerator value={product.code} displayValue={false} height={layout.barcode.h * 0.8} />
-                                </div>
-                            </Rnd>
-                        )}
-
-                        {/* CODE TEXT */}
-                        {layout.code.visible && (
-                            <Rnd
-                                size={{ width: layout.code.w, height: layout.code.h }}
-                                position={{ x: layout.code.x, y: layout.code.y }}
-                                onDragStop={(_e, d) => handleDragStop('code', d)}
-                                onResizeStop={(_e, _dir, ref, _delta, position) => handleResizeStop('code', ref, position)}
-                                bounds="parent"
-                                className="rnd-element"
-                            >
-                                <div style={{ fontSize: layout.code.fontSize, fontWeight: layout.code.fontWeight, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace' }}>
-                                    {product.code}
-                                </div>
-                            </Rnd>
-                        )}
-
-                        {/* PRICE */}
-                        {layout.price.visible && (
-                            <Rnd
-                                size={{ width: layout.price.w, height: layout.price.h }}
-                                position={{ x: layout.price.x, y: layout.price.y }}
-                                onDragStop={(_e, d) => handleDragStop('price', d)}
-                                onResizeStop={(_e, _dir, ref, _delta, position) => handleResizeStop('price', ref, position)}
-                                bounds="parent"
-                                className="rnd-element"
-                            >
-                                <div style={{ fontSize: layout.price.fontSize, fontWeight: layout.price.fontWeight, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    ${product.price.toLocaleString()}
-                                </div>
-                            </Rnd>
-                        )}
+                        ))}
                     </div>
                 </div>
             </div>
+
             {onCancel && (
-                <button onClick={onCancel} className="btn-cancel-float">Cerrar Editor</button>
+                <div className="label-editor-footer">
+                    <button onClick={onCancel} className="btn-ghost">Cancelar</button>
+                    <button onClick={handleSave} className="btn-primary">
+                        <Save size={15} /> Guardar y Cerrar
+                    </button>
+                </div>
             )}
         </div>
     );

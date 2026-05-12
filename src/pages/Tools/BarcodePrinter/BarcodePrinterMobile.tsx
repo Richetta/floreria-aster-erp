@@ -1,12 +1,15 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../../store/useStore';
 import { 
     Plus, Search, ArrowLeft,
-    Printer, Eye
+    Printer, Eye, Settings
 } from 'lucide-react';
 import { getSavedLabelLayout } from '../../../components/LabelEditor/LabelLayoutConfig';
+import type { LabelLayoutConfig } from '../../../components/LabelEditor/LabelLayoutConfig';
 import { PrintableLabel } from '../../../components/LabelEditor/PrintableLabel';
+import { LabelEditor } from '../../../components/LabelEditor/LabelEditor';
 import './BarcodePrinterMobile.css';
 
 type LabelConfig = {
@@ -52,7 +55,8 @@ export const BarcodePrinterMobile = () => {
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState<SelectedProduct[]>([]);
     const [config, setConfig] = useState<LabelConfig>(defaultConfig);
-    const printRef = useRef<HTMLDivElement>(null);
+    const [isDesigning, setIsDesigning] = useState(false);
+    const [labelLayout, setLabelLayout] = useState<LabelLayoutConfig>(() => getSavedLabelLayout());
 
     useEffect(() => { loadProducts(); loadCategories(true); }, []);
 
@@ -92,12 +96,66 @@ export const BarcodePrinterMobile = () => {
         return arr;
     }, [selected]);
 
-    const handlePrint = () => {
-        window.print();
-    };
+    const handlePrint = useCallback(() => {
+        let portal = document.getElementById('barcode-print-portal') as HTMLDivElement | null;
+        if (!portal) {
+            portal = document.createElement('div');
+            portal.id = 'barcode-print-portal';
+            portal.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;background:white;z-index:99999;';
+            document.body.appendChild(portal);
+        }
+        const effectiveLayout: LabelLayoutConfig = {
+            ...labelLayout,
+            width: config.labelW,
+            height: config.labelH,
+        };
+        const pages = Array.from({ length: totalPages }, (_, pageIdx) => {
+            const pageLabels = allLabels.slice(pageIdx * labelsPerPage, (pageIdx + 1) * labelsPerPage);
+            return (
+                <div key={pageIdx} style={{
+                    width: `${config.paperW}mm`, minHeight: `${config.paperH}mm`,
+                    padding: `${config.marginTop}mm ${config.marginLeft}mm`,
+                    boxSizing: 'border-box',
+                    pageBreakAfter: 'always',
+                    display: 'flex', flexWrap: 'wrap', alignContent: 'flex-start',
+                    gap: `${config.gapV}mm ${config.gapH}mm`,
+                }}>
+                    {pageLabels.map((label, i) => (
+                        <PrintableLabel key={i}
+                            product={{ name: label.name, code: label.barcode, price: label.price }}
+                            barcodeValue={label.barcode}
+                            layout={effectiveLayout}
+                            hideBorder={false}
+                        />
+                    ))}
+                </div>
+            );
+        });
+        const root = createRoot(portal);
+        root.render(<div style={{ background: 'white' }}>{pages}</div>);
+        portal.style.display = 'block';
+        setTimeout(() => {
+            window.print();
+            setTimeout(() => { portal!.style.display = 'none'; root.unmount(); }, 500);
+        }, 300);
+    }, [allLabels, totalPages, labelsPerPage, config, labelLayout]);
 
     return (
         <div className="bpm-container">
+            {/* Label Designer Modal */}
+            {isDesigning && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 9999, padding: '0.5rem', overflowY: 'auto' }}>
+                    <div style={{ width: '100%', maxWidth: '600px', borderRadius: 12, overflow: 'hidden', marginTop: '0.5rem' }}>
+                        <LabelEditor
+                            product={selected[0] ? { name: selected[0].name, code: selected[0].barcode, price: selected[0].price } : { name: 'Ejemplo', code: '1234567890', price: 1500 }}
+                            labelWidth={config.labelW}
+                            labelHeight={config.labelH}
+                            onSave={(layout) => { setLabelLayout(layout); setIsDesigning(false); }}
+                            onCancel={() => setIsDesigning(false)}
+                        />
+                    </div>
+                </div>
+            )}
             <header className="bpm-header">
                 <button className="bpm-back" onClick={() => step === 1 ? navigate('/productos') : setStep(s => s - 1)}>
                     <ArrowLeft size={24} />
@@ -161,6 +219,14 @@ export const BarcodePrinterMobile = () => {
                                     </button>
                                 ))}
                             </div>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                <label style={{ flex: 1 }}>Ancho (mm)
+                                    <input type="number" value={config.paperW} onChange={e => setConfig(c => ({ ...c, paperW: +e.target.value, paperSize: 'custom' }))} style={{ width: '100%', marginTop: 4, padding: '0.35rem', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: '0.85rem' }} />
+                                </label>
+                                <label style={{ flex: 1 }}>Alto (mm)
+                                    <input type="number" value={config.paperH} onChange={e => setConfig(c => ({ ...c, paperH: +e.target.value, paperSize: 'custom' }))} style={{ width: '100%', marginTop: 4, padding: '0.35rem', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: '0.85rem' }} />
+                                </label>
+                            </div>
                         </section>
 
                         <section className="config-group">
@@ -191,7 +257,11 @@ export const BarcodePrinterMobile = () => {
                             </div>
                         </section>
 
-                        <div className="bpm-actions">
+                        <div className="bpm-actions" style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <button style={{ width: '100%', padding: '0.75rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 12, color: '#2563eb', fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                                onClick={() => setIsDesigning(true)}>
+                                <Settings size={18} /> Diseño de etiqueta
+                            </button>
                             <button className="primary" onClick={() => setStep(3)}>
                                 <Eye size={20} /> Vista Previa
                             </button>
@@ -207,24 +277,20 @@ export const BarcodePrinterMobile = () => {
                         </div>
 
                         <div className="preview-scroll">
-                            <div ref={printRef} className="bpm-print-area">
+                            <div className="bpm-print-area">
                                 {Array.from({ length: totalPages }).map((_, pageIdx) => {
                                     const pageLabels = allLabels.slice(pageIdx * labelsPerPage, (pageIdx + 1) * labelsPerPage);
+                                    const effectiveLayout: LabelLayoutConfig = { ...labelLayout, width: config.labelW, height: config.labelH };
                                     return (
                                         <div key={pageIdx} className="bpm-page"
-                                            style={{
-                                                width: `${config.paperW}mm`, height: `${config.paperH}mm`,
-                                                padding: `${config.marginTop}mm ${config.marginLeft}mm`,
-                                            }}>
-                                            <div className="bpm-page-grid" style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: `repeat(${cols}, ${config.labelW}mm)`,
-                                                gap: `${config.gapV}mm ${config.gapH}mm`,
-                                            }}>
-                                                {pageLabels.map((label: SelectedProduct, i: number) => (
-                                                    <BarcodeLabel key={`${pageIdx}-${i}`} product={label} config={config} />
-                                                ))}
-                                            </div>
+                                            style={{ width: `${config.paperW}mm`, minHeight: `${config.paperH}mm`, padding: `${config.marginTop}mm ${config.marginLeft}mm`, display: 'flex', flexWrap: 'wrap', alignContent: 'flex-start', gap: `${config.gapV}mm ${config.gapH}mm`, boxSizing: 'border-box' }}>
+                                            {pageLabels.map((label: SelectedProduct, i: number) => (
+                                                <PrintableLabel key={i}
+                                                    product={{ name: label.name, code: label.barcode, price: label.price }}
+                                                    barcodeValue={label.barcode}
+                                                    layout={effectiveLayout}
+                                                />
+                                            ))}
                                         </div>
                                     );
                                 })}
@@ -239,29 +305,6 @@ export const BarcodePrinterMobile = () => {
                     </div>
                 )}
             </main>
-        </div>
-    );
-};
-
-const BarcodeLabel = ({ product, config }: { product: SelectedProduct; config: LabelConfig }) => {
-    // We get the saved layout but override its dimensions with the selected paper label config
-    const baseLayout = getSavedLabelLayout();
-    const layout = {
-        ...baseLayout,
-        width: config.labelW,
-        height: config.labelH,
-        name: { ...baseLayout.name, visible: config.showName },
-        price: { ...baseLayout.price, visible: config.showPrice },
-        code: { ...baseLayout.code, visible: config.showCode },
-    };
-
-    return (
-        <div className="bpm-label-wrapper" style={{ width: `${config.labelW}mm`, height: `${config.labelH}mm`, overflow: 'hidden' }}>
-            <PrintableLabel 
-                product={{ name: product.name, code: product.barcode, price: product.price }} 
-                barcodeValue={product.barcode} 
-                layout={layout} 
-            />
         </div>
     );
 };

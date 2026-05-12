@@ -1,68 +1,66 @@
 export interface ElementLayout {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
+    // All coordinates as percentages (0-100) relative to label width/height
+    x: number;  // left position %
+    y: number;  // top position %
+    w: number;  // width %
+    h: number;  // height %
     visible: boolean;
-    fontSize?: number;
+    fontSize?: number;  // pt for print, px for editor (will be scaled)
     fontWeight?: number;
 }
 
 export interface LabelLayoutConfig {
-    width: number;  // overall label width in mm (default 50)
-    height: number; // overall label height in mm (default 25)
+    width: number;   // label width in mm
+    height: number;  // label height in mm
     name: ElementLayout;
     barcode: ElementLayout;
     code: ElementLayout;
     price: ElementLayout;
 }
 
-// Convert mm to px for the editor display (e.g., 1mm = 3.78px for standard 96dpi)
-export const MM_TO_PX = 3.78;
-
-// We use an internal coordinate system in px for the editor, then map back to mm or relative percentages for print
+// Default layout using percentage-based coordinates
 export const defaultLabelLayout: LabelLayoutConfig = {
     width: 50,
     height: 25,
     name: {
-        x: 10,
+        x: 2,
         y: 2,
-        w: 170,
+        w: 96,
         h: 20,
         visible: true,
-        fontSize: 14,
+        fontSize: 7,
         fontWeight: 700
     },
     barcode: {
-        x: 20,
+        x: 5,
         y: 22,
-        w: 150,
-        h: 40,
+        w: 90,
+        h: 55,
         visible: true
     },
     code: {
-        x: 10,
-        y: 65,
-        w: 170,
-        h: 15,
+        x: 5,
+        y: 78,
+        w: 90,
+        h: 14,
         visible: true,
-        fontSize: 10,
+        fontSize: 6,
         fontWeight: 500
     },
     price: {
-        x: 10,
-        y: 80,
-        w: 170,
-        h: 20,
-        visible: true,
-        fontSize: 16,
+        x: 5,
+        y: 82,
+        w: 90,
+        h: 16,
+        visible: false,
+        fontSize: 7,
         fontWeight: 800
     }
 };
 
 export const getSavedLabelLayout = (): LabelLayoutConfig => {
     try {
-        const saved = localStorage.getItem('aster_label_layout');
+        const saved = localStorage.getItem('aster_label_layout_v2');
         if (saved) return JSON.parse(saved);
     } catch {
         // ignore
@@ -71,5 +69,5 @@ export const getSavedLabelLayout = (): LabelLayoutConfig => {
 };
 
 export const saveLabelLayout = (layout: LabelLayoutConfig) => {
-    localStorage.setItem('aster_label_layout', JSON.stringify(layout));
+    localStorage.setItem('aster_label_layout_v2', JSON.stringify(layout));
 };

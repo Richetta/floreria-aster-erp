@@ -9,6 +9,8 @@ interface BarcodeGeneratorProps {
     displayValue?: boolean;
     format?: 'EAN13' | 'CODE128' | 'CODE39';
     className?: string;
+    style?: React.CSSProperties;
+    margin?: number;
 }
 
 export const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({
@@ -17,7 +19,9 @@ export const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({
     height = 100,
     displayValue = true,
     format = 'CODE128',
-    className = ''
+    className = '',
+    style,
+    margin = 2,
 }) => {
     const imgRef = useRef<HTMLImageElement>(null);
 
@@ -29,13 +33,13 @@ export const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({
                     width,
                     height,
                     displayValue,
-                    margin: 10,
+                    margin,
                     fontOptions: 'bold',
                     font: 'monospace',
                     textAlign: 'center',
                     textPosition: 'bottom',
                     textMargin: 2,
-                    fontSize: 16,
+                    fontSize: 14,
                     background: '#ffffff',
                     lineColor: '#000000'
                 });
@@ -43,11 +47,11 @@ export const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({
                 console.error('Error generating barcode:', error);
             }
         }
-    }, [value, width, height, displayValue, format]);
+    }, [value, width, height, displayValue, format, margin]);
 
     return (
-        <div className={`barcode-container ${className}`}>
-            <img ref={imgRef} alt={`Barcode ${value}`} style={{ maxWidth: '100%', height: 'auto' }} />
+        <div className={`barcode-container ${className}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+            <img ref={imgRef} alt={`Barcode ${value}`} style={{ maxWidth: '100%', maxHeight: '100%', display: 'block', ...style }} />
         </div>
     );
 };

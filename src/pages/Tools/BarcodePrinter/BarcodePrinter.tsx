@@ -1,14 +1,17 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../../store/useStore';
 import type { Category } from '../../../store/slices/types';
 import { 
     ChevronRight, ChevronDown, Folder, FolderOpen, 
     Package, Plus, Trash2, Search, ArrowLeft,
-    X, Printer
+    X, Printer, Settings
 } from 'lucide-react';
 import { getSavedLabelLayout } from '../../../components/LabelEditor/LabelLayoutConfig';
+import type { LabelLayoutConfig } from '../../../components/LabelEditor/LabelLayoutConfig';
 import { PrintableLabel } from '../../../components/LabelEditor/PrintableLabel';
+import { LabelEditor } from '../../../components/LabelEditor/LabelEditor';
 import './BarcodePrinter.css';
 
 type LabelConfig = {
@@ -56,6 +59,8 @@ export const BarcodePrinter = () => {
     const [selected, setSelected] = useState<SelectedProduct[]>([]);
     const [config, setConfig] = useState<LabelConfig>(defaultConfig);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+    const [isDesigning, setIsDesigning] = useState(false);
+    const [labelLayout, setLabelLayout] = useState<LabelLayoutConfig>(() => getSavedLabelLayout());
     const printRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => { loadProducts(); loadCategories(true); }, []);
@@ -212,12 +217,74 @@ export const BarcodePrinter = () => {
         }
     };
 
-    const handlePrint = () => {
-        window.print();
-    };
+    const handlePrint = useCallback(() => {
+        let portal = document.getElementById('barcode-print-portal') as HTMLDivElement | null;
+        if (!portal) {
+            portal = document.createElement('div');
+            portal.id = 'barcode-print-portal';
+            portal.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;background:white;z-index:99999;';
+            document.body.appendChild(portal);
+        }
+        const effectiveLayout: LabelLayoutConfig = {
+            ...labelLayout,
+            width: config.labelW,
+            height: config.labelH,
+        };
+
+        const pages = Array.from({ length: totalPages }, (_, pageIdx) => {
+            const pageLabels = allLabels.slice(pageIdx * labelsPerPage, (pageIdx + 1) * labelsPerPage);
+            return (
+                <div key={pageIdx} style={{
+                    width: `${config.paperW}mm`, minHeight: `${config.paperH}mm`,
+                    padding: `${config.marginTop}mm ${config.marginLeft}mm`,
+                    boxSizing: 'border-box',
+                    pageBreakAfter: 'always',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignContent: 'flex-start',
+                    gap: `${config.gapV}mm ${config.gapH}mm`,
+                }}>
+                    {pageLabels.map((label, i) => (
+                        <PrintableLabel
+                            key={i}
+                            product={{ name: label.name, code: label.barcode, price: label.price }}
+                            barcodeValue={label.barcode}
+                            layout={effectiveLayout}
+                            hideBorder={false}
+                        />
+                    ))}
+                </div>
+            );
+        });
+
+        const root = createRoot(portal);
+        root.render(<div style={{ background: 'white' }}>{pages}</div>);
+        portal.style.display = 'block';
+        setTimeout(() => {
+            window.print();
+            setTimeout(() => {
+                portal!.style.display = 'none';
+                root.unmount();
+            }, 500);
+        }, 300);
+    }, [allLabels, totalPages, labelsPerPage, config, labelLayout]);
 
     return (
         <div className="barcode-printer-page">
+            {/* Label Designer Modal */}
+            {isDesigning && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+                    <div style={{ width: '100%', maxWidth: '860px', borderRadius: 16, overflow: 'hidden' }}>
+                        <LabelEditor
+                            product={selected[0] ? { name: selected[0].name, code: selected[0].barcode, price: selected[0].price } : { name: 'Producto Ejemplo', code: '1234567890', price: 1500 }}
+                            labelWidth={config.labelW}
+                            labelHeight={config.labelH}
+                            onSave={(layout) => { setLabelLayout(layout); setIsDesigning(false); }}
+                            onCancel={() => setIsDesigning(false)}
+                        />
+                    </div>
+                </div>
+            )}
             {/* Header */}
             <div className="bp-header">
                 <button className="bp-back" onClick={() => step === 1 ? navigate('/herramientas') : setStep(s => s - 1)}>
@@ -387,12 +454,12 @@ export const BarcodePrinter = () => {
                             <button className={`bp-option ${config.paperSize === 'custom' ? 'active' : ''}`}
                                 onClick={() => handlePaperChange('custom')}>Personalizado</button>
                         </div>
-                        {config.paperSize === 'custom' && (
+                        {(config.paperSize === 'custom' || true) && (
                             <div className="bp-custom-size">
-                                <label>Ancho (mm) <input type="number" value={config.paperW}
-                                    onChange={e => setConfig((c: LabelConfig) => ({ ...c, paperW: +e.target.value }))} /></label>
-                                <label>Alto (mm) <input type="number" value={config.paperH}
-                                    onChange={e => setConfig((c: LabelConfig) => ({ ...c, paperH: +e.target.value }))} /></label>
+                                <label>Ancho hoja (mm) <input type="number" value={config.paperW}
+                                    onChange={e => setConfig((c: LabelConfig) => ({ ...c, paperW: +e.target.value, paperSize: 'custom' }))} /></label>
+                                <label>Alto hoja (mm) <input type="number" value={config.paperH}
+                                    onChange={e => setConfig((c: LabelConfig) => ({ ...c, paperH: +e.target.value, paperSize: 'custom' }))} /></label>
                             </div>
                         )}
                     </div>
@@ -407,14 +474,12 @@ export const BarcodePrinter = () => {
                             <button className={`bp-option ${config.labelPreset === 'custom' ? 'active' : ''}`}
                                 onClick={() => handleLabelPreset('custom')}>Personalizado</button>
                         </div>
-                        {config.labelPreset === 'custom' && (
-                            <div className="bp-custom-size">
-                                <label>Ancho (mm) <input type="number" value={config.labelW}
-                                    onChange={e => setConfig((c: LabelConfig) => ({ ...c, labelW: +e.target.value }))} /></label>
-                                <label>Alto (mm) <input type="number" value={config.labelH}
-                                    onChange={e => setConfig((c: LabelConfig) => ({ ...c, labelH: +e.target.value }))} /></label>
-                            </div>
-                        )}
+                        <div className="bp-custom-size">
+                            <label>Ancho etiqueta (mm) <input type="number" value={config.labelW}
+                                onChange={e => setConfig((c: LabelConfig) => ({ ...c, labelW: +e.target.value, labelPreset: 'custom' }))} /></label>
+                            <label>Alto etiqueta (mm) <input type="number" value={config.labelH}
+                                onChange={e => setConfig((c: LabelConfig) => ({ ...c, labelH: +e.target.value, labelPreset: 'custom' }))} /></label>
+                        </div>
                     </div>
 
                     <div className="bp-config-section">
@@ -431,28 +496,6 @@ export const BarcodePrinter = () => {
                         </div>
                     </div>
 
-                    <div className="bp-config-section">
-                        <h3>🔤 Formato de Código</h3>
-                        <div className="bp-config-row">
-                            {(['CODE128', 'EAN13', 'CODE39'] as const).map(f => (
-                                <button key={f} className={`bp-option ${config.format === f ? 'active' : ''}`}
-                                    onClick={() => setConfig((c: LabelConfig) => ({ ...c, format: f }))}>{f}</button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="bp-config-section">
-                        <h3>📝 Contenido de la Etiqueta</h3>
-                        <div className="bp-checkboxes">
-                            <label><input type="checkbox" checked={config.showName}
-                                onChange={e => setConfig((c: LabelConfig) => ({ ...c, showName: e.target.checked }))} /> Nombre del producto</label>
-                            <label><input type="checkbox" checked={config.showPrice}
-                                onChange={e => setConfig((c: LabelConfig) => ({ ...c, showPrice: e.target.checked }))} /> Precio</label>
-                            <label><input type="checkbox" checked={config.showCode}
-                                onChange={e => setConfig((c: LabelConfig) => ({ ...c, showCode: e.target.checked }))} /> Código interno</label>
-                        </div>
-                    </div>
-
                     <div className="bp-config-summary">
                         <p>{cols} columnas × {rows} filas = <strong>{labelsPerPage} etiquetas/hoja</strong></p>
                         <p>{totalLabels} etiquetas totales → <strong>{totalPages} hoja(s)</strong></p>
@@ -460,6 +503,9 @@ export const BarcodePrinter = () => {
 
                     <div className="bp-step-actions">
                         <button className="bp-back-btn" onClick={() => setStep(1)}>← Volver</button>
+                        <button className="bp-design-btn" onClick={() => setIsDesigning(true)}>
+                            <Settings size={16} /> Diseño de etiqueta
+                        </button>
                         <button className="bp-next-btn" onClick={() => setStep(3)}>Vista Previa →</button>
                     </div>
                 </div>

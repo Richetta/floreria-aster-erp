@@ -350,43 +350,14 @@
 }
 
 @media print {
-    /* Hide non-printable elements */
-    .bpm-header, .bpm-stepper, .bpm-step-selection, .bpm-step-config, .preview-info, .bpm-actions {
-        display: none !important;
-    }
-
-    /* Reset layout for printable elements */
-    body, #root, html {
-        margin: 0 !important;
-        padding: 0 !important;
-        background: white !important;
-        height: auto !important;
-        overflow: visible !important;
-    }
-
-    .bpm-container, .bpm-main, .bpm-step-preview, .preview-scroll {
+    body > * { display: none !important; }
+    #barcode-print-portal {
         display: block !important;
-        position: static !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: visible !important;
-        height: auto !important;
-        background: white !important;
-        box-shadow: none !important;
-    }
-
-    .bpm-print-area {
-        display: block !important;
-        position: static !important;
-        visibility: visible !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
         background: white !important;
     }
-
-    .bpm-page {
-        margin: 0 !important;
-        box-shadow: none !important;
-        page-break-after: always;
-        page-break-inside: avoid;
-        background: white !important;
-    }
+    @page { margin: 0; size: auto; }
 }

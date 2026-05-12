@@ -1022,7 +1022,7 @@ export const ProductsDesktop = () => {
                 product={productForBarcode}
                 isOpen={showBarcodePrinter}
                 onClose={() => { setShowBarcodePrinter(false); setProductForBarcode(null); }}
-                quantity={1}
+                initialQuantity={1}
             />
 
             {confirmModal && <ConfirmModal {...confirmModal} />}
