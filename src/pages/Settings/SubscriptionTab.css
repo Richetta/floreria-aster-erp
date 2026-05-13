@@ -2,6 +2,40 @@
    SUBSCRIPTION TAB STYLES
    ============================================ */
 
+.subscription-tab {
+    --primary: var(--color-primary, #1a3c2a);
+    --primary-dark: var(--color-primary-hover, #12291d);
+    --primary-light: var(--color-primary-light, #edf2ef);
+    
+    --bg-card: var(--color-surface, #ffffff);
+    --bg-light: #f1f5f9;
+    
+    --text-dark: var(--color-text-main, #1a1a1a);
+    --text-muted: var(--color-text-muted, #4a4a4a);
+    
+    --border-light: var(--color-border, #e5e7eb);
+    
+    --success: var(--color-success, #4f7a5a);
+    --warning: var(--color-warning, #e6c97a);
+    --danger: var(--color-danger, #c47a5a);
+    
+    --info: #0ea5e9;
+    --info-light: #e0f2fe;
+    
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+    
+    --radius-sm: 0.25rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 1rem;
+}
+
 /* ── Loading/Error ── */
 .subscription-loading,
 .subscription-error {

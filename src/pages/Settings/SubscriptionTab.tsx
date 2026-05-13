@@ -3,7 +3,8 @@ import React from 'react';
 import {
     X, ArrowUpRight, CreditCard, Calendar, Shield,
     AlertTriangle, Loader2, Star, Zap, Crown, Leaf,
-    CheckCircle, RefreshCw, ExternalLink, Clock
+    CheckCircle, RefreshCw, ExternalLink, Clock,
+    Users, Package, ShoppingCart, Tags
 } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
@@ -394,10 +395,11 @@ export const SubscriptionTab = () => {
             <div className="subscription-usage">
                 <h4>Uso del Plan</h4>
                 <div className="usage-grid">
-                    <UsageItem label="Usuarios" current={subscription.current_users} max={subscription.max_users} icon="👤" />
-                    <UsageItem label="Productos" current={subscription.current_products} max={subscription.max_products} icon="📦" />
-                    <UsageItem label="Pedidos este mes" current={subscription.current_orders} max={subscription.max_orders_per_month} icon="🛒" />
-                    <UsageItem label="Categorías" current={subscription.current_categories} max={subscription.max_categories} icon="🏷️" />
+                    <UsageItem label="Usuarios" current={subscription.current_users} max={subscription.max_users} icon={<Users size={18} />} />
+                    <UsageItem label="Productos" current={subscription.current_products} max={subscription.max_products} icon={<Package size={18} />} />
+                    <UsageItem label="Pedidos este mes" current={subscription.current_orders} max={subscription.max_orders_per_month} icon={<ShoppingCart size={18} />} />
+                    <UsageItem label="Categorías" current={subscription.current_categories} max={subscription.max_categories} icon={<Tags size={18} />} />
+
                 </div>
             </div>
 
@@ -476,13 +478,16 @@ export const SubscriptionTab = () => {
                     <p className="plans-comparison__note">
                         Manejá tu negocio con tranquilidad. Podés cambiar de plan o cancelar cuando quieras.
                         {selectedBilling === 'monthly'
-                            ? <span className="plans-comparison__detail"><br/>🆓 Los primeros 15 días son gratis — no se cobra nada hasta que venza la prueba.</span>
-                            : <span className="plans-comparison__detail"><br/>📅 Pago anual con 2 meses de descuento. Se cobra inmediatamente por el año completo.</span>
+                            ? <span className="plans-comparison__detail"><br/>Los primeros 15 días son gratis — no se cobra nada hasta que venza la prueba.</span>
+                            : <span className="plans-comparison__detail"><br/>Pago anual con 2 meses de descuento. Se cobra inmediatamente por el año completo.</span>
                         }
                     </p>
                     <div className="plans-grid">
                         {plans.map(plan => {
-                            const isCurrent = plan.slug === subscription.plan_slug;
+                            const isCurrentPlan = plan.slug === subscription.plan_slug;
+                            const isCurrentBilling = selectedBilling === subscription.billing_cycle;
+                            const isCurrent = isCurrentPlan && isCurrentBilling;
+                            
                             const Icon = planIcons[plan.slug] || CreditCard;
                             const monthlyEquiv = selectedBilling === 'annually' ? Math.round(plan.price_annually / 12) : plan.price_monthly;
 
@@ -535,7 +540,7 @@ export const SubscriptionTab = () => {
                                                         {upgrading ? <Loader2 size={16} className="spinner" /> : (
                                                             <>
                                                                 <ExternalLink size={14} />
-                                                                {selectedBilling === 'monthly' ? 'Probar 15 días gratis' : 'Elegir Plan Anual'}
+                                                                {isCurrentPlan ? `Cambiar a pago ${selectedBilling === 'monthly' ? 'mensual' : 'anual'}` : (selectedBilling === 'monthly' ? 'Probar 15 días gratis' : 'Elegir Plan Anual')}
                                                             </>
                                                         )}
                                                     </button>
@@ -561,7 +566,7 @@ export const SubscriptionTab = () => {
 // USAGE ITEM COMPONENT
 // ============================================
 
-interface UsageItemProps { label: string; current: number; max: number | null; icon: string; }
+interface UsageItemProps { label: string; current: number; max: number | null; icon: React.ReactNode; }
 
 const UsageItem = ({ label, current, max, icon }: UsageItemProps) => {
     const percentage = max ? Math.min((current / max) * 100, 100) : 0;
