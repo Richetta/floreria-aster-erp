@@ -28,9 +28,11 @@
   /* Off White */
   --color-surface-hover: #F0EDE4;
 
-  --color-text-main: #3A3A3A;
-  --color-text-muted: #6B6B6B;
-  --color-border: #D1CDBF;
+  --color-text-main: #1A1A1A;
+  /* Darkened from #3A3A3A for WCAG AA compliance — contrast ratio >12:1 on beige */
+  --color-text-muted: #4A4A4A;
+  /* Darkened from #6B6B6B — was failing WCAG at ~2.8:1, now ~6:1 */
+  --color-border: #C4BFB2;
   --color-accent: #C47A5A;
   --color-soft-alert: #E6C97A;
 
