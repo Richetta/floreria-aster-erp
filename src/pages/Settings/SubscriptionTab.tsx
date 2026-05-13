@@ -472,11 +472,12 @@ export const SubscriptionTab = () => {
             {/* Plans Comparison */}
             {showPlans && plans.length > 0 && (
                 <div className="plans-comparison">
-                    <h4>Seleccioná tu nuevo plan</h4>
+                    <h4>Elegí el plan perfecto para tu florería</h4>
                     <p className="plans-comparison__note">
+                        Manejá tu negocio con tranquilidad. Podés cambiar de plan o cancelar cuando quieras.
                         {selectedBilling === 'monthly'
-                            ? '🆓 Los primeros 15 días son gratis — vinculás tarjeta pero no se cobra hasta que venza el período de prueba.'
-                            : '📅 Pago anual con 2 meses de descuento. Se cobra inmediatamente por el año completo.'
+                            ? <span className="plans-comparison__detail"><br/>🆓 Los primeros 15 días son gratis — no se cobra nada hasta que venza la prueba.</span>
+                            : <span className="plans-comparison__detail"><br/>📅 Pago anual con 2 meses de descuento. Se cobra inmediatamente por el año completo.</span>
                         }
                     </p>
                     <div className="plans-grid">
@@ -500,10 +501,10 @@ export const SubscriptionTab = () => {
 
                                     <div className="plan-card__price">
                                         <div className="price">
-                                            {plan.price_monthly === 0 ? 'GRATIS' : formatPrice(monthlyEquiv)}
-                                            {plan.price_monthly > 0 && <span className="period">/mes</span>}
+                                            {Number(plan.price_monthly) === 0 ? 'GRATIS' : formatPrice(monthlyEquiv)}
+                                            {Number(plan.price_monthly) > 0 && <span className="period">/mes</span>}
                                         </div>
-                                        {plan.price_annually > 0 && selectedBilling === 'annually' && (
+                                        {Number(plan.price_annually) > 0 && selectedBilling === 'annually' && (
                                             <div className="annual">{formatPrice(plan.price_annually)}/año</div>
                                         )}
                                     </div>
@@ -516,7 +517,7 @@ export const SubscriptionTab = () => {
 
                                     {!isCurrent && (
                                         <div className="plan-card__actions">
-                                            {plan.price_monthly === 0 ? (
+                                            {Number(plan.price_monthly) === 0 ? (
                                                 <button
                                                     className="plan-card__btn plan-card__btn--free"
                                                     onClick={handleActivateFree}
@@ -534,11 +535,11 @@ export const SubscriptionTab = () => {
                                                         {upgrading ? <Loader2 size={16} className="spinner" /> : (
                                                             <>
                                                                 <ExternalLink size={14} />
-                                                                {selectedBilling === 'monthly' ? 'Probar 15 días gratis' : 'Pagar con MercadoPago'}
+                                                                {selectedBilling === 'monthly' ? 'Probar 15 días gratis' : 'Elegir Plan Anual'}
                                                             </>
                                                         )}
                                                     </button>
-                                                    <p className="plan-card__mp-note">Pagás con MercadoPago (tarjeta, transferencia, wallet)</p>
+                                                    <p className="plan-card__mp-note">Pagás seguro con MercadoPago</p>
                                                 </>
                                             )}
                                         </div>

@@ -284,22 +284,23 @@
 }
 
 .plans-comparison h4 {
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: var(--space-6);
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: var(--space-4);
     text-align: center;
     color: var(--text-dark);
 }
 
 .plans-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-5);
+    grid-template-columns: repeat(auto-fit, minmax(320px, 400px));
+    gap: var(--space-6);
+    justify-content: center;
 }
 
 @media (max-width: 1200px) {
     .plans-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     }
 }
 
@@ -313,15 +314,16 @@
 .plan-card {
     background: var(--bg-card);
     border: 2px solid var(--border-light);
-    border-radius: var(--radius-lg);
-    padding: var(--space-6);
+    border-radius: 20px;
+    padding: var(--space-8);
     position: relative;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .plan-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 
 .plan-card--current {
@@ -597,12 +599,19 @@
 /* ── Plans comparison note ── */
 .plans-comparison__note {
     text-align: center;
-    font-size: 0.9rem;
+    font-size: 1rem;
+    color: var(--text-dark);
+    margin-bottom: var(--space-8);
+    padding: var(--space-4) var(--space-6);
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    line-height: 1.5;
+}
+
+.plans-comparison__detail {
     color: var(--text-muted);
-    margin-bottom: var(--space-6);
-    padding: var(--space-3) var(--space-4);
-    background: var(--bg-light);
-    border-radius: var(--radius-md);
+    font-size: 0.9rem;
 }
 
 /* ── Plan Card MP button ── */
