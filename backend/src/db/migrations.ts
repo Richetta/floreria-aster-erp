@@ -266,9 +266,16 @@ export async function runSubscriptionMigrations() {
     console.log('? subscription_events OK');
     const r = await sql`SELECT COUNT(*) as count FROM subscription_plans`.execute(db);
     if (parseInt((r.rows[0] as any).count, 10) === 0) {
-      await sql`INSERT INTO subscription_plans (slug,name,name_short,description,price_monthly,price_annually,max_users,max_products,max_orders_per_month,max_categories,features,badge_text,sort_order) VALUES ('semilla','Plan Gratuito','Gratis','Gestion basica',0,0,1,50,30,1,'{}',NULL,0),('florecer','Plan Profesional','Profesional','Control total',45000,450000,5,500,200,10,'{}','MAS POPULAR',1),('crecimiento','Plan Business','Business','Multi sucursal',85000,850000,20,2000,1000,50,'{}','BUSINESS',2),('jardin','Plan Enterprise','Enterprise','Red de florerias',150000,1500000,NULL,NULL,NULL,NULL,'{}','ENTERPRISE',3)`.execute(db);
+      await sql`INSERT INTO subscription_plans (slug,name,name_short,description,price_monthly,price_annually,max_users,max_products,max_orders_per_month,max_categories,features,badge_text,sort_order) VALUES ('semilla','Plan Gratuito','Gratis','Gestion basica',0,0,1,50,30,1,'{}',NULL,0),('florecer','Plan Profesional','Profesional','Control total',45000,450000,5,500,200,10,'{}','MAS POPULAR',1)`.execute(db);
       console.log('? Default plans seeded');
     }
+
+    // Cleanup any extra plans added by mistake in previous versions
+    await sql`DELETE FROM subscription_plans WHERE slug NOT IN ('semilla', 'florecer')`.execute(db);
+    
+    // Ensure the existing 'florecer' plan is updated to the new pricing
+    await sql`UPDATE subscription_plans SET price_monthly = 45000, price_annually = 450000, max_users = 5, max_products = 500, max_orders_per_month = 200, max_categories = 10 WHERE slug = 'florecer'`.execute(db);
+    
     console.log('--- SUBSCRIPTION MIGRATIONS COMPLETED ---');
   } catch (error) {
     console.error('Subscription migrations failed (non-fatal):', error);

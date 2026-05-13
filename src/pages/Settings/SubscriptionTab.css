@@ -544,21 +544,22 @@
 
 /* ── Billing Toggle ── */
 .subscription-billing-toggle {
-    display: flex;
+    display: inline-flex;
     justify-content: center;
     gap: var(--space-2);
-    padding: var(--space-4);
-    background: var(--bg-light);
-    border-radius: var(--radius-md);
+    padding: var(--space-2);
+    background: #f1f5f9;
+    border-radius: 40px;
+    margin: 0 auto;
 }
 
 .billing-btn {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-2) var(--space-5);
-    border: 2px solid transparent;
-    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-6);
+    border: none;
+    border-radius: 30px;
     background: transparent;
     cursor: pointer;
     font-size: 0.95rem;
@@ -570,13 +571,13 @@
 .billing-btn--active {
     background: var(--primary);
     color: white;
-    border-color: var(--primary);
 }
 
 .billing-savings {
     font-size: 0.75rem;
-    background: rgba(255,255,255,0.2);
-    padding: 2px 8px;
+    background: #c084fc;
+    color: white;
+    padding: 2px 10px;
     border-radius: 12px;
     font-weight: 700;
 }
@@ -612,13 +613,13 @@
 }
 
 .plan-card__btn--mp {
-    background: #009ee3;
+    background: var(--primary);
     color: white;
 }
 
 .plan-card__btn--mp:hover {
-    background: #0080c0;
-    box-shadow: 0 4px 12px rgba(0, 158, 227, 0.3);
+    background: var(--primary-dark);
+    box-shadow: 0 4px 12px rgba(79, 122, 90, 0.3);
 }
 
 .plan-card__btn--free {
