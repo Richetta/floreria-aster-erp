@@ -68,8 +68,8 @@ const plans = [
     name: 'Profesional Completo',
     tagline: 'Control total de tu negocio y equipo',
     icon: <Star size={28} />,
-    priceMonthly: 18000,
-    priceAnnually: 180000,
+    priceMonthly: 45000,
+    priceAnnually: 450000,
     badge: '👑 RECOMENDADO',
     highlighted: true,
     limits: [
