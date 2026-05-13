@@ -29,6 +29,7 @@ import { CalendarDesktop } from './pages/Calendar';
 import { ToolsHub } from './pages/Tools';
 import { BarcodePrinter } from './pages/Tools/BarcodePrinter';
 import { useAuth } from './store/useAuth';
+import { SubscriptionSuccess, SubscriptionFailure, SubscriptionPending } from './pages/Subscription/SubscriptionResult';
 
 // ============================================
 // PROTECTED ROUTE COMPONENT
@@ -111,6 +112,11 @@ function App() {
                             </PublicRoute>
                         }
                     />
+
+                    {/* Subscription Result Pages — public so MP can redirect here */}
+                    <Route path="/suscripcion/exito" element={<SubscriptionSuccess />} />
+                    <Route path="/suscripcion/error" element={<SubscriptionFailure />} />
+                    <Route path="/suscripcion/pendiente" element={<SubscriptionPending />} />
 
                     {/* Protected Routes */}
                     <Route

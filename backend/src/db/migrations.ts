@@ -253,3 +253,24 @@ export async function runGoogleCalendarMigrations() {
   }
 }
 
+
+
+export async function runSubscriptionMigrations() {
+  console.log('--- SUBSCRIPTION MIGRATIONS ---');
+  try {
+    await sql`CREATE TABLE IF NOT EXISTS subscription_plans (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), slug VARCHAR(50) UNIQUE NOT NULL, name VARCHAR(255) NOT NULL, name_short VARCHAR(100) NOT NULL, description TEXT, price_monthly DECIMAL(10,2) NOT NULL DEFAULT 0, price_annually DECIMAL(10,2) NOT NULL DEFAULT 0, max_users INTEGER, max_products INTEGER, max_orders_per_month INTEGER, max_categories INTEGER, max_afip_invoices INTEGER, max_branches INTEGER DEFAULT 1, features JSONB NOT NULL DEFAULT '{}', badge_text VARCHAR(100), badge_color VARCHAR(50), sort_order INTEGER DEFAULT 0, is_active BOOLEAN DEFAULT true, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW())`.execute(db);
+    console.log('? subscription_plans OK');
+    await sql`CREATE TABLE IF NOT EXISTS subscriptions (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE, plan_id UUID NOT NULL REFERENCES subscription_plans(id), status VARCHAR(50) NOT NULL DEFAULT 'trial', billing_cycle VARCHAR(20) NOT NULL DEFAULT 'monthly', current_period_start TIMESTAMP WITH TIME ZONE DEFAULT NOW(), current_period_end TIMESTAMP WITH TIME ZONE DEFAULT NOW() + INTERVAL '1 month', trial_ends_at TIMESTAMP WITH TIME ZONE, cancel_at_period_end BOOLEAN DEFAULT false, cancelled_at TIMESTAMP WITH TIME ZONE, cancellation_reason TEXT, locked_price_monthly DECIMAL(10,2), locked_price_annually DECIMAL(10,2), orders_this_month INTEGER DEFAULT 0, last_order_count_reset TIMESTAMP WITH TIME ZONE DEFAULT NOW(), mp_preapproval_id VARCHAR(255), mp_subscription_id VARCHAR(255), last_mp_payment_id VARCHAR(255), created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), UNIQUE(business_id))`.execute(db);
+    console.log('? subscriptions OK');
+    await sql`CREATE TABLE IF NOT EXISTS subscription_events (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), subscription_id UUID NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE, event_type VARCHAR(100) NOT NULL, old_plan_id UUID REFERENCES subscription_plans(id), new_plan_id UUID REFERENCES subscription_plans(id), metadata JSONB DEFAULT '{}', created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW())`.execute(db);
+    console.log('? subscription_events OK');
+    const r = await sql`SELECT COUNT(*) as count FROM subscription_plans`.execute(db);
+    if (parseInt((r.rows[0] as any).count, 10) === 0) {
+      await sql`INSERT INTO subscription_plans (slug,name,name_short,description,price_monthly,price_annually,max_users,max_products,max_orders_per_month,max_categories,features,badge_text,sort_order) VALUES ('semilla','Plan Gratuito','Gratis','Gestion basica',0,0,1,50,30,1,'{}',NULL,0),('florecer','Plan Profesional','Profesional','Control total',18000,180000,5,500,200,10,'{}','MAS POPULAR',1),('crecimiento','Plan Business','Business','Multi sucursal',35000,350000,20,2000,1000,50,'{}','BUSINESS',2),('jardin','Plan Enterprise','Enterprise','Red de florerias',70000,700000,NULL,NULL,NULL,NULL,'{}','ENTERPRISE',3)`.execute(db);
+      console.log('? Default plans seeded');
+    }
+    console.log('--- SUBSCRIPTION MIGRATIONS COMPLETED ---');
+  } catch (error) {
+    console.error('Subscription migrations failed (non-fatal):', error);
+  }
+}

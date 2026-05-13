@@ -29,6 +29,10 @@ export const config = {
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
 
+  // Mercado Pago
+  mpAccessToken: process.env.MP_ACCESS_TOKEN,
+  mpWebhookSecret: process.env.MP_WEBHOOK_SECRET,
+
   // Validation
   validate() {
     if (!this.databaseUrl) {

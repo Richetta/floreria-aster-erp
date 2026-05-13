@@ -34,7 +34,7 @@ function useFadeIn() {
 
 const plans = [
   {
-    slug: 'gratis',
+    slug: 'semilla',
     name: 'Gratis',
     tagline: 'Gestión básica para emprendedores',
     icon: <Leaf size={28} />,
@@ -64,19 +64,19 @@ const plans = [
     ctaVariant: 'outline' as const,
   },
   {
-    slug: 'completo',
+    slug: 'florecer',
     name: 'Profesional Completo',
     tagline: 'Control total de tu negocio y equipo',
     icon: <Star size={28} />,
-    priceMonthly: 45000,
-    priceAnnually: 450000,
+    priceMonthly: 18000,
+    priceAnnually: 180000,
     badge: '👑 RECOMENDADO',
     highlighted: true,
     limits: [
-      { label: 'Usuarios', value: 'Ilimitados' },
-      { label: 'Productos', value: 'Ilimitados' },
-      { label: 'Pedidos', value: 'Ilimitados' },
-      { label: 'Categorías', value: 'Ilimitadas' },
+      { label: 'Usuarios', value: '5' },
+      { label: 'Productos', value: '500' },
+      { label: 'Pedidos', value: '200/mes' },
+      { label: 'Categorías', value: '10' },
     ],
     features: [
       'TODO del plan Gratis',
@@ -85,10 +85,8 @@ const plans = [
       'Gestión de mermas y auditoría',
       'Código de barras y etiquetas',
       'Vista calendario y logística',
-      'OCR de listas de precios',
-      'Gestión de combos y paquetes',
-      'CRM completo con historial',
-      'Soporte prioritario 24/7',
+      'Importación CSV de productos',
+      'Soporte por email prioritario',
     ],
     missing: [],
     cta: 'Probar 15 Días Gratis',
@@ -214,27 +212,27 @@ const PricingCard = ({ plan, isAnnual, onSelect }: PricingCardProps) => {
 const faqs = [
   {
     question: '¿Puedo cambiar de plan cuando quiera?',
-    answer: 'Sí, podés hacer upgrade o downgrade en cualquier momento. El cambio se aplica inmediatamente y se ajusta la facturación.',
+    answer: 'Sí, podés hacer upgrade o downgrade en cualquier momento. El cambio se aplica inmediatamente.',
   },
   {
     question: '¿Qué pasa si supero el límite de mi plan?',
-    answer: 'Te avisamos cuando estés cerca del límite (80%). Si lo alcanzás, podés esperar al próximo mes (en pedidos) o hacer upgrade del plan.',
+    answer: 'Te avisamos cuando estés cerca del límite (80%). Si lo alcanzás, podés esperar al próximo mes o hacer upgrade del plan.',
   },
   {
     question: '¿Hay período de prueba?',
-    answer: 'Sí, todos los planes pagos incluyen 15 días de prueba gratis. No necesitás tarjeta de crédito para empezar.',
+    answer: 'Sí, el plan Profesional incluye 15 días de prueba gratis. Para activarla necesitás vincular una tarjeta vía MercadoPago — no se cobra nada durante los primeros 15 días. Podés cancelar en cualquier momento antes de que venza el período.',
   },
   {
     question: '¿Cómo puedo pagar?',
-    answer: 'Aceptamos tarjetas de crédito/débito, transferencia bancaria y MercadoPago. También podés pagar en efectivo con aviso previo.',
+    answer: 'Procesamos los pagos via MercadoPago. Aceptamos tarjetas de crédito y débito, transferencia bancaria y el saldo de tu cuenta de MercadoPago.',
   },
   {
     question: '¿Puedo cancelar mi suscripción?',
     answer: 'Sí, cuando quieras, sin penalties ni preguntas incómodas. Si cancelás, mantenés el acceso hasta el final del período pagado.',
   },
   {
-    question: '¿Los precios incluyen IVA?',
-    answer: 'Los precios mostrados son sin IVA. Se agrega el 21% de IVA en la facturación.',
+    question: '¿El débito es automático?',
+    answer: 'Sí, el plan se renueva automáticamente cada mes (o año si elegís pago anual). Podés desactivar el débito automático desde Configuración > Suscripción en cualquier momento.',
   },
 ];
 
@@ -272,13 +270,59 @@ export const PricingSection = ({ onPlanSelect }: PricingSectionProps) => {
   const [isAnnual, setIsAnnual] = useState(true);
   const sectionRef = useFadeIn();
 
-  const handlePlanSelect = (slug: string) => {
-    if (onPlanSelect) {
-      onPlanSelect(slug);
-    } else {
-      // Default: navigate to subscription page or show modal
-      window.location.href = `/login?plan=${slug}`;
+  const [_isCheckingOut, setIsCheckingOut] = useState(false);
+
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+  const handlePlanSelect = async (slug: string) => {
+    if (slug === 'semilla' || slug === 'gratis') {
+      // Free plan — go to login/register
+      window.location.href = '/login?plan=gratis';
+      return;
     }
+
+    // Paid plan — check if user is logged in
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      // Not logged in — redirect to login with plan intent
+      window.location.href = `/login?plan=${slug}&billing=${isAnnual ? 'annually' : 'monthly'}`;
+      return;
+    }
+
+    // Logged in — initiate MP checkout
+    setIsCheckingOut(true);
+    try {
+      const res = await fetch(`${API_URL}/subscription/create-checkout`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          plan_slug: slug,
+          billing_cycle: isAnnual ? 'annually' : 'monthly',
+          include_trial: !isAnnual
+        })
+      });
+      const data = await res.json();
+
+      if (data.error === 'payment_not_configured') {
+        // MP not configured yet — redirect to dashboard
+        window.location.href = '/';
+        return;
+      }
+
+      if (data.success && data.data?.init_point) {
+        window.location.href = data.data.init_point;
+      } else {
+        alert('No se pudo iniciar el pago. Intentá de nuevo.');
+      }
+    } catch (e) {
+      alert('Error de conexión. Intentá de nuevo.');
+    } finally {
+      setIsCheckingOut(false);
+    }
+    if (onPlanSelect) onPlanSelect(slug);
   };
 
   return (

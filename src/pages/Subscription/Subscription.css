@@ -1,0 +1,149 @@
+/* ============================================
+   SUBSCRIPTION PAGES — Mi Jardín ERP
+   ============================================ */
+
+.sub-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #0a1628 0%, #1a2f1a 50%, #0a1628 100%);
+}
+
+.sub-page--loading {
+  flex-direction: column;
+  gap: 1.5rem;
+  color: #fff;
+  text-align: center;
+}
+
+.sub-spinner {
+  animation: spin 1s linear infinite;
+  color: #4F7A5A;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.sub-page__card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 3rem;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  color: #fff;
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.4);
+}
+
+.sub-page__icon {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 2rem;
+}
+
+.sub-page__icon--success {
+  background: rgba(79, 122, 90, 0.2);
+  border: 2px solid rgba(79, 122, 90, 0.5);
+  color: #6fcf97;
+}
+
+.sub-page__icon--error {
+  background: rgba(235, 87, 87, 0.2);
+  border: 2px solid rgba(235, 87, 87, 0.5);
+  color: #eb5757;
+}
+
+.sub-page__icon--pending {
+  background: rgba(242, 201, 76, 0.2);
+  border: 2px solid rgba(242, 201, 76, 0.5);
+  color: #f2c94c;
+}
+
+.sub-page__card h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.sub-page__card p {
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.sub-page__details {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sub-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.sub-page__note {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+.sub-page__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.sub-page__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.sub-page__btn--primary {
+  background: linear-gradient(135deg, #4F7A5A, #3d6147);
+  color: #fff;
+  margin-top: 1.5rem;
+}
+
+.sub-page__btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(79, 122, 90, 0.4);
+}
+
+.sub-page__btn--secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sub-page__btn--secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+}

@@ -458,6 +458,186 @@
     cursor: not-allowed;
 }
 
+/* ── Alerts ── */
+.subscription-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+}
+
+.subscription-alert--error {
+    background: var(--danger-light, #fef2f2);
+    border: 1px solid var(--danger, #ef4444);
+    color: var(--danger, #ef4444);
+}
+
+.subscription-alert--warning {
+    background: #fffbeb;
+    border: 1px solid var(--warning, #f59e0b);
+    color: #92400e;
+}
+
+.subscription-alert--info {
+    background: #eff6ff;
+    border: 1px solid #3b82f6;
+    color: #1e40af;
+}
+
+.subscription-alert svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.subscription-alert strong {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.subscription-alert p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.sub-link {
+    background: none;
+    border: none;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+    color: inherit;
+    padding: 0;
+}
+
+/* ── Auto-debit Status ── */
+.subscription-debit {
+    padding: var(--space-4) var(--space-5);
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+}
+
+.debit-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: 0.9rem;
+}
+
+.debit-icon--on { color: var(--success, #22c55e); }
+.debit-icon--off { color: var(--text-muted); }
+
+.debit-next {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.debit-email {
+    margin-top: var(--space-2);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* ── Billing Toggle ── */
+.subscription-billing-toggle {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+}
+
+.billing-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-5);
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: all 0.2s;
+}
+
+.billing-btn--active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.billing-savings {
+    font-size: 0.75rem;
+    background: rgba(255,255,255,0.2);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 700;
+}
+
+/* ── Badge variants ── */
+.badge--error {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+.badge--free {
+    background: var(--bg-light);
+    color: var(--text-muted);
+    border: 1px solid var(--border-light);
+}
+
+/* ── Plans comparison note ── */
+.plans-comparison__note {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-6);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+}
+
+/* ── Plan Card MP button ── */
+.plan-card__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.plan-card__btn--mp {
+    background: #009ee3;
+    color: white;
+}
+
+.plan-card__btn--mp:hover {
+    background: #0080c0;
+    box-shadow: 0 4px 12px rgba(0, 158, 227, 0.3);
+}
+
+.plan-card__btn--free {
+    background: var(--bg-light);
+    color: var(--text-dark);
+    border: 2px solid var(--border-light);
+}
+
+.plan-card__btn--free:hover {
+    background: var(--border-light);
+}
+
+.plan-card__mp-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin: 0;
+}
+
 /* ── Responsive ── */
 @media (max-width: 900px) {
     .subscription-header {
@@ -482,5 +662,10 @@
 
     .subscription-billing-info {
         margin-left: 0;
+    }
+
+    .subscription-billing-toggle {
+        flex-direction: column;
+        align-items: center;
     }
 }

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import React from 'react';
 import {
     X, ArrowUpRight, CreditCard, Calendar, Shield,
-    AlertTriangle, Loader2, Star, Zap, Crown, Leaf
+    AlertTriangle, Loader2, Star, Zap, Crown, Leaf,
+    CheckCircle, RefreshCw, ExternalLink, Clock
 } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
@@ -11,8 +12,6 @@ import './SubscriptionTab.css';
 // ============================================
 // TYPES
 // ============================================
-
-
 
 interface Plan {
     slug: string;
@@ -31,7 +30,7 @@ interface Plan {
 
 interface SubscriptionData {
     id: string;
-    status: 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired';
+    status: 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired' | 'free';
     billing_cycle: 'monthly' | 'annually';
     current_period_start: string;
     current_period_end: string;
@@ -55,6 +54,13 @@ interface SubscriptionData {
     current_products: number;
     current_categories: number;
     current_orders: number;
+    mp_preapproval_id?: string;
+}
+
+interface MpStatus {
+    mp_status: string;
+    next_payment_date: string | null;
+    payer_email: string | null;
 }
 
 // ============================================
@@ -70,6 +76,11 @@ const planIcons: Record<string, any> = {
     jardin: Crown
 };
 
+const authHeader = () => ({
+    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+    'Content-Type': 'application/json'
+});
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -77,77 +88,71 @@ const planIcons: Record<string, any> = {
 export const SubscriptionTab = () => {
     const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
     const [plans, setPlans] = useState<Plan[]>([]);
+    const [mpStatus, setMpStatus] = useState<MpStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [upgrading, setUpgrading] = useState(false);
     const [showPlans, setShowPlans] = useState(false);
+    const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'annually'>('monthly');
     const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
 
-    // Load subscription and plans
-    useEffect(() => {
-        Promise.all([
-            fetch(`${API_URL}/subscription/current`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-            }),
-            fetch(`${API_URL}/subscription/plans`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-            })
-        ]).then(async ([subRes, plansRes]) => {
-            const subData = await subRes.json();
-            const plansData = await plansRes.json();
-
+    const loadData = async () => {
+        try {
+            const [subRes, plansRes, mpRes] = await Promise.all([
+                fetch(`${API_URL}/subscription/current`, { headers: authHeader() }),
+                fetch(`${API_URL}/subscription/plans`, { headers: authHeader() }),
+                fetch(`${API_URL}/subscription/mp-status`, { headers: authHeader() }),
+            ]);
+            const [subData, plansData, mpData] = await Promise.all([
+                subRes.json(), plansRes.json(), mpRes.json()
+            ]);
             if (subData.success) setSubscription(subData.data);
             if (plansData.success) setPlans(plansData.data);
-            setLoading(false);
-        }).catch(err => {
+            if (mpData.success && mpData.data) setMpStatus(mpData.data);
+        } catch (err) {
             console.error('Error loading subscription:', err);
+        } finally {
             setLoading(false);
-        });
-    }, []);
+        }
+    };
 
-    // Handle upgrade
-    const handleUpgrade = async (planSlug: string, billingCycle: 'monthly' | 'annually' = 'monthly') => {
-        const confirmed = await showConfirm({
-            title: '¿Cambiar de plan?',
-            message: `¿Estás seguro que querés cambiar al plan ${planSlug}? Se aplicará inmediatamente.`,
-            confirmText: 'Confirmar cambio',
-            variant: 'warning'
-        });
+    useEffect(() => { loadData(); }, []);
 
-        if (!confirmed) return;
-
+    // Handle checkout via MercadoPago
+    const handleCheckout = async (planSlug: string, includeTrial = true) => {
         setUpgrading(true);
         try {
-            const response = await fetch(`${API_URL}/subscription/upgrade`, {
+            const response = await fetch(`${API_URL}/subscription/create-checkout`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ plan_slug: planSlug, billing_cycle: billingCycle }),
+                headers: authHeader(),
+                body: JSON.stringify({
+                    plan_slug: planSlug,
+                    billing_cycle: selectedBilling,
+                    include_trial: includeTrial
+                }),
             });
-
             const data = await response.json();
 
-            if (data.success) {
+            if (data.error === 'payment_not_configured') {
                 showAlert({
-                    title: '¡Plan actualizado!',
-                    message: `Ahora estás en el plan ${data.data.plan.name_short}. Disfrutá las nuevas funciones.`,
-                    variant: 'success'
+                    title: 'Sistema de pagos en configuración',
+                    message: 'El sistema de pagos está siendo configurado. Por ahora podés activar el plan directamente para probarlo.',
+                    variant: 'info'
                 });
-                setShowPlans(false);
-                // Reload subscription
-                const subRes = await fetch(`${API_URL}/subscription/current`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-                });
-                const subData = await subRes.json();
-                if (subData.success) setSubscription(subData.data);
-            } else {
-                throw new Error(data.error || 'Error al actualizar');
+                // Fallback: direct upgrade for testing
+                await handleDirectUpgrade(planSlug);
+                return;
             }
+
+            if (!data.success || !data.data?.init_point) {
+                throw new Error(data.message || 'No se pudo crear el enlace de pago');
+            }
+
+            // Redirect to MercadoPago
+            window.location.href = data.data.init_point;
         } catch (error: any) {
             showAlert({
-                title: 'Error',
-                message: error.message || 'No se pudo actualizar el plan',
+                title: 'Error al procesar el pago',
+                message: error.message || 'No se pudo iniciar el proceso de pago',
                 variant: 'error'
             });
         } finally {
@@ -155,61 +160,98 @@ export const SubscriptionTab = () => {
         }
     };
 
-    // Handle cancel
+    // Activate free plan
+    const handleActivateFree = async () => {
+        setUpgrading(true);
+        try {
+            const response = await fetch(`${API_URL}/subscription/create-free`, {
+                method: 'POST',
+                headers: authHeader(),
+            });
+            const data = await response.json();
+            if (data.success) {
+                showAlert({ title: '¡Plan activado!', message: 'Ya estás usando el Plan Gratuito.', variant: 'success' });
+                await loadData();
+            }
+        } catch (error: any) {
+            showAlert({ title: 'Error', message: 'No se pudo activar el plan', variant: 'error' });
+        } finally {
+            setUpgrading(false);
+        }
+    };
+
+    // Direct upgrade (fallback / admin)
+    const handleDirectUpgrade = async (planSlug: string) => {
+        const response = await fetch(`${API_URL}/subscription/upgrade`, {
+            method: 'POST',
+            headers: authHeader(),
+            body: JSON.stringify({ plan_slug: planSlug, billing_cycle: selectedBilling }),
+        });
+        const data = await response.json();
+        if (data.success) {
+            showAlert({ title: '¡Plan activado!', message: `Ahora estás en el plan ${data.data.plan.name_short}.`, variant: 'success' });
+            setShowPlans(false);
+            await loadData();
+        } else {
+            throw new Error(data.error || 'Error al actualizar');
+        }
+    };
+
+    // Cancel subscription
     const handleCancel = async () => {
         const confirmed = await showConfirm({
             title: '¿Cancelar suscripción?',
-            message: 'Perderás acceso al final del período pagado. ¿Estás seguro?',
-            confirmText: 'Sí, cancelar',
+            message: 'Se cancelará el débito automático. Mantenés el acceso hasta el final del período pagado.',
+            confirmText: 'Sí, cancelar débito',
             variant: 'danger'
         });
-
         if (!confirmed) return;
 
         try {
             const response = await fetch(`${API_URL}/subscription/cancel`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ reason: 'Desde settings' }),
+                headers: authHeader(),
+                body: JSON.stringify({ reason: 'Cancelado desde configuración' }),
             });
-
             const data = await response.json();
-
             if (data.success) {
                 showAlert({
-                    title: 'Suscripción cancelada',
+                    title: 'Débito cancelado',
                     message: `Mantenés acceso hasta ${new Date(data.data.access_until).toLocaleDateString('es-AR')}`,
                     variant: 'info'
                 });
-                const subRes = await fetch(`${API_URL}/subscription/current`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-                });
-                const subData = await subRes.json();
-                if (subData.success) setSubscription(subData.data);
+                await loadData();
             }
         } catch (error: any) {
-            showAlert({
-                title: 'Error',
-                message: error.message || 'No se pudo cancelar',
-                variant: 'error'
-            });
+            showAlert({ title: 'Error', message: 'No se pudo cancelar', variant: 'error' });
         }
     };
 
-    // Format currency
-    const formatPrice = (price: number) => {
-        return new Intl.NumberFormat('es-AR', {
-            style: 'currency',
-            currency: 'ARS',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(price);
+    // Reactivate subscription
+    const handleReactivate = async () => {
+        try {
+            const response = await fetch(`${API_URL}/subscription/reactivate`, {
+                method: 'POST',
+                headers: authHeader(),
+            });
+            const data = await response.json();
+            if (data.success) {
+                showAlert({ title: 'Suscripción reactivada', message: 'El débito automático fue reactivado.', variant: 'success' });
+                await loadData();
+            }
+        } catch (error: any) {
+            showAlert({ title: 'Error', message: 'No se pudo reactivar', variant: 'error' });
+        }
     };
 
+    const formatPrice = (price: number) =>
+        new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(price);
 
+    const getDaysLeft = (date: string | null) => {
+        if (!date) return null;
+        const diff = new Date(date).getTime() - Date.now();
+        return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+    };
 
     if (loading) {
         return (
@@ -230,33 +272,85 @@ export const SubscriptionTab = () => {
         );
     }
 
+    const isFree = subscription.status === 'free' || subscription.plan_slug === 'semilla';
     const isTrial = subscription.status === 'trial';
+    const isPastDue = subscription.status === 'past_due';
     const isCancelled = subscription.cancel_at_period_end;
-
+    const trialDaysLeft = isTrial ? getDaysLeft(subscription.trial_ends_at) : null;
+    const hasAutoDebit = !!subscription.mp_preapproval_id;
 
     return (
         <div className="subscription-tab">
+
+            {/* Past Due Warning */}
+            {isPastDue && (
+                <div className="subscription-alert subscription-alert--error">
+                    <AlertTriangle size={20} />
+                    <div>
+                        <strong>Pago rechazado</strong>
+                        <p>Tu último pago no pudo procesarse. Por favor actualizá tu método de pago en MercadoPago para continuar.</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Trial Banner */}
+            {isTrial && trialDaysLeft !== null && (
+                <div className={`subscription-alert ${trialDaysLeft <= 3 ? 'subscription-alert--warning' : 'subscription-alert--info'}`}>
+                    <Clock size={20} />
+                    <div>
+                        <strong>Período de prueba activo</strong>
+                        <p>
+                            {trialDaysLeft > 0
+                                ? `Te quedan ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''} de prueba gratis. Al vencer, se realizará el primer cobro automáticamente.`
+                                : 'Tu período de prueba venció. El primer cobro se procesará próximamente.'
+                            }
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Cancelled Warning */}
+            {isCancelled && (
+                <div className="subscription-alert subscription-alert--warning">
+                    <AlertTriangle size={20} />
+                    <div>
+                        <strong>Débito automático cancelado</strong>
+                        <p>
+                            Mantenés acceso hasta el {new Date(subscription.current_period_end).toLocaleDateString('es-AR')}.
+                            {' '}<button className="sub-link" onClick={handleReactivate}>Reactivar débito automático</button>
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Current Plan Header */}
             <div className="subscription-header">
                 <div className="subscription-header__icon">
-                    {planIcons[subscription.plan_slug] ? React.createElement(planIcons[subscription.plan_slug], { size: 40 }) : <CreditCard size={40} />}
+                    {planIcons[subscription.plan_slug]
+                        ? React.createElement(planIcons[subscription.plan_slug], { size: 40 })
+                        : <CreditCard size={40} />}
                 </div>
                 <div className="subscription-header__info">
                     <div className="subscription-header__badges">
-                        <h3>{subscription.plan_name}</h3>
+                        <h3>{subscription.plan_name || subscription.plan_full_name}</h3>
                         {isTrial && <span className="badge badge--trial">Período de Prueba</span>}
                         {isCancelled && <span className="badge badge--cancelled">Cancelada</span>}
-                        {!isTrial && !isCancelled && <span className="badge badge--active">Activa</span>}
+                        {isPastDue && <span className="badge badge--error">Pago Fallido</span>}
+                        {!isTrial && !isCancelled && !isPastDue && subscription.status === 'active' && (
+                            <span className="badge badge--active">Activa</span>
+                        )}
+                        {isFree && <span className="badge badge--free">Gratuito</span>}
                     </div>
                     <p className="subscription-header__desc">{subscription.plan_description}</p>
                 </div>
                 <div className="subscription-header__price">
                     <div className="price-amount">
-                        {subscription.locked_price_monthly
-                            ? formatPrice(subscription.locked_price_monthly)
-                            : formatPrice(subscription.price_monthly)
-                        }
-                        <span className="price-period">/mes</span>
+                        {subscription.plan_slug === 'semilla' ? 'GRATIS' : (
+                            <>
+                                {formatPrice(subscription.locked_price_monthly || subscription.price_monthly)}
+                                <span className="price-period">/mes</span>
+                            </>
+                        )}
                     </div>
                     {subscription.locked_price_monthly && (
                         <div className="price-locked">
@@ -267,48 +361,79 @@ export const SubscriptionTab = () => {
                 </div>
             </div>
 
+            {/* Auto-debit status */}
+            {!isFree && (
+                <div className="subscription-debit">
+                    <div className="debit-status">
+                        {hasAutoDebit ? (
+                            <>
+                                <CheckCircle size={16} className="debit-icon debit-icon--on" />
+                                <span>Débito automático <strong>activado</strong></span>
+                                {mpStatus?.next_payment_date && (
+                                    <span className="debit-next">
+                                        · Próximo cobro: {new Date(mpStatus.next_payment_date).toLocaleDateString('es-AR')}
+                                    </span>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <CreditCard size={16} className="debit-icon debit-icon--off" />
+                                <span>Sin débito automático configurado</span>
+                            </>
+                        )}
+                    </div>
+                    {mpStatus?.payer_email && (
+                        <div className="debit-email">Tarjeta vinculada a: {mpStatus.payer_email}</div>
+                    )}
+                </div>
+            )}
+
             {/* Usage Section */}
             <div className="subscription-usage">
                 <h4>Uso del Plan</h4>
                 <div className="usage-grid">
-                    <UsageItem
-                        label="Usuarios"
-                        current={subscription.current_users}
-                        max={subscription.max_users}
-                        icon="👤"
-                    />
-                    <UsageItem
-                        label="Productos"
-                        current={subscription.current_products}
-                        max={subscription.max_products}
-                        icon="📦"
-                    />
-                    <UsageItem
-                        label="Pedidos este mes"
-                        current={subscription.current_orders}
-                        max={subscription.max_orders_per_month}
-                        icon="🛒"
-                    />
-                    <UsageItem
-                        label="Categorías"
-                        current={subscription.current_categories}
-                        max={subscription.max_categories}
-                        icon="🏷️"
-                    />
+                    <UsageItem label="Usuarios" current={subscription.current_users} max={subscription.max_users} icon="👤" />
+                    <UsageItem label="Productos" current={subscription.current_products} max={subscription.max_products} icon="📦" />
+                    <UsageItem label="Pedidos este mes" current={subscription.current_orders} max={subscription.max_orders_per_month} icon="🛒" />
+                    <UsageItem label="Categorías" current={subscription.current_categories} max={subscription.max_categories} icon="🏷️" />
                 </div>
             </div>
 
             {/* Period Info */}
-            <div className="subscription-period">
-                <Calendar size={18} />
-                <div>
-                    <strong>Período actual:</strong>
-                    <span> {new Date(subscription.current_period_start).toLocaleDateString('es-AR')} - {new Date(subscription.current_period_end).toLocaleDateString('es-AR')}</span>
+            {!isFree && (
+                <div className="subscription-period">
+                    <Calendar size={18} />
+                    <div>
+                        <strong>Período actual: </strong>
+                        <span>
+                            {new Date(subscription.current_period_start).toLocaleDateString('es-AR')} –{' '}
+                            {new Date(subscription.current_period_end).toLocaleDateString('es-AR')}
+                        </span>
+                    </div>
+                    <div className="subscription-billing-info">
+                        Facturación: {subscription.billing_cycle === 'monthly' ? 'Mensual' : 'Anual'}
+                    </div>
                 </div>
-                <div className="subscription-billing-info">
-                    Facturación: {subscription.billing_cycle === 'monthly' ? 'Mensual' : 'Anual'}
+            )}
+
+            {/* Billing Cycle Toggle for plan selection */}
+            {showPlans && (
+                <div className="subscription-billing-toggle">
+                    <button
+                        className={`billing-btn ${selectedBilling === 'monthly' ? 'billing-btn--active' : ''}`}
+                        onClick={() => setSelectedBilling('monthly')}
+                    >
+                        Mensual
+                    </button>
+                    <button
+                        className={`billing-btn ${selectedBilling === 'annually' ? 'billing-btn--active' : ''}`}
+                        onClick={() => setSelectedBilling('annually')}
+                    >
+                        Anual
+                        <span className="billing-savings">Ahorrás 2 meses</span>
+                    </button>
                 </div>
-            </div>
+            )}
 
             {/* Actions */}
             <div className="subscription-actions">
@@ -320,23 +445,23 @@ export const SubscriptionTab = () => {
                             disabled={upgrading}
                         >
                             <ArrowUpRight size={18} />
-                            {subscription.plan_slug === 'semilla' ? 'Elegir un Plan' : 'Cambiar de Plan'}
+                            {isFree ? 'Ver Planes con Prueba Gratis' : 'Cambiar de Plan'}
                         </button>
-                        {!isTrial && !isCancelled && subscription.plan_slug !== 'semilla' && (
-                            <button
-                                className="btn btn-danger btn-lg"
-                                onClick={handleCancel}
-                            >
+                        {!isFree && !isCancelled && !isTrial && (
+                            <button className="btn btn-danger btn-lg" onClick={handleCancel}>
                                 <X size={18} />
-                                Cancelar Suscripción
+                                Cancelar Débito Automático
+                            </button>
+                        )}
+                        {isCancelled && (
+                            <button className="btn btn-secondary btn-lg" onClick={handleReactivate}>
+                                <RefreshCw size={18} />
+                                Reactivar Débito Automático
                             </button>
                         )}
                     </>
                 ) : (
-                    <button
-                        className="btn btn-secondary btn-lg"
-                        onClick={() => setShowPlans(false)}
-                    >
+                    <button className="btn btn-secondary btn-lg" onClick={() => setShowPlans(false)}>
                         ← Volver a mi plan
                     </button>
                 )}
@@ -345,18 +470,26 @@ export const SubscriptionTab = () => {
             {/* Plans Comparison */}
             {showPlans && plans.length > 0 && (
                 <div className="plans-comparison">
-                    <h4>Comparativa de Planes</h4>
+                    <h4>Seleccioná tu nuevo plan</h4>
+                    <p className="plans-comparison__note">
+                        {selectedBilling === 'monthly'
+                            ? '🆓 Los primeros 15 días son gratis — vinculás tarjeta pero no se cobra hasta que venza el período de prueba.'
+                            : '📅 Pago anual con 2 meses de descuento. Se cobra inmediatamente por el año completo.'
+                        }
+                    </p>
                     <div className="plans-grid">
                         {plans.map(plan => {
                             const isCurrent = plan.slug === subscription.plan_slug;
                             const Icon = planIcons[plan.slug] || CreditCard;
+                            const monthlyEquiv = selectedBilling === 'annually' ? Math.round(plan.price_annually / 12) : plan.price_monthly;
 
                             return (
-                                <div className={`plan-card ${isCurrent ? 'plan-card--current' : ''} ${plan.badge_text ? 'plan-card--highlighted' : ''}`} key={plan.slug}>
-                                    {plan.badge_text && (
-                                        <div className="plan-card__badge">{plan.badge_text}</div>
-                                    )}
-                                    {isCurrent && <div className="plan-card__current-badge">Tu Plan</div>}
+                                <div
+                                    className={`plan-card ${isCurrent ? 'plan-card--current' : ''} ${plan.badge_text ? 'plan-card--highlighted' : ''}`}
+                                    key={plan.slug}
+                                >
+                                    {plan.badge_text && <div className="plan-card__badge">{plan.badge_text}</div>}
+                                    {isCurrent && <div className="plan-card__current-badge">Tu Plan Actual</div>}
 
                                     <div className="plan-card__header">
                                         <Icon size={28} />
@@ -365,39 +498,48 @@ export const SubscriptionTab = () => {
 
                                     <div className="plan-card__price">
                                         <div className="price">
-                                            {plan.price_monthly === 0 ? 'GRATIS' : formatPrice(plan.price_monthly)}
+                                            {plan.price_monthly === 0 ? 'GRATIS' : formatPrice(monthlyEquiv)}
                                             {plan.price_monthly > 0 && <span className="period">/mes</span>}
                                         </div>
-                                        {plan.price_annually > 0 && (
-                                            <div className="annual">
-                                                {formatPrice(plan.price_annually)}/año
-                                            </div>
+                                        {plan.price_annually > 0 && selectedBilling === 'annually' && (
+                                            <div className="annual">{formatPrice(plan.price_annually)}/año</div>
                                         )}
                                     </div>
 
                                     <div className="plan-card__limits">
-                                        <div className="limit">
-                                            <span className="limit-value">{plan.max_users || '∞'}</span>
-                                            <span className="limit-label">Usuarios</span>
-                                        </div>
-                                        <div className="limit">
-                                            <span className="limit-value">{plan.max_products || '∞'}</span>
-                                            <span className="limit-label">Productos</span>
-                                        </div>
-                                        <div className="limit">
-                                            <span className="limit-value">{plan.max_orders_per_month || '∞'}</span>
-                                            <span className="limit-label">Pedidos/mes</span>
-                                        </div>
+                                        <div className="limit"><span className="limit-value">{plan.max_users || '∞'}</span><span className="limit-label">Usuarios</span></div>
+                                        <div className="limit"><span className="limit-value">{plan.max_products || '∞'}</span><span className="limit-label">Productos</span></div>
+                                        <div className="limit"><span className="limit-value">{plan.max_orders_per_month || '∞'}</span><span className="limit-label">Pedidos/mes</span></div>
                                     </div>
 
                                     {!isCurrent && (
-                                        <button
-                                            className="plan-card__btn"
-                                            onClick={() => handleUpgrade(plan.slug, 'monthly')}
-                                            disabled={upgrading}
-                                        >
-                                            {upgrading ? <Loader2 size={16} className="spinner" /> : 'Elegir este Plan'}
-                                        </button>
+                                        <div className="plan-card__actions">
+                                            {plan.price_monthly === 0 ? (
+                                                <button
+                                                    className="plan-card__btn plan-card__btn--free"
+                                                    onClick={handleActivateFree}
+                                                    disabled={upgrading}
+                                                >
+                                                    {upgrading ? <Loader2 size={16} className="spinner" /> : 'Activar Plan Gratuito'}
+                                                </button>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        className="plan-card__btn plan-card__btn--mp"
+                                                        onClick={() => handleCheckout(plan.slug, selectedBilling === 'monthly')}
+                                                        disabled={upgrading}
+                                                    >
+                                                        {upgrading ? <Loader2 size={16} className="spinner" /> : (
+                                                            <>
+                                                                <ExternalLink size={14} />
+                                                                {selectedBilling === 'monthly' ? 'Probar 15 días gratis' : 'Pagar con MercadoPago'}
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    <p className="plan-card__mp-note">Pagás con MercadoPago (tarjeta, transferencia, wallet)</p>
+                                                </>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             );
@@ -416,12 +558,7 @@ export const SubscriptionTab = () => {
 // USAGE ITEM COMPONENT
 // ============================================
 
-interface UsageItemProps {
-    label: string;
-    current: number;
-    max: number | null;
-    icon: string;
-}
+interface UsageItemProps { label: string; current: number; max: number | null; icon: string; }
 
 const UsageItem = ({ label, current, max, icon }: UsageItemProps) => {
     const percentage = max ? Math.min((current / max) * 100, 100) : 0;
@@ -434,9 +571,7 @@ const UsageItem = ({ label, current, max, icon }: UsageItemProps) => {
             <div className="usage-item__header">
                 <span className="usage-item__icon">{icon}</span>
                 <span className="usage-item__label">{label}</span>
-                <span className="usage-item__value">
-                    {isUnlimited ? '∞' : `${current} / ${max}`}
-                </span>
+                <span className="usage-item__value">{isUnlimited ? '∞' : `${current} / ${max}`}</span>
             </div>
             {!isUnlimited && (
                 <>
@@ -446,7 +581,7 @@ const UsageItem = ({ label, current, max, icon }: UsageItemProps) => {
                             style={{ width: `${percentage}%` }}
                         />
                     </div>
-                    {isWarning && <div className="usage-item__warning">80% usado</div>}
+                    {isWarning && <div className="usage-item__warning">⚠️ {Math.round(percentage)}% usado</div>}
                     {isOver && <div className="usage-item__error">Límite alcanzado</div>}
                 </>
             )}

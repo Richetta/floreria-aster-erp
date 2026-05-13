@@ -224,9 +224,10 @@ const start = async () => {
     console.log('--- STARTING SERVER ---');
 
     // Run emergency migrations
-    const { runEmergencyMigrations, runGoogleCalendarMigrations } = await import('./db/migrations.js');
+    const { runEmergencyMigrations, runGoogleCalendarMigrations, runSubscriptionMigrations } = await import('./db/migrations.js');
     await runEmergencyMigrations();
     await runGoogleCalendarMigrations();
+    await runSubscriptionMigrations();
 
     console.log(`Starting Fastify on port ${config.port}...`);
     await fastify.listen({ port: config.port, host: '0.0.0.0' });
