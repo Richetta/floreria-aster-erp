@@ -6,7 +6,7 @@ import { config } from '../config/index.js';
 
 const MP_ACCESS_TOKEN = config.mpAccessToken || '';
 const FRONTEND_URL = config.frontendUrl || 'https://mijardin-erp.vercel.app';
-const BACKEND_URL = 'https://mijardin-erp-backend.onrender.com';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://mijardin-erp-backend.onrender.com';
 
 // Helper: raw SQL query via pg pool
 async function rawQuery(text: string, params: any[] = []) {
@@ -195,9 +195,8 @@ export default async function subscriptionRoutes(server: FastifyInstance) {
 
       if (include_trial && billing_cycle === 'monthly') {
         mpBody.auto_recurring.free_trial = {
-          frequency: 1,
-          frequency_type: 'days',
-          first_invoice_offset: 15
+          frequency: 15,
+          frequency_type: 'days'
         };
       }
 
