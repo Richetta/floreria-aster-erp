@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Leaf, Star, CheckCircle2, ChevronRight } from 'lucide-react';
+import { CheckCircle2, ChevronRight } from 'lucide-react';
 import { PricingSection } from '../Login/PricingSection';
 import { useSubscription } from '../../store/useSubscription';
 import './PlanOnboarding.css';
 
 export const PlanOnboarding = () => {
   const navigate = useNavigate();
-  const { status, planSlug } = useSubscription();
+  const { status } = useSubscription();
   const [loading, setLoading] = useState(false);
 
   // If user already has a paid plan or active trial, don't show this
