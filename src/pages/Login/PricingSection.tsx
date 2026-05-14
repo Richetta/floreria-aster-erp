@@ -275,21 +275,22 @@ export const PricingSection = ({ onPlanSelect }: PricingSectionProps) => {
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
   const handlePlanSelect = async (slug: string) => {
-    if (slug === 'semilla' || slug === 'gratis') {
-      // Free plan — go to login/register
-      window.location.href = '/login?plan=gratis';
-      return;
-    }
-
-    // Paid plan — check if user is logged in
     const token = localStorage.getItem('auth_token');
+    const billing = isAnnual ? 'annually' : 'monthly';
+
     if (!token) {
-      // Not logged in — redirect to login with plan intent
-      window.location.href = `/login?plan=${slug}&billing=${isAnnual ? 'annually' : 'monthly'}`;
+      // 1. Not logged in — Go to "More Info" / Onboarding page
+      window.location.href = `/bienvenido?plan=${slug}&billing=${billing}`;
       return;
     }
 
-    // Logged in — initiate MP checkout
+    // 2. Logged in — Check if it's the free plan
+    if (slug === 'semilla' || slug === 'gratis') {
+      window.location.href = '/';
+      return;
+    }
+
+    // 3. Logged in — Initiate MP checkout
     setIsCheckingOut(true);
     try {
       const res = await fetch(`${API_URL}/subscription/create-checkout`, {
@@ -300,8 +301,8 @@ export const PricingSection = ({ onPlanSelect }: PricingSectionProps) => {
         },
         body: JSON.stringify({
           plan_slug: slug,
-          billing_cycle: isAnnual ? 'annually' : 'monthly',
-          include_trial: !isAnnual
+          billing_cycle: billing,
+          include_trial: !isAnnual // Trial only for monthly to prevent abuse
         })
       });
       const data = await res.json();
@@ -322,6 +323,7 @@ export const PricingSection = ({ onPlanSelect }: PricingSectionProps) => {
     } finally {
       setIsCheckingOut(false);
     }
+    
     if (onPlanSelect) onPlanSelect(slug);
   };
 

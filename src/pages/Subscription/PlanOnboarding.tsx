@@ -2,20 +2,26 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, ChevronRight } from 'lucide-react';
 import { PricingSection } from '../Login/PricingSection';
+import { useAuth } from '../../store/useAuth';
 import { useSubscription } from '../../store/useSubscription';
 import './PlanOnboarding.css';
 
 export const PlanOnboarding = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { status } = useSubscription();
   const [loading, setLoading] = useState(false);
 
   // If user already has a paid plan or active trial, don't show this
   useEffect(() => {
-    if (status === 'active' || status === 'trial') {
+    if (isAuthenticated && (status === 'active' || status === 'trial')) {
       navigate('/', { replace: true });
     }
-  }, [status, navigate]);
+  }, [status, isAuthenticated, navigate]);
+
+  const handleLogin = () => {
+    navigate('/login');
+  };
 
   const handleContinueFree = () => {
     setLoading(true);
@@ -40,9 +46,13 @@ export const PlanOnboarding = () => {
           <div className="onboarding-logo">
             <img src="/logo-app.png" alt="Mi Jardín" />
           </div>
-          <h1 className="onboarding-title">¡Te damos la bienvenida a Mi Jardín! 🌿</h1>
+          <h1 className="onboarding-title">
+            {isAuthenticated ? '¡Te damos la bienvenida a Mi Jardín! 🌿' : 'Llevá tu florería al siguiente nivel 🚀'}
+          </h1>
           <p className="onboarding-subtitle">
-            Elegí cómo querés empezar a gestionar tu florería hoy mismo.
+            {isAuthenticated 
+              ? 'Elegí cómo querés empezar a gestionar tu negocio hoy mismo.' 
+              : 'Analizá nuestros planes y elegí el que mejor se adapte a tu crecimiento.'}
           </p>
         </div>
 
@@ -69,20 +79,32 @@ export const PlanOnboarding = () => {
 
         {/* Footer / Skip */}
         <div className="onboarding-footer">
-          <button 
-            className="onboarding-btn-skip" 
-            onClick={handleContinueFree}
-            disabled={loading}
-          >
-            {loading ? 'Cargando...' : (
-              <>
-                Continuar con el Plan Gratuito
-                <ChevronRight size={18} />
-              </>
-            )}
-          </button>
+          {isAuthenticated ? (
+            <button 
+              className="onboarding-btn-skip" 
+              onClick={handleContinueFree}
+              disabled={loading}
+            >
+              {loading ? 'Cargando...' : (
+                <>
+                  Continuar con el Plan Gratuito
+                  <ChevronRight size={18} />
+                </>
+              )}
+            </button>
+          ) : (
+            <button 
+              className="onboarding-btn-login" 
+              onClick={handleLogin}
+            >
+              Iniciar sesión para activar un plan
+              <ChevronRight size={18} />
+            </button>
+          )}
           <p className="onboarding-footer-note">
-            Podés cambiar tu plan en cualquier momento desde la configuración.
+            {isAuthenticated 
+              ? 'Podés cambiar tu plan en cualquier momento desde la configuración.'
+              : '¿Ya tenés una cuenta? Iniciá sesión para continuar.'}
           </p>
         </div>
       </div>

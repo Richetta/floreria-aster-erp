@@ -120,14 +120,7 @@ function App() {
                     <Route path="/suscripcion/exito" element={<SubscriptionSuccess />} />
                     <Route path="/suscripcion/error" element={<SubscriptionFailure />} />
                     <Route path="/suscripcion/pendiente" element={<SubscriptionPending />} />
-                    <Route 
-                        path="/bienvenido" 
-                        element={
-                            <ProtectedRoute>
-                                <PlanOnboarding />
-                            </ProtectedRoute>
-                        } 
-                    />
+                    <Route path="/bienvenido" element={<PlanOnboarding />} />
 
                     {/* Protected Routes */}
                     <Route

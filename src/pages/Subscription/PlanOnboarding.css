@@ -128,25 +128,43 @@
   animation: fadeInUp 0.8s ease-out 0.6s both;
 }
 
-.onboarding-btn-skip {
-  background: transparent;
-  border: none;
-  color: #5e9b7e;
-  font-weight: 600;
-  font-size: 1.1rem;
+.onboarding-btn-skip,
+.onboarding-btn-login {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  padding: 0.8rem 1.5rem;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   cursor: pointer;
-  padding: 12px 24px;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  margin-bottom: 16px;
+  transition: all 0.2s ease;
+  margin: 0 auto;
 }
 
-.onboarding-btn-skip:hover {
-  background: rgba(94, 155, 126, 0.05);
-  transform: translateX(5px);
+.onboarding-btn-skip:hover,
+.onboarding-btn-login:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(4px);
+}
+
+.onboarding-btn-login {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+}
+
+.onboarding-btn-login:hover {
+  background: var(--primary-hover);
+  color: white;
+  transform: scale(1.05);
 }
 
 .onboarding-footer-note {
