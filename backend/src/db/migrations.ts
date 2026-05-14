@@ -273,8 +273,8 @@ export async function runSubscriptionMigrations() {
     // Cleanup any extra plans added by mistake in previous versions
     await sql`DELETE FROM subscription_plans WHERE slug NOT IN ('semilla', 'florecer')`.execute(db);
     
-    // Ensure the existing 'florecer' plan is updated to the new pricing
-    await sql`UPDATE subscription_plans SET price_monthly = 45000, price_annually = 450000, max_users = 5, max_products = 500, max_orders_per_month = 200, max_categories = 10 WHERE slug = 'florecer'`.execute(db);
+    // Ensure the existing 'florecer' plan is updated to the new pricing and higher limits
+    await sql`UPDATE subscription_plans SET price_monthly = 45000, price_annually = 450000, max_users = 10, max_products = 10000, max_orders_per_month = 999999, max_categories = 100 WHERE slug = 'florecer'`.execute(db);
     
     await runCustomSubscriptionUpdates();
 

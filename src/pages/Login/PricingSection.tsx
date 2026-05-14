@@ -73,10 +73,10 @@ const plans = [
     badge: '👑 RECOMENDADO',
     highlighted: true,
     limits: [
-      { label: 'Usuarios', value: '5' },
-      { label: 'Productos', value: '500' },
-      { label: 'Pedidos', value: '200/mes' },
-      { label: 'Categorías', value: '10' },
+      { label: 'Usuarios', value: '10' },
+      { label: 'Productos', value: '5.000' },
+      { label: 'Pedidos', value: 'Ilimitados*' },
+      { label: 'Categorías', value: '50' },
     ],
     features: [
       'TODO del plan Gratis',
