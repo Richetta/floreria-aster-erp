@@ -280,7 +280,12 @@ export const PricingSection = ({ onPlanSelect }: PricingSectionProps) => {
 
     if (!token) {
       // 1. Not logged in — Go to "More Info" / Onboarding page
-      window.location.href = `/bienvenido?plan=${slug}&billing=${billing}`;
+      // If we are ALREADY in bienvenido, go to login
+      if (window.location.pathname.includes('/bienvenido')) {
+        window.location.href = `/login?plan=${slug}&billing=${billing}`;
+      } else {
+        window.location.href = `/bienvenido?plan=${slug}&billing=${billing}`;
+      }
       return;
     }
 

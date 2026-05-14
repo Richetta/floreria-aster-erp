@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ChevronRight } from 'lucide-react';
+import { CheckCircle2, ChevronRight, ArrowLeft, LogIn } from 'lucide-react';
 import { PricingSection } from '../Login/PricingSection';
 import { useAuth } from '../../store/useAuth';
 import { useSubscription } from '../../store/useSubscription';
@@ -38,6 +38,19 @@ export const PlanOnboarding = () => {
       <div className="onboarding-bg">
         <div className="onboarding-bg__glow onboarding-bg__glow--1"></div>
         <div className="onboarding-bg__glow onboarding-bg__glow--2"></div>
+      </div>
+
+      <div className="onboarding-nav">
+        <button className="onboarding-nav__btn" onClick={() => navigate('/login')}>
+          <ArrowLeft size={18} />
+          Volver al inicio
+        </button>
+        {!isAuthenticated && (
+          <button className="onboarding-nav__btn onboarding-nav__btn--login" onClick={handleLogin}>
+            <LogIn size={18} />
+            Iniciar Sesión
+          </button>
+        )}
       </div>
 
       <div className="onboarding-content">

@@ -1,13 +1,14 @@
 .onboarding-page {
   min-height: 100vh;
   width: 100%;
-  background-color: #fcfaf7;
+  background: linear-gradient(135deg, #f8faf9 0%, #edf4f1 50%, #e2eeea 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
   overflow-x: hidden;
   padding-bottom: 100px;
+  color: #2d4a3e;
 }
 
 .onboarding-bg {
@@ -39,6 +40,49 @@
   bottom: -10%;
   right: -10%;
   background: radial-gradient(circle, #d8c3a5, transparent);
+}
+
+.onboarding-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 40px;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.onboarding-nav__btn {
+  background: none;
+  border: none;
+  color: #2d4a3e;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 100px;
+  transition: all 0.2s ease;
+}
+
+.onboarding-nav__btn:hover {
+  background: rgba(45, 74, 62, 0.05);
+  transform: translateX(-4px);
+}
+
+.onboarding-nav__btn--login {
+  color: #5e9b7e;
+}
+
+.onboarding-nav__btn--login:hover {
+  transform: translateX(4px);
 }
 
 .onboarding-content {
