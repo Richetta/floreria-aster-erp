@@ -133,7 +133,18 @@ export const SubscriptionTab = () => {
         }
     };
 
-    useEffect(() => { loadData(); }, []);
+    useEffect(() => { 
+        loadData(); 
+
+        // Listener for payment success message from popup
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'MP_PAYMENT_SUCCESS') {
+                loadData();
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
 
     // Handle checkout via MercadoPago
     const handleCheckout = async (planSlug: string, includeTrial = true) => {
@@ -165,8 +176,31 @@ export const SubscriptionTab = () => {
                 throw new Error(data.message || 'No se pudo crear el enlace de pago');
             }
 
-            // Redirect to MercadoPago
-            window.location.href = data.data.init_point;
+            // Open MercadoPago in a floating window (Popup)
+            const width = 600;
+            const height = 850;
+            const left = (window.innerWidth - width) / 2;
+            const top = (window.innerHeight - height) / 2;
+            
+            const popup = window.open(
+                data.data.init_point, 
+                'MercadoPago', 
+                `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
+            );
+
+            // Check if popup was blocked
+            if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+                // Fallback to normal redirect if popup is blocked
+                window.location.href = data.data.init_point;
+            } else {
+                // Monitor popup closure as fallback to refresh data
+                const timer = setInterval(() => {
+                    if (popup.closed) {
+                        clearInterval(timer);
+                        loadData(); // Refresh data just in case message wasn't received
+                    }
+                }, 2000);
+            }
         } catch (error: any) {
             showAlert({
                 title: 'Error al procesar el pago',

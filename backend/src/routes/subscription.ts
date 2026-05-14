@@ -181,15 +181,15 @@ export default async function subscriptionRoutes(server: FastifyInstance) {
 
       const mpBody: any = {
         reason: `Mi Jardín ERP - Plan ${plan.name_short}`,
-        payer_email: user.email,
         auto_recurring: {
           frequency,
           frequency_type: 'months',
-          transaction_amount: amount,
+          transaction_amount: Number(amount.toFixed(2)),
           currency_id: 'ARS'
         },
         back_url: `${FRONTEND_URL}/suscripcion/exito`,
-        notification_url: `${BACKEND_URL}/api/subscription/webhook/mercadopago`
+        notification_url: `${BACKEND_URL}/api/subscription/webhook/mercadopago`,
+        external_reference: `${businessId}`
       };
 
       if (include_trial && billing_cycle === 'monthly') {

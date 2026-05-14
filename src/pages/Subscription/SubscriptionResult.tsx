@@ -10,6 +10,14 @@ export const SubscriptionSuccess = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
 
   useEffect(() => {
+    // Notify opener if this is a popup
+    if (window.opener) {
+        window.opener.postMessage({ type: 'MP_PAYMENT_SUCCESS' }, window.location.origin);
+        // Optional: close window after delay
+        const closeTimer = setTimeout(() => window.close(), 3000);
+        return () => clearTimeout(closeTimer);
+    }
+
     // Give MP webhook a moment to process, then verify
     const timer = setTimeout(async () => {
       try {
