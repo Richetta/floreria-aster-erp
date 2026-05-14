@@ -181,6 +181,7 @@ export default async function subscriptionRoutes(server: FastifyInstance) {
 
       const mpBody: any = {
         reason: `Mi Jardín ERP - Plan ${plan.name_short}`,
+        payer_email: user.email,
         auto_recurring: {
           frequency,
           frequency_type: 'months',
@@ -204,19 +205,19 @@ export default async function subscriptionRoutes(server: FastifyInstance) {
         headers: {
           'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
           'Content-Type': 'application/json',
-          'X-Idempotency-Key': `${businessId}-${plan_slug}-${Date.now()}`
+          'X-Idempotency-Key': `checkout-${businessId}-${Date.now()}`
         },
         body: JSON.stringify(mpBody)
       });
 
       const mpData = await mpResponse.json() as any;
-      server.log.info({ mpData }, 'MP preapproval response');
-
-      if (!mpData.init_point) {
-        server.log.error({ mpData }, 'MP error');
-        return reply.code(500).send({
+      
+      if (!mpResponse.ok || !mpData.init_point) {
+        server.log.error({ mpData, status: mpResponse.status }, 'Mercado Pago API Error');
+        return reply.code(400).send({
+          success: false,
           error: 'mp_error',
-          message: 'No se pudo crear el enlace de pago',
+          message: mpData.message || 'Mercado Pago rechazó la solicitud',
           details: mpData
         });
       }
@@ -238,15 +239,20 @@ export default async function subscriptionRoutes(server: FastifyInstance) {
 
       if (existing) {
         await db.updateTable('subscriptions' as any)
-          .set({ mp_preapproval_id: mpData.id, updated_at: now } as any)
+          .set({ 
+            mp_preapproval_id: mpData.id, 
+            updated_at: now 
+          } as any)
           .where('business_id' as any, '=', businessId)
           .execute();
       } else {
+        // Create as 'pending' or keep as is, but don't activate 'trial' status yet
+        // We only set the plan_id so the UI knows what they ARE TRYING to subscribe to
         await db.insertInto('subscriptions' as any)
           .values({
             business_id: businessId,
             plan_id: plan.id,
-            status: 'trial',
+            status: 'free', // Keep as free until confirmed
             billing_cycle,
             current_period_start: now,
             current_period_end: periodEnd,
