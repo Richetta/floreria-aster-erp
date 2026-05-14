@@ -24,7 +24,8 @@ import {
   Calendar,
   Wrench,
   Lock,
-  Star
+  Star,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { useStore } from '../../store/useStore';
@@ -130,6 +131,7 @@ const navItems: NavItem[] = [
     desc: 'Configuración',
     children: [
       { path: '/configuracion', label: 'General' },
+      { path: '/configuracion?tab=subscription', label: 'Suscripción', icon: CreditCard },
     ]
   },
 ];

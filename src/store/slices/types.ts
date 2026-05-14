@@ -176,6 +176,7 @@ export type PaymentMethod = {
     type: 'cash' | 'transfer' | 'debit' | 'credit' | 'other';
     last_digits?: string;
     is_active: boolean;
+    surcharge?: number;
     iconId?: string;
 };
 

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
     Save, Trash2, Edit2, Plus, 
     Download, Users, Key, LogOut, 
-    MapPin, CreditCard, Banknote, HelpCircle,
+    MapPin, CreditCard,
     Check, X, Shield, Wallet, HardDrive,
-    Smartphone, Coins, Landmark, Building2, Globe, ShieldCheck,
-    Store, Instagram, Database, Upload, Palette, Eye, EyeOff, Cloud,
+    Smartphone, Store, Instagram, Database, Upload, Palette, Eye, EyeOff, Cloud,
     BarChart3, Zap, Share2
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
@@ -14,7 +14,6 @@ import { type PaymentMethod } from '../../store/slices/types';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import { SubscriptionTab } from './SubscriptionTab';
-import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { api, type User } from '../../services/api';
 import './Settings.css';
 
@@ -29,6 +28,7 @@ export const SettingsDesktop = () => {
     const shopInfo = useStore(state => state.shopInfo);
     const updateShopInfo = useStore(state => state.updateShopInfo);
     const { user: currentUser, logout } = useAuth();
+    const location = useLocation();
 
     const [formData, setFormData] = useState(shopInfo);
     const [isSaved, setIsSaved] = useState(false);
@@ -52,6 +52,14 @@ export const SettingsDesktop = () => {
         root.style.setProperty('--color-primary-dark', color);
         localStorage.setItem('Mi Jardín-theme', newTheme);
     };
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const tab = params.get('tab') as any;
+        if (tab && ['general', 'payments', 'data', 'users', 'subscription'].includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, [location]);
 
     useEffect(() => {
         const savedTheme = localStorage.getItem('Mi Jardín-theme');
@@ -798,78 +806,21 @@ export const SettingsDesktop = () => {
 // --- Sub-component for Payment Methods Management ---
 const PaymentMethodsManager = () => {
     const shopInfo = useStore(state => state.shopInfo);
-    const updatePaymentMethods = useStore(state => state.updatePaymentMethods);
-    const { showAlert, showConfirm } = useModal();
-
+    const updateShopInfo = useStore(state => state.updateShopInfo);
+    const { showAlert } = useModal();
     const [methods, setMethods] = useState<PaymentMethod[]>(shopInfo.paymentMethods || []);
-    const [isEditing, setIsEditing] = useState<string | null>(null);
-    const [editForm, setEditForm] = useState<Partial<PaymentMethod>>({});
 
-    useEffect(() => {
-        setMethods(shopInfo.paymentMethods || []);
-    }, [shopInfo.paymentMethods]);
-
-    const handleAdd = () => {
-        const newMethod: PaymentMethod = {
-            id: generateIdWithPrefix('pm'),
-            name: '',
-            type: 'other',
-            is_active: true,
-            iconId: 'other'
-        };
-        setMethods([newMethod, ...methods]);
-        setIsEditing(newMethod.id);
-        setEditForm(newMethod);
+    const handleSaveMethods = () => {
+        updateShopInfo({ ...shopInfo, paymentMethods: methods });
+        showAlert({ title: 'Éxito', message: 'Métodos de pago actualizados', variant: 'success' });
     };
 
-    const handleSave = async (id: string) => {
-        if (!editForm.name?.trim()) {
-            showAlert({ title: 'Atención', message: 'El nombre es obligatorio', variant: 'warning' });
-            return;
-        }
-
-        const updatedMethods = methods.map(m => m.id === id ? { ...m, ...editForm } as PaymentMethod : m);
-        await updatePaymentMethods(updatedMethods);
-        setIsEditing(null);
-        setEditForm({});
+    const handleToggleMethod = (id: string) => {
+        setMethods(methods.map(m => m.id === id ? { ...m, is_active: !m.is_active } : m));
     };
 
-    const handleDelete = async (id: string) => {
-        if (await showConfirm({
-            title: '¿Eliminar método?',
-            message: 'Esta acción no se puede deshacer.',
-            confirmText: 'Eliminar',
-            variant: 'danger'
-        })) {
-            const updatedMethods = methods.filter(m => m.id !== id);
-            await updatePaymentMethods(updatedMethods);
-        }
-    };
-
-    const PAYMENT_ICONS = [
-        { id: 'cash', icon: <Banknote size={20} />, label: 'Efectivo' },
-        { id: 'card', icon: <CreditCard size={20} />, label: 'Tarjeta' },
-        { id: 'bank', icon: <Landmark size={20} />, label: 'Banco' },
-        { id: 'mobile', icon: <Smartphone size={20} />, label: 'Móvil / QR' },
-        { id: 'wallet', icon: <Wallet size={20} />, label: 'Billetera' },
-        { id: 'coins', icon: <Coins size={20} />, label: 'Céntimos / Cambio' },
-        { id: 'building', icon: <Building2 size={20} />, label: 'Local' },
-        { id: 'globe', icon: <Globe size={20} />, label: 'Online' },
-        { id: 'shield', icon: <ShieldCheck size={20} />, label: 'Seguro' },
-        { id: 'other', icon: <HelpCircle size={20} />, label: 'Otro' },
-    ];
-
-    const getTypeIcon = (method: any) => {
-        const iconObj = PAYMENT_ICONS.find(i => i.id === method.iconId);
-        if (iconObj) return <div className={`pm-brand-icon ${method.type}`}>{iconObj.icon}</div>;
-
-        switch (method.type) {
-            case 'cash': return <div className="pm-brand-icon cash"><Banknote size={20} /></div>;
-            case 'transfer': return <div className="pm-brand-icon bank"><Landmark size={20} /></div>;
-            case 'debit':
-            case 'credit': return <div className="pm-brand-icon card"><CreditCard size={18} /></div>;
-            default: return <div className="pm-brand-icon other"><Wallet size={20} /></div>;
-        }
+    const handleSurchargeChange = (id: string, surcharge: number) => {
+        setMethods(methods.map(m => m.id === id ? { ...m, surcharge } : m));
     };
 
     return (
@@ -879,328 +830,47 @@ const PaymentMethodsManager = () => {
                     <Wallet size={24} />
                 </div>
                 <div className="card-header-text">
-                    <h2>Gestión de Cobros</h2>
-                    <p>Configurá las cuentas o cajas donde recibís dinero</p>
+                    <h2>Métodos de Pago y Recargos</h2>
+                    <p>Configurá cómo cobrás y los recargos automáticos</p>
                 </div>
-                <button className="btn btn-primary btn-compact" onClick={handleAdd}>
-                    <Plus size={16} />
-                    <span>Nuevo Método</span>
+            </div>
+
+            <div className="payment-methods-list">
+                {methods.map(method => (
+                    <div key={method.id} className={`payment-method-item ${!method.is_active ? 'disabled' : ''}`}>
+                        <div className="method-info">
+                            <div className="method-toggle" onClick={() => handleToggleMethod(method.id)}>
+                                {method.is_active ? <CheckCircle className="text-primary" size={24} /> : <Circle className="text-gray-300" size={24} />}
+                            </div>
+                            <div className="method-name">
+                                <h3>{method.name}</h3>
+                                <p>{method.is_active ? 'Activo en el POS' : 'Desactivado'}</p>
+                            </div>
+                        </div>
+                        <div className="method-settings">
+                            <div className="surcharge-input">
+                                <label>Recargo (%)</label>
+                                <input
+                                    type="number"
+                                    value={method.surcharge || 0}
+                                    onChange={e => handleSurchargeChange(method.id, parseFloat(e.target.value) || 0)}
+                                    disabled={!method.is_active}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="form-actions">
+                <button className="btn btn-primary" onClick={handleSaveMethods}>
+                    <Save size={18} />
+                    <span>Guardar Métodos</span>
                 </button>
             </div>
-
-            <div className="pm-list">
-                {methods.length === 0 ? (
-                    <div className="pm-empty">
-                        <Wallet size={48} />
-                        <p>No tenés métodos de pago configurados.</p>
-                        <button className="btn btn-secondary" onClick={handleAdd}>Agregar el primero</button>
-                    </div>
-                ) : (
-                    <div className="pm-grid">
-                        {methods.map(method => (
-                            <div key={method.id} className={`pm-item ${!method.is_active ? 'inactive' : ''}`}>
-                                {isEditing === method.id ? (
-                                    <div className="pm-edit-form">
-                                        <div className="pm-form-main">
-                                            <div className="form-group">
-                                                <label>Nombre Personalizado</label>
-                                                <input
-                                                    type="text"
-                                                    value={editForm.name}
-                                                    onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                                                    placeholder="Ej: Mercado Pago Personal"
-                                                />
-                                            </div>
-                                            <div className="form-row">
-                                                <div className="form-group">
-                                                    <label>Tipo de Pago</label>
-                                                    <select
-                                                        value={editForm.type}
-                                                        onChange={e => setEditForm({ ...editForm, type: e.target.value as any })}
-                                                    >
-                                                        <option value="cash">Efectivo / Caja</option>
-                                                        <option value="transfer">Transferencia / Banco</option>
-                                                        <option value="debit">Débito</option>
-                                                        <option value="credit">Crédito</option>
-                                                        <option value="other">Billetera Virtual / QR</option>
-                                                    </select>
-                                                </div>
-                                                <div className="form-group">
-                                                    <label>Dígitos (Opcional)</label>
-                                                    <input
-                                                        type="text"
-                                                        maxLength={4}
-                                                        value={editForm.last_digits || ''}
-                                                        onChange={e => setEditForm({ ...editForm, last_digits: e.target.value.replace(/\D/g, '') })}
-                                                        placeholder="Últimos 4"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="pm-icon-selector">
-                                            <label className="form-label-compact">Personalizar Icono</label>
-                                            <div className="icon-grid">
-                                                {PAYMENT_ICONS.map(i => (
-                                                    <button 
-                                                        key={i.id}
-                                                        className={`icon-option ${editForm.iconId === i.id ? 'selected' : ''}`}
-                                                        onClick={() => setEditForm({ ...editForm, iconId: i.id })}
-                                                        title={i.label}
-                                                    >
-                                                        {i.icon}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="pm-edit-actions">
-                                            <button className="btn btn-primary btn-full" onClick={() => handleSave(method.id)}>
-                                                <Save size={16} />
-                                                <span>Guardar Cambios</span>
-                                            </button>
-                                            <button className="btn btn-secondary btn-full" onClick={() => { setIsEditing(null); setEditForm({}); if (!method.name) handleDelete(method.id); }}>
-                                                Cancelar
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="pm-info">
-                                            <div className="pm-visual">{getTypeIcon(method)}</div>
-                                            <div className="pm-details">
-                                                <div className="pm-header-row">
-                                                    <span className="pm-name">{method.name}</span>
-                                                    {method.name === 'Efectivo' && <span className="pm-badge-default">Default</span>}
-                                                </div>
-                                                <span className="pm-meta">
-                                                    <span className={`pm-type-tag ${method.type}`}>{method.type.toUpperCase()}</span>
-                                                    {method.last_digits && <span className="pm-digits">•••• {method.last_digits}</span>}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="pm-actions">
-                                            <div className="pm-status-toggle">
-                                                <div className={`status-dot ${method.is_active ? 'active' : 'inactive'}`}></div>
-                                                <span>{method.is_active ? 'Activo' : 'Inactivo'}</span>
-                                            </div>
-                                            <div className="pm-action-buttons">
-                                                <button className="btn-icon-blur" onClick={() => { setIsEditing(method.id); setEditForm(method); }}>
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button className="btn-icon-blur text-danger" onClick={() => handleDelete(method.id)}>
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <style>{`
-                .pm-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-                    gap: 1.25rem;
-                    padding: 1.25rem 0;
-                }
-                .pm-item {
-                    background: white;
-                    border: 1px solid rgba(0,0,0,0.05);
-                    border-radius: 16px;
-                    padding: 1.25rem;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 1.25rem;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-                    position: relative;
-                    min-height: 180px;
-                }
-                .pm-item:hover {
-                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-                    transform: translateY(-4px);
-                    border-color: var(--color-primary-light);
-                }
-                .pm-item.inactive { 
-                    opacity: 0.7;
-                    filter: grayscale(0.5);
-                }
-
-                .pm-edit-form { 
-                    width: 100%; 
-                    display: flex; 
-                    flex-direction: column; 
-                    gap: 1.25rem; 
-                    padding: 0.25rem;
-                    animation: fadeIn 0.2s ease;
-                }
-
-                .pm-form-main {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 1rem;
-                }
-
-                .pm-icon-selector {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.75rem;
-                }
-
-                .icon-grid {
-                    display: grid;
-                    grid-template-columns: repeat(5, 1fr);
-                    gap: 0.5rem;
-                }
-
-                .icon-option {
-                    width: 100%;
-                    aspect-ratio: 1;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 10px;
-                    border: 2px solid #f1f5f9;
-                    background: #f8fafc;
-                    color: #64748b;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-
-                .icon-option:hover {
-                    border-color: var(--color-primary-light);
-                    color: var(--color-primary);
-                }
-
-                .icon-option.selected {
-                    border-color: var(--color-primary);
-                    background: var(--color-primary-light);
-                    color: var(--color-primary);
-                }
-
-                .pm-edit-actions { 
-                    display: flex; 
-                    gap: 0.75rem; 
-                    margin-top: 0.5rem; 
-                }
-
-                .btn-full { flex: 1; justify-content: center; height: 42px; }
-
-                .pm-info { display: flex; gap: 1.15rem; align-items: center; }
-                .pm-visual {
-                    width: 54px;
-                    height: 54px;
-                    border-radius: 14px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.25rem;
-                    flex-shrink: 0;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                }
-                .pm-brand-icon {
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: inherit;
-                    color: white;
-                }
-                .pm-brand-icon.cash { background: #10B981; }
-                .pm-brand-icon.transfer { background: #3B82F6; }
-                .pm-brand-icon.card { background: #6366F1; }
-                .pm-brand-icon.debit { background: #EC4899; }
-                .pm-brand-icon.credit { background: #8B5CF6; }
-                .pm-brand-icon.other { background: #64748B; }
-
-                .pm-name { font-size: 1.05rem; font-weight: 700; color: #1e293b; }
-                .pm-badge-default {
-                    font-size: 0.65rem;
-                    background: #f1f5f9;
-                    color: #64748b;
-                    padding: 2px 6px;
-                    border-radius: 4px;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                }
-
-                .pm-meta { display: flex; align-items: center; gap: 0.75rem; margin-top: 2px; }
-                .pm-type-tag {
-                    font-size: 0.7rem;
-                    font-weight: 600;
-                    padding: 1px 6px;
-                    border-radius: 9999px;
-                    background: #f8fafc;
-                    color: #94a3b8;
-                    text-transform: uppercase;
-                }
-                
-                .pm-digits { font-size: 0.75rem; color: #94a3b8; font-family: monospace; letter-spacing: 1px; }
-
-                .pm-actions { 
-                    display: flex; 
-                    justify-content: space-between; 
-                    align-items: center; 
-                    padding-top: 1rem;
-                    border-top: 1px dashed #f1f5f9;
-                    margin-top: auto;
-                }
-                
-                .pm-status-toggle { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; font-weight: 500; color: #64748b; }
-                .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-                .status-dot.active { background: #10B981; box-shadow: 0 0 8px #10B98180; }
-                .status-dot.inactive { background: #cbd5e1; }
-
-                .pm-action-buttons { display: flex; gap: 0.5rem; }
-                .btn-icon-blur {
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    width: 36px;
-                    height: 36px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 12px;
-                    color: #64748b;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                .btn-icon-blur:hover { 
-                    background: white; 
-                    color: var(--color-primary);
-                    border-color: var(--color-primary-light);
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                }
-                .btn-icon-blur.text-danger:hover { 
-                    background: #fff1f2; 
-                    color: #e11d48;
-                    border-color: #fecdd3;
-                }
-
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(4px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-
-                .pm-empty {
-                    text-align: center;
-                    padding: 4rem 2rem;
-                    color: var(--color-text-secondary);
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 1.25rem;
-                    background: #f8fafc;
-                    border-radius: 20px;
-                    border: 2px dashed #e2e8f0;
-                }
-            `}</style>
         </div>
     );
 };
+
+// Re-add missing icons for sub-components
+import { CheckCircle, Circle } from 'lucide-react';
