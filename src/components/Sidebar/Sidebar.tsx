@@ -23,7 +23,8 @@ import {
   ChevronDown,
   Calendar,
   Wrench,
-  Lock
+  Lock,
+  Star
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { useStore } from '../../store/useStore';

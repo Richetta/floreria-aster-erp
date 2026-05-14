@@ -39,7 +39,7 @@ import { PlanOnboarding } from './pages/Subscription/PlanOnboarding';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const { isAuthenticated, isLoading } = useAuth();
-    const { status, isLoading: subLoading } = useSubscription();
+    const { isLoading: subLoading } = useSubscription();
     const location = useLocation();
 
     if (isLoading || subLoading) {
