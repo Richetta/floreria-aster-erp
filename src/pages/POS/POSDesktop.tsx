@@ -116,15 +116,8 @@ export const POSDesktop = () => {
 
     // Local-only state
     const [customerSearch, setCustomerSearch] = useState('');
-    const [expandedSection, setExpandedSection] = useState<number | null>(1);
     
-    const toggleSection = (section: number) => {
-        if (expandedSection === section) {
-            setExpandedSection(null);
-        } else {
-            setExpandedSection(section);
-        }
-    };
+
 
     const [isAddingCustomer, setIsAddingCustomer] = useState(false);
     const [newCustomerName, setNewCustomerName] = useState('');
@@ -140,8 +133,6 @@ export const POSDesktop = () => {
     const [productView, setProductView] = useState<ProductView>('all');
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [checkoutMode, setCheckoutMode] = useState<'sale' | 'order'>('sale');
-    const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
-    const [showOrderModal, setShowOrderModal] = useState(false);
     const [isScanningEnabled, setIsScanningEnabled] = useState(true);
     const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
     // --- NUEVO SISTEMA DE AJUSTE UNIFICADO ---
@@ -464,9 +455,6 @@ export const POSDesktop = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [searchTerm, cart, isScanning]);
 
-    const updateQty = (id: string, delta: number) => {
-        updateCartQty(id, delta);
-    };
 
     // Wrapper with stock check
     const handleAddToCart = async (product: any) => {
@@ -982,29 +970,6 @@ export const POSDesktop = () => {
                         <p className="text-body text-muted">Seleccioná productos y gestioná tus ventas diarias</p>
                     </div>
 
-                    {/* VIEW SWITCHER - Crítico para UX mobile */}
-                    <div className="pos-view-switcher">
-                        <button
-                            className={`view-segment ${checkoutMode === 'sale' ? 'active-sale' : ''}`}
-                            onClick={() => {
-                                setCheckoutMode('sale');
-                                setShowOrderModal(false);
-                            }}
-                        >
-                            <ShoppingCart size={18} />
-                            <span>Venta Rápida</span>
-                        </button>
-                        <button
-                            className={`view-segment ${checkoutMode === 'order' ? 'active-order' : ''}`}
-                            onClick={() => {
-                                setCheckoutMode('order');
-                                setShowOrderModal(true);
-                            }}
-                        >
-                            <Calendar size={18} />
-                            <span>Pedir Después</span>
-                        </button>
-                    </div>
 
                     {/* Smart Unified Search & View Toggle */}
                     <div className="pos-actions-bar mb-4">
@@ -2096,285 +2061,6 @@ export const POSDesktop = () => {
                 />
             )}
 
-            {/* Mobile: Botón flotante del carrito */}
-            {isMobile && cart.length > 0 && (
-                <button
-                    className="cart-float-button"
-                    onClick={() => setIsCartSheetOpen(!isCartSheetOpen)}
-                >
-                    <ShoppingCart size={24} />
-                    <span className="cart-float-count">{itemCount}</span>
-                </button>
-            )}
-
-            {/* Mobile: Bottom Sheet del carrito */}
-            {isMobile && (
-                <div className={`cart-bottom-sheet ${isCartSheetOpen ? 'open' : ''}`}>
-                    <div
-                        className="cart-sheet-header"
-                        onClick={() => setIsCartSheetOpen(!isCartSheetOpen)}
-                    >
-                        <div className="cart-sheet-title">
-                            <ShoppingCart size={18} />
-                            <span>Carrito</span>
-                            <span className="cart-sheet-count">{itemCount} items</span>
-                        </div>
-                        <div className="cart-sheet-total">
-                            ${total.toLocaleString()}
-                        </div>
-                    </div>
-
-                    <div className="cart-sheet-content">
-                        {cart.length === 0 ? (
-                            <div className="empty-cart-msg">
-                                <ShoppingCart size={32} className="text-muted mb-2 opacity-20" />
-                                <p className="text-body text-center font-medium">
-                                    Bandeja vacía.<br />Seleccioná productos.
-                                </p>
-                            </div>
-                        ) : (
-                            cart.map((item, idx) => (
-                                <div key={`${item.id}-${idx}`} className="cart-line-item">
-                                    <div className="cart-line-details">
-                                        <h4 className="font-bold text-small line-clamp-1">{item.name}</h4>
-                                        <p className="text-micro text-muted">${item.price?.toLocaleString() || '0'} c/u</p>
-                                    </div>
-                                    <div className="cart-line-actions">
-                                        <div className="qty-controls">
-                                            <button className="qty-btn" onClick={() => updateQty(item.id, -1)}>
-                                                <Minus size={12} />
-                                            </button>
-                                            <span className="qty-value">{item.qty}</span>
-                                            <button className="qty-btn" onClick={() => updateQty(item.id, 1)}>
-                                                <Plus size={12} />
-                                            </button>
-                                        </div>
-                                        <div className="cart-line-total font-bold">
-                                            ${(item.price * item.qty).toLocaleString()}
-                                        </div>
-                                        <button
-                                            className="btn-icon text-danger"
-                                            onClick={() => removeFromCart(item.id)}
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-
-                    {cart.length > 0 && (
-                        <div className="cart-sheet-footer">
-                            <div className="cart-totals-compact">
-                                <span className="total-label">Total a Pagar</span>
-                                <span className="total-amount">${total.toLocaleString()}</span>
-                            </div>
-                            <div className="payment-buttons-compact">
-                                <button
-                                    className="payment-btn-compact payment-cash"
-                                    onClick={() => {
-                                        handleCheckout('cash');
-                                        setIsCartSheetOpen(false);
-                                    }}
-                                >
-                                    <Banknote size={18} />
-                                    <span>Efectivo</span>
-                                </button>
-                                <button
-                                    className="payment-btn-compact payment-card"
-                                    onClick={() => {
-                                        handleCheckout('card');
-                                        setIsCartSheetOpen(false);
-                                    }}
-                                >
-                                    <CreditCard size={18} />
-                                    <span>Tarjeta</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Mobile: Modal de "Pedir Después" - Full screen */}
-            <div className={`order-modal-overlay ${showOrderModal ? 'show' : ''}`} onClick={() => setShowOrderModal(false)}>
-                <div className="order-modal" onClick={e => e.stopPropagation()}>
-                    <div className="order-modal-header">
-                        <h2>
-                            <Calendar size={20} />
-                            Pedir para Después
-                        </h2>
-                        <button
-                            className="order-modal-close"
-                            onClick={() => {
-                                setShowOrderModal(false);
-                                setCheckoutMode('sale');
-                            }}
-                        >
-                            <X size={20} />
-                        </button>
-                    </div>
-                    <div className="order-modal-body">
-                        {/* Formulario de pedidos completo */}
-                        <div className="order-form-scrollable">
-                            {/* Step 1: Customer */}
-                            <div className="order-form-section">
-                                <div
-                                    className={`section-header ${expandedSection === 1 ? 'expanded' : ''}`}
-                                    onClick={() => toggleSection(1)}
-                                >
-                                    <div className="section-title-row">
-                                        <span className="section-number">1</span>
-                                        <h4 className="section-title">Cliente</h4>
-                                    </div>
-                                    {(selectedCustomer || (isGuest && guestName)) && (
-                                        <span className="selected-value">
-                                            {isGuest ? (guestName || 'Invitado') : (customers.find(c => c.id === selectedCustomer)?.name)}
-                                        </span>
-                                    )}
-                                    <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 1 ? 'expanded' : ''}`} />
-                                </div>
-                                {expandedSection === 1 && (
-                                    <div className="section-content expanded">
-                                        {/* Contenido del formulario de cliente */}
-                                        <div className="guest-toggle-container mb-3">
-                                            <button
-                                                className={`guest-toggle-btn ${isGuest ? 'active' : ''}`}
-                                                onClick={() => updatePosOrderForm({ isGuest: !isGuest, selectedCustomer: '' })}
-                                                type="button"
-                                            >
-                                                <UserPlus size={16} />
-                                                <span>{isGuest ? 'Cambiar a Cliente Agendado' : 'Venta como Invitado'}</span>
-                                            </button>
-                                        </div>
-                                        {isGuest ? (
-                                            <div className="guest-fields">
-                                                <div className="form-group mb-2">
-                                                    <label className="form-label">Nombre del Cliente *</label>
-                                                    <input
-                                                        type="text"
-                                                        className="form-input"
-                                                        placeholder="Nombre para el pedido..."
-                                                        value={guestName}
-                                                        onChange={(e) => updatePosOrderForm({ guestName: e.target.value })}
-                                                    />
-                                                </div>
-                                                <div className="form-group mb-2">
-                                                    <label className="form-label">Teléfono</label>
-                                                    <input
-                                                        type="text"
-                                                        className="form-input"
-                                                        placeholder="Teléfono de contacto..."
-                                                        value={guestPhone}
-                                                        onChange={(e) => updatePosOrderForm({ guestPhone: e.target.value })}
-                                                    />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="search-input-wrapper" style={{ position: 'relative', marginBottom: '0.75rem' }}>
-                                                <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                                                <input
-                                                    type="text"
-                                                    className="form-input"
-                                                    placeholder="Buscar cliente..."
-                                                    value={customerSearch}
-                                                    onChange={(e) => setCustomerSearch(e.target.value)}
-                                                    style={{ paddingLeft: '2.5rem' }}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Step 2: Delivery */}
-                            <div className="order-form-section">
-                                <div
-                                    className={`section-header ${expandedSection === 2 ? 'expanded' : ''}`}
-                                    onClick={() => toggleSection(2)}
-                                >
-                                    <div className="section-title-row">
-                                        <span className="section-number">2</span>
-                                        <h4 className="section-title">Entrega</h4>
-                                    </div>
-                                    <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 2 ? 'expanded' : ''}`} />
-                                </div>
-                                {expandedSection === 2 && (
-                                    <div className="section-content expanded">
-                                        <div className="delivery-method-toggle">
-                                            <button
-                                                className={`toggle-btn ${deliveryMethod === 'pickup' ? 'active' : ''}`}
-                                                onClick={() => updatePosOrderForm({ deliveryMethod: 'pickup' })}
-                                            >
-                                                <Store size={16} />
-                                                <span>Local</span>
-                                            </button>
-                                            <button
-                                                className={`toggle-btn ${deliveryMethod === 'delivery' ? 'active' : ''}`}
-                                                onClick={() => updatePosOrderForm({ deliveryMethod: 'delivery' })}
-                                            >
-                                                <Truck size={16} />
-                                                <span>Domicilio</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Step 3: Fecha */}
-                            <div className="order-form-section">
-                                <div
-                                    className={`section-header ${expandedSection === 3 ? 'expanded' : ''}`}
-                                    onClick={() => toggleSection(3)}
-                                >
-                                    <div className="section-title-row">
-                                        <span className="section-number">3</span>
-                                        <h4 className="section-title">Fecha de Entrega</h4>
-                                    </div>
-                                    <ChevronDown size={18} className={`section-expand-icon ${expandedSection === 3 ? 'expanded' : ''}`} />
-                                </div>
-                                {expandedSection === 3 && (
-                                    <div className="section-content expanded">
-                                        <div className="form-group">
-                                            <label className="form-label">Fecha</label>
-                                            <input
-                                                type="date"
-                                                className="form-input"
-                                                value={deliveryDate}
-                                                onChange={(e) => updatePosOrderForm({ deliveryDate: e.target.value })}
-                                                min={new Date().toISOString().split('T')[0]}
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Horario</label>
-                                            <select className="form-input" value={deliveryTimeSlot} onChange={(e) => updatePosOrderForm({ deliveryTimeSlot: e.target.value })}>
-                                                <option value="allday">Todo el día</option>
-                                                <option value="morning">Mañana (9-13hs)</option>
-                                                <option value="afternoon">Tarde (14-18hs)</option>
-                                                <option value="evening">Noche (18-21hs)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Botón de confirmar */}
-                            <button
-                                className="btn btn-primary btn-block"
-                                style={{ marginTop: '1.5rem', padding: '1rem', fontSize: '16px', fontWeight: '700' }}
-                                onClick={() => {
-                                    setShowOrderModal(false);
-                                    setIsCartSheetOpen(true);
-                                }}
-                            >
-                                <Check size={20} />
-                                Confirmar Pedido
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             {isCameraScannerOpen && (
                 <CameraScanner 
