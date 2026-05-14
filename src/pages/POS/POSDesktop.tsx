@@ -49,7 +49,7 @@ import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { playBeep } from '../../utils/audio';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import { api } from '../../services/api';
-import './POS.mobile.css';
+import './POS.css';
 import { TreeSelect } from '../../components/TreeSelect/TreeSelect';
 import { usePlanGuard } from '../../store/useSubscription';
 
