@@ -98,22 +98,37 @@ export const SubscriptionTab = () => {
     const [showPlans, setShowPlans] = useState(false);
     const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'annually'>('monthly');
     const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
+    const [error, setError] = useState<string | null>(null);
 
     const loadData = async () => {
+        setLoading(true);
+        setError(null);
         try {
             const [subRes, plansRes, mpRes] = await Promise.all([
                 fetch(`${API_URL}/subscription/current`, { headers: authHeader() }),
                 fetch(`${API_URL}/subscription/plans`, { headers: authHeader() }),
                 fetch(`${API_URL}/subscription/mp-status`, { headers: authHeader() }),
             ]);
+
+            // Check for non-200 responses
+            if (!subRes.ok) {
+                const errText = await subRes.text();
+                console.error('Subscription Fetch Error:', subRes.status, errText);
+                throw new Error(`Error ${subRes.status}: No se pudo obtener la suscripción`);
+            }
+
             const [subData, plansData, mpData] = await Promise.all([
                 subRes.json(), plansRes.json(), mpRes.json()
             ]);
+            
             if (subData.success) setSubscription(subData.data);
+            else throw new Error(subData.message || 'La respuesta del servidor no fue exitosa');
+
             if (plansData.success) setPlans(plansData.data);
             if (mpData.success && mpData.data) setMpStatus(mpData.data);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error loading subscription:', err);
+            setError(err.message || 'Error de conexión con el servidor');
         } finally {
             setLoading(false);
         }
@@ -270,8 +285,12 @@ export const SubscriptionTab = () => {
         return (
             <div className="subscription-error">
                 <AlertTriangle size={48} />
-                <h3>No se encontró información de suscripción</h3>
-                <p>Contactá a soporte para más detalles</p>
+                <h3>No se pudo cargar la información</h3>
+                <p>{error || 'Contactá a soporte para más detalles'}</p>
+                <button className="btn btn-primary mt-4" onClick={loadData}>
+                    <RefreshCw size={18} className="mr-2" />
+                    Reintentar conexión
+                </button>
             </div>
         );
     }

@@ -201,7 +201,10 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         {navItems.map((item) => {
           // Collapsible group (has children)
           if (isNavGroup(item)) {
-            const isExpanded = expandedMenus[item.id] || isChildActive(item.children);
+            // If the user has manually toggled it, use that. Otherwise, expand if a child is active.
+            const isExpanded = expandedMenus[item.id] !== undefined 
+              ? expandedMenus[item.id] 
+              : isChildActive(item.children);
 
             return (
               <div key={item.id} className={`sidebar-group ${isExpanded ? 'sidebar-group-open' : ''}`}>
