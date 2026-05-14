@@ -9,6 +9,7 @@ import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { CameraScanner } from '../../components/CameraScanner/CameraScanner';
 import type { Product, Category } from '../../store/slices/types';
 import { CategoryTreeMobile } from '../../components/CategoryTree/CategoryTreeMobile';
+import { usePlanGuard } from '../../store/useSubscription';
 import './POSMobile.css';
 
 export const POSMobile = () => {
@@ -57,6 +58,8 @@ export const POSMobile = () => {
 
     const { showAlert } = useModal();
     const navigate = useNavigate();
+
+    const { guard: guardOrder } = usePlanGuard('orders');
 
     // Load categories with hierarchy on mount
     useEffect(() => {
@@ -173,10 +176,11 @@ export const POSMobile = () => {
 
     // --- Checkout Handler ---
     const handleCheckout = async () => {
-        if (cart.length === 0) return;
-        setIsProcessing(true);
+        guardOrder(async () => {
+            if (cart.length === 0) return;
+            setIsProcessing(true);
 
-        if (checkoutMode === 'order') {
+            if (checkoutMode === 'order') {
             if (!isGuest && !selectedCustomer) {
                 showAlert({ title: 'Atención', message: 'Seleccioná un cliente o marcá como Invitado.', variant: 'warning' });
                 setIsProcessing(false); return;
@@ -229,7 +233,8 @@ export const POSMobile = () => {
                 showAlert({ title: 'Error', message: 'Error procesando la venta.', variant: 'error' });
             }
         }
-        setIsProcessing(false);
+            setIsProcessing(false);
+        });
     };
 
     const getCategoryIcon = (catName: string) => {

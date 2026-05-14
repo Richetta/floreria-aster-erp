@@ -29,7 +29,9 @@ import { CalendarDesktop } from './pages/Calendar';
 import { ToolsHub } from './pages/Tools';
 import { BarcodePrinter } from './pages/Tools/BarcodePrinter';
 import { useAuth } from './store/useAuth';
+import { useSubscription } from './store/useSubscription';
 import { SubscriptionSuccess, SubscriptionFailure, SubscriptionPending } from './pages/Subscription/SubscriptionResult';
+import { PlanOnboarding } from './pages/Subscription/PlanOnboarding';
 
 // ============================================
 // PROTECTED ROUTE COMPONENT
@@ -37,9 +39,10 @@ import { SubscriptionSuccess, SubscriptionFailure, SubscriptionPending } from '.
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const { isAuthenticated, isLoading } = useAuth();
+    const { status, isLoading: subLoading } = useSubscription();
     const location = useLocation();
 
-    if (isLoading) {
+    if (isLoading || subLoading) {
         return (
             <div className="loading-screen">
                 <div className="loading-content">
@@ -54,6 +57,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     if (!isAuthenticated) {
         return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+
+    // Intermediate Plan Onboarding for Free users
+    const hasSeenOnboarding = sessionStorage.getItem('onboarding_seen') === 'true';
+    if (status === 'free' && !hasSeenOnboarding && location.pathname !== '/bienvenido') {
+        return <Navigate to="/bienvenido" replace />;
     }
 
     return <>{children}</>;
@@ -117,6 +126,14 @@ function App() {
                     <Route path="/suscripcion/exito" element={<SubscriptionSuccess />} />
                     <Route path="/suscripcion/error" element={<SubscriptionFailure />} />
                     <Route path="/suscripcion/pendiente" element={<SubscriptionPending />} />
+                    <Route 
+                        path="/bienvenido" 
+                        element={
+                            <ProtectedRoute>
+                                <PlanOnboarding />
+                            </ProtectedRoute>
+                        } 
+                    />
 
                     {/* Protected Routes */}
                     <Route

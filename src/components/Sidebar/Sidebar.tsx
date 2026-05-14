@@ -22,10 +22,12 @@ import {
   X,
   ChevronDown,
   Calendar,
-  Wrench
+  Wrench,
+  Lock
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { useStore } from '../../store/useStore';
+import { useSubscription, type SubscriptionState } from '../../store/useSubscription';
 import './Sidebar.css';
 
 type NavLink = {
@@ -34,6 +36,7 @@ type NavLink = {
   label: string;
   desc: string;
   highlight?: boolean;
+  feature?: keyof SubscriptionState['features'];
 };
 
 type NavGroup = {
@@ -41,7 +44,7 @@ type NavGroup = {
   icon: typeof LayoutDashboard;
   label: string;
   desc: string;
-  children: { path: string; label: string; icon?: typeof LayoutDashboard }[];
+  children: { path: string; label: string; icon?: typeof LayoutDashboard; feature?: keyof SubscriptionState['features'] }[];
 };
 
 type NavItem = NavLink | NavGroup;
@@ -58,8 +61,8 @@ const navItems: NavItem[] = [
     desc: 'Entregas y envíos',
     children: [
       { path: '/pedidos', label: 'Gestión' },
-      { path: '/logistica', label: 'Logística', icon: Map },
-      { path: '/calendario', label: 'Calendario', icon: Calendar },
+      { path: '/logistica', label: 'Logística', icon: Map, feature: 'logistics' },
+      { path: '/calendario', label: 'Calendario', icon: Calendar, feature: 'calendar' },
     ]
   },
   {
@@ -69,7 +72,7 @@ const navItems: NavItem[] = [
     desc: 'Base de datos',
     children: [
       { path: '/clientes', label: 'Directorio' },
-      { path: '/recordatorios', label: 'Recordatorios', icon: Bell },
+      { path: '/recordatorios', label: 'Recordatorios', icon: Bell, feature: 'reminders' },
     ]
   },
 
@@ -81,10 +84,10 @@ const navItems: NavItem[] = [
     desc: 'Inventario y stock',
     children: [
       { path: '/productos', label: 'Catálogo' },
-      { path: '/paquetes', label: 'Ramos', icon: Layers },
-      { path: '/reposicion', label: 'Reposición' },
-      { path: '/stock', label: 'Movimientos', icon: Activity },
-      { path: '/mermas', label: 'Mermas', icon: Trash2 },
+      { path: '/paquetes', label: 'Ramos', icon: Layers, feature: 'packages' },
+      { path: '/reposicion', label: 'Reposición', feature: 'restock' },
+      { path: '/stock', label: 'Movimientos', icon: Activity, feature: 'stockMovements' },
+      { path: '/mermas', label: 'Mermas', icon: Trash2, feature: 'waste' },
     ]
   },
   {
@@ -94,7 +97,7 @@ const navItems: NavItem[] = [
     desc: 'Compras y suministros',
     children: [
       { path: '/proveedores', label: 'Directorio' },
-      { path: '/compras', label: 'Compras', icon: ShoppingBag },
+      { path: '/compras', label: 'Compras', icon: ShoppingBag, feature: 'purchases' },
     ]
   },
   {
@@ -105,8 +108,8 @@ const navItems: NavItem[] = [
     children: [
       { path: '/finanzas', label: 'Movimientos' },
       { path: '/ventas', label: 'Ventas', icon: FileText },
-      { path: '/caja', label: 'Caja', icon: Vault },
-      { path: '/reportes', label: 'Reportes', icon: BarChart3 },
+      { path: '/caja', label: 'Caja', icon: Vault, feature: 'cashRegister' },
+      { path: '/reportes', label: 'Reportes', icon: BarChart3, feature: 'reports' },
     ]
   },
   {
@@ -116,7 +119,7 @@ const navItems: NavItem[] = [
     desc: 'Utilidades operativas',
     children: [
       { path: '/herramientas', label: 'Ver Todas' },
-      { path: '/herramientas/codigos', label: 'Códigos de Barra' },
+      { path: '/herramientas/codigos', label: 'Códigos de Barra', feature: 'barcode' },
     ]
   },
   {
@@ -140,6 +143,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const products = useStore(state => state.products);
+  const { features, showUpgradeModal } = useSubscription();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
 
   const restockItems = products.filter(p => p.stock <= (p.min || 0));
@@ -148,6 +152,16 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleLinkClick = (e: React.MouseEvent, feature?: keyof SubscriptionState['features']) => {
+    if (feature && !features[feature]) {
+      e.preventDefault();
+      e.stopPropagation();
+      showUpgradeModal('Esta sección es exclusiva del plan Profesional.');
+      return;
+    }
+    if (onClose) onClose();
   };
 
   const toggleSubmenu = (id: string) => {
@@ -202,44 +216,54 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 </button>
 
                 <div className={`sidebar-submenu ${isExpanded ? 'sidebar-submenu-open' : ''}`}>
-                  {item.children.map((child) => (
-                    <NavLink
-                      key={child.path}
-                      to={child.path}
-                      className={({ isActive }) =>
-                        `sidebar-sublink ${isActive ? 'active' : ''}`
-                      }
-                      onClick={onClose}
-                    >
-                      <span className="sidebar-sublabel flex items-center justify-between w-full">
-                        {child.label}
-                        {child.path === '/reposicion' && restockItems.length > 0 && (
-                          <span className={`px-2 py-0.5 ml-2 text-xs font-bold rounded-full ${unassignedCount > 0 ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'}`}>
-                            {restockItems.length}
+                  {item.children.map((child) => {
+                    const isLocked = child.feature && !features[child.feature];
+                    return (
+                      <NavLink
+                        key={child.path}
+                        to={child.path}
+                        className={({ isActive }) =>
+                          `sidebar-sublink ${isActive ? 'active' : ''} ${isLocked ? 'locked' : ''}`
+                        }
+                        onClick={(e) => handleLinkClick(e, child.feature)}
+                      >
+                        <span className="sidebar-sublabel flex items-center justify-between w-full">
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {child.label}
+                            {isLocked && <Lock size={12} className="text-gray-400" />}
                           </span>
-                        )}
-                      </span>
-                    </NavLink>
-                  ))}
+                          {child.path === '/reposicion' && restockItems.length > 0 && !isLocked && (
+                            <span className={`px-2 py-0.5 ml-2 text-xs font-bold rounded-full ${unassignedCount > 0 ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'}`}>
+                              {restockItems.length}
+                            </span>
+                          )}
+                        </span>
+                      </NavLink>
+                    );
+                  })}
                 </div>
               </div>
             );
           }
 
           // Simple link (no children)
+          const isLocked = item.feature && !features[item.feature];
           return (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `sidebar-link ${isActive ? 'active' : ''} ${item.highlight ? 'sidebar-link-highlight' : ''}`
+                `sidebar-link ${isActive ? 'active' : ''} ${item.highlight ? 'sidebar-link-highlight' : ''} ${isLocked ? 'locked' : ''}`
               }
               title={item.desc}
-              onClick={onClose}
+              onClick={(e) => handleLinkClick(e, item.feature)}
               end={item.path === '/'}
             >
               <item.icon className="sidebar-icon" size={20} />
-              <span className="sidebar-label">{item.label}</span>
+              <span className="sidebar-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {item.label}
+                {isLocked && <Lock size={14} className="text-gray-400" />}
+              </span>
             </NavLink>
           );
         })}

@@ -9,6 +9,7 @@ import { useModal } from '../../hooks/useModal';
 import { useNavigate } from 'react-router-dom';
 import { CameraScanner } from '../../components/CameraScanner/CameraScanner';
 import { CategoryTreeMobile } from '../../components/CategoryTree/CategoryTreeMobile';
+import { usePlanGuard } from '../../store/useSubscription';
 import './ProductsMobile.css';
 
 export const ProductsMobile = () => {
@@ -38,6 +39,9 @@ export const ProductsMobile = () => {
     const [productForBarcode, setProductForBarcode] = useState<Product | null>(null);
     const { confirmModal, showConfirm } = useModal();
     const navigate = useNavigate();
+    
+    const { guard: guardProduct } = usePlanGuard('products');
+
     useEffect(() => {
         loadProducts();
         // Load with hierarchy so parent_id is available
@@ -65,8 +69,10 @@ export const ProductsMobile = () => {
     };
 
     const handleCreate = () => {
-        setProductToEdit(null);
-        setIsModalOpen(true);
+        guardProduct(() => {
+            setProductToEdit(null);
+            setIsModalOpen(true);
+        });
     };
 
     const handleBarcode = (e: React.MouseEvent, product: Product) => {

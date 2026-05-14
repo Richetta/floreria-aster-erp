@@ -49,9 +49,9 @@ import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { playBeep } from '../../utils/audio';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import { api } from '../../services/api';
-import './POS.css';
 import './POS.mobile.css';
 import { TreeSelect } from '../../components/TreeSelect/TreeSelect';
+import { usePlanGuard } from '../../store/useSubscription';
 
 type ProductView = 'recent' | 'top' | 'all' | 'packages';
 
@@ -69,6 +69,8 @@ export const POSDesktop = () => {
     const shopInfo = useStore((state) => state.shopInfo);
     const navigate = useNavigate();
     const isMobile = useMediaQuery('(max-width: 768px)');
+    
+    const { guard: guardOrder } = usePlanGuard('orders');
 
     const addCustomer = useStore((state) => state.addCustomer);
     const brands = useStore((state) => state.brands);
@@ -523,9 +525,10 @@ export const POSDesktop = () => {
         : total + adjAmount;
 
     const handleCheckout = async (method: string) => {
-        if (cart.length === 0) return;
+        guardOrder(async () => {
+            if (cart.length === 0) return;
 
-        // Final Stock Validation before processing
+            // Final Stock Validation before processing
         for (const item of cart) {
             if (item.isPackage) {
                 const availability = checkPackageAvailability(item.id);
@@ -710,6 +713,7 @@ export const POSDesktop = () => {
                 });
             }
         }
+        });
     };
 
     // Helper for hierarchical category filtering

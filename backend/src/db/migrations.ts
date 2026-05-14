@@ -276,8 +276,88 @@ export async function runSubscriptionMigrations() {
     // Ensure the existing 'florecer' plan is updated to the new pricing
     await sql`UPDATE subscription_plans SET price_monthly = 45000, price_annually = 450000, max_users = 5, max_products = 500, max_orders_per_month = 200, max_categories = 10 WHERE slug = 'florecer'`.execute(db);
     
+    await runCustomSubscriptionUpdates();
+
     console.log('--- SUBSCRIPTION MIGRATIONS COMPLETED ---');
   } catch (error) {
     console.error('Subscription migrations failed (non-fatal):', error);
+  }
+}
+
+/**
+ * Custom updates requested by user:
+ * 1. richettajp@gmail.com and floreriaaster@gmail.com -> Florecer (Annual)
+ * 2. Other existing accounts -> 15-day Trial
+ * 3. New accounts -> Start with Free mode (handled in auth logic)
+ */
+export async function runCustomSubscriptionUpdates() {
+  console.log('--- RUNNING CUSTOM SUBSCRIPTION UPDATES ---');
+  try {
+    // 1. Get the 'florecer' plan ID
+    const planResult = await sql`SELECT id FROM subscription_plans WHERE slug = 'florecer'`.execute(db);
+    const florecerPlanId = (planResult.rows[0] as any)?.id;
+
+    if (!florecerPlanId) {
+      console.error('❌ Plan "florecer" not found, skipping custom updates');
+      return;
+    }
+
+    // 2. Identify businesses for the specific emails
+    const specificEmails = ['richettajp@gmail.com', 'floreriaaster@gmail.com'];
+    const usersResult = await sql`SELECT business_id, email FROM users WHERE email IN (${sql.join(specificEmails)})`.execute(db);
+    const specificBusinessIds = usersResult.rows.map((u: any) => u.business_id);
+
+    const now = new Date();
+    const oneYearLater = new Date(now);
+    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+
+    // Update specific businesses to Florecer Annual
+    for (const businessId of specificBusinessIds) {
+      await sql`
+        INSERT INTO subscriptions (business_id, plan_id, status, billing_cycle, current_period_start, current_period_end, updated_at)
+        VALUES (${businessId}, ${florecerPlanId}, 'active', 'annually', ${now}, ${oneYearLater}, ${now})
+        ON CONFLICT (business_id) DO UPDATE SET
+          plan_id = EXCLUDED.plan_id,
+          status = 'active',
+          billing_cycle = 'annually',
+          current_period_start = EXCLUDED.current_period_start,
+          current_period_end = EXCLUDED.current_period_end,
+          trial_ends_at = NULL,
+          updated_at = EXCLUDED.updated_at
+      `.execute(db);
+      console.log(`✔ Business ${businessId} upgraded to Florecer Annual`);
+    }
+
+    // 3. Set all other existing businesses to a 15-day trial
+    // We target businesses that are NOT in the specific list
+    const trialEnd = new Date(now);
+    trialEnd.setDate(trialEnd.getDate() + 15);
+
+    // Get the 'semilla' plan ID for the trial if they don't have one? 
+    // Actually, usually trial is on the paid plan features, but the user said "leave them in trial mode".
+    // I'll assume they get the 'florecer' features during the trial.
+    
+    const otherBusinessesResult = await sql`
+      SELECT id FROM businesses 
+      WHERE id NOT IN (SELECT business_id FROM users WHERE email IN (${sql.join(specificEmails)}))
+    `.execute(db);
+    
+    for (const b of otherBusinessesResult.rows as any) {
+      // Upsert trial subscription
+      await sql`
+        INSERT INTO subscriptions (business_id, plan_id, status, billing_cycle, current_period_start, current_period_end, trial_ends_at, updated_at)
+        VALUES (${b.id}, ${florecerPlanId}, 'trial', 'monthly', ${now}, ${trialEnd}, ${trialEnd}, ${now})
+        ON CONFLICT (business_id) DO UPDATE SET
+          status = 'trial',
+          trial_ends_at = EXCLUDED.trial_ends_at,
+          updated_at = EXCLUDED.updated_at
+        WHERE subscriptions.status != 'active' -- Don't overwrite active paying users if any
+      `.execute(db);
+    }
+    console.log('✔ Existing accounts set to 15-day trial mode');
+
+    console.log('--- CUSTOM SUBSCRIPTION UPDATES COMPLETED ---');
+  } catch (error) {
+    console.error('❌ Custom subscription updates failed:', error);
   }
 }

@@ -96,6 +96,7 @@ export const ProductsDesktop = () => {
     // Modals state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const { guard: guardProduct } = usePlanGuard('products');
+    const { guard: guardCategory } = usePlanGuard('categories');
     const { requireFeature } = useFeatureGuard();
 
     const handleNewProduct = () => {
@@ -223,13 +224,17 @@ export const ProductsDesktop = () => {
 
     // Handlers
     const handleAddSubCategory = (parentId: string) => {
-        const name = prompt('Nombre de la sub-carpeta:');
-        if (name) addCategory(name, parentId);
+        guardCategory(() => {
+            const name = prompt('Nombre de la sub-carpeta:');
+            if (name) addCategory(name, parentId);
+        });
     };
 
     const handleCreateRootCategory = () => {
-        const name = prompt('Nombre de la nueva carpeta:');
-        if (name) addCategory(name);
+        guardCategory(() => {
+            const name = prompt('Nombre de la nueva carpeta:');
+            if (name) addCategory(name);
+        });
     };
 
     const handleRenameCategoryAction = (cat: Category) => {
@@ -440,17 +445,17 @@ export const ProductsDesktop = () => {
                                         <>
                                             <div className="dropdown-overlay" onClick={() => setShowMoreMenu(false)} />
                                             <div className="dropdown-menu">
-                                                <button className="dropdown-item" onClick={() => { setIsPriceHistoryOpen(true); setShowMoreMenu(false); }}>
+                                                <button className="dropdown-item" onClick={() => requireFeature('reports', () => { setIsPriceHistoryOpen(true); setShowMoreMenu(false); })}>
                                                     <TrendingUp size={18} /> Ver Historial de Precios
                                                 </button>
-                                                <button className="dropdown-item" onClick={() => { setShowImportModal(true); setShowMoreMenu(false); }}>
+                                                <button className="dropdown-item" onClick={() => requireFeature('importProducts', () => { setShowImportModal(true); setShowMoreMenu(false); })}>
                                                     <Upload size={18} /> Importar Productos
                                                 </button>
                                                 <div className="dropdown-divider"></div>
-                                                <button className="dropdown-item" onClick={() => { setIsBulkUpdateOpen(true); setShowMoreMenu(false); }}>
+                                                <button className="dropdown-item" onClick={() => requireFeature('importProducts', () => { setIsBulkUpdateOpen(true); setShowMoreMenu(false); })}>
                                                     <Tag size={18} /> Actualizar Precios Masivamente
                                                 </button>
-                                                <button className="dropdown-item" onClick={() => { handlePrint(); setShowMoreMenu(false); }}>
+                                                <button className="dropdown-item" onClick={() => requireFeature('reports', () => { handlePrint(); setShowMoreMenu(false); })}>
                                                     <FileDown size={18} /> Descargar Catálogo PDF
                                                 </button>
                                             </div>
@@ -795,7 +800,7 @@ export const ProductsDesktop = () => {
                                 <div className="bulk-actions-toolbar flex items-center gap-2">
                                     <button
                                         className="btn-bulk-edit"
-                                        onClick={() => setShowBulkEditModal(true)}
+                                        onClick={() => requireFeature('importProducts', () => setShowBulkEditModal(true))}
                                     >
                                         <Check size={16} />
                                         Editar {selectedProductIds.size}

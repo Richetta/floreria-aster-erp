@@ -183,6 +183,18 @@
     background-color: var(--color-primary-light);
 }
 
+.sidebar-link.locked,
+.sidebar-sublink.locked {
+    color: var(--color-text-muted);
+    opacity: 0.6;
+}
+
+.sidebar-link.locked:hover,
+.sidebar-sublink.locked:hover {
+    background-color: transparent;
+    color: var(--color-text-muted);
+}
+
 .sidebar-sublink.active::before {
     background: var(--color-primary);
     opacity: 1;
