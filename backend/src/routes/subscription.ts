@@ -189,8 +189,7 @@ export default async function subscriptionRoutes(server: FastifyInstance) {
           currency_id: 'ARS'
         },
         back_url: `${FRONTEND_URL}/suscripcion/exito`,
-        notification_url: `${BACKEND_URL}/api/subscription/webhook/mercadopago`,
-        status: 'pending'
+        notification_url: `${BACKEND_URL}/api/subscription/webhook/mercadopago`
       };
 
       if (include_trial && billing_cycle === 'monthly') {
