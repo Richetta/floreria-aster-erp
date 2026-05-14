@@ -59,12 +59,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    // Intermediate Plan Onboarding for Free users
-    const hasSeenOnboarding = sessionStorage.getItem('onboarding_seen') === 'true';
-    if (status === 'free' && !hasSeenOnboarding && location.pathname !== '/bienvenido') {
-        return <Navigate to="/bienvenido" replace />;
-    }
-
     return <>{children}</>;
 };
 

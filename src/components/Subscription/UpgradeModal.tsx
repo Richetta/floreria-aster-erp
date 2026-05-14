@@ -26,7 +26,7 @@ export const UpgradeModal = () => {
 
   const handleGoToSettings = () => {
     closeUpgradeModal();
-    navigate('/configuracion?tab=subscription');
+    navigate('/bienvenido');
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {

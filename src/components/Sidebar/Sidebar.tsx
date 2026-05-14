@@ -270,6 +270,20 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       </nav>
 
       <div className="sidebar-footer">
+        {status === 'free' && (
+          <button 
+            className="sidebar-upgrade-card"
+            onClick={() => navigate('/bienvenido')}
+          >
+            <div className="upgrade-card-icon">
+              <Star size={20} fill="currentColor" />
+            </div>
+            <div className="upgrade-card-content">
+              <span className="upgrade-card-title">Plan Profesional</span>
+              <span className="upgrade-card-desc">Subí de nivel hoy</span>
+            </div>
+          </button>
+        )}
         <div className="user-profile">
           <div className="avatar">{user?.name?.charAt(0).toUpperCase() || 'U'}</div>
           <div className="user-info">
