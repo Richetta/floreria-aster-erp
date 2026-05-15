@@ -98,7 +98,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const currentUser = request.user as any;
 
-    await sql`SET LOCAL app.current_business_id = ${currentUser.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(db);
 
     const users = await db
       .selectFrom('users')
@@ -162,7 +162,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createUserSchema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${currentUser.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(db);
 
       // Check if email already exists
       const existing = await db
@@ -228,7 +228,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = updateUserSchema.parse(request.body);
 
-      await sql`SET LOCAL app.current_business_id = ${currentUser.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(db);
 
       if (id === currentUser.sub && body.role && body.role !== currentUser.role) {
         return reply.status(400).send({ error: 'Cannot change your own role' });
@@ -293,7 +293,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: 'Cannot delete your own account' });
     }
 
-    await sql`SET LOCAL app.current_business_id = ${currentUser.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(db);
 
     await db
       .updateTable('users')
@@ -411,7 +411,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const invitations = await db
       .selectFrom('user_invitations')
@@ -446,7 +446,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       const body = schema.parse(request.body);
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       // Check user limit
       const canInvite = await checkUserLimit(user.business_id, reply);
@@ -508,7 +508,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     await db
       .deleteFrom('user_invitations')

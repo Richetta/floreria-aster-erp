@@ -25,7 +25,7 @@ export const commentsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { entityType, entityId } = request.params as { entityType: string, entityId: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     const comments = await db
       .selectFrom('internal_comments as c')
@@ -59,7 +59,7 @@ export const commentsRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       const body = commentSchema.parse(request.body);
-      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
       const result = await db
         .insertInto('internal_comments')
@@ -98,7 +98,7 @@ export const commentsRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
     // Only creator or admin/owner can delete
     const comment = await db
