@@ -17,6 +17,7 @@ import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useModal } from '../../hooks/useModal';
 import { useFeatureGuard } from '../../store/useSubscription';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
+import { CommentSection } from '../../components/Comments/CommentSection';
 import './Customers.css';
 
 export const CustomersDesktop = () => {
@@ -41,6 +42,9 @@ export const CustomersDesktop = () => {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentData, setPaymentData] = useState({ customerId: '', amount: '' });
     const [historyModal, setHistoryModal] = useState<{ open: boolean; customerId: string; customerName: string }>({
+        open: false, customerId: '', customerName: ''
+    });
+    const [notesModal, setNotesModal] = useState<{ open: boolean; customerId: string; customerName: string }>({
         open: false, customerId: '', customerName: ''
     });
 
@@ -180,13 +184,20 @@ export const CustomersDesktop = () => {
                                 </div>
                             </div>
                             <div className="customer-actions flex gap-1">
-                                <button
-                                    className="btn-icon text-muted hover-primary"
-                                    onClick={() => handleViewHistory(customer)}
-                                    title="Ver Historial"
-                                >
-                                    <Clock size={18} />
-                                </button>
+                                    <button
+                                        className="btn-icon text-muted hover-primary"
+                                        onClick={() => setNotesModal({ open: true, customerId: customer.id, customerName: customer.name })}
+                                        title="Notas de Equipo"
+                                    >
+                                        <MessageCircle size={18} />
+                                    </button>
+                                    <button
+                                        className="btn-icon text-muted hover-primary"
+                                        onClick={() => handleViewHistory(customer)}
+                                        title="Ver Historial"
+                                    >
+                                        <Clock size={18} />
+                                    </button>
                                 <button
                                     className="btn-icon text-muted hover-primary"
                                     onClick={() => handleEdit(customer)}
@@ -320,6 +331,20 @@ export const CustomersDesktop = () => {
                     customerName={historyModal.customerName}
                     onClose={() => setHistoryModal({ ...historyModal, open: false })}
                 />
+            )}
+            
+            {notesModal.open && (
+                <div className="modal-overlay" onClick={() => setNotesModal({ ...notesModal, open: false })}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', height: '80vh', display: 'flex', flexDirection: 'column' }}>
+                        <div className="modal-header flex justify-between items-center mb-4 p-4 border-b">
+                            <h3 className="text-h3">Notas de Equipo: {notesModal.customerName}</h3>
+                            <button className="btn-icon" onClick={() => setNotesModal({ ...notesModal, open: false })}><X size={20} /></button>
+                        </div>
+                        <div className="flex-1 overflow-hidden p-4">
+                            <CommentSection entityType="customer" entityId={notesModal.customerId} />
+                        </div>
+                    </div>
+                </div>
             )}
 
             {alertModal && <AlertModal {...alertModal} />}

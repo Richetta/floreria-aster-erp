@@ -29,6 +29,8 @@ export interface Database {
   refresh_tokens: RefreshTokensTable;
   audit_logs: AuditLogsTable;
   user_activity: UserActivityTable;
+  user_invitations: UserInvitationsTable;
+  internal_comments: InternalCommentsTable;
   app_settings: AppSettingsTable;
   subscription_plans: SubscriptionPlansTable;
   subscriptions: SubscriptionsTable;
@@ -65,6 +67,7 @@ interface UsersTable {
   id: string;
   business_id: string;
   name: string;
+  username: string | null;
   email: string;
   password_hash: string | null;
   google_id: string | null;
@@ -72,7 +75,7 @@ interface UsersTable {
   google_refresh_token: string | null;
   google_token_expiry: number | null;
   google_calendar_enabled: boolean | null;
-  role: 'admin' | 'seller' | 'driver' | 'viewer';
+  role: 'owner' | 'admin' | 'employee' | 'finance' | 'delivery' | 'viewer';
   phone: string | null;
   is_active: boolean;
   last_login: Date | null;
@@ -403,6 +406,29 @@ interface LiveCartTable {
   business_id: string;
   user_id: string;
   cart_data: any;
+  updated_at: Date;
+}
+
+interface UserInvitationsTable {
+  id: string;
+  business_id: string;
+  email: string;
+  role: string;
+  token: string;
+  invited_by: string | null;
+  expires_at: Date;
+  accepted_at: Date | null;
+  created_at: Date;
+}
+
+interface InternalCommentsTable {
+  id: string;
+  business_id: string;
+  entity_type: string;
+  entity_id: string;
+  user_id: string | null;
+  content: string;
+  created_at: Date;
   updated_at: Date;
 }
 

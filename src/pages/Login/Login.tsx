@@ -7,7 +7,7 @@ import {
     Package, ShoppingCart, TrendingUp, Truck,
     BarChart3, ChevronDown, CheckCircle2, Zap, Clock,
     ClipboardList, AlertTriangle, BarChart2, ArrowRight,
-    Star, Play
+    Star, Play, User
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { api } from '../../services/api';
@@ -205,8 +205,8 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
             <form onSubmit={handleSubmit} className="login-form">
                 <div className="form-group">
                     <label className="form-label">
-                        <Mail size={18} />
-                        Email
+                        <User size={18} />
+                        Email o Usuario
                     </label>
                     <div className="input-wrapper">
                         <input

@@ -89,6 +89,7 @@ const PUBLIC_ROUTES = [
   '/api/auth/google',
   '/api/auth/google/callback',
   '/api/subscription/webhook/mercadopago', // MercadoPago webhook needs to receive callbacks
+  '/api/users/invitations/accept', // Allow users to accept invitations without login
   '/api/health',
   '/health', // Support both paths
 ];
@@ -177,6 +178,8 @@ console.log('Loading business.js...');
 await fastify.register(import('./routes/business.js'), { prefix: '/api/business' });
 console.log('Loading inventory.js...');
 await fastify.register(import('./routes/inventory.js'), { prefix: '/api/inventory' });
+console.log('Loading comments.js...');
+await fastify.register(import('./routes/comments.js'), { prefix: '/api/comments' });
 console.log('Loading diagnostic.js...');
 await fastify.register(import('./routes/diagnostic.js'), { prefix: '/api/admin' });
 console.log('Loading subscription.js...');

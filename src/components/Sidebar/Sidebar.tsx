@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -25,20 +25,23 @@ import {
   Wrench,
   Lock,
   Star,
-  CreditCard
+  CreditCard,
+  UserCheck
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { useStore } from '../../store/useStore';
 import { useSubscription, type SubscriptionState } from '../../store/useSubscription';
+import { usePermissions } from '../../hooks/usePermissions';
 import './Sidebar.css';
 
-type NavLink = {
+type NavLinkItem = {
   path: string;
   icon: typeof LayoutDashboard;
   label: string;
   desc: string;
   highlight?: boolean;
   feature?: keyof SubscriptionState['features'];
+  permission?: string;
 };
 
 type NavGroup = {
@@ -46,24 +49,25 @@ type NavGroup = {
   icon: typeof LayoutDashboard;
   label: string;
   desc: string;
-  children: { path: string; label: string; icon?: typeof LayoutDashboard; feature?: keyof SubscriptionState['features'] }[];
+  children: { path: string; label: string; icon?: typeof LayoutDashboard; feature?: keyof SubscriptionState['features']; permission?: string }[];
+  permission?: string;
 };
 
-type NavItem = NavLink | NavGroup;
+type NavItem = NavLinkItem | NavGroup;
 
-// Navegación reorganizada: 8 items primarios con submenús
+// Navegación reorganizada con permisos
 const navItems: NavItem[] = [
-  // ── PRINCIPAL (siempre visible, sin grupo) ──
   { path: '/', icon: LayoutDashboard, label: 'Inicio', desc: 'Resumen del día' },
-  { path: '/pos', icon: ShoppingCart, label: 'Vender', desc: 'Nueva venta rápida', highlight: true },
+  { path: '/pos', icon: ShoppingCart, label: 'Vender', desc: 'Nueva venta rápida', highlight: true, permission: 'canManageOrders' },
   {
     id: 'pedidos',
     icon: Truck,
     label: 'Pedidos',
     desc: 'Entregas y envíos',
+    permission: 'canViewOrders',
     children: [
       { path: '/pedidos', label: 'Gestión' },
-      { path: '/logistica', label: 'Logística', icon: Map, feature: 'logistics' },
+      { path: '/logistica', label: 'Logística', icon: Map, feature: 'logistics', permission: 'canViewLogistics' },
       { path: '/calendario', label: 'Calendario', icon: Calendar, feature: 'calendar' },
     ]
   },
@@ -72,24 +76,24 @@ const navItems: NavItem[] = [
     icon: Users,
     label: 'Clientes',
     desc: 'Base de datos',
+    permission: 'canViewCustomers',
     children: [
       { path: '/clientes', label: 'Directorio' },
       { path: '/recordatorios', label: 'Recordatorios', icon: Bell, feature: 'reminders' },
     ]
   },
-
-  // ── GESTIÓN (con submenús colapsables) ──
   {
     id: 'productos',
     icon: Package,
     label: 'Productos',
     desc: 'Inventario y stock',
+    permission: 'canViewProducts',
     children: [
       { path: '/productos', label: 'Catálogo' },
       { path: '/paquetes', label: 'Ramos', icon: Layers, feature: 'packages' },
-      { path: '/reposicion', label: 'Reposición', feature: 'restock' },
+      { path: '/reposicion', label: 'Reposición', feature: 'restock', permission: 'canManageProducts' },
       { path: '/stock', label: 'Movimientos', icon: Activity, feature: 'stockMovements' },
-      { path: '/mermas', label: 'Mermas', icon: Trash2, feature: 'waste' },
+      { path: '/mermas', label: 'Mermas', icon: Trash2, feature: 'waste', permission: 'canManageProducts' },
     ]
   },
   {
@@ -97,6 +101,7 @@ const navItems: NavItem[] = [
     icon: Store,
     label: 'Proveedores',
     desc: 'Compras y suministros',
+    permission: 'canManageProducts',
     children: [
       { path: '/proveedores', label: 'Directorio' },
       { path: '/compras', label: 'Compras', icon: ShoppingBag, feature: 'purchases' },
@@ -107,10 +112,11 @@ const navItems: NavItem[] = [
     icon: Wallet,
     label: 'Finanzas',
     desc: 'Control económico',
+    permission: 'canViewFinances',
     children: [
-      { path: '/finanzas', label: 'Movimientos' },
+      { path: '/finanzas', label: 'Movimientos', permission: 'canManageFinances' },
       { path: '/ventas', label: 'Ventas', icon: FileText },
-      { path: '/caja', label: 'Caja', icon: Vault, feature: 'cashRegister' },
+      { path: '/caja', label: 'Caja', icon: Vault, feature: 'cashRegister', permission: 'canManageFinances' },
       { path: '/reportes', label: 'Reportes', icon: BarChart3, feature: 'reports' },
     ]
   },
@@ -121,7 +127,7 @@ const navItems: NavItem[] = [
     desc: 'Utilidades operativas',
     children: [
       { path: '/herramientas', label: 'Ver Todas' },
-      { path: '/herramientas/codigos', label: 'Códigos de Barra', feature: 'barcode' },
+      { path: '/herramientas/codigos', label: 'Códigos de Barra', feature: 'barcode', permission: 'canManageProducts' },
     ]
   },
   {
@@ -130,8 +136,9 @@ const navItems: NavItem[] = [
     label: 'Ajustes',
     desc: 'Configuración',
     children: [
-      { path: '/configuracion', label: 'General' },
-      { path: '/configuracion?tab=subscription', label: 'Suscripción', icon: CreditCard },
+      { path: '/configuracion', label: 'General', permission: 'canManageSettings' },
+      { path: '/usuarios', label: 'Equipo', icon: UserCheck, permission: 'canManageUsers' },
+      { path: '/configuracion?tab=subscription', label: 'Suscripción', icon: CreditCard, permission: 'canManageSubscription' },
     ]
   },
 ];
@@ -145,8 +152,9 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const perms = usePermissions();
   const products = useStore(state => state.products);
-  const { features, showUpgradeModal } = useSubscription();
+  const { status, features, showUpgradeModal } = useSubscription();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
 
   const restockItems = products.filter(p => p.stock <= (p.min || 0));
@@ -170,6 +178,33 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const toggleSubmenu = (id: string) => {
     setExpandedMenus(prev => ({ ...prev, [id]: !prev[id] }));
   };
+
+  // Filter nav items based on permissions
+  const filteredNavItems = useMemo(() => {
+    return navItems.filter(item => {
+      // Check top-level permission
+      if (item.permission && !(perms as any)[item.permission]) {
+        return false;
+      }
+
+      // If it's a group, check if it has at least one visible child
+      if ('children' in item) {
+        const visibleChildren = item.children.filter(child => {
+          if (child.permission && !(perms as any)[child.permission]) {
+            return false;
+          }
+          return true;
+        });
+        
+        if (visibleChildren.length === 0) return false;
+        
+        // Update item with only visible children
+        return { ...item, children: visibleChildren };
+      }
+
+      return true;
+    });
+  }, [perms]);
 
   // Auto-expand a submenu if one of its children is the active route
   const isChildActive = (children: { path: string }[]) =>
@@ -198,7 +233,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       </div>
 
       <nav className="sidebar-nav">
-        {navItems.map((item) => {
+        {filteredNavItems.map((item) => {
           // Collapsible group (has children)
           if (isNavGroup(item)) {
             // If the user has manually toggled it, use that. Otherwise, expand if a child is active.
@@ -295,9 +330,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           <div className="user-info">
             <span className="user-name">{user?.name || 'Usuario'}</span>
             <span className="user-role">
-              {user?.role === 'admin' ? 'Administrador' :
-                user?.role === 'seller' ? 'Vendedor' :
-                  user?.role === 'driver' ? 'Repartidor' : 'Visualizador'}
+              {user?.role === 'owner' ? 'Dueño' :
+                user?.role === 'admin' ? 'Administrador' :
+                user?.role === 'employee' ? 'Empleado' :
+                user?.role === 'finance' ? 'Finanzas' :
+                user?.role === 'delivery' ? 'Repartidor' : 'Visualizador'}
             </span>
           </div>
           <button className="btn-icon-logout" onClick={handleLogout} title="Cerrar sesión">

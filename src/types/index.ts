@@ -292,12 +292,13 @@ export interface SupplierFormData {
 // USER TYPES
 // ============================================
 
-export type UserRole = 'admin' | 'seller' | 'driver' | 'viewer';
+export type UserRole = 'owner' | 'admin' | 'employee' | 'finance' | 'delivery' | 'viewer';
 
 export interface User {
   id: string;
   business_id: string;
   name: string;
+  username?: string | null;
   email: string;
   role: UserRole;
   phone?: string;
@@ -309,10 +310,35 @@ export interface User {
 
 export interface UserFormData {
   name: string;
+  username?: string;
   email: string;
   password?: string;
   role: UserRole;
   phone?: string;
+}
+
+export interface UserInvitation {
+  id: string;
+  business_id: string;
+  email: string;
+  role: UserRole;
+  token: string;
+  invited_by?: string;
+  expires_at: string;
+  accepted_at?: string;
+  created_at: string;
+}
+
+export interface InternalComment {
+  id: string;
+  business_id: string;
+  entity_type: string;
+  entity_id: string;
+  user_id: string;
+  user_name?: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AuthResponse {

@@ -124,7 +124,7 @@ export const activityRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         await request.jwtVerify();
         const user = request.user as any;
-        if (user.role !== 'admin') {
+        if (user.role !== 'admin' && user.role !== 'owner') {
           reply.code(403).send({ error: 'Forbidden' });
         }
       } catch (err) {

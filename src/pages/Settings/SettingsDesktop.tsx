@@ -6,7 +6,7 @@ import {
     MapPin, CreditCard,
     Check, X, Shield, Wallet, HardDrive,
     Smartphone, Store, Instagram, Database, Upload, Palette, Eye, EyeOff, Cloud,
-    BarChart3, Zap, Share2
+    BarChart3, Zap, Share2, MessageSquare, UserCheck, Mail
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
@@ -611,86 +611,36 @@ export const SettingsDesktop = () => {
 
                 {/* USERS TAB */}
                 {activeTab === 'users' && (
-                    <div className="settings-tab-content">
-                        <div className="users-header">
-                            <div className="users-header-content">
-                                <div className="users-header-icon">
-                                    <Users size={28} />
-                                </div>
-                                <div className="users-header-text">
-                                    <h2>Usuarios del Sistema</h2>
-                                    <p>Gestioná los usuarios y permisos de acceso</p>
+                        <div className="users-managed-card">
+                            <div className="managed-card-content">
+                                <Users size={48} className="text-primary mb-4" />
+                                <h2>Nueva Gestión de Equipo</h2>
+                                <p>Ahora podés invitar empleados, asignar roles detallados y coordinar a tu equipo de forma más profesional.</p>
+                                <div className="managed-actions mt-6">
+                                    <button 
+                                        className="btn btn-primary btn-lg"
+                                        onClick={() => navigate('/usuarios')}
+                                    >
+                                        <UserCheck size={20} />
+                                        Ir a Gestión de Equipo
+                                    </button>
                                 </div>
                             </div>
-                            <button className="btn btn-primary" onClick={() => handleOpenUserModal()}>
-                                <Plus size={18} />
-                                <span>Nuevo Usuario</span>
-                            </button>
+                            <div className="managed-card-features">
+                                <div className="feature-item">
+                                    <Shield size={20} className="text-success" />
+                                    <span>Roles de Dueño, Admin, Empleado, Repartidor y más.</span>
+                                </div>
+                                <div className="feature-item">
+                                    <Mail size={20} className="text-primary" />
+                                    <span>Invitaciones por email con enlaces de registro únicos.</span>
+                                </div>
+                                <div className="feature-item">
+                                    <MessageSquare size={20} className="text-purple-500" />
+                                    <span>Chat interno y coordinación en pedidos y clientes.</span>
+                                </div>
+                            </div>
                         </div>
-
-                        {isLoadingUsers ? (
-                            <div className="loading-state">
-                                <div className="spinner" />
-                                <p>Cargando usuarios...</p>
-                            </div>
-                        ) : users.length === 0 ? (
-                            <div className="empty-state">
-                                <Users size={64} className="empty-state-icon" />
-                                <h3>No hay usuarios</h3>
-                                <p>Comenzá creando el primer usuario del sistema</p>
-                                <button className="btn btn-primary" onClick={() => handleOpenUserModal()}>
-                                    <Plus size={18} />
-                                    <span>Crear Primer Usuario</span>
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="users-grid">
-                                {users.map(user => (
-                                    <div key={user.id} className="user-card">
-                                        <div className="user-card-header">
-                                            <div className="user-avatar">
-                                                {user.name.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div className="user-info">
-                                                <h4>{user.name}</h4>
-                                                <p className="user-email">{user.email}</p>
-                                            </div>
-                                        </div>
-                                        <div className="user-card-body">
-                                            <div className="user-role-section">
-                                                <span className={`role-badge ${getRoleBadgeColor(user.role)}`}>
-                                                    {getRoleLabel(user.role)}
-                                                </span>
-                                            </div>
-                                            <div className="user-meta">
-                                                <div className="user-meta-item">
-                                                    <Shield size={14} />
-                                                    <span>ID: {user.id.substring(0, 8)}...</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="user-card-actions">
-                                            <button
-                                                className="btn btn-secondary btn-compact"
-                                                onClick={() => handleOpenUserModal(user)}
-                                            >
-                                                <Edit2 size={14} />
-                                                <span>Editar</span>
-                                            </button>
-                                            {user.id !== currentUser?.id && (
-                                                <button
-                                                    className="btn btn-danger btn-compact"
-                                                    onClick={() => handleDeleteUser(user)}
-                                                >
-                                                    <Trash2 size={14} />
-                                                    <span>Eliminar</span>
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
 
                         {/* User Modal */}
                         {isUserModalOpen && (

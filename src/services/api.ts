@@ -17,8 +17,9 @@ const API_BASE_URL = import.meta.env.PROD
 export type User = {
   id: string;
   name: string;
+  username?: string | null;
   email: string;
-  role: 'admin' | 'seller' | 'driver' | 'viewer';
+  role: 'owner' | 'admin' | 'employee' | 'finance' | 'delivery' | 'viewer';
   business_id: string;
 };
 
@@ -202,6 +203,31 @@ export type Brand = {
   updated_at: string;
 };
 
+export type UserInvitation = {
+  id: string;
+  business_id: string;
+  email: string;
+  role: string;
+  token: string;
+  invited_by?: string;
+  expires_at: string;
+  accepted_at?: string;
+  created_at: string;
+  invite_link?: string;
+};
+
+export type InternalComment = {
+  id: string;
+  business_id: string;
+  entity_type: string;
+  entity_id: string;
+  user_id: string;
+  user_name?: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+};
+
 // ============================================
 // HTTP CLIENT
 // ============================================
@@ -359,6 +385,59 @@ class ApiClient {
 
   async getProfile(): Promise<User> {
     return this.request<User>('/users/profile/me');
+  }
+
+  // ============================================
+  // INVITATIONS ENDPOINTS
+  // ============================================
+
+  async getInvitations(): Promise<UserInvitation[]> {
+    return this.request<UserInvitation[]>('/users/invitations');
+  }
+
+  async getInvitationByToken(token: string): Promise<UserInvitation> {
+    return this.request<UserInvitation>(`/users/invitations/accept?token=${token}`);
+  }
+
+  async createInvitation(data: { email: string; role: string }): Promise<UserInvitation> {
+    return this.request<UserInvitation>('/users/invitations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async revokeInvitation(id: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/users/invitations/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async acceptInvitation(data: any): Promise<any> {
+    return this.request('/users/invitations/accept', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ============================================
+  // INTERNAL COMMENTS ENDPOINTS
+  // ============================================
+
+  async getComments(entityType: string, entityId: string): Promise<InternalComment[]> {
+    return this.request<InternalComment[]>(`/comments/${entityType}/${entityId}`);
+  }
+
+  async createComment(data: { entity_type: string; entity_id: string; content: string }): Promise<InternalComment> {
+    return this.request<InternalComment>('/comments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteComment(id: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/comments/${id}`, {
+      method: 'DELETE',
+    });
   }
 
   // ============================================
@@ -702,6 +781,10 @@ class ApiClient {
 
   async getOrder(id: string): Promise<any> {
     return this.request(`/orders/${id}`);
+  }
+
+  async getActivity(): Promise<any[]> {
+    return this.request<any[]>('/activity');
   }
 
   async createOrder(order: any): Promise<Order> {

@@ -15,6 +15,7 @@ import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
 import { Link, useNavigate } from 'react-router-dom';
 import { NotificationsPanel } from '../../components/Notifications/NotificationsPanel';
+import { ActivityFeed } from '../../components/Dashboard/ActivityFeed';
 import './Dashboard.css';
 
 export const DashboardDesktop = () => {
@@ -272,6 +273,11 @@ export const DashboardDesktop = () => {
                             </div>
                         )}
                     </div>
+                </section>
+
+                {/* Activity Feed */}
+                <section className="card">
+                    <ActivityFeed />
                 </section>
             </div>
 

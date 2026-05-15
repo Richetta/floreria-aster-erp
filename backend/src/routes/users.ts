@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { sql } from 'kysely';
 import { db } from '../db/index.js';
 import { randomUUID } from 'crypto';
+import { emailService } from '../services/EmailService.js';
+import { config } from '../config/index.js';
 
 // Helper: Check subscription user limit
 async function checkUserLimit(businessId: string, reply: any) {
@@ -68,9 +70,10 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   // Create user schema
   const createUserSchema = z.object({
     name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+    username: z.string().min(3, 'El nombre de usuario debe tener al menos 3 caracteres').optional().or(z.literal('')),
     email: z.string().email('Email inválido'),
     password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-    role: z.enum(['admin', 'seller', 'driver', 'viewer']).default('viewer'),
+    role: z.enum(['owner', 'admin', 'employee', 'finance', 'delivery', 'viewer']).default('viewer'),
     phone: z.string().optional().or(z.literal(''))
   });
 
@@ -85,8 +88,8 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         await request.jwtVerify();
         const user = request.user as any;
-        if (user.role !== 'admin') {
-          return reply.code(403).send({ error: 'Only admins can list users' });
+        if (user.role !== 'admin' && user.role !== 'owner') {
+          return reply.code(403).send({ error: 'Only admins or owners can list users' });
         }
       } catch (err) {
         reply.code(401).send({ error: 'Unauthorized' });
@@ -99,7 +102,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
     const users = await db
       .selectFrom('users')
-      .select(['id', 'name', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
+      .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
       .where('deleted_at', 'is', null)
       .orderBy('name', 'asc')
       .execute();
@@ -124,7 +127,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
     const targetUser = await db
       .selectFrom('users')
-      .select(['id', 'name', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
+      .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
       .where('id', '=', id)
       .where('deleted_at', 'is', null)
       .executeTakeFirst();
@@ -142,8 +145,8 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         await request.jwtVerify();
         const user = request.user as any;
-        if (user.role !== 'admin') {
-          return reply.code(403).send({ error: 'Only admins can create users' });
+        if (user.role !== 'admin' && user.role !== 'owner') {
+          return reply.code(403).send({ error: 'Only admins or owners can create users' });
         }
       } catch (err) {
         reply.code(401).send({ error: 'Unauthorized' });
@@ -183,6 +186,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
           id: randomUUID(),
           business_id: currentUser.business_id,
           name: body.name,
+          username: body.username || null,
           email: body.email,
           password_hash: passwordHash,
           role: body.role,
@@ -192,7 +196,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
           updated_at: new Date(),
           deleted_at: null
         })
-        .returning(['id', 'name', 'email', 'role', 'phone', 'is_active', 'created_at'])
+        .returning(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'created_at'])
         .executeTakeFirst();
 
       return reply.status(201).send(result);
@@ -210,8 +214,8 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         await request.jwtVerify();
         const user = request.user as any;
-        if (user.role !== 'admin') {
-          return reply.code(403).send({ error: 'Only admins can update users' });
+        if (user.role !== 'admin' && user.role !== 'owner') {
+          return reply.code(403).send({ error: 'Only admins or owners can update users' });
         }
       } catch (err) {
         reply.code(401).send({ error: 'Unauthorized' });
@@ -226,8 +230,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
       await sql`SET LOCAL app.current_business_id = ${currentUser.business_id}`.execute(db);
 
-      // Admins can't demote themselves
-      if (id === currentUser.sub && body.role && body.role !== 'admin') {
+      if (id === currentUser.sub && body.role && body.role !== currentUser.role) {
         return reply.status(400).send({ error: 'Cannot change your own role' });
       }
 
@@ -237,6 +240,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       };
 
       if (body.name !== undefined) updateData.name = body.name;
+      if (body.username !== undefined) updateData.username = body.username || null;
       if (body.email !== undefined) updateData.email = body.email;
       if (body.role !== undefined) updateData.role = body.role;
       if (body.phone !== undefined) updateData.phone = body.phone || null;
@@ -251,7 +255,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
         .updateTable('users')
         .set(updateData)
         .where('id', '=', id)
-        .returning(['id', 'name', 'email', 'role', 'phone', 'is_active', 'updated_at'])
+        .returning(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'updated_at'])
         .executeTakeFirst();
 
       if (!result) {
@@ -273,8 +277,8 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         await request.jwtVerify();
         const user = request.user as any;
-        if (user.role !== 'admin') {
-          return reply.code(403).send({ error: 'Only admins can delete users' });
+        if (user.role !== 'admin' && user.role !== 'owner') {
+          return reply.code(403).send({ error: 'Only admins or owners can delete users' });
         }
       } catch (err) {
         reply.code(401).send({ error: 'Unauthorized' });
@@ -383,11 +387,247 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
     const profile = await db
       .selectFrom('users')
-      .select(['id', 'name', 'email', 'role', 'phone', 'is_active', 'created_at'])
+      .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'created_at'])
       .where('id', '=', user.sub)
       .executeTakeFirst();
 
     return reply.send(profile);
+  });
+
+  // --- INVITATIONS SYSTEM ---
+
+  // LIST INVITATIONS
+  fastify.get('/invitations', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+        const user = request.user as any;
+        if (user.role !== 'admin' && user.role !== 'owner') {
+          return reply.code(403).send({ error: 'Only admins or owners can list invitations' });
+        }
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+
+    const invitations = await db
+      .selectFrom('user_invitations')
+      .selectAll()
+      .where('accepted_at', 'is', null)
+      .where('expires_at', '>', new Date())
+      .orderBy('created_at', 'desc')
+      .execute();
+
+    return reply.send(invitations);
+  });
+
+  // CREATE INVITATION
+  fastify.post('/invitations', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+        const user = request.user as any;
+        if (user.role !== 'admin' && user.role !== 'owner') {
+          return reply.code(403).send({ error: 'Only admins or owners can invite users' });
+        }
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+    const schema = z.object({
+      email: z.string().email(),
+      role: z.enum(['admin', 'employee', 'finance', 'delivery', 'viewer'])
+    });
+
+    try {
+      const body = schema.parse(request.body);
+      await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+
+      // Check user limit
+      const canInvite = await checkUserLimit(user.business_id, reply);
+      if (!canInvite) return;
+
+      const token = randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
+
+      const result = await db
+        .insertInto('user_invitations')
+        .values({
+          id: randomUUID(),
+          business_id: user.business_id,
+          email: body.email,
+          role: body.role,
+          token,
+          invited_by: user.sub,
+          expires_at: expiresAt,
+          created_at: new Date()
+        })
+        .returningAll()
+        .executeTakeFirst();
+
+      // Send email
+      const inviteLink = `${config.frontendUrl}/accept-invitation?token=${token}`;
+      
+      // Get business name for the email
+      const business = await db.selectFrom('businesses').select('name').where('id', '=', user.business_id).executeTakeFirst();
+      
+      await emailService.sendInvitationEmail(body.email, business?.name || 'Tu Florería', inviteLink);
+
+      return reply.status(201).send({
+        ...result,
+        invite_link: inviteLink
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'Validation error', details: error.errors });
+      }
+      throw error;
+    }
+  });
+
+  // REVOKE INVITATION
+  fastify.delete('/invitations/:id', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+        const user = request.user as any;
+        if (user.role !== 'admin' && user.role !== 'owner') {
+          return reply.code(403).send({ error: 'Only admins or owners can revoke invitations' });
+        }
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const user = request.user as any;
+    const { id } = request.params as { id: string };
+
+    await sql`SET LOCAL app.current_business_id = ${user.business_id}`.execute(db);
+
+    await db
+      .deleteFrom('user_invitations')
+      .where('id', '=', id)
+      .execute();
+
+    return reply.send({ success: true });
+  });
+
+  // ACCEPT INVITATION (Public)
+  fastify.post('/invitations/accept', async (request, reply) => {
+    const schema = z.object({
+      token: z.string(),
+      name: z.string().min(2),
+      username: z.string().min(3).optional(),
+      password: z.string().min(6)
+    });
+
+    try {
+      const body = schema.parse(request.body);
+
+      // Find invitation
+      const invitation = await db
+        .selectFrom('user_invitations')
+        .selectAll()
+        .where('token', '=', body.token)
+        .where('accepted_at', 'is', null)
+        .where('expires_at', '>', new Date())
+        .executeTakeFirst();
+
+      if (!invitation) {
+        return reply.status(404).send({ error: 'Invitation not found or expired' });
+      }
+
+      // check if username exists
+      if (body.username) {
+        const existingUsername = await db
+          .selectFrom('users')
+          .select('id')
+          .where('username', '=', body.username)
+          .where('deleted_at', 'is', null)
+          .executeTakeFirst();
+        
+        if (existingUsername) {
+          return reply.status(409).send({ error: 'Username already taken' });
+        }
+      }
+
+      const passwordHash = await bcrypt.hash(body.password, 10);
+      const userId = randomUUID();
+
+      // Create user
+      await db
+        .insertInto('users')
+        .values({
+          id: userId,
+          business_id: invitation.business_id,
+          name: body.name,
+          username: body.username || null,
+          email: invitation.email,
+          password_hash: passwordHash,
+          role: invitation.role as any,
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date()
+        })
+        .execute();
+
+      // Mark invitation as accepted
+      await db
+        .updateTable('user_invitations')
+        .set({ accepted_at: new Date() })
+        .where('id', '=', invitation.id)
+        .execute();
+
+      return reply.send({ success: true, message: 'Invitation accepted successfully' });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'Validation error', details: error.errors });
+      }
+      throw error;
+    }
+  });
+
+  // GET INVITATION DETAILS (Public)
+  fastify.get('/invitations/accept', async (request, reply) => {
+    const { token } = request.query as { token: string };
+
+    if (!token) {
+      return reply.status(400).send({ error: 'Token is required' });
+    }
+
+    const invitation = await db
+      .selectFrom('user_invitations as i')
+      .innerJoin('businesses as b', 'i.business_id', 'b.id')
+      .select([
+        'i.id',
+        'i.email',
+        'i.role',
+        'i.expires_at',
+        'i.accepted_at',
+        'b.name as business_name'
+      ])
+      .where('i.token', '=', token)
+      .executeTakeFirst();
+
+    if (!invitation) {
+      return reply.status(404).send({ error: 'Invitation not found' });
+    }
+
+    if (invitation.accepted_at) {
+      return reply.status(400).send({ error: 'Invitation already accepted' });
+    }
+
+    if (new Date(invitation.expires_at) < new Date()) {
+      return reply.status(400).send({ error: 'Invitation expired' });
+    }
+
+    return reply.send(invitation);
   });
 };
 

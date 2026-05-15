@@ -35,7 +35,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         .selectAll()
         .where((eb) => eb.or([
           eb('email', '=', body.email),
-          eb('name', '=', body.email)
+          eb('username', '=', body.email)
         ]))
         .where('is_active', '=', true)
         .executeTakeFirst();
@@ -249,7 +249,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
             name: name || email.split('@')[0],
             email: email,
             google_id: googleId,
-            role: 'admin',
+            role: 'owner',
             is_active: true,
             created_at: new Date(),
             updated_at: new Date()
@@ -418,7 +418,8 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
             name: name || email.split('@')[0],
             email: email,
             google_id: googleId,
-            role: 'admin', // First user of a business is admin
+            google_id: googleId,
+            role: 'owner', // First user of a business is owner
             is_active: true,
             created_at: new Date(),
             updated_at: new Date()

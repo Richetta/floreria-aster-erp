@@ -24,7 +24,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
 // ROLE-BASED AUTHORIZATION
 // ============================================
 
-type UserRole = 'admin' | 'seller' | 'driver' | 'viewer';
+type UserRole = 'owner' | 'admin' | 'employee' | 'finance' | 'delivery' | 'viewer';
 
 /**
  * Returns a preHandler hook that checks if the authenticated user

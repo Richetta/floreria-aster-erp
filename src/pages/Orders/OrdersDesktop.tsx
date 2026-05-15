@@ -5,6 +5,7 @@ import {
     MessageSquare, CreditCard, DollarSign, ChevronLeft, ArrowRight,
     ChevronRight, Filter, Archive, AlertCircle
 } from 'lucide-react';
+import { CommentSection } from '../../components/Comments/CommentSection';
 import { useStore } from '../../store/useStore';
 import type { Order } from '../../store/useStore';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -1232,28 +1233,11 @@ export const OrdersDesktop = () => {
                                     </section>
 
                                     <section className="detail-card mt-4">
-                                        <div className="detail-card-header">
-                                            <FileText size={18} />
-                                            <h3>Notas Internas</h3>
-                                        </div>
-                                        <div className="detail-card-body">
-                                            {isEditing ? (
-                                                <textarea
-                                                    className="edit-textarea"
-                                                    value={editForm.notes || ''}
-                                                    onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
-                                                    placeholder="Notas internas del pedido..."
-                                                />
-                                            ) : (
-                                                selectedOrder.notes ? (
-                                                    <div className="notes-display">
-                                                        {selectedOrder.notes}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-muted text-xs italic">Sin observaciones para este pedido.</p>
-                                                )
-                                            )}
-                                        </div>
+                                        <CommentSection 
+                                            entityType="order" 
+                                            entityId={selectedOrder.id} 
+                                            title="Coordinación de Equipo" 
+                                        />
                                     </section>
                                 </div>
 

@@ -957,3 +957,65 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Managed Users Card */
+.users-managed-card {
+    background: white;
+    border-radius: 24px;
+    padding: 3rem;
+    border: 1px solid #E5E7EB;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+.managed-card-content h2 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1F2937;
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+}
+
+.managed-card-content p {
+    font-size: 1.1rem;
+    color: #6B7280;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+.managed-card-features {
+    background: #F9FAFB;
+    padding: 2rem;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.feature-item svg {
+    flex-shrink: 0;
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+}
+
+@media (max-width: 992px) {
+    .users-managed-card {
+        grid-template-columns: 1fr;
+        padding: 2rem;
+        gap: 2rem;
+    }
+}
