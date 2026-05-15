@@ -42,8 +42,13 @@ export const UsersPage = () => {
       setIsLoading(true);
       const usersData = await api.getUsers();
       setUsers(usersData);
-    } catch (error) {
-      alert('Error al cargar datos del equipo');
+    } catch (error: any) {
+      console.error('[EQUIPO ERROR]', error);
+      if (error.status === 403) {
+        alert('No tenés permisos para ver la lista de equipo. Solo los Administradores o el Dueño pueden gestionar usuarios.');
+      } else {
+        alert('Error al cargar datos del equipo: ' + (error.message || 'Error desconocido'));
+      }
     } finally {
       setIsLoading(false);
     }
