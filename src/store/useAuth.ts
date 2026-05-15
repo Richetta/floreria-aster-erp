@@ -97,13 +97,16 @@ export const useAuth = create<AuthState>()((set, get) => ({
         }
 
         try {
+            console.log('[AUTH DEBUG] Running checkAuth...');
             const user = await api.getCurrentUser();
+            console.log('[AUTH DEBUG] checkAuth success:', user.email, 'Role:', user.role);
             set({
                 user,
                 isAuthenticated: true,
                 isLoading: false,
             });
-        } catch (error) {
+        } catch (error: any) {
+            console.error('[AUTH DEBUG] checkAuth FAILED! Logging out. Error:', error.message);
             api.logout();
             set({
                 user: null,

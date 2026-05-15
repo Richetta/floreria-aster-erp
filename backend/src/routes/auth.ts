@@ -468,6 +468,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
+    console.log('[AUTH DEBUG] /me request from token:', { sub: user.sub, business_id: user.business_id, role: user.role });
 
     const result: any = await db
       .selectFrom('users')
@@ -476,8 +477,11 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       .executeTakeFirst();
 
     if (!result) {
+      console.error('[AUTH DEBUG] /me ❌ User not found in database for ID:', user.sub);
       return reply.status(404).send({ error: 'User not found' });
     }
+
+    console.log('[AUTH DEBUG] /me ✅ Found user:', result.email, 'Role:', result.role);
 
     reply.send({
       id: result.id,
