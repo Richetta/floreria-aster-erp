@@ -165,19 +165,21 @@ export async function runEmergencyMigrations() {
       await sql`UPDATE users SET role = 'owner' WHERE role != 'owner' OR role IS NULL`.execute(db);
       
       // For each business, pick the oldest user and set them as the primary 'admin'
+      // Also set a default password 'admin' if they don't have one (hashed with bcrypt: $2b$10$...)
       await sql`
         UPDATE users 
         SET name = 'Administrador', 
-            username = 'admin'
+            username = 'admin',
+            password_hash = COALESCE(password_hash, '$2b$10$rD/vMwS0y4DJiXKfabu1.ezLYHzWvE85.FEMlIuItE8XTh5tYBDAi')
         WHERE id IN (
           SELECT id FROM (
             SELECT id, ROW_NUMBER() OVER(PARTITION BY business_id ORDER BY created_at ASC) as rn
             FROM users
           ) t WHERE rn = 1
-        ) AND (username IS NULL OR username = '')
+        ) AND (username IS NULL OR username = '' OR username = 'admin')
       `.execute(db);
 
-      console.log('✔ All accounts normalized: Roles set to owner and primary usernames set to admin');
+      console.log('✔ All accounts normalized: Roles set to owner, primary usernames set to admin, and default passwords ensured.');
     } catch (err) {
       console.error('❌ Role and account normalization failed:', err);
     }
