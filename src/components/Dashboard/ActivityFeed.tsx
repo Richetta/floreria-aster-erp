@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ApiClient } from '../../services/api';
-import { Clock, User, ArrowRight, Package, ShoppingCart, UserPlus, DollarSign } from 'lucide-react';
+import { Clock, ArrowRight, Package, ShoppingCart, UserPlus, DollarSign } from 'lucide-react';
 
 const api = new ApiClient();
 

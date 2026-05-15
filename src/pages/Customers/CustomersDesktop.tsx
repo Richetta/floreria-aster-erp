@@ -8,7 +8,8 @@ import {
     CalendarDays,
     Wallet,
     Users,
-    Clock
+    Clock,
+    X
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { CustomerModal } from '../../components/CustomerModal/CustomerModal';

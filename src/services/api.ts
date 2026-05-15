@@ -14,19 +14,15 @@ const API_BASE_URL = import.meta.env.PROD
 // TYPES
 // ============================================
 
-export type User = {
-  id: string;
-  name: string;
-  username?: string | null;
-  email: string;
-  role: 'owner' | 'admin' | 'employee' | 'finance' | 'delivery' | 'viewer';
-  business_id: string;
-};
+import type { 
+  User, 
+  AuthResponse, 
+  UserInvitation, 
+  InternalComment,
+  UserRole
+} from '../types';
 
-export type AuthResponse = {
-  token: string;
-  user: User;
-};
+export type { User, AuthResponse, UserInvitation, InternalComment, UserRole };
 
 export type CustomFilterOption = {
   id: string;
@@ -203,36 +199,12 @@ export type Brand = {
   updated_at: string;
 };
 
-export type UserInvitation = {
-  id: string;
-  business_id: string;
-  email: string;
-  role: string;
-  token: string;
-  invited_by?: string;
-  expires_at: string;
-  accepted_at?: string;
-  created_at: string;
-  invite_link?: string;
-};
-
-export type InternalComment = {
-  id: string;
-  business_id: string;
-  entity_type: string;
-  entity_id: string;
-  user_id: string;
-  user_name?: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-};
 
 // ============================================
 // HTTP CLIENT
 // ============================================
 
-class ApiClient {
+export class ApiClient {
   private token: string | null = localStorage.getItem('auth_token');
 
   setToken(token: string | null) {

@@ -327,6 +327,7 @@ export interface UserInvitation {
   expires_at: string;
   accepted_at?: string;
   created_at: string;
+  invite_link?: string;
 }
 
 export interface InternalComment {

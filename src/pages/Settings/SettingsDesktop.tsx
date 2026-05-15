@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
-    Save, Trash2, Edit2, Plus, 
-    Download, Users, Key, LogOut, 
+    Save, Download, Users, LogOut, 
     MapPin, CreditCard,
-    Check, X, Shield, Wallet, HardDrive,
-    Smartphone, Store, Instagram, Database, Upload, Palette, Eye, EyeOff, Cloud,
-    BarChart3, Zap, Share2, MessageSquare, UserCheck, Mail
+    Check, Shield, Wallet, HardDrive,
+    Smartphone, Store, Instagram, Database, Upload, Palette, Cloud,
+    BarChart3, Zap, MessageSquare, UserCheck, Mail, CheckCircle, Circle
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
@@ -14,21 +13,14 @@ import { type PaymentMethod } from '../../store/slices/types';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal, AlertModal } from '../../components/ui/Modals';
 import { SubscriptionTab } from './SubscriptionTab';
-import { api, type User } from '../../services/api';
 import './Settings.css';
-
-type UserFormData = {
-    name: string;
-    email: string;
-    password: string;
-    role: 'admin' | 'seller' | 'driver' | 'viewer';
-};
 
 export const SettingsDesktop = () => {
     const shopInfo = useStore(state => state.shopInfo);
     const updateShopInfo = useStore(state => state.updateShopInfo);
-    const { user: currentUser, logout } = useAuth();
+    const { logout } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
 
     const [formData, setFormData] = useState(shopInfo);
     const [isSaved, setIsSaved] = useState(false);
@@ -66,42 +58,6 @@ export const SettingsDesktop = () => {
         if (savedTheme) handleThemeChange(savedTheme);
     }, []);
 
-    // Users state
-    const [users, setUsers] = useState<User[]>([]);
-    const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-    const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-    const [userToEdit, setUserToEdit] = useState<User | null>(null);
-    const [showPassword, setShowPassword] = useState(false);
-    const [userForm, setUserForm] = useState<UserFormData>({
-        name: '',
-        email: '',
-        password: '',
-        role: 'viewer'
-    });
-
-    useEffect(() => {
-        if (activeTab === 'users') {
-            loadUsers();
-        }
-    }, [activeTab]);
-
-    const loadUsers = async () => {
-        setIsLoadingUsers(true);
-        try {
-            const usersList = await api.getUsers();
-            setUsers(usersList);
-        } catch (error: any) {
-            console.error('Error loading users:', error);
-            showAlert({
-                title: 'Error al cargar usuarios',
-                message: 'Verificá tu conexión e intentá de nuevo',
-                variant: 'error'
-            });
-        } finally {
-            setIsLoadingUsers(false);
-        }
-    };
-
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
         updateShopInfo(formData);
@@ -135,12 +91,14 @@ export const SettingsDesktop = () => {
                 const data = JSON.parse(event.target?.result as string);
                 if (!data.products && !data.customers) throw new Error('Formato inválido');
 
-                if (await showConfirm({
+                const confirmed = await showConfirm({
                     title: '¿Importar datos?',
                     message: 'Esto podría duplicar registros si ya existen.',
                     confirmText: 'Importar',
                     variant: 'warning'
-                })) {
+                });
+
+                if (confirmed) {
                     showAlert({
                         title: 'Éxito',
                         message: '¡Datos importados correctamente!',
@@ -170,136 +128,8 @@ export const SettingsDesktop = () => {
         }
     };
 
-    const handleOpenUserModal = (user?: User) => {
-        if (user) {
-            setUserToEdit(user);
-            setUserForm({
-                name: user.name,
-                email: user.email,
-                password: '',
-                role: user.role
-            });
-        } else {
-            setUserToEdit(null);
-            setUserForm({ name: '', email: '', password: '', role: 'viewer' });
-        }
-        setIsUserModalOpen(true);
-    };
-
-    const handleSaveUser = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!userForm.name || !userForm.email) {
-            showAlert({
-                title: 'Campos requeridos',
-                message: 'Nombre y email son obligatorios',
-                variant: 'warning'
-            });
-            return;
-        }
-
-        if (!userToEdit && !userForm.password) {
-            showAlert({
-                title: 'Contraseña requerida',
-                message: 'La contraseña es obligatoria para nuevos usuarios',
-                variant: 'warning'
-            });
-            return;
-        }
-
-        try {
-            if (userToEdit) {
-                await api.updateUser(userToEdit.id, {
-                    name: userForm.name,
-                    email: userForm.email,
-                    role: userForm.role,
-                    ...(userForm.password && { password: userForm.password })
-                });
-                showAlert({
-                    title: 'Éxito',
-                    message: 'Usuario actualizado exitosamente',
-                    variant: 'success'
-                });
-            } else {
-                await api.createUser({
-                    name: userForm.name,
-                    email: userForm.email,
-                    password: userForm.password,
-                    role: userForm.role
-                });
-                showAlert({
-                    title: 'Éxito',
-                    message: 'Usuario creado exitosamente',
-                    variant: 'success'
-                });
-            }
-            setIsUserModalOpen(false);
-            loadUsers();
-        } catch (error: any) {
-            showAlert({
-                title: 'Error',
-                message: error.message || 'Error al guardar usuario',
-                variant: 'error'
-            });
-        }
-    };
-
-    const handleDeleteUser = async (user: User) => {
-        if (user.id === currentUser?.id) {
-            showAlert({
-                title: 'Acción no permitida',
-                message: 'No puedes eliminar tu propia cuenta',
-                variant: 'warning'
-            });
-            return;
-        }
-
-        const confirmed = await showConfirm({
-            title: '¿Eliminar usuario?',
-            message: `Se eliminará "${user.name}" permanentmente.`,
-            confirmText: 'Eliminar',
-            variant: 'danger'
-        });
-        if (confirmed) {
-            try {
-                await api.deleteUser(user.id);
-                showAlert({
-                    title: 'Éxito',
-                    message: 'Usuario eliminado exitosamente',
-                    variant: 'success'
-                });
-                loadUsers();
-            } catch (error: any) {
-                showAlert({
-                    title: 'Error',
-                    message: error.message || 'Error al eliminar usuario',
-                    variant: 'error'
-                });
-            }
-        }
-    };
-
-    const getRoleBadgeColor = (role: string) => {
-        switch (role) {
-            case 'admin': return 'badge-danger';
-            case 'seller': return 'badge-primary';
-            case 'driver': return 'badge-warning';
-            default: return 'badge-secondary';
-        }
-    };
-
-    const getRoleLabel = (role: string) => {
-        switch (role) {
-            case 'admin': return 'Administrador';
-            case 'seller': return 'Vendedor';
-            case 'driver': return 'Repartidor';
-            default: return 'Visualizador';
-        }
-    };
-
     return (
         <div className="settings-page">
-            {/* Header */}
             <div className="settings-header">
                 <div className="settings-header-content">
                     <div className="settings-header-icon">
@@ -316,7 +146,6 @@ export const SettingsDesktop = () => {
                 </button>
             </div>
 
-            {/* Navigation Tabs */}
             <div className="settings-tabs">
                 <button
                     className={`settings-tab ${activeTab === 'general' ? 'active' : ''}`}
@@ -355,12 +184,9 @@ export const SettingsDesktop = () => {
                 </button>
             </div>
 
-            {/* Tab Content */}
             <div className="settings-content">
-                {/* GENERAL TAB */}
                 {activeTab === 'general' && (
                     <div className="settings-tab-content">
-                        {/* Shop Identity Card */}
                         <div className="settings-card settings-card-wide">
                             <div className="card-header">
                                 <div className="card-header-icon card-header-icon-primary">
@@ -439,7 +265,6 @@ export const SettingsDesktop = () => {
                             </form>
                         </div>
 
-                        {/* Security & Theme Cards */}
                         <div className="settings-grid-2">
                             <div className="settings-card">
                                 <div className="card-header">
@@ -477,11 +302,6 @@ export const SettingsDesktop = () => {
                                             />
                                         </label>
                                     </div>
-
-                                    <button className="btn btn-secondary btn-block btn-compact">
-                                        <Share2 size={16} />
-                                        <span>Compartir Acceso (Read Only)</span>
-                                    </button>
                                 </div>
                             </div>
 
@@ -516,14 +336,12 @@ export const SettingsDesktop = () => {
                     </div>
                 )}
 
-                {/* PAYMENTS TAB */}
                 {activeTab === 'payments' && (
                     <div className="settings-tab-content animate-fade-in">
                         <PaymentMethodsManager />
                     </div>
                 )}
 
-                {/* DATA TAB */}
                 {activeTab === 'data' && (
                     <div className="settings-tab-content">
                         <div className="stats-grid">
@@ -564,184 +382,42 @@ export const SettingsDesktop = () => {
                                 </div>
                             </div>
                         </div>
-
-                        <div className="data-management">
-                            <div className="settings-card">
-                                <div className="card-header">
-                                    <div className="card-header-icon card-header-icon-primary">
-                                        <Database size={24} />
-                                    </div>
-                                    <div className="card-header-text">
-                                        <h2>Gestión de Datos</h2>
-                                        <p>Importá y exportá tu información</p>
-                                    </div>
-                                </div>
-
-                                <div className="data-actions-grid">
-                                    <div className="data-action-card">
-                                        <Download size={32} className="data-action-icon" />
-                                        <h3>Exportar Datos</h3>
-                                        <p>Descargá un backup completo en JSON</p>
-                                        <button className="btn btn-primary" onClick={handleExport}>
-                                            <Download size={16} />
-                                            <span>Exportar Ahora</span>
-                                        </button>
-                                    </div>
-
-                                    <div className="data-action-card">
-                                        <Upload size={32} className="data-action-icon" />
-                                        <h3>Importar Datos</h3>
-                                        <p>Cargá un archivo JSON previamente exportado</p>
-                                        <label className="btn btn-secondary">
-                                            <Upload size={16} />
-                                            <span>Seleccionar Archivo</span>
-                                            <input
-                                                type="file"
-                                                accept=".json"
-                                                onChange={handleImport}
-                                                style={{ display: 'none' }}
-                                            />
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 )}
 
-                {/* USERS TAB */}
                 {activeTab === 'users' && (
-                        <div className="users-managed-card">
-                            <div className="managed-card-content">
-                                <Users size={48} className="text-primary mb-4" />
-                                <h2>Nueva Gestión de Equipo</h2>
-                                <p>Ahora podés invitar empleados, asignar roles detallados y coordinar a tu equipo de forma más profesional.</p>
-                                <div className="managed-actions mt-6">
-                                    <button 
-                                        className="btn btn-primary btn-lg"
-                                        onClick={() => navigate('/usuarios')}
-                                    >
-                                        <UserCheck size={20} />
-                                        Ir a Gestión de Equipo
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="managed-card-features">
-                                <div className="feature-item">
-                                    <Shield size={20} className="text-success" />
-                                    <span>Roles de Dueño, Admin, Empleado, Repartidor y más.</span>
-                                </div>
-                                <div className="feature-item">
-                                    <Mail size={20} className="text-primary" />
-                                    <span>Invitaciones por email con enlaces de registro únicos.</span>
-                                </div>
-                                <div className="feature-item">
-                                    <MessageSquare size={20} className="text-purple-500" />
-                                    <span>Chat interno y coordinación en pedidos y clientes.</span>
-                                </div>
+                    <div className="users-managed-card">
+                        <div className="managed-card-content">
+                            <Users size={48} className="text-primary mb-4" />
+                            <h2>Nueva Gestión de Equipo</h2>
+                            <p>Ahora podés invitar empleados, asignar roles detallados y coordinar a tu equipo de forma más profesional.</p>
+                            <div className="managed-actions mt-6">
+                                <button 
+                                    className="btn btn-primary btn-lg"
+                                    onClick={() => navigate('/usuarios')}
+                                >
+                                    <UserCheck size={20} />
+                                    Ir a Gestión de Equipo
+                                </button>
                             </div>
                         </div>
-
-                        {/* User Modal */}
-                        {isUserModalOpen && (
-                            <div className="modal-overlay" onClick={() => setIsUserModalOpen(false)}>
-                                <div className="modal-content" onClick={e => e.stopPropagation()}>
-                                    <div className="modal-header">
-                                        <div className="modal-header-content">
-                                            <div className="modal-header-icon">
-                                                <Key size={24} />
-                                            </div>
-                                            <h2>{userToEdit ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
-                                        </div>
-                                        <button className="modal-close-btn" onClick={() => setIsUserModalOpen(false)}>
-                                            <X size={20} />
-                                        </button>
-                                    </div>
-
-                                    <form onSubmit={handleSaveUser} className="modal-form">
-                                        <div className="form-group">
-                                            <label className="form-label">Nombre Completo *</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={userForm.name}
-                                                onChange={e => setUserForm({ ...userForm, name: e.target.value })}
-                                                placeholder="Ej: Juan Pérez"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div className="form-group">
-                                            <label className="form-label">Email *</label>
-                                            <input
-                                                type="email"
-                                                className="form-input"
-                                                value={userForm.email}
-                                                onChange={e => setUserForm({ ...userForm, email: e.target.value })}
-                                                placeholder="juan@mijardin.com"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div className="form-group">
-                                            <label className="form-label">Rol *</label>
-                                            <select
-                                                className="form-input form-select"
-                                                value={userForm.role}
-                                                onChange={e => setUserForm({ ...userForm, role: e.target.value as any })}
-                                            >
-                                                <option value="admin">Administrador (Acceso completo)</option>
-                                                <option value="seller">Vendedor (Ventas, productos, clientes)</option>
-                                                <option value="driver">Repartidor (Solo entregas)</option>
-                                                <option value="viewer">Visualizador (Solo lectura)</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="form-group">
-                                            <label className="form-label">
-                                                Contraseña {userToEdit && '(dejar vacío para no cambiar)'}
-                                            </label>
-                                            <div className="input-with-icon password-input">
-                                                <Key size={18} className="input-icon" />
-                                                <input
-                                                    type={showPassword ? 'text' : 'password'}
-                                                    className="form-input"
-                                                    value={userForm.password}
-                                                    onChange={e => setUserForm({ ...userForm, password: e.target.value })}
-                                                    placeholder={userToEdit ? '••••••••' : 'Mínimo 6 caracteres'}
-                                                    required={!userToEdit}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="password-toggle"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                >
-                                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="modal-footer">
-                                            <button
-                                                type="button"
-                                                className="btn btn-secondary"
-                                                onClick={() => setIsUserModalOpen(false)}
-                                            >
-                                                Cancelar
-                                            </button>
-                                            <button type="submit" className="btn btn-primary">
-                                                <Check size={18} />
-                                                {userToEdit ? 'Actualizar' : 'Crear Usuario'}
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
+                        <div className="managed-card-features">
+                            <div className="feature-item">
+                                <Shield size={20} className="text-success" />
+                                <span>Roles de Dueño, Admin, Empleado, Repartidor y más.</span>
                             </div>
-                        )}
+                            <div className="feature-item">
+                                <Mail size={20} className="text-primary" />
+                                <span>Invitaciones por email con enlaces de registro únicos.</span>
+                            </div>
+                            <div className="feature-item">
+                                <MessageSquare size={20} className="text-purple-500" />
+                                <span>Chat interno y coordinación en pedidos y clientes.</span>
+                            </div>
+                        </div>
                     </div>
                 )}
 
-                {/* SUBSCRIPTION TAB */}
                 {activeTab === 'subscription' && (
                     <SubscriptionTab />
                 )}
@@ -753,7 +429,6 @@ export const SettingsDesktop = () => {
     );
 };
 
-// --- Sub-component for Payment Methods Management ---
 const PaymentMethodsManager = () => {
     const shopInfo = useStore(state => state.shopInfo);
     const updateShopInfo = useStore(state => state.updateShopInfo);
@@ -821,6 +496,3 @@ const PaymentMethodsManager = () => {
         </div>
     );
 };
-
-// Re-add missing icons for sub-components
-import { CheckCircle, Circle } from 'lucide-react';

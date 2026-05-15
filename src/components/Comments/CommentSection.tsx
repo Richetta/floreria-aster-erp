@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Send, MessageSquare, Trash2, Clock, User } from 'lucide-react';
 import { ApiClient } from '../../services/api';
-import { InternalComment } from '../../types';
+import type { InternalComment } from '../../types';
 import { useAuth } from '../../store/useAuth';
-import { toast } from 'react-hot-toast';
 import './Comments.css';
 
 const api = new ApiClient();
@@ -52,9 +51,9 @@ export const CommentSection = ({ entityType, entityId, title = 'Notas Internas' 
       });
       setNewComment('');
       loadComments();
-      toast.success('Comentario añadido');
-    } catch (error) {
-      toast.error('Error al añadir comentario');
+      alert('Comentario enviado');
+    } catch (error: any) {
+      alert(error.message || 'Error al enviar comentario');
     } finally {
       setIsSubmitting(false);
     }
@@ -65,9 +64,9 @@ export const CommentSection = ({ entityType, entityId, title = 'Notas Internas' 
     try {
       await api.deleteComment(id);
       setComments(comments.filter(c => c.id !== id));
-      toast.success('Nota eliminada');
+      alert('Comentario eliminado');
     } catch (error) {
-      toast.error('Error al eliminar nota');
+      alert('Error al eliminar comentario');
     }
   };
 

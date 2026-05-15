@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ApiClient } from '../../services/api';
-import { toast } from 'react-hot-toast';
 import { Mail, User, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import './AcceptInvitation.css';
 
@@ -26,7 +25,7 @@ export const AcceptInvitation = () => {
 
   useEffect(() => {
     if (!token) {
-      toast.error('Token de invitación no encontrado');
+      alert('Token de invitación no encontrado');
       navigate('/login');
       return;
     }
@@ -36,7 +35,7 @@ export const AcceptInvitation = () => {
         const data = await api.getInvitationByToken(token);
         setInvitation(data);
       } catch (error: any) {
-        toast.error(error.message || 'La invitación no es válida o ha expirado');
+        alert(error.message || 'La invitación no es válida o ha expirado');
         navigate('/login');
       } finally {
         setIsLoading(false);
@@ -50,12 +49,12 @@ export const AcceptInvitation = () => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Las contraseñas no coinciden');
+      alert('Las contraseñas no coinciden');
       return;
     }
 
     if (formData.password.length < 6) {
-      toast.error('La contraseña debe tener al menos 6 caracteres');
+      alert('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
@@ -69,14 +68,14 @@ export const AcceptInvitation = () => {
       });
       
       setIsSuccess(true);
-      toast.success('¡Bienvenido al equipo!');
+      alert('¡Bienvenido al equipo!');
       
       // Redirect after a short delay
       setTimeout(() => {
         navigate('/login');
       }, 3000);
     } catch (error: any) {
-      toast.error(error.message || 'Error al aceptar invitación');
+      alert(error.message || 'Error al aceptar invitación');
     } finally {
       setIsSubmitting(false);
     }

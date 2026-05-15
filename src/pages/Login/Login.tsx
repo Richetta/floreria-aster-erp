@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import type { CodeResponse } from '@react-oauth/google';
 import {
-    Lock, Mail, AlertCircle, Eye, EyeOff,
+    Lock, AlertCircle, Eye, EyeOff,
     Package, ShoppingCart, TrendingUp, Truck,
     BarChart3, ChevronDown, CheckCircle2, Zap, Clock,
     ClipboardList, AlertTriangle, BarChart2, ArrowRight,

@@ -33,7 +33,6 @@ import { useSubscription } from './store/useSubscription';
 import { SubscriptionSuccess, SubscriptionFailure, SubscriptionPending } from './pages/Subscription/SubscriptionResult';
 import { PlanOnboarding } from './pages/Subscription/PlanOnboarding';
 import { UsersPage } from './pages/Users';
-import { AcceptInvitation } from './pages/Users/AcceptInvitation';
 
 // ============================================
 // PROTECTED ROUTE COMPONENT
@@ -123,7 +122,6 @@ function App() {
                     <Route path="/suscripcion/error" element={<SubscriptionFailure />} />
                     <Route path="/suscripcion/pendiente" element={<SubscriptionPending />} />
                     <Route path="/bienvenido" element={<PlanOnboarding />} />
-                    <Route path="/invitaciones/aceptar" element={<AcceptInvitation />} />
 
                     {/* Protected Routes */}
                     <Route
