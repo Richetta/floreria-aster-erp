@@ -154,22 +154,32 @@ export async function runEmergencyMigrations() {
     `.execute(db);
     console.log('✔ RLS helper function get_current_business_id() verified/created');
 
-    // 4.5 FIX: Ensure all existing users are promoted to 'owner' if they were 'viewer' or had no role
-    // This fixes the issue where adding the role column with a default of 'viewer' blocked original admins.
+    // 4.5 FIX: Final role and account normalization
+    // 1. Ensure all users are owners (as requested: "every registered account is an admin")
+    // 2. Set primary user of each business to have username 'admin' and name 'Administrador'
     try {
-      // First ensure the column exists
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50)`.execute(db);
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(255)`.execute(db);
       
-      // Promote everyone to owner if they were caught in the default 'viewer' net
-      const promotionResult = await sql`
+      // Promote everyone to owner
+      await sql`UPDATE users SET role = 'owner' WHERE role != 'owner' OR role IS NULL`.execute(db);
+      
+      // For each business, pick the oldest user and set them as the primary 'admin'
+      await sql`
         UPDATE users 
-        SET role = 'owner' 
-        WHERE role != 'owner' OR role IS NULL
+        SET name = 'Administrador', 
+            username = 'admin'
+        WHERE id IN (
+          SELECT id FROM (
+            SELECT id, ROW_NUMBER() OVER(PARTITION BY business_id ORDER BY created_at ASC) as rn
+            FROM users
+          ) t WHERE rn = 1
+        ) AND (username IS NULL OR username = '')
       `.execute(db);
-      
-      console.log(`✔ Mass role promotion completed: ${promotionResult.numUpdatedRows || 'many'} users promoted to owner`);
+
+      console.log('✔ All accounts normalized: Roles set to owner and primary usernames set to admin');
     } catch (err) {
-      console.error('❌ Role promotion migration failed:', err);
+      console.error('❌ Role and account normalization failed:', err);
     }
 
     // Enable RLS on all multi-tenant tables
