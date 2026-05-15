@@ -154,6 +154,24 @@ export async function runEmergencyMigrations() {
     `.execute(db);
     console.log('✔ RLS helper function get_current_business_id() verified/created');
 
+    // 4.5 FIX: Ensure all existing users are promoted to 'owner' if they were 'viewer' or had no role
+    // This fixes the issue where adding the role column with a default of 'viewer' blocked original admins.
+    try {
+      // First ensure the column exists
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50)`.execute(db);
+      
+      // Promote everyone to owner if they were caught in the default 'viewer' net
+      const promotionResult = await sql`
+        UPDATE users 
+        SET role = 'owner' 
+        WHERE role IS NULL OR role = 'viewer' OR role = 'admin'
+      `.execute(db);
+      
+      console.log(`✔ Mass role promotion completed: ${promotionResult.numUpdatedRows || 'many'} users promoted to owner`);
+    } catch (err) {
+      console.error('❌ Role promotion migration failed:', err);
+    }
+
     // Enable RLS on all multi-tenant tables
     const tablesToEnableRls = [
       'users', 'categories', 'brands', 'customers', 'price_history', 'stock_movements',
