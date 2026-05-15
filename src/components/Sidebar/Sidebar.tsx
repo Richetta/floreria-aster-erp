@@ -26,7 +26,8 @@ import {
   Lock,
   Star,
   CreditCard,
-  UserCheck
+  UserCheck,
+  User as UserIcon
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { useStore } from '../../store/useStore';
@@ -136,7 +137,8 @@ const navItems: NavItem[] = [
     label: 'Ajustes',
     desc: 'Configuración',
     children: [
-      { path: '/configuracion', label: 'General', permission: 'canManageSettings' },
+      { path: '/configuracion', label: 'Mi Perfil', icon: UserIcon }, // Visible para todos
+      { path: '/configuracion?tab=general', label: 'General', permission: 'canManageSettings' },
       { path: '/usuarios', label: 'Equipo', icon: UserCheck, permission: 'canManageUsers' },
       { path: '/configuracion?tab=subscription', label: 'Suscripción', icon: CreditCard, permission: 'canManageSubscription' },
     ]
@@ -313,16 +315,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       <div className="sidebar-footer">
         {status === 'free' && (
           <button 
-            className="sidebar-upgrade-card"
+            className="sidebar-upgrade-link"
             onClick={() => navigate('/bienvenido')}
           >
-            <div className="upgrade-card-icon">
-              <Star size={20} fill="currentColor" />
-            </div>
-            <div className="upgrade-card-content">
-              <span className="upgrade-card-title">Plan Profesional</span>
-              <span className="upgrade-card-desc">Subí de nivel hoy</span>
-            </div>
+            <Star size={14} fill="currentColor" />
+            <span>Subí a Plan Profesional</span>
           </button>
         )}
         <div className="user-profile">

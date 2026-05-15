@@ -206,77 +206,36 @@
     white-space: nowrap;
 }
 
-/* ── Upgrade Card ── */
+/* ── Upgrade Link (Minimalist) ── */
 
-.sidebar-upgrade-card {
-    background: linear-gradient(135deg, #2c3e50, #000);
-    border-radius: var(--radius-lg);
-    padding: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.875rem;
-    margin-bottom: 1.25rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 100%;
-    text-align: left;
-    position: relative;
-    overflow: hidden;
-}
-
-.sidebar-upgrade-card::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(94, 155, 126, 0.2) 0%, transparent 70%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.sidebar-upgrade-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-    border-color: rgba(94, 155, 126, 0.4);
-}
-
-.sidebar-upgrade-card:hover::before {
-    opacity: 1;
-}
-
-.upgrade-card-icon {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #f1c40f, #e67e22);
-    border-radius: 10px;
+.sidebar-upgrade-link {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    flex-shrink: 0;
-    box-shadow: 0 4px 10px rgba(230, 126, 34, 0.3);
-}
-
-.upgrade-card-content {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.upgrade-card-title {
-    color: white;
+    gap: 0.5rem;
+    padding: 0.625rem;
+    margin-bottom: 1rem;
+    border-radius: var(--radius-md);
+    background-color: #fff9db; /* Very light yellow */
+    color: #f08c00;          /* Warm orange-gold */
+    font-size: 0.8125rem;
     font-weight: 700;
-    font-size: 0.875rem;
-    line-height: 1.2;
+    border: 1px solid #ffe066;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
-.upgrade-card-desc {
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.75rem;
-    margin-top: 2px;
+.sidebar-upgrade-link:hover {
+    background-color: #fff3bf;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(240, 140, 0, 0.15);
+}
+
+.sidebar-upgrade-link svg {
+    flex-shrink: 0;
 }
 
 /* ── Footer ── */
