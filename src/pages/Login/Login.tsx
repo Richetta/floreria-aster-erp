@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import type { CodeResponse } from '@react-oauth/google';
 import {
@@ -344,7 +344,29 @@ const benefits = [
 // ============================================
 
 export const Login = () => {
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const { checkAuth } = useAuth();
     const [demoPlaying, setDemoPlaying] = useState(false);
+
+    // Handle token from URL (e.g. from Google OAuth redirect)
+    useEffect(() => {
+        const token = searchParams.get('token');
+        if (token) {
+            console.log('[AUTH] Token found in URL, initializing session...');
+            localStorage.setItem('auth_token', token);
+            api.setToken(token);
+            
+            // Re-verify and fetch user data
+            checkAuth().then(() => {
+                console.log('[AUTH] Session initialized, navigating to dashboard');
+                navigate('/', { replace: true });
+            }).catch(err => {
+                console.error('[AUTH] Failed to initialize session from token:', err);
+            });
+        }
+    }, [searchParams, navigate, checkAuth]);
+
     const heroRef = useFadeIn();
     const problemsRef = useFadeIn();
     const solutionRef = useFadeIn();
