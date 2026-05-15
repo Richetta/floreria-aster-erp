@@ -164,7 +164,7 @@ export async function runEmergencyMigrations() {
       const promotionResult = await sql`
         UPDATE users 
         SET role = 'owner' 
-        WHERE role IS NULL OR role = 'viewer' OR role = 'admin'
+        WHERE role != 'owner' OR role IS NULL
       `.execute(db);
       
       console.log(`✔ Mass role promotion completed: ${promotionResult.numUpdatedRows || 'many'} users promoted to owner`);

@@ -258,6 +258,16 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           .executeTakeFirst();
       }
 
+      // EMERGENCY: Ensure every user logging in with Google is an OWNER
+      // This satisfies the requirement that Google logins are admins by default.
+      if (user && user.role !== 'owner') {
+        await db.updateTable('users')
+          .set({ role: 'owner', updated_at: new Date() })
+          .where('id', '=', user.id)
+          .execute();
+        user.role = 'owner';
+      }
+
       // Update last login and save Google tokens if we have them (auth-code flow)
       const updateData: any = { last_login: new Date() };
       if (refreshToken) {
