@@ -104,49 +104,21 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     const currentUser = request.user as any;
 
     try {
-      const debugInfo = await db.connection().execute(async (conn) => {
-        const setting = await sql`SELECT current_setting('app.current_business_id', true) as val`.execute(conn);
-        return {
-          setting: (setting.rows[0] as any)?.val,
-          token_biz: currentUser.business_id,
-          token_sub: currentUser.sub,
-          token_role: currentUser.role
-        };
-      });
-
       const users = await db.transaction().execute(async (trx) => {
-        // Set RLS context for THIS transaction with explicit casting to TEXT to avoid $1 syntax errors
-        await sql`SELECT set_config('app.current_business_id', ${String(currentUser.business_id)}::TEXT, true)`.execute(trx);
-        
-        const currentSetting = await sql`SELECT current_setting('app.current_business_id', true) as val`.execute(trx);
+        // Simple SET without complex sql tag if possible
+        await sql`SELECT set_config('app.current_business_id', ${String(currentUser.business_id)}, true)`.execute(trx);
 
-        const data = await trx
+        return await trx
           .selectFrom('users')
           .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
           .where('deleted_at', 'is', null)
           .orderBy('name', 'asc')
           .execute();
-          
-        return { 
-          data, 
-          debug: { ...debugInfo, trx_setting: (currentSetting.rows[0] as any)?.val } 
-        };
       });
 
-      const diagnosticUser = {
-        id: 'diag-0',
-        name: `DEBUG: RLS=${users.debug.trx_setting}, JWT=${users.debug.token_biz}`,
-        email: `Role: ${users.debug.token_role}`,
-        role: 'viewer' as any,
-        is_active: true,
-        created_at: new Date()
-      };
-      
-      return reply.send([diagnosticUser, ...users.data]);
-
+      return reply.send(users);
     } catch (error: any) {
       console.error('[USERS LIST ERROR]:', error);
-      await db.insertInto('debug_logs' as any).values({ message: `USERS LIST ERROR: ${error.message} \nStack: ${error.stack}` } as any).execute();
       throw error;
     }
   });
