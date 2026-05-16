@@ -19,21 +19,35 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
    */
   async function ensureDefaultAdmin(businessId: string) {
     try {
+      console.log(`[AUTH] Ensuring 'Jefe' exists for business: ${businessId}`);
       await db.connection().execute(async (conn) => {
         // Establecer el contexto de RLS para esta conexión
         await sql`SELECT set_config('app.current_business_id', ${businessId}, true)`.execute(conn);
 
-        const existing = await conn
+        // Buscar si ya existe un usuario administrador (por username o nombre)
+        const adminUser = await conn
           .selectFrom('users')
           .where('business_id', '=', businessId)
           .where((eb) => eb.or([
             eb('username', '=', 'admin'),
-            eb('name', '=', 'Jefe')
+            eb('name', '=', 'Jefe'),
+            eb('name', '=', 'Administrador'),
+            eb('name', '=', '01 (Administrador)')
           ]))
           .executeTakeFirst();
 
-        if (!existing) {
-          console.log(`[AUTH] Creating default 'Jefe' for business: ${businessId}`);
+        if (adminUser) {
+          // Si existe pero tiene el nombre viejo, lo actualizamos a "Jefe"
+          if (adminUser.name !== 'Jefe') {
+            console.log(`[AUTH] Renaming existing admin to 'Jefe' for business: ${businessId}`);
+            await conn.updateTable('users')
+              .set({ name: 'Jefe', updated_at: new Date() })
+              .where('id', '=', adminUser.id)
+              .execute();
+          }
+        } else {
+          // No existe ningún admin, lo creamos
+          console.log(`[AUTH] Creating NEW 'Jefe' for business: ${businessId}`);
           const passwordHash = await bcrypt.hash('admin', 10);
           await conn.insertInto('users')
             .values({
@@ -45,12 +59,14 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
               password_hash: passwordHash,
               role: 'admin',
               is_active: true,
+              deleted_at: null,
               created_at: new Date(),
               updated_at: new Date()
             } as any)
             .execute();
         }
       });
+      console.log(`[AUTH] 'Jefe' check completed for business: ${businessId}`);
     } catch (err) {
       console.error(`[AUTH] Failed to ensure default admin for ${businessId}:`, err);
     }
@@ -312,8 +328,10 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       if (user && user.business_id) {
+        console.log(`[AUTH] Google login successful for ${email}, business: ${user.business_id}`);
         await ensureDefaultAdmin(user.business_id);
       }
+
 
       // EMERGENCY: Ensure every user logging in with Google is an OWNER
       // This satisfies the requirement that Google logins are admins by default.
@@ -485,7 +503,6 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
             name: name || email.split('@')[0],
             email: email,
             google_id: googleId,
-            google_id: googleId,
             role: 'owner', // First user of a business is owner
             is_active: true,
             created_at: new Date(),
@@ -535,11 +552,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       await ensureDefaultAdmin(user.business_id);
     }
 
-    const result = await db.connection().execute(async (conn) => {
+    const result = await db.transaction().execute(async (trx) => {
       // CRITICAL: Set RLS context before querying /me
-      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(conn);
+      console.log(`[AUTH DEBUG] /me: Setting RLS context to ${user.business_id} for user ${user.sub}`);
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-      return await conn
+      return await trx
         .selectFrom('users')
         .select(['id', 'name', 'email', 'role', 'business_id', 'phone', 'google_id' as any])
         .where('id', '=', user.sub)
