@@ -144,6 +144,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
     } catch (error: any) {
       console.error('[USERS LIST ERROR]:', error);
+      await db.insertInto('debug_logs' as any).values({ message: `USERS LIST ERROR: ${error.message} \nStack: ${error.stack}` } as any).execute();
       throw error;
     }
   });
