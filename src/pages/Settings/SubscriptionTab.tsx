@@ -68,9 +68,10 @@ interface MpStatus {
 // CONSTANTS
 // ============================================
 
-const API_URL = import.meta.env.PROD 
-    ? '/api' 
-    : (import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.PROD
+  ? '/api'
+  : (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\/$/, '')}/api`);
 
 const planIcons: Record<string, any> = {
     semilla: Leaf,

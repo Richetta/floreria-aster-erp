@@ -272,7 +272,10 @@ export const PricingSection = ({ onPlanSelect }: PricingSectionProps) => {
 
   const [_isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  const API_URL = import.meta.env.PROD
+    ? '/api'
+    : (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\/$/, '')}/api`);
 
   const handlePlanSelect = async (slug: string) => {
     const token = localStorage.getItem('auth_token');

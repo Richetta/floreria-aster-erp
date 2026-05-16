@@ -76,7 +76,10 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
                 return;
             }
 
-            const apiUrl = import.meta.env.PROD ? '/api' : (import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
+            const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+            const apiUrl = import.meta.env.PROD
+              ? '/api'
+              : (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\/$/, '')}/api`);
             const response = await fetch(`${apiUrl}/auth/google`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
 import './Subscription.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.PROD
+  ? '/api'
+  : (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\/$/, '')}/api`);
 
 export const SubscriptionSuccess = () => {
   const navigate = useNavigate();

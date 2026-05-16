@@ -28,7 +28,10 @@ export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
             setIsLoading(true);
             try {
                 const token = localStorage.getItem('auth_token');
-                const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                const baseUrl = import.meta.env.PROD
+                  ? '/api'
+                  : (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\/$/, '')}/api`);
                 const res = await fetch(`${baseUrl}/customers/${customerId}/history`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });

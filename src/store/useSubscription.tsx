@@ -94,7 +94,10 @@ const DEFAULT_FEATURES = PLAN_FEATURES['completo']; // Permissive default during
 
 const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.PROD
+  ? '/api'
+  : (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\/$/, '')}/api`);
 
 // ============================================
 // PROVIDER
