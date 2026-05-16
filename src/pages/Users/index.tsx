@@ -15,11 +15,9 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { ApiClient } from '../../services/api';
+import { api } from '../../services/api';
 import type { User, UserRole } from '../../types';
 import './Users.css';
-
-const api = new ApiClient();
 
 export const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);

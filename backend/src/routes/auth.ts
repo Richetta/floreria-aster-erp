@@ -14,6 +14,43 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     config.googleRedirectUri
   );
 
+  /**
+   * Asegura que una cuenta tenga el usuario administrador por defecto "01 (Administrador)"
+   */
+  async function ensureDefaultAdmin(businessId: string) {
+    try {
+      const existing = await db
+        .selectFrom('users')
+        .where('business_id', '=', businessId)
+        .where((eb) => eb.or([
+          eb('username', '=', 'admin'),
+          eb('name', '=', '01 (Administrador)')
+        ]))
+        .executeTakeFirst();
+
+      if (!existing) {
+        console.log(`[AUTH] Creating default admin for business: ${businessId}`);
+        const passwordHash = await bcrypt.hash('admin', 10);
+        await db.insertInto('users')
+          .values({
+            id: randomUUID(),
+            business_id: businessId,
+            name: '01 (Administrador)',
+            username: 'admin',
+            email: `admin@${businessId.substring(0, 8)}.local`,
+            password_hash: passwordHash,
+            role: 'admin',
+            is_active: true,
+            created_at: new Date(),
+            updated_at: new Date()
+          } as any)
+          .execute();
+      }
+    } catch (err) {
+      console.error(`[AUTH] Failed to ensure default admin for ${businessId}:`, err);
+    }
+  }
+
   // Login schema
   const loginSchema = z.object({
     email: z.string(),
@@ -269,6 +306,10 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           .executeTakeFirst();
       }
 
+      if (user && user.business_id) {
+        await ensureDefaultAdmin(user.business_id);
+      }
+
       // EMERGENCY: Ensure every user logging in with Google is an OWNER
       // This satisfies the requirement that Google logins are admins by default.
       if (user && user.role !== 'owner') {
@@ -449,6 +490,10 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           .executeTakeFirst();
       }
 
+      if (user && user.business_id) {
+        await ensureDefaultAdmin(user.business_id);
+      }
+
       const token = fastify.jwt.sign({
         sub: user.id,
         business_id: user.business_id,
@@ -480,6 +525,10 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
     console.log('[AUTH DEBUG] /me request from token:', { sub: user.sub, business_id: user.business_id, role: user.role });
+
+    if (user.business_id) {
+      await ensureDefaultAdmin(user.business_id);
+    }
 
     const result: any = await db
       .selectFrom('users')
