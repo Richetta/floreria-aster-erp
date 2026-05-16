@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
+import { sql } from 'kysely';
 import { OAuth2Client } from 'google-auth-library';
 import { db } from '../db/index.js';
 import { randomUUID } from 'crypto';
@@ -27,6 +28,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         // Buscar si ya existe un usuario administrador (por username o nombre)
         const adminUser = await conn
           .selectFrom('users')
+          .selectAll()
           .where('business_id', '=', businessId)
           .where((eb) => eb.or([
             eb('username', '=', 'admin'),
@@ -34,7 +36,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
             eb('name', '=', 'Administrador'),
             eb('name', '=', '01 (Administrador)')
           ]))
-          .executeTakeFirst();
+          .executeTakeFirst() as any;
 
         if (adminUser) {
           // Si existe pero tiene el nombre viejo, lo actualizamos a "Jefe"
