@@ -37,7 +37,7 @@ async function checkUserLimit(businessId: string, reply: any) {
 
     // Count current users using a separate connection but with RLS set
     const currentCount = await db.connection().execute(async (conn) => {
-      await sql`SELECT set_config('app.current_business_id', ${businessId}, true)`.execute(conn);
+      await sql`SELECT set_config('app.current_business_id', ${String(businessId)}::TEXT, true)`.execute(conn);
       const res = await conn
         .selectFrom('users')
         .select(db.fn.count('id').as('count'))
