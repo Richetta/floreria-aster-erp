@@ -99,26 +99,49 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }]
   }, async (request, reply) => {
-      // HARDCODED TEST
-      const testUsers = [
-        { id: 'test-1', name: 'Jefe (TEST)', email: 'test@test.com', role: 'admin', is_active: true, created_at: new Date() }
-      ];
-      console.log('[DEBUG] Returning hardcoded test users');
-      return reply.send(testUsers);
-      
+    const currentUser = request.user as any;
+
+    try {
+      const debugInfo = await db.connection().execute(async (conn) => {
+        const setting = await sql`SELECT current_setting('app.current_business_id', true) as val`.execute(conn);
+        return {
+          setting: (setting.rows[0] as any)?.val,
+          token_biz: currentUser.business_id,
+          token_sub: currentUser.sub,
+          token_role: currentUser.role
+        };
+      });
+
       const users = await db.transaction().execute(async (trx) => {
         // Set RLS context for THIS transaction
         await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(trx);
+        
+        const currentSetting = await sql`SELECT current_setting('app.current_business_id') as val`.execute(trx);
 
-        return await trx
+        const data = await trx
           .selectFrom('users')
           .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
           .where('deleted_at', 'is', null)
           .orderBy('name', 'asc')
           .execute();
+          
+        return { 
+          data, 
+          debug: { ...debugInfo, trx_setting: (currentSetting.rows[0] as any)?.val } 
+        };
       });
 
-      return reply.send(users);
+      const diagnosticUser = {
+        id: 'diag-0',
+        name: `DEBUG: RLS=${users.debug.trx_setting}, JWT=${users.debug.token_biz}`,
+        email: `Role: ${users.debug.token_role}`,
+        role: 'viewer' as any,
+        is_active: true,
+        created_at: new Date()
+      };
+      
+      return reply.send([diagnosticUser, ...users.data]);
+
     } catch (error: any) {
       console.error('[USERS LIST ERROR]:', error);
       throw error;
