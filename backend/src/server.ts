@@ -198,7 +198,7 @@ await fastify.register(import('./routes/calendar.js'), { prefix: '/api/calendar'
 // Diagnostic Route — removed for security (was exposing config without auth)
 
 fastify.setNotFoundHandler((request, reply) => {
-  const version = 'vFINAL-DEPLOYED';
+  const version = 'vDEBUG-RLS-FIX-V2';
   console.log(`[404] Route not found: ${request.method} ${request.url} (Version: ${version})`);
   reply.code(404).send({
     error: 'Not Found',
