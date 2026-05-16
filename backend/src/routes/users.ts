@@ -92,7 +92,9 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
         await request.jwtVerify();
         const user = request.user as any;
         if (user.role !== 'admin' && user.role !== 'owner') {
-          return reply.code(403).send({ error: 'Only admins or owners can list users' });
+          const role = user.role;
+          console.error(`[AUTH] 403 Forbidden: User ${user.email} has role '${role}'`);
+          return reply.code(403).send({ error: 'Only admins or owners can list users', yourRole: role });
         }
       } catch (err) {
         reply.code(401).send({ error: 'Unauthorized' });
