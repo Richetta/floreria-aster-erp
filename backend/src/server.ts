@@ -198,7 +198,7 @@ await fastify.register(import('./routes/calendar.js'), { prefix: '/api/calendar'
 // Diagnostic Route — removed for security (was exposing config without auth)
 
 fastify.get('/api/debug-status', async () => {
-  return { status: 'ok', version: 'vDEBUG-RLS-FIX-V3', message: 'debug-live' };
+  return { status: 'ok', version: 'vDEBUG-RLS-FIX-V4', message: 'debug-live-v4' };
 });
 
 fastify.setNotFoundHandler((request, reply) => {

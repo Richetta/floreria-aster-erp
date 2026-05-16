@@ -115,10 +115,10 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       const users = await db.transaction().execute(async (trx) => {
-        // Set RLS context for THIS transaction
-        await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(trx);
+        // Set RLS context for THIS transaction with explicit casting to TEXT to avoid $1 syntax errors
+        await sql`SELECT set_config('app.current_business_id', ${String(currentUser.business_id)}::TEXT, true)`.execute(trx);
         
-        const currentSetting = await sql`SELECT current_setting('app.current_business_id') as val`.execute(trx);
+        const currentSetting = await sql`SELECT current_setting('app.current_business_id', true) as val`.execute(trx);
 
         const data = await trx
           .selectFrom('users')
