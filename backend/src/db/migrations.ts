@@ -164,6 +164,14 @@ export async function runEmergencyMigrations() {
       // Promote everyone to owner
       await sql`UPDATE users SET role = 'owner' WHERE role != 'owner' OR role IS NULL`.execute(db);
       
+      // Fix: Drop global unique constraint on username to allow multiple 'admin' users across different businesses
+      try {
+        await sql`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_username_key`.execute(db);
+        await sql`ALTER TABLE users ADD CONSTRAINT users_business_username_key UNIQUE (business_id, username)`.execute(db);
+      } catch (err) {
+        console.log('Constraint already fixed or not applicable');
+      }
+
       // For each business, pick the oldest user and set them as the primary 'admin'
       // Also set a default password 'admin' if they don't have one (hashed with bcrypt: $2b$10$...)
       await sql`
