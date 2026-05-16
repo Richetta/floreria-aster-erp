@@ -15,37 +15,42 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   /**
-   * Asegura que una cuenta tenga el usuario administrador por defecto "01 (Administrador)"
+   * Asegura que una cuenta tenga el usuario administrador por defecto "Jefe"
    */
   async function ensureDefaultAdmin(businessId: string) {
     try {
-      const existing = await db
-        .selectFrom('users')
-        .where('business_id', '=', businessId)
-        .where((eb) => eb.or([
-          eb('username', '=', 'admin'),
-          eb('name', '=', '01 (Administrador)')
-        ]))
-        .executeTakeFirst();
+      await db.connection().execute(async (conn) => {
+        // Establecer el contexto de RLS para esta conexión
+        await sql`SELECT set_config('app.current_business_id', ${businessId}, true)`.execute(conn);
 
-      if (!existing) {
-        console.log(`[AUTH] Creating default admin for business: ${businessId}`);
-        const passwordHash = await bcrypt.hash('admin', 10);
-        await db.insertInto('users')
-          .values({
-            id: randomUUID(),
-            business_id: businessId,
-            name: '01 (Administrador)',
-            username: 'admin',
-            email: `admin@${businessId.substring(0, 8)}.local`,
-            password_hash: passwordHash,
-            role: 'admin',
-            is_active: true,
-            created_at: new Date(),
-            updated_at: new Date()
-          } as any)
-          .execute();
-      }
+        const existing = await conn
+          .selectFrom('users')
+          .where('business_id', '=', businessId)
+          .where((eb) => eb.or([
+            eb('username', '=', 'admin'),
+            eb('name', '=', 'Jefe')
+          ]))
+          .executeTakeFirst();
+
+        if (!existing) {
+          console.log(`[AUTH] Creating default 'Jefe' for business: ${businessId}`);
+          const passwordHash = await bcrypt.hash('admin', 10);
+          await conn.insertInto('users')
+            .values({
+              id: randomUUID(),
+              business_id: businessId,
+              name: 'Jefe',
+              username: 'admin',
+              email: `admin@${businessId.substring(0, 8)}.local`,
+              password_hash: passwordHash,
+              role: 'admin',
+              is_active: true,
+              created_at: new Date(),
+              updated_at: new Date()
+            } as any)
+            .execute();
+        }
+      });
     } catch (err) {
       console.error(`[AUTH] Failed to ensure default admin for ${businessId}:`, err);
     }
@@ -530,11 +535,16 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       await ensureDefaultAdmin(user.business_id);
     }
 
-    const result: any = await db
-      .selectFrom('users')
-      .select(['id', 'name', 'email', 'role', 'business_id', 'phone', 'google_id' as any])
-      .where('id', '=', user.sub)
-      .executeTakeFirst();
+    const result = await db.connection().execute(async (conn) => {
+      // CRITICAL: Set RLS context before querying /me
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(conn);
+
+      return await conn
+        .selectFrom('users')
+        .select(['id', 'name', 'email', 'role', 'business_id', 'phone', 'google_id' as any])
+        .where('id', '=', user.sub)
+        .executeTakeFirst();
+    });
 
     if (!result) {
       console.error('[AUTH DEBUG] /me ❌ User not found in database for ID:', user.sub);

@@ -98,14 +98,16 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const currentUser = request.user as any;
 
-    await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(db);
+    const users = await db.connection().execute(async (conn) => {
+      await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(conn);
 
-    const users = await db
-      .selectFrom('users')
-      .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
-      .where('deleted_at', 'is', null)
-      .orderBy('name', 'asc')
-      .execute();
+      return await conn
+        .selectFrom('users')
+        .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
+        .where('deleted_at', 'is', null)
+        .orderBy('name', 'asc')
+        .execute();
+    });
 
     return reply.send(users);
   });
@@ -123,14 +125,16 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const { id } = request.params as { id: string };
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    const targetUser = await db.connection().execute(async (conn) => {
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(conn);
 
-    const targetUser = await db
-      .selectFrom('users')
-      .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
-      .where('id', '=', id)
-      .where('deleted_at', 'is', null)
-      .executeTakeFirst();
+      return await conn
+        .selectFrom('users')
+        .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
+        .where('id', '=', id)
+        .where('deleted_at', 'is', null)
+        .executeTakeFirst();
+    });
 
     if (!targetUser) {
       return reply.status(404).send({ error: 'User not found' });
@@ -162,42 +166,48 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = createUserSchema.parse(request.body);
 
-      await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(db);
+      const result = await db.connection().execute(async (conn) => {
+        await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(conn);
 
-      // Check if email already exists
-      const existing = await db
-        .selectFrom('users')
-        .select('id')
-        .where('email', '=', body.email)
-        .where('deleted_at', 'is', null)
-        .executeTakeFirst();
+        // Check if email already exists
+        const existing = await conn
+          .selectFrom('users')
+          .select('id')
+          .where('email', '=', body.email)
+          .where('deleted_at', 'is', null)
+          .executeTakeFirst();
 
-      if (existing) {
+        if (existing) {
+          return null; // Handle outside to send 409
+        }
+
+        // Hash password
+        const passwordHash = await bcrypt.hash(body.password, 10);
+
+        // Create user
+        return await conn
+          .insertInto('users')
+          .values({
+            id: randomUUID(),
+            business_id: currentUser.business_id,
+            name: body.name,
+            username: body.username || null,
+            email: body.email,
+            password_hash: passwordHash,
+            role: body.role,
+            phone: body.phone || null,
+            is_active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            deleted_at: null
+          })
+          .returning(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'created_at'])
+          .executeTakeFirst();
+      });
+
+      if (result === null) {
         return reply.status(409).send({ error: 'Email already registered' });
       }
-
-      // Hash password
-      const passwordHash = await bcrypt.hash(body.password, 10);
-
-      // Create user
-      const result = await db
-        .insertInto('users')
-        .values({
-          id: randomUUID(),
-          business_id: currentUser.business_id,
-          name: body.name,
-          username: body.username || null,
-          email: body.email,
-          password_hash: passwordHash,
-          role: body.role,
-          phone: body.phone || null,
-          is_active: true,
-          created_at: new Date(),
-          updated_at: new Date(),
-          deleted_at: null
-        })
-        .returning(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'created_at'])
-        .executeTakeFirst();
 
       return reply.status(201).send(result);
     } catch (error: any) {
@@ -228,35 +238,37 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = updateUserSchema.parse(request.body);
 
-      await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(db);
+      const result = await db.connection().execute(async (conn) => {
+        await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(conn);
 
-      if (id === currentUser.sub && body.role && body.role !== currentUser.role) {
-        return reply.status(400).send({ error: 'Cannot change your own role' });
-      }
+        if (id === currentUser.sub && body.role && body.role !== currentUser.role) {
+          throw new Error('Cannot change your own role');
+        }
 
-      // Build update object
-      const updateData: any = {
-        updated_at: new Date()
-      };
+        // Build update object
+        const updateData: any = {
+          updated_at: new Date()
+        };
 
-      if (body.name !== undefined) updateData.name = body.name;
-      if (body.username !== undefined) updateData.username = body.username || null;
-      if (body.email !== undefined) updateData.email = body.email;
-      if (body.role !== undefined) updateData.role = body.role;
-      if (body.phone !== undefined) updateData.phone = body.phone || null;
-      if (body.is_active !== undefined) updateData.is_active = body.is_active;
+        if (body.name !== undefined) updateData.name = body.name;
+        if (body.username !== undefined) updateData.username = body.username || null;
+        if (body.email !== undefined) updateData.email = body.email;
+        if (body.role !== undefined) updateData.role = body.role;
+        if (body.phone !== undefined) updateData.phone = body.phone || null;
+        if (body.is_active !== undefined) updateData.is_active = body.is_active;
 
-      // Hash password if provided
-      if (body.password !== undefined && body.password !== '') {
-        updateData.password_hash = await bcrypt.hash(body.password, 10);
-      }
+        // Hash password if provided
+        if (body.password !== undefined && body.password !== '') {
+          updateData.password_hash = await bcrypt.hash(body.password, 10);
+        }
 
-      const result = await db
-        .updateTable('users')
-        .set(updateData)
-        .where('id', '=', id)
-        .returning(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'updated_at'])
-        .executeTakeFirst();
+        return await conn
+          .updateTable('users')
+          .set(updateData)
+          .where('id', '=', id)
+          .returning(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'updated_at'])
+          .executeTakeFirst();
+      });
 
       if (!result) {
         return reply.status(404).send({ error: 'User not found' });
@@ -264,6 +276,9 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
       return reply.send(result);
     } catch (error: any) {
+      if (error.message === 'Cannot change your own role') {
+        return reply.status(400).send({ error: error.message });
+      }
       if (error instanceof z.ZodError) {
         return reply.status(400).send({ error: 'Validation error', details: error.errors });
       }
@@ -293,16 +308,18 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: 'Cannot delete your own account' });
     }
 
-    await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(db);
+    await db.connection().execute(async (conn) => {
+      await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(conn);
 
-    await db
-      .updateTable('users')
-      .set({
-        deleted_at: new Date(),
-        is_active: false
-      })
-      .where('id', '=', id)
-      .execute();
+      await conn
+        .updateTable('users')
+        .set({
+          deleted_at: new Date(),
+          is_active: false
+        })
+        .where('id', '=', id)
+        .execute();
+    });
 
     return reply.send({ success: true });
   });
@@ -327,46 +344,53 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = schema.parse(request.body);
 
-      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+      const result = await db.connection().execute(async (conn) => {
+        await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(conn);
 
-      // Get current user
-      const currentUserData = await db
-        .selectFrom('users')
-        .select(['password_hash'])
-        .where('id', '=', user.sub)
-        .executeTakeFirst();
+        // Get current user
+        const currentUserData = await conn
+          .selectFrom('users')
+          .select(['password_hash'])
+          .where('id', '=', user.sub)
+          .executeTakeFirst();
 
-      if (!currentUserData) {
-        return reply.status(404).send({ error: 'User not found' });
-      }
+        if (!currentUserData) {
+          throw new Error('User not found');
+        }
 
-      // Verify current password
-      if (!currentUserData.password_hash) {
-        return reply.status(400).send({ error: 'This user does not have a local password set' });
-      }
-      const validPassword = await bcrypt.compare(body.current_password, currentUserData.password_hash);
-      if (!validPassword) {
-        return reply.status(401).send({ error: 'Current password is incorrect' });
-      }
+        // Verify current password
+        if (!currentUserData.password_hash) {
+          throw new Error('This user does not have a local password set');
+        }
+        const validPassword = await bcrypt.compare(body.current_password, currentUserData.password_hash);
+        if (!validPassword) {
+          throw new Error('Current password is incorrect');
+        }
 
-      // Hash new password
-      const newPasswordHash = await bcrypt.hash(body.new_password, 10);
+        // Hash new password
+        const newPasswordHash = await bcrypt.hash(body.new_password, 10);
 
-      // Update password
-      await db
-        .updateTable('users')
-        .set({
-          password_hash: newPasswordHash,
-          updated_at: new Date()
-        })
-        .where('id', '=', user.sub)
-        .execute();
+        // Update password
+        await conn
+          .updateTable('users')
+          .set({
+            password_hash: newPasswordHash,
+            updated_at: new Date()
+          })
+          .where('id', '=', user.sub)
+          .execute();
+        
+        return { success: true };
+      });
 
       return reply.send({ success: true, message: 'Password changed successfully' });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         return reply.status(400).send({ error: 'Validation error', details: error.errors });
       }
+      if (error.message === 'User not found') return reply.status(404).send({ error: error.message });
+      if (error.message === 'Current password is incorrect') return reply.status(401).send({ error: error.message });
+      if (error.message === 'This user does not have a local password set') return reply.status(400).send({ error: error.message });
       throw error;
     }
   });
@@ -383,13 +407,15 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as any;
 
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    const profile = await db.connection().execute(async (conn) => {
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(conn);
 
-    const profile = await db
-      .selectFrom('users')
-      .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'created_at'])
-      .where('id', '=', user.sub)
-      .executeTakeFirst();
+      return await conn
+        .selectFrom('users')
+        .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'created_at'])
+        .where('id', '=', user.sub)
+        .executeTakeFirst();
+    });
 
     return reply.send(profile);
   });
@@ -411,15 +437,18 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     }]
   }, async (request, reply) => {
     const user = request.user as any;
-    await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
+    
+    const invitations = await db.connection().execute(async (conn) => {
+      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(conn);
 
-    const invitations = await db
-      .selectFrom('user_invitations')
-      .selectAll()
-      .where('accepted_at', 'is', null)
-      .where('expires_at', '>', new Date())
-      .orderBy('created_at', 'desc')
-      .execute();
+      return await conn
+        .selectFrom('user_invitations')
+        .selectAll()
+        .where('accepted_at', 'is', null)
+        .where('expires_at', '>', new Date())
+        .orderBy('created_at', 'desc')
+        .execute();
+    });
 
     return reply.send(invitations);
   });
