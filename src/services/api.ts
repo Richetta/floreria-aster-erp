@@ -255,6 +255,11 @@ export class ApiClient {
         logger.error(`API Error: ${response.status} ${error.error || error.message}`, error, 'ApiClient');
 
         if (response.status === 401 && !window.location.pathname.includes('/login')) {
+          // Ignorar 401 en /activity para no desloguear si el backend anterior no lo soporta
+          if (url.includes('/activity')) {
+             console.warn('Ignoring 401 on /activity for backward compatibility');
+             throw new Error('Activity feed not available');
+          }
           this.token = null;
           localStorage.removeItem('auth_token');
           window.location.href = '/login';
