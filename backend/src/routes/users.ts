@@ -35,15 +35,18 @@ async function checkUserLimit(businessId: string, reply: any) {
       planSlug = subscriptionInfo.slug;
     }
 
-    // Count current users
-    const countResult = await db.executeQuery(
-      db.selectFrom('users')
+    // Count current users using a separate connection but with RLS set
+    const currentCount = await db.connection().execute(async (conn) => {
+      await sql`SELECT set_config('app.current_business_id', ${businessId}, true)`.execute(conn);
+      const res = await conn
+        .selectFrom('users')
         .select(db.fn.count('id').as('count'))
         .where('business_id', '=', businessId)
         .where('is_active', '=', true)
-    );
-
-    const currentCount = Number(countResult.rows[0].count);
+        .where('deleted_at', 'is', null)
+        .executeTakeFirst();
+      return Number(res?.count || 0);
+    });
 
     if (currentCount >= maxUsers) {
       reply.code(429).send({
@@ -96,20 +99,30 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }]
   }, async (request, reply) => {
-    const currentUser = request.user as any;
+      // HARDCODED TEST
+      const testUsers = [
+        { id: 'test-1', name: 'Jefe (TEST)', email: 'test@test.com', role: 'admin', is_active: true, created_at: new Date() }
+      ];
+      console.log('[DEBUG] Returning hardcoded test users');
+      return reply.send(testUsers);
+      
+      const users = await db.transaction().execute(async (trx) => {
+        // Set RLS context for THIS transaction
+        await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(trx);
 
-    const users = await db.connection().execute(async (conn) => {
-      await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(conn);
+        return await trx
+          .selectFrom('users')
+          .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
+          .where('deleted_at', 'is', null)
+          .orderBy('name', 'asc')
+          .execute();
+      });
 
-      return await conn
-        .selectFrom('users')
-        .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
-        .where('deleted_at', 'is', null)
-        .orderBy('name', 'asc')
-        .execute();
-    });
-
-    return reply.send(users);
+      return reply.send(users);
+    } catch (error: any) {
+      console.error('[USERS LIST ERROR]:', error);
+      throw error;
+    }
   });
 
   // GET SINGLE USER

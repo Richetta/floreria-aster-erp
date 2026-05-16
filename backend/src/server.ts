@@ -94,50 +94,47 @@ const PUBLIC_ROUTES = [
   '/health', // Support both paths
 ];
 
-fastify.addHook('onRequest', (request, reply, done) => {
+fastify.addHook('onRequest', async (request, reply) => {
   const url = request.url.split('?')[0]; // strip query params
 
   // Skip public routes
   if (PUBLIC_ROUTES.includes(url)) {
-    return done();
+    return;
   }
 
   // Skip non-API routes
   if (!url.startsWith('/api/')) {
-    return done();
+    return;
   }
 
-  fastify.addHook('onRequest', async (request, reply) => {
-    // Skip for non-api routes or auth routes
-    if (!request.url.startsWith('/api') || 
-        request.url.startsWith('/api/auth') || 
-        request.url.startsWith('/api/subscription/webhook')) {
-      return;
+  // Skip auth routes (they handle their own logic)
+  if (url.startsWith('/api/auth') || url.startsWith('/api/subscription/webhook')) {
+    return;
+  }
+
+  try {
+    await request.jwtVerify();
+    const user = request.user as any;
+    
+    if (!user || !user.business_id) {
+      console.error('[AUTH DEBUG] ❌ Token valid but missing business_id:', user);
+      return reply.code(401).send({ error: 'Invalid session context' });
     }
 
-    try {
-      await request.jwtVerify();
-      const user = request.user as any;
-      
-      if (!user || !user.business_id) {
-        console.error('[AUTH DEBUG] ❌ Token valid but missing business_id:', user);
-        return reply.code(401).send({ error: 'Invalid session context' });
-      }
-
-      // Set business context for RLS
-      await db.execute(sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`);
-      console.log('[AUTH DEBUG] ✅ Authorized:', user.email, 'Business:', user.business_id);
-      
-    } catch (err: any) {
-      console.error('[AUTH DEBUG] ❌ JWT Verification failed for:', request.url, 'Error:', err.message);
-      return reply.code(401).send({ error: 'Unauthorized', details: err.message });
-    }
-  });
+    // NOTE: We DO NOT set RLS context here using db.execute() because it's unreliable 
+    // across different connections in the pool. 
+    // RLS context must be set inside each route's db.connection() or db.transaction() block.
+    console.log('[AUTH DEBUG] ✅ Authorized:', user.email, 'Business:', user.business_id);
+    
+  } catch (err: any) {
+    console.error('[AUTH DEBUG] ❌ JWT Verification failed for:', request.url, 'Error:', err.message);
+    return reply.code(401).send({ error: 'Unauthorized', details: err.message });
+  }
+});
 
   // Simple request logger
-  fastify.addHook('onRequest', (request, _reply, done) => {
+  fastify.addHook('onRequest', async (request, _reply) => {
     console.log(`[REQUEST] ${request.method} ${request.url}`);
-    done();
   });
 
 // API Routes
