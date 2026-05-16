@@ -107,8 +107,8 @@ fastify.addHook('onRequest', async (request, reply) => {
     return;
   }
 
-  // Skip auth routes (they handle their own logic)
-  if (url.startsWith('/api/auth') || url.startsWith('/api/subscription/webhook')) {
+  // Skip auth routes and debug status (they handle their own logic or are public)
+  if (url.startsWith('/api/auth') || url.startsWith('/api/subscription/webhook') || url === '/api/debug-status') {
     return;
   }
 

@@ -104,9 +104,13 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     const currentUser = request.user as any;
 
     try {
+      if (!currentUser.business_id) {
+         throw new Error('Business ID missing in token');
+      }
+
       const users = await db.transaction().execute(async (trx) => {
-        // Simple SET without complex sql tag if possible
-        await sql`SELECT set_config('app.current_business_id', ${String(currentUser.business_id)}, true)`.execute(trx);
+        // Set RLS context for THIS transaction with explicit casting to TEXT to avoid $1 syntax errors
+        await sql`SELECT set_config('app.current_business_id', ${String(currentUser.business_id)}::TEXT, true)`.execute(trx);
 
         return await trx
           .selectFrom('users')
