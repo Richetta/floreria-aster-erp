@@ -30,40 +30,46 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       const body = loginSchema.parse(request.body);
 
       // Find user by email OR name
-      const result = await db
+      const users: any[] = await db
         .selectFrom('users')
         .selectAll()
         .where((eb) => eb.or([
           eb('email', '=', body.email),
           eb('username', '=', body.email)
         ]))
-        .where('is_active', '=', true)
-        .executeTakeFirst();
+        .execute();
 
-      if (!result) {
+      if (users.length === 0) {
         return reply.status(401).send({ error: 'Invalid credentials' });
       }
 
-      // Check if this is a Google user trying password login
-      if (result.google_id && !result.password_hash) {
-        return reply.status(401).send({
-          error: 'This account is linked to Google. Please use Google Sign-In.'
-        });
+      let authenticatedUser = null;
+
+      for (const result of users) {
+        // Verify password
+        let validPassword = result.password_hash
+          ? await bcrypt.compare(body.password, result.password_hash)
+          : false;
+
+        // EMERGENCY FALLBACK: If user is typing 'amdin' (with M) instead of 'admin'
+        if (!validPassword && result.username === 'admin' && body.password === 'amdin') {
+            validPassword = await bcrypt.compare('admin', result.password_hash);
+        }
+
+        if (validPassword) {
+          if (!result.is_active) {
+            return reply.status(403).send({ error: 'Account is inactive' });
+          }
+          authenticatedUser = result;
+          break;
+        }
       }
 
-      // Verify password
-      let validPassword = result.password_hash
-        ? await bcrypt.compare(body.password, result.password_hash)
-        : false;
-
-      // EMERGENCY FALLBACK: If user is typing 'amdin' (with M) instead of 'admin'
-      if (!validPassword && result.username === 'admin' && body.password === 'amdin') {
-          validPassword = await bcrypt.compare('admin', result.password_hash);
-      }
-
-      if (!validPassword) {
+      if (!authenticatedUser) {
         return reply.status(401).send({ error: 'Invalid credentials' });
       }
+
+      const result = authenticatedUser;
 
       // Generate JWT
       const token = fastify.jwt.sign({

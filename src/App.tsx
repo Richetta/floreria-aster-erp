@@ -98,6 +98,10 @@ function App() {
     const { checkAuth } = useAuth();
 
     useEffect(() => {
+        // Prevent race condition with Google OAuth redirect
+        if (window.location.search.includes('token=')) {
+            return;
+        }
         checkAuth();
     }, []);
 
