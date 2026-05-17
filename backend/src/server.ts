@@ -92,6 +92,7 @@ const PUBLIC_ROUTES = [
   '/api/users/invitations/accept', // Allow users to accept invitations without login
   '/api/health',
   '/health', // Support both paths
+  '/api/debug-status', // Publicly accessible diagnostic route
 ];
 
 fastify.addHook('onRequest', async (request, reply) => {
@@ -198,11 +199,11 @@ await fastify.register(import('./routes/calendar.js'), { prefix: '/api/calendar'
 // Diagnostic Route — removed for security (was exposing config without auth)
 
 fastify.get('/api/debug-status', async () => {
-  return { status: 'ok', version: 'v5', message: 'debug-live-v5' };
+  return { status: 'ok', version: 'v6', message: 'debug-live-v6' };
 });
 
 fastify.setNotFoundHandler((request, reply) => {
-  const version = 'v5';
+  const version = 'v6';
   console.log(`[404] Route not found: ${request.method} ${request.url} (Version: ${version})`);
   reply.code(404).send({
     error: 'Not Found',

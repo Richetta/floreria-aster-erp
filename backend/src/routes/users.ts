@@ -104,13 +104,15 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
     const currentUser = request.user as any;
 
     try {
-      if (!currentUser.business_id) {
-         throw new Error('Business ID missing in token');
+      const businessId = String(currentUser.business_id);
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(businessId)) {
+        throw new Error('Invalid business ID format');
       }
 
       const users = await db.transaction().execute(async (trx) => {
-        // Set RLS context for THIS transaction with explicit casting to TEXT to avoid $1 syntax errors
-        await sql`SELECT set_config('app.current_business_id', ${String(currentUser.business_id)}::TEXT, true)`.execute(trx);
+        // Set RLS context for THIS transaction with raw SQL literal to avoid PgBouncer/placeholder issues
+        await sql`SELECT set_config('app.current_business_id', ${sql.raw(`'${businessId}'`)}, true)`.execute(trx);
 
         return await trx
           .selectFrom('users')

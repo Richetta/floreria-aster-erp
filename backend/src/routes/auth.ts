@@ -22,8 +22,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       console.log(`[AUTH] Ensuring 'Jefe' exists for business: ${businessId}`);
       await db.connection().execute(async (conn) => {
-        // Establecer el contexto de RLS para esta conexión
-        await sql`SELECT set_config('app.current_business_id', ${businessId}, true)`.execute(conn);
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(businessId)) {
+          throw new Error('Invalid business ID format');
+        }
+        // Establecer el contexto de RLS para esta conexión con raw SQL para evitar PgBouncer $1 errors
+        await sql`SELECT set_config('app.current_business_id', ${sql.raw(`'${businessId}'`)}, true)`.execute(conn);
 
         // Buscar si ya existe un usuario administrador (por username o nombre)
         const adminUser = await conn
@@ -555,9 +559,13 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const result = await db.transaction().execute(async (trx) => {
-      // CRITICAL: Set RLS context before querying /me
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(user.business_id)) {
+        throw new Error('Invalid business ID format');
+      }
+      // CRITICAL: Set RLS context before querying /me using raw SQL to avoid PgBouncer $1 errors
       console.log(`[AUTH DEBUG] /me: Setting RLS context to ${user.business_id} for user ${user.sub}`);
-      await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+      await sql`SELECT set_config('app.current_business_id', ${sql.raw(`'${user.business_id}'`)}, true)`.execute(trx);
 
       return await trx
         .selectFrom('users')
