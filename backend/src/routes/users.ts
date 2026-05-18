@@ -73,11 +73,17 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
   // Create user schema
   const createUserSchema = z.object({
     name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
-    username: z.string().min(3, 'El nombre de usuario debe tener al menos 3 caracteres').optional().or(z.literal('')),
+    username: z.preprocess(
+      (val) => (val === '' || val === null ? undefined : val),
+      z.string().min(3, 'El nombre de usuario debe tener al menos 3 caracteres').optional()
+    ),
     email: z.string().email('Email inválido'),
     password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
     role: z.enum(['owner', 'admin', 'employee', 'finance', 'delivery', 'viewer']).default('viewer'),
-    phone: z.string().optional().or(z.literal(''))
+    phone: z.preprocess(
+      (val) => (val === '' || val === null ? undefined : val),
+      z.string().optional()
+    )
   });
 
   // Update user schema (partial)
@@ -198,6 +204,21 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
           return null; // Handle outside to send 409
         }
 
+        // Check if username already exists for this business
+        if (body.username) {
+          const existingUsername = await conn
+            .selectFrom('users')
+            .select('id')
+            .where('business_id', '=', currentUser.business_id)
+            .where('username', '=', body.username)
+            .where('deleted_at', 'is', null)
+            .executeTakeFirst();
+
+          if (existingUsername) {
+            return { errorType: 'username_taken' };
+          }
+        }
+
         // Hash password
         const passwordHash = await bcrypt.hash(body.password, 10);
 
@@ -223,7 +244,11 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       if (result === null) {
-        return reply.status(409).send({ error: 'Email already registered' });
+        return reply.status(409).send({ error: 'Este correo electrónico ya está registrado' });
+      }
+
+      if (result && 'errorType' in result && result.errorType === 'username_taken') {
+        return reply.status(409).send({ error: 'El nombre de usuario ya está registrado en tu empresa' });
       }
 
       return reply.status(201).send(result);
@@ -262,6 +287,22 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
           throw new Error('Cannot change your own role');
         }
 
+        // Check if username already exists for another user in this business
+        if (body.username) {
+          const existingUsername = await conn
+            .selectFrom('users')
+            .select('id')
+            .where('business_id', '=', currentUser.business_id)
+            .where('username', '=', body.username)
+            .where('id', '!=', id)
+            .where('deleted_at', 'is', null)
+            .executeTakeFirst();
+
+          if (existingUsername) {
+            return { errorType: 'username_taken' };
+          }
+        }
+
         // Build update object
         const updateData: any = {
           updated_at: new Date()
@@ -286,6 +327,10 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
           .returning(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'updated_at'])
           .executeTakeFirst();
       });
+
+      if (result && 'errorType' in result && result.errorType === 'username_taken') {
+        return reply.status(409).send({ error: 'El nombre de usuario ya está registrado en tu empresa' });
+      }
 
       if (!result) {
         return reply.status(404).send({ error: 'User not found' });

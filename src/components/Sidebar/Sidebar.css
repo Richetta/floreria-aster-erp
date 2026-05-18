@@ -472,10 +472,12 @@
     align-items: center;
     gap: 0.75rem;
     background: #f8fafc;
-    padding: 0.75rem 1rem;
+    padding: 0 1.25rem !important; /* Fixed padding for perfect visual balance */
     border-radius: 12px;
     border: 1.5px solid #e2e8f0;
     transition: all 0.2s ease-in-out;
+    min-height: 48px !important; /* Force exact 48px matching regular inputs */
+    box-sizing: border-box !important;
 }
 
 .input-with-icon:focus-within {
@@ -493,12 +495,16 @@
     width: 100%;
     font-size: 0.95rem;
     color: #0f172a;
+    height: 44px !important; /* Ensure input fits and behaves correctly */
+    min-height: 44px !important;
 }
 
 .input-with-icon svg {
     color: #94a3b8;
     transition: color 0.2s;
     flex-shrink: 0;
+    position: static !important; /* Completely override absolute positioning conflicts */
+    display: block !important;
 }
 
 .input-with-icon:focus-within svg {
