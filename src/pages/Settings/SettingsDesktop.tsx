@@ -331,6 +331,49 @@ export const SettingsDesktop = () => {
                                         </button>
                                     ))}
                                 </div>
+
+                                <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--explorer-border, #e2e8f0)', paddingTop: '1.25rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div>
+                                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Explorador de Negocios (BETA)</h3>
+                                            <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0.2rem 0 0 0' }}>Navegación visual simplificada mediante carpetas y planillas.</p>
+                                        </div>
+                                        <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={localStorage.getItem('feature_explorer_enabled') === 'true'}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        localStorage.setItem('feature_explorer_enabled', 'true');
+                                                    } else {
+                                                        localStorage.removeItem('feature_explorer_enabled');
+                                                    }
+                                                    window.location.reload();
+                                                }}
+                                                style={{ opacity: 0, width: 0, height: 0 }}
+                                            />
+                                            <span style={{
+                                                position: 'absolute',
+                                                cursor: 'pointer',
+                                                top: 0, left: 0, right: 0, bottom: 0,
+                                                backgroundColor: localStorage.getItem('feature_explorer_enabled') === 'true' ? '#10b981' : '#cbd5e1',
+                                                transition: '.2s',
+                                                borderRadius: '24px'
+                                            }}>
+                                                <span style={{
+                                                    position: 'absolute',
+                                                    content: '""',
+                                                    height: '18px', width: '18px',
+                                                    left: localStorage.getItem('feature_explorer_enabled') === 'true' ? '22px' : '3px',
+                                                    bottom: '3px',
+                                                    backgroundColor: 'white',
+                                                    transition: '.2s',
+                                                    borderRadius: '50%'
+                                                }} />
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

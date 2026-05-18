@@ -1,0 +1,825 @@
+/* ==========================================================================
+   WORKSPACE EXPLORER DESIGN SYSTEM - Florería Mi Jardín ERP (Beta)
+   Inspired by Notion, Airtable, Linear, and Arc Browser
+   ========================================================================== */
+
+/* Variables locales */
+:root {
+  --explorer-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --explorer-bg: #f8fafc;
+  --explorer-card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  --explorer-card-hover-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+  --explorer-border: #e2e8f0;
+  --explorer-text-primary: #0f172a;
+  --explorer-text-secondary: #475569;
+  --explorer-primary: #10b981; /* Emerald base */
+  --explorer-primary-glow: rgba(16, 185, 129, 0.15);
+  --explorer-glass-bg: rgba(255, 255, 255, 0.75);
+}
+
+/* Base fade-in anim */
+.fade-in {
+  animation: explorerFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes explorerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom transitions and pulses */
+.animate-pulse-subtle {
+  animation: pulseSubtle 3s infinite ease-in-out;
+}
+
+@keyframes pulseSubtle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.95;
+  }
+}
+
+/* Page container */
+.workspace-explorer-container {
+  font-family: var(--explorer-font);
+  background-color: var(--explorer-bg);
+  min-height: calc(100vh - 100px);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  color: var(--explorer-text-primary);
+}
+
+/* Header Section */
+.workspace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--explorer-border);
+  padding-bottom: 1.25rem;
+}
+
+.workspace-title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.workspace-icon-bg {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.workspace-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.workspace-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--explorer-text-primary);
+}
+
+.workspace-beta-badge {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.workspace-subtitle {
+  font-size: 0.875rem;
+  color: var(--explorer-text-secondary);
+  margin: 0.25rem 0 0 0;
+}
+
+/* Global Directory Search Bar */
+.workspace-search-bar {
+  position: relative;
+  width: 320px;
+  max-width: 100%;
+}
+
+.workspace-search-bar .search-icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.workspace-search-input {
+  width: 100%;
+  padding: 0.6rem 2rem 0.6rem 2.5rem;
+  border-radius: 10px;
+  border: 1px solid var(--explorer-border);
+  background-color: white;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.workspace-search-input:focus {
+  outline: none;
+  border-color: var(--explorer-primary);
+  box-shadow: 0 0 0 3px var(--explorer-primary-glow);
+}
+
+.workspace-search-bar .clear-search-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Navigation Toolbar */
+.workspace-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--explorer-glass-bg);
+  backdrop-filter: blur(12px);
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--explorer-border);
+  box-shadow: var(--explorer-card-shadow);
+  gap: 1rem;
+}
+
+.breadcrumbs-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn-back-dir {
+  background-color: white;
+  border: 1px solid var(--explorer-border);
+  color: var(--explorer-text-secondary);
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.btn-back-dir:hover {
+  background-color: #f8fafc;
+  color: var(--explorer-text-primary);
+  border-color: #cbd5e1;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--explorer-text-secondary);
+  font-weight: 500;
+}
+
+.breadcrumb-separator {
+  color: #cbd5e1;
+}
+
+.breadcrumb-item {
+  background: none;
+  border: none;
+  color: var(--explorer-primary);
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.breadcrumb-item:hover {
+  background-color: rgba(16, 185, 129, 0.08);
+}
+
+.breadcrumb-item.active {
+  color: var(--explorer-text-primary);
+  font-weight: 700;
+  cursor: default;
+}
+
+.breadcrumb-item.active:hover {
+  background: none;
+}
+
+.filename-crumb {
+  font-family: monospace;
+  font-size: 0.8rem;
+  background-color: #f1f5f9;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid var(--explorer-border);
+}
+
+.search-stats {
+  font-size: 0.75rem;
+  color: var(--explorer-text-secondary);
+}
+
+/* ==========================================================================
+   VFS BROWSER COMPONENT STYLE (Folders and Files)
+   ========================================================================== */
+.vfs-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.vfs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--explorer-text-secondary);
+  margin: 0;
+  border-left: 3px solid var(--explorer-primary);
+  padding-left: 0.5rem;
+}
+
+.vfs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* General visual cards */
+.vfs-card {
+  background-color: white;
+  border: 1px solid var(--explorer-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--explorer-card-shadow);
+}
+
+.vfs-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--explorer-card-hover-shadow);
+}
+
+.item-name {
+  font-size: 0.925rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--explorer-text-primary);
+}
+
+.item-desc {
+  font-size: 0.75rem;
+  color: var(--explorer-text-secondary);
+  margin: 0.2rem 0 0 0;
+  line-height: 1.35;
+}
+
+/* Folders Custom layout */
+.folder-card {
+  border-left: 4px solid var(--explorer-primary);
+  background: linear-gradient(135deg, white 0%, var(--folder-bg) 100%);
+}
+
+.folder-icon-wrapper {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--explorer-primary);
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.folder-card:hover .folder-icon-wrapper {
+  background-color: var(--explorer-primary);
+  color: white;
+}
+
+.arrow-icon {
+  margin-left: auto;
+  color: #94a3b8;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.folder-card:hover .arrow-icon {
+  transform: translateX(2px);
+  color: var(--explorer-primary);
+  opacity: 1;
+}
+
+/* Files Custom layout */
+.file-card {
+  border-left: 4px solid #3b82f6; /* Blue edge for spread sheet */
+}
+
+.file-icon-wrapper {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.file-card:hover .file-icon-wrapper {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.file-badge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background-color: #f1f5f9;
+  color: #475569;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  border: 1px solid var(--explorer-border);
+}
+
+/* Empty VFS state */
+.vfs-empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: white;
+  border: 2px dashed var(--explorer-border);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.empty-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--explorer-text-primary);
+  margin: 0.5rem 0 0 0;
+}
+
+.empty-subtext {
+  font-size: 0.8rem;
+  color: var(--explorer-text-secondary);
+  margin: 0;
+}
+
+/* ==========================================================================
+   SPREADSHEET VIEWER (Excel-like visual grid)
+   ========================================================================== */
+.spreadsheet-viewer {
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border: 1px solid var(--explorer-border);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  height: 68vh;
+}
+
+/* Header area of table */
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--explorer-border);
+  background-color: #fafbfc;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.sheet-title-area {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.file-icon-lead {
+  font-size: 1.75rem;
+}
+
+.sheet-filename {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+  font-family: monospace;
+}
+
+.sheet-description {
+  font-size: 0.75rem;
+  color: var(--explorer-text-secondary);
+  margin: 0.2rem 0 0 0;
+}
+
+/* Actions inside active sheet */
+.sheet-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Internal search inside spreadsheet */
+.sheet-search-wrapper {
+  position: relative;
+  width: 240px;
+}
+
+.sheet-search-wrapper .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.sheet-search-input {
+  width: 100%;
+  padding: 0.45rem 1.75rem 0.45rem 2.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--explorer-border);
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.sheet-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.sheet-search-wrapper .clear-search-btn {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.sheet-btn {
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0.45rem 0.85rem;
+  height: 34px;
+}
+
+.btn-export {
+  background-color: #f1f5f9;
+  border: 1px solid var(--explorer-border);
+  color: var(--explorer-text-secondary);
+}
+
+.btn-export:hover:not(:disabled) {
+  background-color: #e2e8f0;
+  color: var(--explorer-text-primary);
+}
+
+.btn-export:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-close-sheet {
+  background-color: white;
+  border: 1px solid var(--explorer-border);
+  color: #64748b;
+  width: 34px;
+  padding: 0;
+}
+
+.btn-close-sheet:hover {
+  background-color: #fee2e2;
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
+/* Grid layout with scrollbar overrides */
+.sheet-grid-container {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  background-color: #fcfdfe;
+}
+
+/* Table layout styling rules */
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+/* Sticky Headers */
+.sheet-table th {
+  position: sticky;
+  top: 0;
+  background-color: #f1f5f9;
+  border-bottom: 2px solid #cbd5e1;
+  color: var(--explorer-text-secondary);
+  font-weight: 700;
+  padding: 0.65rem 0.75rem;
+  z-index: 10;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.05);
+}
+
+.sheet-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f1f5f9;
+  color: var(--explorer-text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 300px;
+}
+
+.sheet-table tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Column align settings */
+.align-left { text-align: left; }
+.align-center { text-align: center; }
+.align-right { text-align: right; }
+
+/* Grid index columns */
+.row-index-hdr {
+  width: 45px;
+  background-color: #e2e8f0 !important;
+  color: #64748b;
+  text-align: center;
+}
+
+.row-index-cell {
+  background-color: #fafbfc;
+  color: #64748b;
+  text-align: center;
+  font-weight: 600;
+  border-right: 1px solid #e2e8f0 !important;
+}
+
+/* Spreadsheet Badges */
+.sheet-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.badge-success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-danger {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-info {
+  background-color: #e0f2fe;
+  color: #075985;
+}
+
+.badge-muted {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+/* Loader and Overlay grids */
+.sheet-loading-overlay, .sheet-empty-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  padding: 3rem;
+  box-sizing: border-box;
+}
+
+.sheet-loading-overlay {
+  color: var(--explorer-text-secondary);
+  gap: 0.75rem;
+}
+
+.sheet-loading-overlay .spinner {
+  color: var(--explorer-primary);
+  animation: explorerSpin 1s linear infinite;
+}
+
+@keyframes explorerSpin {
+  to { transform: rotate(360deg); }
+}
+
+.sheet-empty-overlay {
+  text-align: center;
+  color: var(--explorer-text-secondary);
+}
+
+.sheet-empty-overlay h4 {
+  margin: 0.75rem 0 0.25rem 0;
+  color: var(--explorer-text-primary);
+  font-size: 1rem;
+}
+
+.sheet-empty-overlay p {
+  margin: 0;
+  font-size: 0.8rem;
+  max-width: 320px;
+  line-height: 1.4;
+}
+
+/* Footer layout inside Spreadsheet */
+.sheet-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1.5rem;
+  border-top: 1px solid var(--explorer-border);
+  background-color: #f8fafc;
+  font-size: 0.725rem;
+  color: var(--explorer-text-secondary);
+  font-weight: 500;
+}
+
+.footer-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.footer-stat .separator {
+  color: #cbd5e1;
+}
+
+.footer-status-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--explorer-primary);
+  font-weight: 700;
+}
+
+.footer-status-tag .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--explorer-primary);
+  display: inline-block;
+  box-shadow: 0 0 4px var(--explorer-primary);
+}
+
+/* ==========================================================================
+   MOBILE FIRST RESPONSIVENESS OVERRIDES
+   ========================================================================== */
+@media (max-width: 768px) {
+  .workspace-explorer-container {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .workspace-header {
+    gap: 1rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .workspace-search-bar {
+    width: 100%;
+  }
+
+  .workspace-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .search-stats {
+    align-self: flex-end;
+  }
+
+  .vfs-grid {
+    grid-template-columns: 1fr; /* Single column stack */
+  }
+
+  .vfs-card {
+    padding: 1rem;
+  }
+
+  .sheet-header {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .sheet-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sheet-search-wrapper {
+    flex: 1;
+    width: auto;
+  }
+
+  .btn-export .btn-text {
+    display: none; /* Icon-only export on small screens */
+  }
+
+  .sheet-btn {
+    padding: 0.35rem 0.5rem;
+  }
+
+  .spreadsheet-viewer {
+    height: 60vh;
+  }
+}

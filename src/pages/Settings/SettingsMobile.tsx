@@ -121,6 +121,42 @@ export const SettingsMobile = () => {
                             </div>
                             <span className="material-symbols-rounded m-arrow">download</span>
                         </div>
+                        <div className="menu-item-row" style={{ cursor: 'pointer' }} onClick={() => {
+                            const active = localStorage.getItem('feature_explorer_enabled') === 'true';
+                            if (active) {
+                                localStorage.removeItem('feature_explorer_enabled');
+                            } else {
+                                localStorage.setItem('feature_explorer_enabled', 'true');
+                            }
+                            window.location.reload();
+                        }}>
+                            <span className="material-symbols-rounded m-icon">layers</span>
+                            <div className="m-text" style={{ flex: 1 }}>
+                                <span className="m-title">Explorador de Negocios (BETA)</span>
+                                <span className="m-sub">Ver listados como carpetas y planillas</span>
+                            </div>
+                            <div className="toggle-switch-wrapper" style={{ marginRight: '5px' }}>
+                                <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '38px', height: '20px', pointerEvents: 'none' }}>
+                                    <span style={{
+                                        position: 'absolute',
+                                        top: 0, left: 0, right: 0, bottom: 0,
+                                        backgroundColor: localStorage.getItem('feature_explorer_enabled') === 'true' ? '#10b981' : '#cbd5e1',
+                                        transition: '.2s',
+                                        borderRadius: '20px'
+                                    }}>
+                                        <span style={{
+                                            position: 'absolute',
+                                            height: '14px', width: '14px',
+                                            left: localStorage.getItem('feature_explorer_enabled') === 'true' ? '21px' : '3px',
+                                            bottom: '3px',
+                                            backgroundColor: 'white',
+                                            transition: '.2s',
+                                            borderRadius: '50%'
+                                        }} />
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </section>
 

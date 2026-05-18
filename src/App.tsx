@@ -33,6 +33,7 @@ import { useSubscription } from './store/useSubscription';
 import { SubscriptionSuccess, SubscriptionFailure, SubscriptionPending } from './pages/Subscription/SubscriptionResult';
 import { PlanOnboarding } from './pages/Subscription/PlanOnboarding';
 import { UsersPage } from './pages/Users';
+import { WorkspaceExplorer } from './pages/WorkspaceExplorer/WorkspaceExplorer';
 
 // ============================================
 // PROTECTED ROUTE COMPONENT
@@ -98,6 +99,15 @@ function App() {
     const { checkAuth } = useAuth();
 
     useEffect(() => {
+        // Persistir la feature flag del explorador si viene en la URL
+        const params = new URLSearchParams(window.location.search);
+        const explorerParam = params.get('explorer');
+        if (explorerParam === 'true') {
+            localStorage.setItem('feature_explorer_enabled', 'true');
+        } else if (explorerParam === 'false') {
+            localStorage.removeItem('feature_explorer_enabled');
+        }
+
         // Prevent race condition with Google OAuth redirect
         if (window.location.search.includes('token=')) {
             return;
@@ -189,6 +199,17 @@ function App() {
                         <Route path="usuarios" element={<UsersPage />} />
                         <Route path="herramientas" element={<ToolsHub />} />
                         <Route path="herramientas/codigos" element={<BarcodePrinter />} />
+                        <Route 
+                            path="workspace" 
+                            element={
+                                localStorage.getItem('feature_explorer_enabled') === 'true' || 
+                                new URLSearchParams(window.location.search).get('explorer') === 'true' ? (
+                                    <WorkspaceExplorer />
+                                ) : (
+                                    <Navigate to="/" replace />
+                                )
+                            } 
+                        />
                     </Route>
 
                     {/* 404 Route */}

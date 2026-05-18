@@ -267,7 +267,10 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
   // Filter nav items based on permissions
   const filteredNavItems = useMemo(() => {
-    return navItems.filter(item => {
+    const isExplorerActive = localStorage.getItem('feature_explorer_enabled') === 'true' ||
+                             new URLSearchParams(window.location.search).get('explorer') === 'true';
+
+    const baseItems = navItems.filter(item => {
       // Check top-level permission
       if (item.permission && !(perms as any)[item.permission]) {
         return false;
@@ -290,6 +293,24 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
       return true;
     });
+
+    if (isExplorerActive) {
+      const settingsIndex = baseItems.findIndex(item => 'id' in item && item.id === 'ajustes');
+      const explorerItem: NavItem = {
+        path: '/workspace',
+        icon: Layers,
+        label: 'Explorador (BETA)',
+        desc: 'Explorador de negocios experimental',
+      };
+
+      if (settingsIndex !== -1) {
+        baseItems.splice(settingsIndex, 0, explorerItem);
+      } else {
+        baseItems.push(explorerItem);
+      }
+    }
+
+    return baseItems;
   }, [perms]);
 
   // Auto-expand a submenu if one of its children is the active route
