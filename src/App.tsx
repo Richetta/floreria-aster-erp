@@ -199,17 +199,7 @@ function App() {
                         <Route path="usuarios" element={<UsersPage />} />
                         <Route path="herramientas" element={<ToolsHub />} />
                         <Route path="herramientas/codigos" element={<BarcodePrinter />} />
-                        <Route 
-                            path="workspace" 
-                            element={
-                                localStorage.getItem('feature_explorer_enabled') === 'true' || 
-                                new URLSearchParams(window.location.search).get('explorer') === 'true' ? (
-                                    <WorkspaceExplorer />
-                                ) : (
-                                    <Navigate to="/" replace />
-                                )
-                            } 
-                        />
+                        <Route path="workspace" element={<WorkspaceExplorer />} />
                     </Route>
 
                     {/* 404 Route */}
