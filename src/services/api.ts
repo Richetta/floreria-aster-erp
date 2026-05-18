@@ -267,7 +267,9 @@ export class ApiClient {
           window.location.href = '/login';
         }
 
-        throw new Error(error.message || error.error || 'Request failed');
+        const errorInstance = new Error(error.message || error.error || 'Request failed');
+        (errorInstance as any).details = error.details || null;
+        throw errorInstance;
       }
 
       const contentType = response.headers.get('content-type');

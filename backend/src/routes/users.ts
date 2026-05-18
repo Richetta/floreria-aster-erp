@@ -88,6 +88,10 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update user schema (partial)
   const updateUserSchema = createUserSchema.partial().extend({
+    password: z.preprocess(
+      (val) => (val === '' || val === null ? undefined : val),
+      z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional()
+    ),
     is_active: z.boolean().optional()
   });
 

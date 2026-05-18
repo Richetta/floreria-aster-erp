@@ -97,7 +97,12 @@ export const UsersPage = () => {
       setUserForm({ name: '', email: '', username: '', password: '', role: 'employee', phone: '' });
       fetchData();
     } catch (error: any) {
-      alert(error.message || 'Error al crear usuario');
+      if (error.details && Array.isArray(error.details) && error.details.length > 0) {
+        const userFriendlyMsg = error.details.map((d: any) => d.message).join('\n');
+        alert(`Error de validación:\n${userFriendlyMsg}`);
+      } else {
+        alert(error.message || 'Error al crear usuario');
+      }
     }
   };
 
@@ -163,7 +168,12 @@ export const UsersPage = () => {
 
       fetchData();
     } catch (error: any) {
-      alert(error.message || 'Error al actualizar usuario');
+      if (error.details && Array.isArray(error.details) && error.details.length > 0) {
+        const userFriendlyMsg = error.details.map((d: any) => d.message).join('\n');
+        alert(`Error de validación:\n${userFriendlyMsg}`);
+      } else {
+        alert(error.message || 'Error al actualizar usuario');
+      }
     }
   };
 
@@ -373,6 +383,7 @@ export const UsersPage = () => {
                       placeholder="••••••••"
                       value={userForm.password}
                       onChange={(e) => setUserForm({...userForm, password: e.target.value})}
+                      autoComplete="new-password"
                     />
                     <button 
                       type="button" 
@@ -528,6 +539,7 @@ export const UsersPage = () => {
                       placeholder="Ingresa nueva para cambiar..."
                       value={editForm.password}
                       onChange={(e) => setEditForm({...editForm, password: e.target.value})}
+                      autoComplete="new-password"
                     />
                     <button 
                       type="button" 
