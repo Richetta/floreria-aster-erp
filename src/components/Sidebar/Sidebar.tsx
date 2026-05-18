@@ -393,7 +393,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               
               <div className="form-group">
                 <label>Nombre de Usuario o Email</label>
-                <div className="input-with-icon">
+                <div className="sidebar-input-with-icon">
                   <UserIcon size={18} />
                   <input 
                     type="text" 
@@ -407,7 +407,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
               <div className="form-group">
                 <label>Contraseña</label>
-                <div className="input-with-icon">
+                <div className="sidebar-input-with-icon">
                   <Lock size={18} />
                   <input 
                     type={showSwitchPassword ? 'text' : 'password'} 

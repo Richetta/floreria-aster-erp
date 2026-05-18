@@ -338,7 +338,7 @@ export const UsersPage = () => {
 
                 <div className="form-group">
                   <label>Nombre de Usuario (Opcional)</label>
-                  <div className="input-with-icon">
+                  <div className="users-input-with-icon">
                     <UserCheck size={18} />
                     <input 
                       type="text" 
@@ -352,7 +352,7 @@ export const UsersPage = () => {
 
                 <div className="form-group">
                   <label>Teléfono (Opcional)</label>
-                  <div className="input-with-icon">
+                  <div className="users-input-with-icon">
                     <Phone size={18} />
                     <input 
                       type="text" 
@@ -365,7 +365,7 @@ export const UsersPage = () => {
 
                 <div className="form-group">
                   <label>Contraseña Inicial *</label>
-                  <div className="input-with-icon">
+                  <div className="users-input-with-icon">
                     <Lock size={18} />
                     <input 
                       type={showPassword ? 'text' : 'password'} 
@@ -494,7 +494,7 @@ export const UsersPage = () => {
 
                 <div className="form-group">
                   <label>Nombre de Usuario (Opcional)</label>
-                  <div className="input-with-icon">
+                  <div className="users-input-with-icon">
                     <UserCheck size={18} />
                     <input 
                       type="text" 
@@ -508,7 +508,7 @@ export const UsersPage = () => {
 
                 <div className="form-group">
                   <label>Teléfono (Opcional)</label>
-                  <div className="input-with-icon">
+                  <div className="users-input-with-icon">
                     <Phone size={18} />
                     <input 
                       type="text" 
@@ -521,7 +521,7 @@ export const UsersPage = () => {
 
                 <div className="form-group">
                   <label>Contraseña (Opcional)</label>
-                  <div className="input-with-icon">
+                  <div className="users-input-with-icon">
                     <Lock size={18} />
                     <input 
                       type={showEditPassword ? 'text' : 'password'} 

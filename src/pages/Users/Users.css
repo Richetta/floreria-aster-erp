@@ -356,7 +356,7 @@
   outline: none;
 }
 
-.input-with-icon {
+.users-input-with-icon {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -369,13 +369,13 @@
   box-sizing: border-box !important;
 }
 
-.input-with-icon:focus-within {
+.users-input-with-icon:focus-within {
   background: white;
   border-color: var(--primary, #0284c7);
   box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.08);
 }
 
-.input-with-icon input {
+.users-input-with-icon input {
   background: transparent !important;
   border: none !important;
   outline: none !important;
@@ -388,7 +388,7 @@
   min-height: 44px !important;
 }
 
-.input-with-icon svg {
+.users-input-with-icon svg {
   color: #94a3b8;
   transition: color 0.2s;
   flex-shrink: 0;
@@ -396,7 +396,7 @@
   display: block !important;
 }
 
-.input-with-icon:focus-within svg {
+.users-input-with-icon:focus-within svg {
   color: var(--primary, #0284c7);
 }
 
