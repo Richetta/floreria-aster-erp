@@ -18,6 +18,7 @@
     "@fastify/rate-limit": "^10.3.0",
     "@types/bcrypt": "^5.0.2",
     "@types/node": "^20.10.6",
+    "@types/nodemailer": "^8.0.0",
     "@types/pdf-parse": "^1.1.5",
     "@types/pg": "^8.10.9",
     "axios": "^1.6.0",
@@ -37,7 +38,6 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/nodemailer": "^8.0.0",
     "typescript": "^5.3.3"
   }
 }
