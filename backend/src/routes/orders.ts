@@ -153,6 +153,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     let query = db
       .selectFrom('orders')
       .selectAll()
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null);
 
     // Filters
@@ -219,6 +220,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       .selectFrom('orders')
       .selectAll()
       .where('id', '=', id)
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null)
       .executeTakeFirst();
 
@@ -521,6 +523,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
         updated_at: new Date()
       } as any)
       .where('id', '=', id)
+      .where('business_id', '=', user.business_id)
       .returningAll()
       .executeTakeFirst();
 
@@ -552,6 +555,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
         deleted_at: new Date()
       })
       .where('id', '=', id)
+      .where('business_id', '=', user.business_id)
       .execute();
 
     return reply.send({ success: true });
@@ -581,6 +585,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
       .selectFrom('orders')
       .selectAll()
       .where('id', '=', id)
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null)
       .executeTakeFirst();
 
@@ -664,6 +669,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
     let query = db
       .selectFrom('orders')
       .selectAll()
+      .where('business_id', '=', user.business_id)
       .where('deleted_at', 'is', null)
       .where('delivery_method', '=', 'delivery')
       .where('status', 'in', ['ready', 'out_for_delivery']);
@@ -721,6 +727,7 @@ export const ordersRoutes: FastifyPluginAsync = async (fastify) => {
         'orders.customer_phone',
         'orders.delivery_notes as notes',
       ])
+      .where('orders.business_id', '=', user.business_id)
       .where('orders.deleted_at', 'is', null)
       .where('orders.delivery_method', '=', 'delivery')
       .where('orders.status', 'in', ['ready', 'out_for_delivery', 'pending'])
