@@ -146,7 +146,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       const usage = usageData?.data?.limits;
 
       if (sub) {
-        const normalizedSlug = SLUG_MAP[sub.slug] || sub.slug || 'gratis';
+        const rawSlug = sub.plan_slug || sub.slug || 'gratis';
+        const normalizedSlug = SLUG_MAP[rawSlug] || rawSlug;
         setState({
           planSlug: normalizedSlug,
           planName: sub.plan_name || sub.name_short || (normalizedSlug === 'gratis' ? 'Gratis' : 'Profesional Completo'),
