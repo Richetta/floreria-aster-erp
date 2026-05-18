@@ -618,6 +618,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
             'is_active',
             sql<boolean>`(password_hash IS NOT NULL AND password_hash <> '')`.as('has_password')
           ])
+          .where('business_id', '=', businessId)
           .where('deleted_at', 'is', null)
           .where('is_active', '=', true)
           .orderBy('name', 'asc')
@@ -652,6 +653,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           .selectFrom('users')
           .selectAll()
           .where('id', '=', targetUserId)
+          .where('business_id', '=', businessId)
           .where('deleted_at', 'is', null)
           .where('is_active', '=', true)
           .executeTakeFirst();

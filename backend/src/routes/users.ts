@@ -127,6 +127,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
         return await trx
           .selectFrom('users')
           .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
+          .where('business_id', '=', businessId)
           .where('deleted_at', 'is', null)
           .orderBy('name', 'asc')
           .execute();
@@ -159,6 +160,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
         .selectFrom('users')
         .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'last_login', 'created_at'])
         .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
         .where('deleted_at', 'is', null)
         .executeTakeFirst();
     });
@@ -196,10 +198,11 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
       const result = await db.connection().execute(async (conn) => {
         await sql`SELECT set_config('app.current_business_id', ${currentUser.business_id}, true)`.execute(conn);
 
-        // Check if email already exists
+        // Check if email already exists for this business
         const existing = await conn
           .selectFrom('users')
           .select('id')
+          .where('business_id', '=', currentUser.business_id)
           .where('email', '=', body.email)
           .where('deleted_at', 'is', null)
           .executeTakeFirst();
@@ -328,6 +331,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
           .updateTable('users')
           .set(updateData)
           .where('id', '=', id)
+          .where('business_id', '=', currentUser.business_id)
           .returning(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'updated_at'])
           .executeTakeFirst();
       });
@@ -384,6 +388,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
           is_active: false
         })
         .where('id', '=', id)
+        .where('business_id', '=', currentUser.business_id)
         .execute();
     });
 
@@ -418,6 +423,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
           .selectFrom('users')
           .select(['password_hash'])
           .where('id', '=', user.sub)
+          .where('business_id', '=', user.business_id)
           .executeTakeFirst();
 
         if (!currentUserData) {
@@ -444,6 +450,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
             updated_at: new Date()
           })
           .where('id', '=', user.sub)
+          .where('business_id', '=', user.business_id)
           .execute();
         
         return { success: true };
@@ -480,6 +487,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify) => {
         .selectFrom('users')
         .select(['id', 'name', 'username', 'email', 'role', 'phone', 'is_active', 'created_at'])
         .where('id', '=', user.sub)
+        .where('business_id', '=', user.business_id)
         .executeTakeFirst();
     });
 
