@@ -27,7 +27,9 @@ import {
   Star,
   CreditCard,
   UserCheck,
-  User as UserIcon
+  User as UserIcon,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { useStore } from '../../store/useStore';
@@ -158,6 +160,13 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const products = useStore(state => state.products);
   const { status, features, showUpgradeModal } = useSubscription();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+  
+  // States for Switch User quick login
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
+  const [showSwitchPassword, setShowSwitchPassword] = useState(false);
+  const [switchForm, setSwitchForm] = useState({ username: '', password: '' });
+  const [switchError, setSwitchError] = useState<string | null>(null);
+  const [switchLoading, setSwitchLoading] = useState(false);
 
   const restockItems = products.filter(p => p.stock <= (p.min || 0));
   const unassignedCount = restockItems.filter(p => !p.supplierId).length;
@@ -165,6 +174,27 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleSwitchUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSwitchError(null);
+    if (!switchForm.username || !switchForm.password) {
+      setSwitchError('Por favor completa todos los campos.');
+      return;
+    }
+    setSwitchLoading(true);
+    try {
+      await useAuth.getState().login(switchForm.username, switchForm.password);
+      setShowSwitchModal(false);
+      setSwitchForm({ username: '', password: '' });
+      navigate('/');
+      window.location.reload();
+    } catch (err: any) {
+      setSwitchError(err.message || 'Credenciales de usuario incorrectas.');
+    } finally {
+      setSwitchLoading(false);
+    }
   };
 
   const handleLinkClick = (e: React.MouseEvent, feature?: keyof SubscriptionState['features']) => {
@@ -334,11 +364,78 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 user?.role === 'delivery' ? 'Repartidor' : 'Visualizador'}
             </span>
           </div>
-          <button className="btn-icon-logout" onClick={handleLogout} title="Cerrar sesión">
-            <LogOut size={18} />
-          </button>
+          <div className="user-profile-actions">
+            <button className="btn-icon-switch" onClick={() => setShowSwitchModal(true)} title="Cambiar de usuario">
+              <UserCheck size={18} />
+            </button>
+            <button className="btn-icon-logout" onClick={handleLogout} title="Cerrar sesión">
+              <LogOut size={18} />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Switch User Modal */}
+      {showSwitchModal && (
+        <div className="modal-overlay">
+          <div className="modal-content switch-user-modal">
+            <header>
+              <h2>Cambiar de Usuario</h2>
+              <button className="close-btn" onClick={() => setShowSwitchModal(false)}>×</button>
+            </header>
+            
+            <form onSubmit={handleSwitchUserSubmit}>
+              {switchError && (
+                <div className="switch-error-message">
+                  {switchError}
+                </div>
+              )}
+              
+              <div className="form-group">
+                <label>Nombre de Usuario o Email</label>
+                <div className="input-with-icon">
+                  <UserIcon size={18} />
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="Ej: admin o juan@gmail.com"
+                    value={switchForm.username}
+                    onChange={(e) => setSwitchForm({...switchForm, username: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Contraseña</label>
+                <div className="input-with-icon">
+                  <Lock size={18} />
+                  <input 
+                    type={showSwitchPassword ? 'text' : 'password'} 
+                    required 
+                    placeholder="••••••••"
+                    value={switchForm.password}
+                    onChange={(e) => setSwitchForm({...switchForm, password: e.target.value})}
+                  />
+                  <button 
+                    type="button" 
+                    className="password-toggle"
+                    onClick={() => setShowSwitchPassword(!showSwitchPassword)}
+                  >
+                    {showSwitchPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={() => setShowSwitchModal(false)}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={switchLoading}>
+                  {switchLoading ? 'Cambiando...' : 'Iniciar Sesión'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </aside>
   );
 };
