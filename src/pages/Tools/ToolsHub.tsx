@@ -3,6 +3,15 @@ import './ToolsHub.css';
 
 const tools = [
     {
+        id: 'workspace-explorer',
+        title: 'Explorador de Negocios (BETA)',
+        description: 'Explorá tu inventario, ventas, clientes y proveedores visualmente mediante una intuitiva metáfora de carpetas y planillas de cálculo.',
+        icon: 'folder_open',
+        path: '/workspace',
+        color: '#10b981',
+        bg: '#ecfdf5',
+    },
+    {
         id: 'barcode-printer',
         title: 'Imprimir Códigos de Barra',
         description: 'Generá e imprimí etiquetas de códigos de barra de manera masiva. Elegí productos, configurá el tamaño y formato, y lanzá la impresión.',
@@ -26,6 +35,14 @@ const tools = [
 export const ToolsHub = () => {
     const navigate = useNavigate();
 
+    const handleToolClick = (tool: typeof tools[0]) => {
+        if (tool.disabled) return;
+        if (tool.id === 'workspace-explorer') {
+            localStorage.setItem('feature_explorer_enabled', 'true');
+        }
+        navigate(tool.path);
+    };
+
     return (
         <div className="tools-hub-page">
             <div className="tools-hub-header">
@@ -38,7 +55,7 @@ export const ToolsHub = () => {
                     <button
                         key={tool.id}
                         className={`tool-card ${tool.disabled ? 'tool-card-disabled' : ''}`}
-                        onClick={() => !tool.disabled && navigate(tool.path)}
+                        onClick={() => handleToolClick(tool)}
                         disabled={tool.disabled}
                     >
                         <div className="tool-card-icon" style={{ background: tool.bg, color: tool.color }}>

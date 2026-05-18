@@ -270,13 +270,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const isExplorerActive = localStorage.getItem('feature_explorer_enabled') === 'true' ||
                              new URLSearchParams(window.location.search).get('explorer') === 'true';
 
-    const baseItems = navItems.filter(item => {
-      // Check top-level permission
-      if (item.permission && !(perms as any)[item.permission]) {
-        return false;
-      }
-
-      // If it's a group, check if it has at least one visible child
+    // 1. Map to filter children and inject custom features conditionally
+    const mappedItems = navItems.map(item => {
       if ('children' in item) {
         const visibleChildren = item.children.filter(child => {
           if (child.permission && !(perms as any)[child.permission]) {
@@ -285,32 +280,30 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           return true;
         });
         
-        if (visibleChildren.length === 0) return false;
+        // Inject Explorador under Herramientas if active
+        if (item.id === 'herramientas' && isExplorerActive) {
+          visibleChildren.push({
+            path: '/workspace',
+            label: 'Explorador (BETA)',
+            icon: Layers
+          });
+        }
         
-        // Update item with only visible children
         return { ...item, children: visibleChildren };
       }
-
-      return true;
+      return item;
     });
 
-    if (isExplorerActive) {
-      const settingsIndex = baseItems.findIndex(item => 'id' in item && item.id === 'ajustes');
-      const explorerItem: NavItem = {
-        path: '/workspace',
-        icon: Layers,
-        label: 'Explorador (BETA)',
-        desc: 'Explorador de negocios experimental',
-      };
-
-      if (settingsIndex !== -1) {
-        baseItems.splice(settingsIndex, 0, explorerItem);
-      } else {
-        baseItems.push(explorerItem);
+    // 2. Filter top-level items based on permissions and children count
+    return mappedItems.filter(item => {
+      if (item.permission && !(perms as any)[item.permission]) {
+        return false;
       }
-    }
-
-    return baseItems;
+      if ('children' in item && item.children.length === 0) {
+        return false;
+      }
+      return true;
+    });
   }, [perms]);
 
   // Auto-expand a submenu if one of its children is the active route
