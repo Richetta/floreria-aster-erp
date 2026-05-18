@@ -582,3 +582,34 @@
     box-shadow: 0 6px 16px rgba(2, 132, 199, 0.3);
 }
 
+/* Sidebar selector dropdown select style */
+.sidebar-select {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    width: 100%;
+    font-size: 0.95rem;
+    color: #0f172a;
+    height: 44px !important;
+    min-height: 44px !important;
+    cursor: pointer;
+}
+
+/* Add custom animations for smoother transition */
+.fade-in {
+    animation: fadeIn 0.25s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+

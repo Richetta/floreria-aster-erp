@@ -260,7 +260,7 @@ export const UsersPage = () => {
             <div className="empty-state">No se encontraron miembros.</div>
           ) : (
             filteredUsers.map(user => (
-              <div key={user.id} className={`user-card ${!user.is_active ? 'inactive' : ''}`}>
+              <div key={user.id} className={`user-card ${!user.is_active ? 'inactive' : ''} ${user.id === currentUser?.id ? 'active-session-user' : ''}`}>
                 <div className="user-card-main">
                   <div className="user-avatar">
                     {user.name.charAt(0).toUpperCase()}
@@ -269,6 +269,7 @@ export const UsersPage = () => {
                     <div className="user-name-row">
                       <h3>{user.name}</h3>
                       {getRoleBadge(user.role)}
+                      {user.id === currentUser?.id && <span className="badge badge-active-session">Sesión Activa (Tú)</span>}
                     </div>
                     <div className="user-meta">
                       <span><Mail size={12} /> {user.email}</span>

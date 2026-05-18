@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { api } from '../../services/api';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -164,9 +165,47 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   // States for Switch User quick login
   const [showSwitchModal, setShowSwitchModal] = useState(false);
   const [showSwitchPassword, setShowSwitchPassword] = useState(false);
-  const [switchForm, setSwitchForm] = useState({ username: '', password: '' });
   const [switchError, setSwitchError] = useState<string | null>(null);
   const [switchLoading, setSwitchLoading] = useState(false);
+
+  // Selector Dropdown Switcher States
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState('');
+  const [switchPassword, setSwitchPassword] = useState('');
+  const [needsPassword, setNeedsPassword] = useState(false);
+
+  // Fetch team members when switcher modal is opened
+  useEffect(() => {
+    if (showSwitchModal) {
+      setTeamLoading(true);
+      setSwitchError(null);
+      api.request<any[]>('/auth/team')
+        .then(data => {
+          setTeamMembers(data);
+          if (data.length > 0) {
+            // Select the first member excluding current user, or just the first
+            const switchable = data.filter((u: any) => u.id !== user?.id);
+            const defaultUser = switchable.length > 0 ? switchable[0] : data[0];
+            setSelectedMemberId(defaultUser.id);
+            setNeedsPassword(defaultUser.has_password);
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching team members:', err);
+          setSwitchError('No se pudo cargar la lista de miembros del equipo.');
+        })
+        .finally(() => {
+          setTeamLoading(false);
+        });
+    } else {
+      setTeamMembers([]);
+      setSelectedMemberId('');
+      setSwitchPassword('');
+      setNeedsPassword(false);
+      setShowSwitchPassword(false);
+    }
+  }, [showSwitchModal, user?.id]);
 
   const restockItems = products.filter(p => p.stock <= (p.min || 0));
   const unassignedCount = restockItems.filter(p => !p.supplierId).length;
@@ -179,19 +218,34 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const handleSwitchUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSwitchError(null);
-    if (!switchForm.username || !switchForm.password) {
-      setSwitchError('Por favor completa todos los campos.');
+    if (!selectedMemberId) {
+      setSwitchError('Por favor selecciona un usuario.');
       return;
     }
     setSwitchLoading(true);
     try {
-      await useAuth.getState().login(switchForm.username, switchForm.password);
-      setShowSwitchModal(false);
-      setSwitchForm({ username: '', password: '' });
-      navigate('/');
-      window.location.reload();
+      const response = await api.request<{ token: string; user: any }>('/auth/switch', {
+        method: 'POST',
+        body: JSON.stringify({
+          targetUserId: selectedMemberId,
+          password: needsPassword ? switchPassword : undefined
+        })
+      });
+
+      if (response.token) {
+        api.setToken(response.token);
+        useAuth.setState({
+          user: response.user,
+          isAuthenticated: true,
+          isLoading: false
+        });
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setShowSwitchModal(false);
+        navigate('/');
+        window.location.reload();
+      }
     } catch (err: any) {
-      setSwitchError(err.message || 'Credenciales de usuario incorrectas.');
+      setSwitchError(err.message || 'Contraseña incorrecta o error al cambiar de usuario.');
     } finally {
       setSwitchLoading(false);
     }
@@ -391,47 +445,72 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 </div>
               )}
               
-              <div className="form-group">
-                <label>Nombre de Usuario o Email</label>
-                <div className="sidebar-input-with-icon">
-                  <UserIcon size={18} />
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="Ej: admin o juan@gmail.com"
-                    value={switchForm.username}
-                    onChange={(e) => setSwitchForm({...switchForm, username: e.target.value})}
-                  />
-                </div>
-              </div>
+              {teamLoading ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>Cargando miembros...</div>
+              ) : (
+                <>
+                  <div className="form-group">
+                    <label>Seleccionar Usuario</label>
+                    <div className="sidebar-input-with-icon">
+                      <UserIcon size={18} />
+                      <select 
+                        className="sidebar-select"
+                        value={selectedMemberId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedMemberId(val);
+                          const member = teamMembers.find(m => m.id === val);
+                          setNeedsPassword(member ? member.has_password : false);
+                          setSwitchPassword('');
+                        }}
+                        required
+                      >
+                        {teamMembers.map(m => (
+                          <option key={m.id} value={m.id}>
+                            {m.name} ({m.role === 'owner' ? 'Dueño' :
+                              m.role === 'admin' ? 'Administrador' :
+                              m.role === 'employee' ? 'Empleado' :
+                              m.role === 'finance' ? 'Finanzas' :
+                              m.role === 'delivery' ? 'Repartidor' : 'Visualizador'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
-              <div className="form-group">
-                <label>Contraseña</label>
-                <div className="sidebar-input-with-icon">
-                  <Lock size={18} />
-                  <input 
-                    type={showSwitchPassword ? 'text' : 'password'} 
-                    required 
-                    placeholder="••••••••"
-                    value={switchForm.password}
-                    onChange={(e) => setSwitchForm({...switchForm, password: e.target.value})}
-                  />
-                  <button 
-                    type="button" 
-                    className="password-toggle"
-                    onClick={() => setShowSwitchPassword(!showSwitchPassword)}
-                  >
-                    {showSwitchPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
+                  {needsPassword && (
+                    <div className="form-group fade-in">
+                      <label>Contraseña de Acceso</label>
+                      <div className="sidebar-input-with-icon">
+                        <Lock size={18} />
+                        <input 
+                          type={showSwitchPassword ? 'text' : 'password'} 
+                          required 
+                          placeholder="••••••••"
+                          value={switchPassword}
+                          onChange={(e) => setSwitchPassword(e.target.value)}
+                          autoComplete="current-password"
+                        />
+                        <button 
+                          type="button" 
+                          className="password-toggle"
+                          onClick={() => setShowSwitchPassword(!showSwitchPassword)}
+                        >
+                          {showSwitchPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                      <small className="help-text">Este usuario tiene una contraseña asignada.</small>
+                    </div>
+                  )}
 
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setShowSwitchModal(false)}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={switchLoading}>
-                  {switchLoading ? 'Cambiando...' : 'Iniciar Sesión'}
-                </button>
-              </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn-secondary" onClick={() => setShowSwitchModal(false)}>Cancelar</button>
+                    <button type="submit" className="btn-primary" disabled={switchLoading}>
+                      {switchLoading ? 'Cambiando...' : 'Iniciar Sesión'}
+                    </button>
+                  </div>
+                </>
+              )}
             </form>
           </div>
         </div>

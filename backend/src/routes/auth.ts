@@ -590,6 +590,138 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       phone: result.phone
     });
   });
+
+  // GET SIMPLE TEAM LIST FOR SELECTOR
+  fastify.get('/team', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const currentUser = request.user as any;
+    try {
+      const businessId = String(currentUser.business_id);
+      const members = await db.connection().execute(async (conn) => {
+        await sql`SELECT set_config('app.current_business_id', ${sql.raw(`'${businessId}'`)}, true)`.execute(conn);
+        return await conn
+          .selectFrom('users')
+          .select([
+            'id',
+            'name',
+            'username',
+            'email',
+            'role',
+            'phone',
+            'is_active',
+            sql<boolean>`(password_hash IS NOT NULL AND password_hash <> '')`.as('has_password')
+          ])
+          .where('deleted_at', 'is', null)
+          .where('is_active', '=', true)
+          .orderBy('name', 'asc')
+          .execute();
+      });
+      return reply.send(members);
+    } catch (error) {
+      console.error('[AUTH TEAM LIST ERROR]:', error);
+      throw error;
+    }
+  });
+
+  // SWITCH USER SESSION DIRECTLY WITHIN THE SAME BUSINESS
+  fastify.post('/switch', {
+    preHandler: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }]
+  }, async (request, reply) => {
+    const currentUser = request.user as any;
+    const { targetUserId, password } = request.body as { targetUserId: string; password?: string };
+
+    try {
+      const businessId = String(currentUser.business_id);
+
+      const targetUser = await db.connection().execute(async (conn) => {
+        await sql`SELECT set_config('app.current_business_id', ${sql.raw(`'${businessId}'`)}, true)`.execute(conn);
+        return await conn
+          .selectFrom('users')
+          .selectAll()
+          .where('id', '=', targetUserId)
+          .where('deleted_at', 'is', null)
+          .where('is_active', '=', true)
+          .executeTakeFirst();
+      });
+
+      if (!targetUser) {
+        return reply.status(404).send({ error: 'Usuario no encontrado o inactivo' });
+      }
+
+      // Verify password if the target user has a password set
+      const hasPassword = targetUser.password_hash !== null && targetUser.password_hash !== '';
+      if (hasPassword) {
+        if (!password) {
+          return reply.status(400).send({ error: 'Se requiere contraseña para este usuario' });
+        }
+        const validPassword = await bcrypt.compare(password, targetUser.password_hash!);
+        if (!validPassword) {
+          return reply.status(401).send({ error: 'Contraseña incorrecta' });
+        }
+      }
+
+      // Generate NEW JWT token for the target user
+      const token = fastify.jwt.sign({
+        sub: targetUser.id,
+        business_id: targetUser.business_id,
+        role: targetUser.role,
+        email: targetUser.email
+      });
+
+      // Update last login
+      await db.updateTable('users')
+        .set({ last_login: new Date() })
+        .where('id', '=', targetUser.id)
+        .execute();
+
+      // Log switch activity
+      try {
+        await db.connection().execute(async (conn) => {
+          await sql`SELECT set_config('app.current_business_id', ${sql.raw(`'${businessId}'`)}, true)`.execute(conn);
+          await conn.insertInto('user_activity')
+            .values({
+              id: randomUUID(),
+              business_id: businessId,
+              user_id: targetUser.id,
+              action: 'switch_profile',
+              resource_type: 'session',
+              details: JSON.stringify({ from_user_id: currentUser.sub }),
+              created_at: new Date()
+            } as any)
+            .execute();
+        });
+      } catch (logErr) {
+        console.warn('Failed to log switch activity:', logErr);
+      }
+
+      return reply.send({
+        token,
+        user: {
+          id: targetUser.id,
+          name: targetUser.name,
+          email: targetUser.email,
+          role: targetUser.role,
+          business_id: targetUser.business_id
+        }
+      });
+    } catch (error) {
+      console.error('[AUTH SWITCH ERROR]:', error);
+      return reply.status(500).send({ error: 'Error al cambiar de usuario' });
+    }
+  });
 };
 
 export default authRoutes;
