@@ -105,6 +105,27 @@ const VFS_ITEMS: VFSItem[] = [
   },
 ];
 
+// Helper to get descendant category IDs recursively
+const getDescendantCategoryIds = (catId: string, categories: any[]): string[] => {
+  const ids = [catId];
+  const findChildren = (parentId: string) => {
+    const children = categories.filter(c => c.parent_id === parentId);
+    const cat = categories.find(c => c.id === parentId);
+    const nestedChildren = cat?.children || [];
+    const allChildren = [...children, ...nestedChildren];
+
+    allChildren.forEach(ch => {
+      if (!ids.includes(ch.id)) {
+        ids.push(ch.id);
+        findChildren(ch.id);
+      }
+    });
+  };
+  findChildren(catId);
+  return ids;
+};
+
+
 export const useWorkspaceExplorer = () => {
   const [currentFolderId, setCurrentFolderId] = useState<string>('root');
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
@@ -132,28 +153,59 @@ export const useWorkspaceExplorer = () => {
       color: '#f0fdf4', // pastel light green
     });
 
-    // 2. Add each category as a folder and subfolder
-    store.categoriesData.forEach(c => {
-      const parentId = c.parent_id ? `category_dir_${c.parent_id}` : 'categorias_folder';
-      items.push({
-        id: `category_dir_${c.id}`,
-        name: c.name,
-        parentId: parentId,
-        type: 'folder',
-        description: `Productos en categoría ${c.name}`,
-        color: '#f0fdf4',
-      });
+    // 2. Normalize categories into a tree structure
+    const categoriesData = store.categoriesData || [];
+    const isAlreadyNested = categoriesData.some(c => c.children && c.children.length > 0);
+    
+    const catTree = isAlreadyNested 
+      ? categoriesData 
+      : (() => {
+          const buildTree = (parentId: string | null = null): any[] => {
+            return categoriesData
+              .filter(c => c.parent_id === parentId || (parentId === null && !c.parent_id))
+              .map(c => ({
+                ...c,
+                children: buildTree(c.id)
+              }));
+          };
+          return buildTree(null);
+        })();
 
-      // 3. Add category products spreadsheet inside its category folder
-      items.push({
-        id: `category_file_${c.id}`,
-        name: `${c.name}.xlsx`,
-        parentId: `category_dir_${c.id}`,
-        type: 'file',
-        entity: 'products',
-        description: `Planilla con los productos de la categoría ${c.name}`,
+    // 3. Recursive function to collect all categories and subcategories from the tree
+    const collectCategories = (cats: any[], parentFolderId: string) => {
+      cats.forEach(c => {
+        const folderId = `category_dir_${c.id}`;
+        
+        // Add category folder
+        items.push({
+          id: folderId,
+          name: c.name,
+          parentId: parentFolderId,
+          type: 'folder',
+          description: `Productos en categoría ${c.name}`,
+          color: '#f0fdf4',
+        });
+
+        // Add category products spreadsheet inside its category folder
+        items.push({
+          id: `category_file_${c.id}`,
+          name: `${c.name}.xlsx`,
+          parentId: folderId,
+          type: 'file',
+          entity: 'products',
+          description: `Planilla con los productos de la categoría ${c.name}`,
+        });
+
+        // Recursively add children as subfolders
+        if (c.children && c.children.length > 0) {
+          collectCategories(c.children, folderId);
+        }
       });
-    });
+    };
+
+    if (catTree && catTree.length > 0) {
+      collectCategories(catTree, 'categorias_folder');
+    }
 
     return items;
   }, [store.categoriesData, store.isLoading]);
@@ -260,8 +312,13 @@ export const useWorkspaceExplorer = () => {
       case 'products': {
         const isCategoryFile = activeFile.id.startsWith('category_file_');
         const categoryId = isCategoryFile ? activeFile.id.replace('category_file_', '') : null;
+        
+        const categoryIds = categoryId 
+          ? getDescendantCategoryIds(categoryId, store.categoriesData)
+          : [];
+
         const productsList = categoryId 
-          ? store.products.filter(p => p.category_id === categoryId)
+          ? store.products.filter(p => p.category_id && categoryIds.includes(p.category_id))
           : store.products;
 
         return {
