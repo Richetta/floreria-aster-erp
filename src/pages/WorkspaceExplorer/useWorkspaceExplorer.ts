@@ -113,6 +113,51 @@ export const useWorkspaceExplorer = () => {
   // Access existing Zustand stores
   const store = useStore();
 
+  // Dynamically compute the combined VFS structure including dynamic category folders and files
+  const allVFSItems = useMemo<VFSItem[]>(() => {
+    const items = [...VFS_ITEMS];
+
+    // Lazy load categories if they are empty
+    if (store.categoriesData.length === 0 && !store.isLoading) {
+      store.loadCategories(true);
+    }
+
+    // 1. Add "Explorar por Categoría" virtual folder under 'inventario'
+    items.push({
+      id: 'categorias_folder',
+      name: 'Explorar por Categoría',
+      parentId: 'inventario',
+      type: 'folder',
+      description: 'Navegá tu catálogo agrupado por sus carpetas de categorías',
+      color: '#f0fdf4', // pastel light green
+    });
+
+    // 2. Add each category as a folder and subfolder
+    store.categoriesData.forEach(c => {
+      const parentId = c.parent_id ? `category_dir_${c.parent_id}` : 'categorias_folder';
+      items.push({
+        id: `category_dir_${c.id}`,
+        name: c.name,
+        parentId: parentId,
+        type: 'folder',
+        description: `Productos en categoría ${c.name}`,
+        color: '#f0fdf4',
+      });
+
+      // 3. Add category products spreadsheet inside its category folder
+      items.push({
+        id: `category_file_${c.id}`,
+        name: `${c.name}.xlsx`,
+        parentId: `category_dir_${c.id}`,
+        type: 'file',
+        entity: 'products',
+        description: `Planilla con los productos de la categoría ${c.name}`,
+      });
+    });
+
+    return items;
+  }, [store.categoriesData, store.isLoading]);
+
   // Reset active file when folder changes
   const navigateToFolder = (folderId: string) => {
     setCurrentFolderId(folderId);
@@ -130,22 +175,30 @@ export const useWorkspaceExplorer = () => {
     setSearchQuery('');
   };
 
-  // Get path list for breadcrumbs
+  // Get path list for breadcrumbs recursively
   const breadcrumbs = useMemo(() => {
     const list: { id: string; name: string }[] = [{ id: 'root', name: 'Mi Negocio' }];
     if (currentFolderId === 'root') return list;
 
-    const folder = VFS_ITEMS.find((item) => item.id === currentFolderId && item.type === 'folder');
-    if (folder) {
-      list.push({ id: folder.id, name: folder.name });
+    const path: { id: string; name: string }[] = [];
+    let currentId = currentFolderId;
+
+    while (currentId && currentId !== 'root') {
+      const folder = allVFSItems.find((item) => item.id === currentId && item.type === 'folder');
+      if (folder) {
+        path.unshift({ id: folder.id, name: folder.name });
+        currentId = folder.parentId || 'root';
+      } else {
+        break;
+      }
     }
-    return list;
-  }, [currentFolderId]);
+    return [...list, ...path];
+  }, [currentFolderId, allVFSItems]);
 
   // List folder contents
   const currentItems = useMemo(() => {
-    return VFS_ITEMS.filter((item) => item.parentId === currentFolderId);
-  }, [currentFolderId]);
+    return allVFSItems.filter((item) => item.parentId === currentFolderId);
+  }, [currentFolderId, allVFSItems]);
 
   // Go to parent directory
   const goBack = () => {
@@ -154,7 +207,7 @@ export const useWorkspaceExplorer = () => {
       return;
     }
     if (currentFolderId === 'root') return;
-    const folder = VFS_ITEMS.find((item) => item.id === currentFolderId && item.type === 'folder');
+    const folder = allVFSItems.find((item) => item.id === currentFolderId && item.type === 'folder');
     if (folder && folder.parentId) {
       navigateToFolder(folder.parentId);
     } else {
@@ -165,8 +218,8 @@ export const useWorkspaceExplorer = () => {
   // Active file details
   const activeFile = useMemo(() => {
     if (!activeFileId) return null;
-    return VFS_ITEMS.find((item) => item.id === activeFileId && item.type === 'file') || null;
-  }, [activeFileId]);
+    return allVFSItems.find((item) => item.id === activeFileId && item.type === 'file') || null;
+  }, [activeFileId, allVFSItems]);
 
   // Load backend data trigger if store is empty
   const triggerLoadData = async (entity: string) => {
@@ -204,7 +257,13 @@ export const useWorkspaceExplorer = () => {
     triggerLoadData(entity);
 
     switch (entity) {
-      case 'products':
+      case 'products': {
+        const isCategoryFile = activeFile.id.startsWith('category_file_');
+        const categoryId = isCategoryFile ? activeFile.id.replace('category_file_', '') : null;
+        const productsList = categoryId 
+          ? store.products.filter(p => p.category_id === categoryId)
+          : store.products;
+
         return {
           columns: [
             { key: 'code', label: 'Código', width: 120 },
@@ -215,7 +274,7 @@ export const useWorkspaceExplorer = () => {
             { key: 'price', label: 'Precio Venta ($)', width: 120, align: 'right', format: 'currency' },
             { key: 'is_active', label: 'Estado', width: 100, align: 'center', badge: true }
           ],
-          rows: store.products.map(p => ({
+          rows: productsList.map(p => ({
             id: p.id,
             code: p.code || 'S/C',
             name: p.name,
@@ -226,6 +285,7 @@ export const useWorkspaceExplorer = () => {
             is_active: 'Activo'
           }))
         };
+      }
 
       case 'categories':
         return {
