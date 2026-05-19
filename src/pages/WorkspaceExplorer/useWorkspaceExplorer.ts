@@ -61,6 +61,14 @@ const VFS_ITEMS: VFSItem[] = [
     description: 'Control de proveedores y órdenes de compras',
     color: '#fff7ed', // light orange
   },
+  {
+    id: 'pedidos_compra_folder',
+    name: 'Órdenes de Pedido',
+    parentId: 'proveedores_folder',
+    type: 'folder',
+    description: 'Historial de planillas de pedidos y órdenes de compra generadas',
+    color: '#fffbeb', // elegant light yellow
+  },
 
   // --- Files in Inventario ---
   {
@@ -286,6 +294,38 @@ export const useWorkspaceExplorer = () => {
   // Helper to drag and drop move an item
   const moveItem = (itemId: string, newParentId: string) => {
     persistItemParent(itemId, newParentId);
+  };
+
+  // Helper to delete custom VFS items recursively
+  const deleteItem = (itemId: string) => {
+    const getCustomChildIds = (id: string): string[] => {
+      const ids = [id];
+      const children = customItems.filter(item => item.parentId === id);
+      children.forEach(c => {
+        ids.push(...getCustomChildIds(c.id));
+      });
+      return ids;
+    };
+
+    const idsToDelete = getCustomChildIds(itemId);
+    const updatedCustom = customItems.filter(item => !idsToDelete.includes(item.id));
+    persistCustomItems(updatedCustom);
+
+    setItemParents(prev => {
+      const next = { ...prev };
+      idsToDelete.forEach(id => {
+        delete next[id];
+      });
+      Object.keys(next).forEach(key => {
+        if (idsToDelete.includes(next[key])) {
+          delete next[key];
+        }
+      });
+      if (businessId) {
+        localStorage.setItem(`explorer_item_parents_${businessId}`, JSON.stringify(next));
+      }
+      return next;
+    });
   };
 
   // Dynamically compute the combined VFS structure including dynamic category folders, files and user custom elements
@@ -742,6 +782,7 @@ export const useWorkspaceExplorer = () => {
     createFolder,
     createExcelFile,
     moveItem,
+    deleteItem,
     saveSpreadsheetChanges,
   };
 };

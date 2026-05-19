@@ -10,7 +10,8 @@ import {
   AlertTriangle, 
   Check, 
   X,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import type { VFSItem } from '../useWorkspaceExplorer';
 import { useStore } from '../../../store/useStore';
@@ -26,6 +27,7 @@ interface VFSBrowserProps {
   onCreateFolder: (name: string) => void;
   onCreateExcelFile: (name: string, templateType: 'empty' | 'products' | 'customers' | 'orders') => void;
   onMoveItem: (itemId: string, targetId: string) => void;
+  onDeleteItem: (itemId: string) => void;
 }
 
 export const VFSBrowser: React.FC<VFSBrowserProps> = ({
@@ -37,6 +39,7 @@ export const VFSBrowser: React.FC<VFSBrowserProps> = ({
   onCreateFolder,
   onCreateExcelFile,
   onMoveItem,
+  onDeleteItem,
 }) => {
   const store = useStore();
 
@@ -429,11 +432,30 @@ export const VFSBrowser: React.FC<VFSBrowserProps> = ({
                 <div className="folder-icon-wrapper">
                   <Folder className="folder-icon" size={32} />
                 </div>
-                <div className="folder-info">
-                  <div className="folder-name-row">
-                    <h4 className="item-name">{folder.name}</h4>
+                <div className="folder-info" style={{ flex: 1 }}>
+                  <div className="folder-name-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <h4 className="item-name">{folder.name}</h4>
+                      {folder.isCustom && (
+                        <span className="custom-badge"><Sparkles size={8} /> Creada</span>
+                      )}
+                    </div>
                     {folder.isCustom && (
-                      <span className="custom-badge"><Sparkles size={8} /> Creada</span>
+                      <button
+                        className="vfs-delete-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`¿Estás seguro de que deseas eliminar la carpeta "${folder.name}" y todos sus archivos contenidos?`)) {
+                            onDeleteItem(folder.id);
+                          }
+                        }}
+                        title="Eliminar carpeta"
+                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', transition: 'transform 0.2s' }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     )}
                   </div>
                   {folder.description && (
@@ -465,11 +487,30 @@ export const VFSBrowser: React.FC<VFSBrowserProps> = ({
                 <div className="file-icon-wrapper">
                   <FileSpreadsheet className="file-icon" size={28} />
                 </div>
-                <div className="file-info">
-                  <div className="file-name-row">
-                    <h4 className="item-name">{file.name}</h4>
+                <div className="file-info" style={{ flex: 1 }}>
+                  <div className="file-name-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <h4 className="item-name">{file.name}</h4>
+                      {file.isCustom && (
+                        <span className="custom-badge"><Sparkles size={8} /> Personal</span>
+                      )}
+                    </div>
                     {file.isCustom && (
-                      <span className="custom-badge"><Sparkles size={8} /> Personal</span>
+                      <button
+                        className="vfs-delete-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`¿Estás seguro de que deseas eliminar el archivo "${file.name}"?`)) {
+                            onDeleteItem(file.id);
+                          }
+                        }}
+                        title="Eliminar archivo"
+                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', transition: 'transform 0.2s' }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     )}
                   </div>
                   {file.description && (

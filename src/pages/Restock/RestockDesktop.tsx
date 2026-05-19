@@ -61,9 +61,41 @@ const RestockDesktop: React.FC = () => {
 
     // Replenishment strategy
     const [strategy, setStrategy] = useState<'critical' | 'predictive' | 'mermas'>('predictive');
+    const [showAllCatalogProducts, setShowAllCatalogProducts] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedSupplierFilter, setSelectedSupplierFilter] = useState('');
+    const [selectedTag, setSelectedTag] = useState('');
+
+    // Dynamic Category Tree options with indentation
+    const categoryOptions = useMemo(() => {
+        const buildOptions = (parentId: string | null = null, depth = 0): { id: string; name: string; label: string }[] => {
+            const list: { id: string; name: string; label: string }[] = [];
+            const filtered = categoriesData.filter(c => c.parent_id === parentId || (parentId === null && !c.parent_id));
+            filtered.forEach(c => {
+                const indent = '\u00A0\u00A0'.repeat(depth);
+                list.push({
+                    id: c.id,
+                    name: c.name,
+                    label: `${indent}${depth > 0 ? '↳ ' : '📁 '}${c.name}`
+                });
+                list.push(...buildOptions(c.id, depth + 1));
+            });
+            return list;
+        };
+        return buildOptions(null, 0);
+    }, [categoriesData]);
+
+    // Unique tags extractor
+    const allTags = useMemo(() => {
+        const tagsSet = new Set<string>();
+        products.forEach(p => {
+            if (p.tags && Array.isArray(p.tags)) {
+                p.tags.forEach(t => tagsSet.add(t));
+            }
+        });
+        return Array.from(tagsSet).sort();
+    }, [products]);
 
     // Bulk assignment state
     const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -159,10 +191,29 @@ const RestockDesktop: React.FC = () => {
                 p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                 (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()));
 
-            const matchesCategory = !selectedCategory || p.category === selectedCategory;
-            const matchesSupplier = !selectedSupplierFilter || p.supplierId === selectedSupplierFilter;
+            // Category matching recursively
+            const getCategoryWithDescendants = (catName: string): string[] => {
+                const matchingCat = categoriesData.find(c => c.name === catName);
+                if (!matchingCat) return [catName];
+                
+                const names = [matchingCat.name];
+                const collectChildren = (parentId: string) => {
+                    const children = categoriesData.filter(c => c.parent_id === parentId);
+                    children.forEach(ch => {
+                        names.push(ch.name);
+                        collectChildren(ch.id);
+                    });
+                };
+                collectChildren(matchingCat.id);
+                return names;
+            };
 
-            return (matchesSearch && matchesCategory && matchesSupplier) || isManuallyAdded;
+            const allowedCategories = selectedCategory ? getCategoryWithDescendants(selectedCategory) : [];
+            const matchesCategory = !selectedCategory || allowedCategories.includes(p.category || '');
+            const matchesSupplier = !selectedSupplierFilter || p.supplierId === selectedSupplierFilter;
+            const matchesTag = !selectedTag || (p.tags && p.tags.includes(selectedTag));
+
+            return (matchesSearch && matchesCategory && matchesSupplier && matchesTag) || isManuallyAdded;
         });
 
         filteredProducts.forEach(p => {
@@ -200,9 +251,11 @@ const RestockDesktop: React.FC = () => {
                 suggestedAmount = customSuggestedAmounts[p.id];
             }
 
-            const shouldShow = strategy === 'critical' 
-                ? (p.stock <= p.min || isManuallyAdded) 
-                : (p.stock <= p.min || runoutDays <= (leadTime + 7) || isManuallyAdded);
+            const shouldShow = showAllCatalogProducts || (
+                strategy === 'critical' 
+                    ? (p.stock <= p.min || isManuallyAdded) 
+                    : (p.stock <= p.min || runoutDays <= (leadTime + 7) || isManuallyAdded)
+            );
 
             if (shouldShow) {
                 if (!grouped[supplierId]) {
@@ -264,7 +317,7 @@ const RestockDesktop: React.FC = () => {
         return Object.values(grouped)
             .filter(g => g.items.length > 0 || manuallyStartedSuppliers.includes(g.supplierId || 'unassigned'))
             .sort((a, b) => a.supplierName.localeCompare(b.supplierName));
-    }, [products, suppliers, strategy, searchQuery, selectedCategory, selectedSupplierFilter, leadTimes, manuallyStartedSuppliers, manuallyAddedProducts, customOrderItems, customSuggestedAmounts]);
+    }, [products, suppliers, strategy, showAllCatalogProducts, searchQuery, selectedCategory, selectedSupplierFilter, selectedTag, categoriesData, leadTimes, manuallyStartedSuppliers, manuallyAddedProducts, customOrderItems, customSuggestedAmounts]);
 
     // Handle inline update of catalog products
     const handleInlineUpdate = async (productId: string, field: 'stock' | 'min' | 'cost', value: number) => {
@@ -426,7 +479,7 @@ const RestockDesktop: React.FC = () => {
         const newFile = {
             id: `restock_order_${supplier.supplierId || 'unassigned'}_${Date.now()}`,
             name: filename,
-            parentId: 'proveedores_folder',
+            parentId: 'pedidos_compra_folder',
             type: 'file',
             entity: 'custom',
             description: `Orden de reposición sugerida para ${supplier.supplierName}. Notas: ${orderNotes[supplier.supplierId || ''] || 'Sin notas'}.`,
@@ -564,8 +617,33 @@ const RestockDesktop: React.FC = () => {
                         >
                             <Scale size={14} />
                             Mermas + Seg
-                        </button>
                     </div>
+                </div>
+
+                {/* Free Restocking Toggle Switch */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', justifyContent: 'center' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}>🔓 Modo Abastecimiento</label>
+                    <button
+                        type="button"
+                        onClick={() => setShowAllCatalogProducts(prev => !prev)}
+                        style={{
+                            padding: '8px 14px',
+                            fontSize: '0.8rem',
+                            fontWeight: 'bold',
+                            borderRadius: '8px',
+                            border: `1px solid ${showAllCatalogProducts ? '#4F7A5A' : '#cbd5e1'}`,
+                            background: showAllCatalogProducts ? '#ecfdf5' : '#ffffff',
+                            color: showAllCatalogProducts ? '#4F7A5A' : '#475569',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        }}
+                    >
+                        <span>{showAllCatalogProducts ? '🌟 Ver Todo el Catálogo (Libre)' : '⚠️ Solo Stock Crítico / IA'}</span>
+                    </button>
                 </div>
 
                 {/* Filters */}
@@ -584,18 +662,29 @@ const RestockDesktop: React.FC = () => {
                     <select
                         value={selectedCategory}
                         onChange={e => setSelectedCategory(e.target.value)}
-                        style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', background: '#ffffff', minWidth: '130px' }}
+                        style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', background: '#ffffff', minWidth: '150px' }}
                     >
                         <option value="">Todas las Carpetas</option>
-                        {categoriesData.map(c => (
-                            <option key={c.id} value={c.name}>{c.name}</option>
+                        {categoryOptions.map(opt => (
+                            <option key={opt.id} value={opt.name}>{opt.label}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={selectedTag}
+                        onChange={e => setSelectedTag(e.target.value)}
+                        style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', background: '#ffffff', minWidth: '130px' }}
+                    >
+                        <option value="">Todas las Etiquetas</option>
+                        {allTags.map(tag => (
+                            <option key={tag} value={tag}>{tag}</option>
                         ))}
                     </select>
 
                     <select
                         value={selectedSupplierFilter}
                         onChange={e => setSelectedSupplierFilter(e.target.value)}
-                        style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', background: '#ffffff', minWidth: '130px' }}
+                        style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', background: '#ffffff', minWidth: '150px' }}
                     >
                         <option value="">Todos los Proveedores</option>
                         {suppliers.map(s => (
