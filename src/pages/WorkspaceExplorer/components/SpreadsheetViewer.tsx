@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Download, Search, AlertCircle, Loader, AlertTriangle, ShieldAlert, Sparkles, Check } from 'lucide-react';
+import { X, Download, Search, AlertCircle, Loader, AlertTriangle, ShieldAlert, Sparkles, Check, Plus } from 'lucide-react';
 import type { VFSItem, Column } from '../useWorkspaceExplorer';
 import * as XLSX from 'xlsx';
 
@@ -136,6 +136,38 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
     XLSX.writeFile(workbook, safeFilename);
   };
 
+  // Add new row helper
+  const handleAddRow = () => {
+    const newId = `new_${Date.now()}`;
+    const emptyRow: any = { id: newId };
+    
+    columns.forEach(col => {
+      emptyRow[col.key] = '';
+    });
+    
+    if (file.entity === 'products') {
+      emptyRow.name = 'Nuevo Producto';
+      emptyRow.stock_quantity = 0;
+      emptyRow.cost = 0;
+      emptyRow.price = 0;
+    }
+    
+    setLocalRows(prev => [...prev, emptyRow]);
+    
+    // Register creation as a pending change so the save banner appears
+    setPendingChanges(prev => [
+      ...prev,
+      {
+        id: newId,
+        rowName: 'Nueva Fila Creada',
+        key: 'name',
+        label: 'Nombre',
+        oldValue: '',
+        newValue: emptyRow.name || 'Nuevo Elemento'
+      }
+    ]);
+  };
+
   // Inline Cell Editing Trigger
   const handleCellDoubleClick = (row: any, idx: number, col: Column, value: any) => {
     // Only allow editing editable keys (no virtual headers / relations not editable)
@@ -256,6 +288,16 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
               </button>
             )}
           </div>
+
+          <button
+            onClick={handleAddRow}
+            className="sheet-btn btn-add-row"
+            title="Agregar una nueva fila al final de la planilla"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', color: '#10b981', border: '1px solid #10b981', fontWeight: 'bold' }}
+          >
+            <Plus size={16} />
+            <span className="btn-text">Agregar Fila</span>
+          </button>
 
           <button
             onClick={handleExportExcel}

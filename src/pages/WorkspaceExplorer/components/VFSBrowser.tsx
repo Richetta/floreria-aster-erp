@@ -11,7 +11,9 @@ import {
   Check, 
   X,
   Sparkles,
-  Trash2
+  Trash2,
+  Edit2,
+  Archive
 } from 'lucide-react';
 import type { VFSItem } from '../useWorkspaceExplorer';
 import { useStore } from '../../../store/useStore';
@@ -27,6 +29,8 @@ interface VFSBrowserProps {
   onCreateFolder: (name: string) => void;
   onCreateExcelFile: (name: string, templateType: 'empty' | 'products' | 'customers' | 'orders') => void;
   onMoveItem: (itemId: string, targetId: string) => void;
+  onRenameItem?: (itemId: string, newName: string) => void;
+  onArchiveItem?: (itemId: string) => void;
   onDeleteItem: (itemId: string) => void;
 }
 
@@ -39,6 +43,8 @@ export const VFSBrowser: React.FC<VFSBrowserProps> = ({
   onCreateFolder,
   onCreateExcelFile,
   onMoveItem,
+  onRenameItem,
+  onArchiveItem,
   onDeleteItem,
 }) => {
   const store = useStore();
@@ -440,23 +446,56 @@ export const VFSBrowser: React.FC<VFSBrowserProps> = ({
                         <span className="custom-badge"><Sparkles size={8} /> Creada</span>
                       )}
                     </div>
-                    {folder.isCustom && (
-                      <button
-                        className="vfs-delete-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`¿Estás seguro de que deseas eliminar la carpeta "${folder.name}" y todos sus archivos contenidos?`)) {
-                            onDeleteItem(folder.id);
-                          }
-                        }}
-                        title="Eliminar carpeta"
-                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', transition: 'transform 0.2s' }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+                    <div style={{ display: 'flex', gap: '2px' }}>
+                      {onArchiveItem && folder.id !== 'archivo_folder' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onArchiveItem(folder.id);
+                          }}
+                          title="Archivar"
+                          style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', transition: 'transform 0.2s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          <Archive size={14} />
+                        </button>
+                      )}
+                      {folder.isCustom && onRenameItem && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newName = prompt(`Renombrar carpeta "${folder.name}" a:`, folder.name);
+                            if (newName && newName.trim() !== '') {
+                              onRenameItem(folder.id, newName.trim());
+                            }
+                          }}
+                          title="Renombrar carpeta"
+                          style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', transition: 'transform 0.2s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                      )}
+                      {folder.isCustom && (
+                        <button
+                          className="vfs-delete-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`¿Estás seguro de que deseas eliminar la carpeta "${folder.name}" y todos sus archivos contenidos?`)) {
+                              onDeleteItem(folder.id);
+                            }
+                          }}
+                          title="Eliminar carpeta"
+                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', transition: 'transform 0.2s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {folder.description && (
                     <p className="item-desc">{folder.description}</p>
@@ -495,23 +534,56 @@ export const VFSBrowser: React.FC<VFSBrowserProps> = ({
                         <span className="custom-badge"><Sparkles size={8} /> Personal</span>
                       )}
                     </div>
-                    {file.isCustom && (
-                      <button
-                        className="vfs-delete-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`¿Estás seguro de que deseas eliminar el archivo "${file.name}"?`)) {
-                            onDeleteItem(file.id);
-                          }
-                        }}
-                        title="Eliminar archivo"
-                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', transition: 'transform 0.2s' }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+                    <div style={{ display: 'flex', gap: '2px' }}>
+                      {onArchiveItem && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onArchiveItem(file.id);
+                          }}
+                          title="Archivar"
+                          style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', transition: 'transform 0.2s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          <Archive size={14} />
+                        </button>
+                      )}
+                      {file.isCustom && onRenameItem && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newName = prompt(`Renombrar archivo "${file.name}" a:`, file.name);
+                            if (newName && newName.trim() !== '') {
+                              onRenameItem(file.id, newName.trim());
+                            }
+                          }}
+                          title="Renombrar archivo"
+                          style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', transition: 'transform 0.2s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                      )}
+                      {file.isCustom && (
+                        <button
+                          className="vfs-delete-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`¿Estás seguro de que deseas eliminar el archivo "${file.name}"?`)) {
+                              onDeleteItem(file.id);
+                            }
+                          }}
+                          title="Eliminar archivo"
+                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', transition: 'transform 0.2s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {file.description && (
                     <p className="item-desc">{file.description}</p>

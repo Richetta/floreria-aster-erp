@@ -27,6 +27,8 @@ export const WorkspaceExplorer: React.FC = () => {
     createFolder,
     createExcelFile,
     moveItem,
+    renameItem,
+    archiveItem,
     deleteItem,
     saveSpreadsheetChanges,
   } = useWorkspaceExplorer();
@@ -150,6 +152,8 @@ export const WorkspaceExplorer: React.FC = () => {
             onCreateFolder={createFolder}
             onCreateExcelFile={createExcelFile}
             onMoveItem={moveItem}
+            onRenameItem={renameItem}
+            onArchiveItem={archiveItem}
             onDeleteItem={deleteItem}
           />
         )}

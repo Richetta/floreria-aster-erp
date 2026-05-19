@@ -117,6 +117,16 @@ const VFS_ITEMS: VFSItem[] = [
     entity: 'suppliers',
     description: 'Proveedores registrados y compras realizadas',
   },
+
+  // --- Archive Folder ---
+  {
+    id: 'archivo_folder',
+    name: '🗃️ Archivo',
+    parentId: 'root',
+    type: 'folder',
+    description: 'Carpetas y planillas ocultas o archivadas',
+    color: '#e2e8f0', // slate gray
+  },
 ];
 
 // Helper to get descendant category IDs recursively
@@ -294,6 +304,22 @@ export const useWorkspaceExplorer = () => {
   // Helper to drag and drop move an item
   const moveItem = (itemId: string, newParentId: string) => {
     persistItemParent(itemId, newParentId);
+  };
+
+  // Helper to rename a custom item
+  const renameItem = (itemId: string, newName: string) => {
+    const updated = customItems.map(item => {
+      if (item.id === itemId) {
+        return { ...item, name: newName };
+      }
+      return item;
+    });
+    persistCustomItems(updated);
+  };
+
+  // Helper to archive an item
+  const archiveItem = (itemId: string) => {
+    persistItemParent(itemId, 'archivo_folder');
   };
 
   // Helper to delete custom VFS items recursively
@@ -709,38 +735,66 @@ export const useWorkspaceExplorer = () => {
       const entity = file?.entity;
       if (!entity) return;
 
-      // Persist changes one by one into the live database stores
-      for (const change of changes) {
-        const { id, key, newValue } = change;
+      // Group changes by ID to handle new creations cleanly
+      const changesById: Record<string, Record<string, any>> = {};
+      changes.forEach(c => {
+        if (!changesById[c.id]) changesById[c.id] = {};
+        changesById[c.id][c.key] = c.newValue;
+      });
+
+      for (const [id, fields] of Object.entries(changesById)) {
+        const isNew = id.startsWith('new_');
         
         if (entity === 'products') {
-          const mappedUpdates: any = {};
-          if (key === 'name') mappedUpdates.name = String(newValue);
-          if (key === 'code') mappedUpdates.code = String(newValue);
-          if (key === 'stock_quantity') mappedUpdates.stock = Number(newValue);
-          if (key === 'cost') mappedUpdates.cost = Number(newValue);
-          if (key === 'price') mappedUpdates.price = Number(newValue);
-          
-          await store.updateProduct(id, mappedUpdates);
+          if (isNew) {
+            await store.addProduct({
+              name: String(fields.name || 'Nuevo Producto'),
+              code: String(fields.code || `PROD-${Date.now()}`),
+              stock: Number(fields.stock_quantity) || 0,
+              cost: Number(fields.cost) || 0,
+              price: Number(fields.price) || 0,
+              category_id: 'default_category'
+            });
+          } else {
+            const mappedUpdates: any = {};
+            if ('name' in fields) mappedUpdates.name = String(fields.name);
+            if ('code' in fields) mappedUpdates.code = String(fields.code);
+            if ('stock_quantity' in fields) mappedUpdates.stock = Number(fields.stock_quantity);
+            if ('cost' in fields) mappedUpdates.cost = Number(fields.cost);
+            if ('price' in fields) mappedUpdates.price = Number(fields.price);
+            
+            if (Object.keys(mappedUpdates).length > 0) {
+              await store.updateProduct(id, mappedUpdates);
+            }
+          }
         } else if (entity === 'customers') {
-          const mappedUpdates: any = {};
-          if (key === 'name') mappedUpdates.name = String(newValue);
-          if (key === 'phone') mappedUpdates.phone = String(newValue);
-          if (key === 'email') mappedUpdates.email = String(newValue);
-          if (key === 'debtBalance') mappedUpdates.debtBalance = Number(newValue);
-          
-          await store.updateCustomer(id, mappedUpdates);
+          if (!isNew) {
+            const mappedUpdates: any = {};
+            if ('name' in fields) mappedUpdates.name = String(fields.name);
+            if ('phone' in fields) mappedUpdates.phone = String(fields.phone);
+            if ('email' in fields) mappedUpdates.email = String(fields.email);
+            if ('debtBalance' in fields) mappedUpdates.debtBalance = Number(fields.debtBalance);
+            
+            if (Object.keys(mappedUpdates).length > 0) {
+              await store.updateCustomer(id, mappedUpdates);
+            }
+          }
         } else if (entity === 'suppliers') {
-          const mappedUpdates: any = {};
-          if (key === 'name') mappedUpdates.name = String(newValue);
-          if (key === 'contactName') mappedUpdates.contactName = String(newValue);
-          if (key === 'phone') mappedUpdates.phone = String(newValue);
-          if (key === 'address') mappedUpdates.address = String(newValue);
-          if (key === 'category') mappedUpdates.category = String(newValue);
-          
-          await store.updateSupplier(id, mappedUpdates);
+          if (!isNew) {
+            const mappedUpdates: any = {};
+            if ('name' in fields) mappedUpdates.name = String(fields.name);
+            if ('contactName' in fields) mappedUpdates.contactName = String(fields.contactName);
+            if ('phone' in fields) mappedUpdates.phone = String(fields.phone);
+            if ('address' in fields) mappedUpdates.address = String(fields.address);
+            if ('category' in fields) mappedUpdates.category = String(fields.category);
+            
+            if (Object.keys(mappedUpdates).length > 0) {
+              await store.updateSupplier(id, mappedUpdates);
+            }
+          }
         } else if (entity === 'orders') {
-          if (key === 'status') {
+          if (!isNew && 'status' in fields) {
+            const newValue = fields.status;
             const statusMap: Record<string, string> = {
               'Pendiente': 'pending',
               'Armando': 'assembling',
@@ -782,6 +836,8 @@ export const useWorkspaceExplorer = () => {
     createFolder,
     createExcelFile,
     moveItem,
+    renameItem,
+    archiveItem,
     deleteItem,
     saveSpreadsheetChanges,
   };
