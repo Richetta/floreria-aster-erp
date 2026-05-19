@@ -1,7 +1,20 @@
 .restock-page {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: #f8fafc;
+    min-height: 100%;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
 }
 
 .empty-state {
@@ -10,10 +23,11 @@
     align-items: center;
     justify-content: center;
     padding: 4rem 2rem;
-    background: var(--color-surface);
-    border-radius: var(--radius-xl);
+    background: white;
+    border-radius: 12px;
     text-align: center;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #cbd5e1;
 }
 
 .suppliers-grid {
@@ -23,31 +37,29 @@
 }
 
 .supplier-restock-card {
-    background: var(--color-surface);
-    border-radius: var(--radius-xl);
+    background: white;
+    border-radius: 16px;
     padding: 1.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-    border: 1px solid var(--color-border);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
+    border: 1px solid #cbd5e1;
     transition: all 0.2s ease-in-out;
 }
 
 .supplier-restock-card:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 20px -5px rgba(0,0,0,0.05);
 }
 
-/* Estilos especiales para tarjeta sin asignar */
 .supplier-restock-card.unassigned {
-    border: 1px solid var(--color-warning);
-    background: linear-gradient(to bottom, rgba(254, 243, 199, 0.3), var(--color-surface));
+    border: 1px solid #f59e0b;
+    background: linear-gradient(to bottom, #fffbeb, white);
 }
 
 .supplier-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid #f1f5f9;
     padding-bottom: 1rem;
-    margin-bottom: 0.5rem;
 }
 
 .whatsapp-btn {
@@ -58,25 +70,25 @@
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     color: white;
+    cursor: pointer;
+    transition: background 0.15s;
 }
 
 .whatsapp-btn:hover {
     background: #128C7E;
-    color: white;
 }
 
 .supplier-items-list {
     display: flex;
     flex-direction: column;
+    margin-top: 1rem;
 }
 
 .restock-item {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
     align-items: center;
-    padding: 0.85rem 0.5rem;
-    border-bottom: 1px solid var(--color-background);
-    border-radius: var(--radius-md);
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
     transition: background-color 0.15s ease;
 }
 
@@ -84,43 +96,25 @@
     border-bottom: none;
 }
 
-/* Item interactions */
 .restock-item.selectable {
     cursor: pointer;
 }
 
 .restock-item.selectable:hover {
-    background-color: var(--color-background);
+    background-color: #f8fafc;
 }
 
 .restock-item.selected {
-    background-color: var(--color-primary-light);
-}
-
-.item-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex: 1;
+    background-color: #ecfdf5;
 }
 
 .item-code {
-    background: var(--color-background);
-    padding: 0.2rem 0.5rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.75rem;
+    font-family: monospace;
     font-weight: 600;
-    color: var(--color-text-muted);
 }
 
 .item-name {
-    font-weight: 500;
-}
-
-.item-stock-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+    font-size: 0.9rem;
 }
 
 .stock-pill {
@@ -131,48 +125,41 @@
 }
 
 .stock-pill.critical {
-    background: var(--color-danger-light);
-    color: var(--color-danger);
+    background: #fee2e2;
+    color: #ef4444;
 }
 
 .stock-pill.minimal {
-    background: var(--color-background);
-    color: var(--color-text-muted);
+    background: #f1f5f9;
+    color: #475569;
 }
 
 .cost-info {
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    color: #64748b;
     font-weight: 500;
 }
 
 .bulk-assign-bar {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(226, 232, 240, 0.6);
+    background: #fffbeb;
+    border: 1px solid #fed7aa;
+    border-radius: 8px;
+    padding: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-@media (max-width: 640px) {
-    .restock-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    
-    .item-stock-info {
-        width: 100%;
-        justify-content: space-between;
-        padding-left: 1.5rem; /* Alinear con el texto si hay checkbox */
-    }
+.filter-strategy-bar input:focus, 
+.filter-strategy-bar select:focus,
+.supplier-restock-card input:focus {
+    outline: none;
+    border-color: #4F7A5A !important;
+    box-shadow: 0 0 0 2px rgba(79, 122, 90, 0.15);
+}
 
-    .bulk-assign-bar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .bulk-assign-bar > div:last-child {
-        justify-content: space-between;
-        max-width: 100%;
+@media (max-width: 1024px) {
+    .filter-strategy-bar {
+        grid-template-columns: 1fr !important;
     }
 }
