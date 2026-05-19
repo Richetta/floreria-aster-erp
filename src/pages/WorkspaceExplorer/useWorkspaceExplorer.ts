@@ -753,15 +753,16 @@ export const useWorkspaceExplorer = () => {
               stock: Number(fields.stock_quantity) || 0,
               cost: Number(fields.cost) || 0,
               price: Number(fields.price) || 0,
-              category_id: 'default_category',
-              min: 0,
-              category: 'Sin categoría',
+              category_id: '',
+              min: 1,
+              category: String(fields.category_name || 'Sin categoría'),
               tags: []
             });
           } else {
             const mappedUpdates: any = {};
             if ('name' in fields) mappedUpdates.name = String(fields.name);
             if ('code' in fields) mappedUpdates.code = String(fields.code);
+            if ('category_name' in fields) mappedUpdates.category = String(fields.category_name);
             if ('stock_quantity' in fields) mappedUpdates.stock = Number(fields.stock_quantity);
             if ('cost' in fields) mappedUpdates.cost = Number(fields.cost);
             if ('price' in fields) mappedUpdates.price = Number(fields.price);
