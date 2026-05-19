@@ -16,6 +16,7 @@ interface RestockItem {
     runoutDays: number;
     mermaRate: number;
     category: string;
+    isCustomItem?: boolean;
 }
 
 interface SupplierRestock {
@@ -52,6 +53,20 @@ export const RestockMobile: React.FC = () => {
     const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
     const [targetSupplierId, setTargetSupplierId] = useState<string>('');
     const [isAssigning, setIsAssigning] = useState(false);
+
+    // Custom manually started suppliers, catalog selections, invented items, and suggested amounts
+    const [manuallyStartedSuppliers, setManuallyStartedSuppliers] = useState<string[]>([]);
+    const [manuallyAddedProducts, setManuallyAddedProducts] = useState<Record<string, string[]>>({});
+    const [customOrderItems, setCustomOrderItems] = useState<Record<string, RestockItem[]>>({});
+    const [customSuggestedAmounts, setCustomSuggestedAmounts] = useState<Record<string, number>>({});
+
+    // Inline inputs for inventing items
+    const [inventedName, setInventedName] = useState<Record<string, string>>({});
+    const [inventedCost, setInventedCost] = useState<Record<string, string>>({});
+    const [inventedAmount, setInventedAmount] = useState<Record<string, string>>({});
+
+    // Catalog search query inside each supplier card
+    const [catalogSearchQueries, setCatalogSearchQueries] = useState<Record<string, string>>({});
 
     // Supplier specific settings: lead time (days) and custom notes
     const [leadTimes, setLeadTimes] = useState<Record<string, number>>(() => {
@@ -106,7 +121,24 @@ export const RestockMobile: React.FC = () => {
     const restockData = useMemo(() => {
         const grouped: Record<string, SupplierRestock> = {};
 
+        // 1. Incorporate all manually started suppliers into group keys
+        manuallyStartedSuppliers.forEach(sId => {
+            if (!grouped[sId]) {
+                const supplier = suppliers.find(s => s.id === sId);
+                grouped[sId] = {
+                    supplierId: sId === 'unassigned' ? null : sId,
+                    supplierName: supplier ? supplier.name : 'Sin Proveedor Asignado',
+                    supplierPhone: supplier ? supplier.phone : null,
+                    items: []
+                };
+            }
+        });
+
+        // 2. Loop over standard products
         const filteredProducts = products.filter(p => {
+            const supplierId = p.supplierId || 'unassigned';
+            const isManuallyAdded = manuallyAddedProducts[supplierId]?.includes(p.id);
+
             const matchesSearch = !searchQuery || 
                 p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                 (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -114,7 +146,7 @@ export const RestockMobile: React.FC = () => {
             const matchesCategory = !selectedCategory || p.category === selectedCategory;
             const matchesSupplier = !selectedSupplierFilter || p.supplierId === selectedSupplierFilter;
 
-            return matchesSearch && matchesCategory && matchesSupplier;
+            return (matchesSearch && matchesCategory && matchesSupplier) || isManuallyAdded;
         });
 
         filteredProducts.forEach(p => {
@@ -124,6 +156,8 @@ export const RestockMobile: React.FC = () => {
             const dailySales = p.weeklySales ? (p.weeklySales / 7) : 0.4;
             const runoutDays = dailySales > 0 ? (p.stock / dailySales) : 999;
             const mermaRate = p.category?.toLowerCase().includes('flor') ? 0.12 : 0.05;
+
+            const isManuallyAdded = manuallyAddedProducts[supplierId]?.includes(p.id);
 
             // Suggested Restocking Amount
             let suggestedAmount = 0;
@@ -143,8 +177,16 @@ export const RestockMobile: React.FC = () => {
 
             if (suggestedAmount < 0) suggestedAmount = 0;
             if (suggestedAmount === 0 && triggerRestock) suggestedAmount = 10;
+            if (isManuallyAdded && suggestedAmount === 0) suggestedAmount = 10;
 
-            const shouldShow = strategy === 'critical' ? p.stock <= p.min : (p.stock <= p.min || runoutDays <= (leadTime + 7));
+            // Apply overrides if customSuggestedAmounts exists
+            if (customSuggestedAmounts[p.id] !== undefined) {
+                suggestedAmount = customSuggestedAmounts[p.id];
+            }
+
+            const shouldShow = strategy === 'critical' 
+                ? (p.stock <= p.min || isManuallyAdded) 
+                : (p.stock <= p.min || runoutDays <= (leadTime + 7) || isManuallyAdded);
 
             if (shouldShow) {
                 if (!grouped[supplierId]) {
@@ -156,31 +198,137 @@ export const RestockMobile: React.FC = () => {
                         items: []
                     };
                 }
-                grouped[supplierId].items.push({
-                    id: p.id,
-                    code: p.code || 'S/C',
-                    name: p.name,
-                    stock: p.stock ?? 0,
-                    minStock: p.min ?? 0,
-                    cost: p.cost || 0,
-                    suggestedAmount,
-                    runoutDays,
-                    mermaRate,
-                    category: p.category
-                });
+                
+                if (!grouped[supplierId].items.some(item => item.id === p.id)) {
+                    grouped[supplierId].items.push({
+                        id: p.id,
+                        code: p.code || 'S/C',
+                        name: p.name,
+                        stock: p.stock ?? 0,
+                        minStock: p.min ?? 0,
+                        cost: p.cost || 0,
+                        suggestedAmount,
+                        runoutDays,
+                        mermaRate,
+                        category: p.category
+                    });
+                }
             }
         });
 
-        return Object.values(grouped).sort((a, b) => a.supplierName.localeCompare(b.supplierName));
-    }, [products, suppliers, strategy, searchQuery, selectedCategory, selectedSupplierFilter, leadTimes]);
+        // 3. Inject custom invented items
+        Object.keys(customOrderItems).forEach(sId => {
+            if (!grouped[sId]) {
+                const supplier = suppliers.find(s => s.id === sId);
+                grouped[sId] = {
+                    supplierId: sId === 'unassigned' ? null : sId,
+                    supplierName: supplier ? supplier.name : 'Sin Proveedor Asignado',
+                    supplierPhone: supplier ? supplier.phone : null,
+                    items: []
+                };
+            }
+            customOrderItems[sId].forEach(customItem => {
+                let amount = customItem.suggestedAmount;
+                if (customSuggestedAmounts[customItem.id] !== undefined) {
+                    amount = customSuggestedAmounts[customItem.id];
+                }
+
+                if (!grouped[sId].items.some(item => item.id === customItem.id)) {
+                    grouped[sId].items.push({
+                        ...customItem,
+                        suggestedAmount: amount
+                    });
+                }
+            });
+        });
+
+        return Object.values(grouped)
+            .filter(g => g.items.length > 0 || manuallyStartedSuppliers.includes(g.supplierId || 'unassigned'))
+            .sort((a, b) => a.supplierName.localeCompare(b.supplierName));
+    }, [products, suppliers, strategy, searchQuery, selectedCategory, selectedSupplierFilter, leadTimes, manuallyStartedSuppliers, manuallyAddedProducts, customOrderItems, customSuggestedAmounts]);
 
     // Handle inline update
     const handleInlineUpdate = async (productId: string, field: 'stock' | 'min' | 'cost', value: number) => {
+        if (productId.startsWith('invented_')) {
+            setCustomOrderItems(prev => {
+                const updated = { ...prev };
+                Object.keys(updated).forEach(sId => {
+                    updated[sId] = updated[sId].map(item => {
+                        if (item.id === productId) {
+                            return { ...item, [field === 'min' ? 'minStock' : field]: value };
+                        }
+                        return item;
+                    });
+                });
+                return updated;
+            });
+            return;
+        }
+
         try {
             await updateProduct(productId, { [field === 'min' ? 'min' : field]: value });
         } catch (error) {
             console.error('Error updating in-line value:', error);
         }
+    };
+
+    // Adddynamic invented item
+    const handleAddInventedItem = (supplierId: string) => {
+        const name = inventedName[supplierId] || '';
+        const cost = parseFloat(inventedCost[supplierId]) || 0;
+        const amount = parseInt(inventedAmount[supplierId]) || 10;
+
+        if (!name.trim()) {
+            addNotification('El nombre es obligatorio', 'warning');
+            return;
+        }
+
+        const newItem: RestockItem = {
+            id: `invented_${Date.now()}`,
+            code: 'INV',
+            name: name,
+            stock: 0,
+            minStock: 0,
+            cost: cost,
+            suggestedAmount: amount,
+            runoutDays: 0,
+            mermaRate: 0,
+            category: 'Flores Frescas',
+            isCustomItem: true
+        };
+
+        setCustomOrderItems(prev => ({
+            ...prev,
+            [supplierId]: [...(prev[supplierId] || []), newItem]
+        }));
+
+        setInventedName({ ...inventedName, [supplierId]: '' });
+        setInventedCost({ ...inventedCost, [supplierId]: '' });
+        setInventedAmount({ ...inventedAmount, [supplierId]: '' });
+
+        const key = supplierId || 'unassigned';
+        if (!manuallyStartedSuppliers.includes(key)) {
+            setManuallyStartedSuppliers(prev => [...prev, key]);
+        }
+
+        addNotification('Ítem inventado añadido', 'success');
+    };
+
+    // Remove item
+    const handleRemoveItem = (supplierId: string, itemId: string) => {
+        const sKey = supplierId || 'unassigned';
+        if (itemId.startsWith('invented_')) {
+            setCustomOrderItems(prev => ({
+                ...prev,
+                [sKey]: (prev[sKey] || []).filter(item => item.id !== itemId)
+            }));
+        } else {
+            setManuallyAddedProducts(prev => ({
+                ...prev,
+                [sKey]: (prev[sKey] || []).filter(id => id !== itemId)
+            }));
+        }
+        addNotification('Ítem removido', 'info');
     };
 
     // Fast product creation
@@ -301,7 +449,7 @@ export const RestockMobile: React.FC = () => {
         message += `⏰ *Plazo de entrega solicitado*: ${lead} días hábiles.\n`;
         
         if (notes.trim()) {
-            message += `📌 *Nota adjunta*: ${notes}\n`;
+            message += `📌 *Notas / Comentarios*: ${notes}\n`;
         }
         
         message += `\nQuedo a la espera de tu confirmación de stock y costos. ¡Muchas gracias!`;
@@ -438,6 +586,40 @@ export const RestockMobile: React.FC = () => {
                 </div>
             </header>
 
+            {/* Quick manual supplier order selectors */}
+            <div style={{ background: '#ffffff', padding: '10px 12px', borderBottom: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#64748b' }}>¿Iniciar pedido manual con un proveedor?</span>
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                    {suppliers.map(s => {
+                        const isStarted = manuallyStartedSuppliers.includes(s.id);
+                        return (
+                            <button
+                                key={s.id}
+                                onClick={() => {
+                                    if (isStarted) {
+                                        setManuallyStartedSuppliers(prev => prev.filter(id => id !== s.id));
+                                    } else {
+                                        setManuallyStartedSuppliers(prev => [...prev, s.id]);
+                                    }
+                                }}
+                                style={{ 
+                                    padding: '4px 8px', 
+                                    background: isStarted ? '#e2e8f0' : 'white', 
+                                    border: '1px solid #cbd5e1', 
+                                    borderRadius: '6px', 
+                                    fontSize: '0.7rem', 
+                                    whiteSpace: 'nowrap',
+                                    color: isStarted ? '#475569' : '#4F7A5A',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                {isStarted ? `✓ ${s.name}` : `+ ${s.name}`}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
             {successVFSItem && (
                 <div style={{ background: '#fef3c7', borderBottom: '1px solid #f59e0b', padding: '10px 12px', fontSize: '0.75rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <span className="material-symbols-rounded" style={{ color: '#d97706', fontSize: '18px' }}>check_circle</span>
@@ -458,7 +640,7 @@ export const RestockMobile: React.FC = () => {
                 <div className="restock-empty">
                     <span className="material-symbols-rounded">check_circle</span>
                     <h3>¡Todo en orden!</h3>
-                    <p>No hay productos con stock bajo en esta vista.</p>
+                    <p>No hay productos con stock bajo. Usa el selector de arriba para iniciar un pedido manual.</p>
                 </div>
             ) : (
                 <div className="restock-content">
@@ -505,15 +687,91 @@ export const RestockMobile: React.FC = () => {
                                                         <span style={{ fontSize: '0.7rem', color: '#475569' }}>días</span>
                                                     </div>
                                                 </div>
-                                                <input 
-                                                    type="text"
-                                                    placeholder="Notas de pedido..."
+                                                <textarea 
+                                                    placeholder="Notas de pedido especiales..."
                                                     value={orderNotes[supplierKey] || ''}
                                                     onChange={e => setOrderNotes({ ...orderNotes, [supplierKey]: e.target.value })}
-                                                    style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.75rem', width: '100%' }}
+                                                    rows={2}
+                                                    style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', width: '100%', resize: 'vertical' }}
                                                 />
                                             </div>
                                         )}
+
+                                        {/* Add Catalog Item & Invent Items inside supplier card for mobile */}
+                                        <div style={{ background: '#ffffff', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {/* Catalog sum */}
+                                            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b' }}>🔍 Sumar producto del catálogo:</span>
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Buscar en catálogo..."
+                                                    value={catalogSearchQueries[supplierKey] || ''}
+                                                    onChange={e => setCatalogSearchQueries({ ...catalogSearchQueries, [supplierKey]: e.target.value })}
+                                                    style={{ padding: '4px 8px', fontSize: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '4px', width: '100%' }}
+                                                />
+                                                {catalogSearchQueries[supplierKey] && (
+                                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '120px', overflowY: 'auto' }}>
+                                                        {products
+                                                            .filter(p => p.name.toLowerCase().includes(catalogSearchQueries[supplierKey].toLowerCase()) && (!p.supplierId || p.supplierId === supplierKey))
+                                                            .slice(0, 4)
+                                                            .map(p => (
+                                                                <div 
+                                                                    key={p.id}
+                                                                    onClick={() => {
+                                                                        setManuallyAddedProducts(prev => ({
+                                                                            ...prev,
+                                                                            [supplierKey]: [...(prev[supplierKey] || []).filter(id => id !== p.id), p.id]
+                                                                        }));
+                                                                        if (supplierKey !== 'unassigned' && !manuallyStartedSuppliers.includes(supplierKey)) {
+                                                                            setManuallyStartedSuppliers(prev => [...prev, supplierKey]);
+                                                                        }
+                                                                        setCatalogSearchQueries({ ...catalogSearchQueries, [supplierKey]: '' });
+                                                                        addNotification(`Producto ${p.name} sumado`, 'success');
+                                                                    }}
+                                                                    style={{ padding: '6px 8px', fontSize: '0.7rem', borderBottom: '1px solid #f1f5f9' }}
+                                                                >
+                                                                    {p.name} (Stock: {p.stock})
+                                                                </div>
+                                                            ))
+                                                        }
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Invent custom item */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b' }}>✨ Inventar producto temporal:</span>
+                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Nombre..."
+                                                        value={inventedName[supplierKey] || ''}
+                                                        onChange={e => setInventedName({ ...inventedName, [supplierKey]: e.target.value })}
+                                                        style={{ flex: 1, padding: '4px 6px', fontSize: '0.7rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                                                    />
+                                                    <input 
+                                                        type="number"
+                                                        placeholder="Cost..."
+                                                        value={inventedCost[supplierKey] || ''}
+                                                        onChange={e => setInventedCost({ ...inventedCost, [supplierKey]: e.target.value })}
+                                                        style={{ width: '50px', padding: '4px 6px', fontSize: '0.7rem', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center' }}
+                                                    />
+                                                    <input 
+                                                        type="number"
+                                                        placeholder="Cant..."
+                                                        value={inventedAmount[supplierKey] || ''}
+                                                        onChange={e => setInventedAmount({ ...inventedAmount, [supplierKey]: e.target.value })}
+                                                        style={{ width: '40px', padding: '4px 6px', fontSize: '0.7rem', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center' }}
+                                                    />
+                                                    <button 
+                                                        onClick={() => handleAddInventedItem(supplierKey)}
+                                                        style={{ background: '#4F7A5A', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' }}
+                                                    >
+                                                        Sumar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
 
                                         {isUnassigned && (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
@@ -553,7 +811,8 @@ export const RestockMobile: React.FC = () => {
                                         {/* Products grid */}
                                         {supplier.items.map(item => {
                                             const isSelected = selectedProducts.includes(item.id);
-                                            const runoutLabel = item.runoutDays <= 5 ? 'Sin stock' : `${item.runoutDays.toFixed(0)}d`;
+                                            const isInvented = item.id.startsWith('invented_');
+                                            const runoutLabel = isInvented ? 'Inventado' : (item.runoutDays <= 5 ? 'Sin stock' : `${item.runoutDays.toFixed(0)}d`);
 
                                             return (
                                                 <div
@@ -571,17 +830,39 @@ export const RestockMobile: React.FC = () => {
                                                             )}
                                                             <div className="item-mobile-info">
                                                                 {item.code && <span className="item-code-sm">{item.code}</span>}
-                                                                <div className="item-name-sm">{item.name}</div>
-                                                                <span style={{ fontSize: '0.65rem', color: item.runoutDays <= 5 ? '#ef4444' : '#d97706', fontWeight: 'bold' }}>
+                                                                <div className="item-name-sm" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    {item.name}
+                                                                    <span 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleRemoveItem(supplierKey, item.id);
+                                                                        }}
+                                                                        className="material-symbols-rounded" 
+                                                                        style={{ fontSize: '15px', color: '#ef4444', cursor: 'pointer' }}
+                                                                    >
+                                                                        delete
+                                                                    </span>
+                                                                </div>
+                                                                <span style={{ fontSize: '0.65rem', color: isInvented ? '#8b5cf6' : (item.runoutDays <= 5 ? '#ef4444' : '#d97706'), fontWeight: 'bold' }}>
                                                                     Autonomía: {runoutLabel}
                                                                 </span>
                                                             </div>
                                                         </div>
                                                         
-                                                        {/* Suggested Replenishment Pill */}
-                                                        <span style={{ fontSize: '0.75rem', fontWeight: 'bold', background: '#ecfdf5', color: '#10b981', padding: '2px 8px', borderRadius: '6px' }}>
-                                                            Surg: {item.suggestedAmount} u
-                                                        </span>
+                                                        {/* Suggested Replenishment Pill editable input */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Cant:</span>
+                                                            <input 
+                                                                type="number"
+                                                                min="0"
+                                                                value={item.suggestedAmount}
+                                                                onChange={e => {
+                                                                    const val = parseInt(e.target.value) || 0;
+                                                                    setCustomSuggestedAmounts(prev => ({ ...prev, [item.id]: val }));
+                                                                }}
+                                                                style={{ width: '45px', padding: '2px', border: '1px solid #4F7A5A', borderRadius: '4px', fontSize: '0.75rem', textAlign: 'center', fontWeight: 'bold', color: '#4F7A5A', background: '#ecfdf5' }}
+                                                            />
+                                                        </div>
                                                     </div>
 
                                                     {/* In-line parameter editing */}
@@ -591,6 +872,7 @@ export const RestockMobile: React.FC = () => {
                                                             <input 
                                                                 type="number"
                                                                 defaultValue={item.stock}
+                                                                disabled={isInvented}
                                                                 onBlur={e => handleInlineUpdate(item.id, 'stock', parseFloat(e.target.value) || 0)}
                                                                 style={{ padding: '2px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.75rem', textAlign: 'center' }}
                                                             />
@@ -600,6 +882,7 @@ export const RestockMobile: React.FC = () => {
                                                             <input 
                                                                 type="number"
                                                                 defaultValue={item.minStock}
+                                                                disabled={isInvented}
                                                                 onBlur={e => handleInlineUpdate(item.id, 'min', parseFloat(e.target.value) || 0)}
                                                                 style={{ padding: '2px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.75rem', textAlign: 'center' }}
                                                             />
@@ -781,7 +1064,7 @@ export const RestockMobile: React.FC = () => {
                             type="submit" 
                             style={{ background: '#4F7A5A', color: 'white', border: 'none', padding: '10px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}
                         >
-                            ✓ Registrar Producto
+                            ✓ Registrar Catálogo
                         </button>
                     </form>
                 </div>

@@ -13,7 +13,8 @@ import {
     Target, 
     FileSpreadsheet, 
     UserPlus,
-    X
+    X,
+    Trash2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
@@ -32,6 +33,7 @@ interface RestockItem {
     runoutDays: number;
     mermaRate: number;
     category: string;
+    isCustomItem?: boolean;
 }
 
 interface SupplierRestock {
@@ -67,6 +69,20 @@ const RestockDesktop: React.FC = () => {
     const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
     const [targetSupplierId, setTargetSupplierId] = useState<string>('');
     const [isAssigning, setIsAssigning] = useState(false);
+
+    // Custom manually started suppliers, catalog selections, invented items, and suggested amounts
+    const [manuallyStartedSuppliers, setManuallyStartedSuppliers] = useState<string[]>([]);
+    const [manuallyAddedProducts, setManuallyAddedProducts] = useState<Record<string, string[]>>({});
+    const [customOrderItems, setCustomOrderItems] = useState<Record<string, RestockItem[]>>({});
+    const [customSuggestedAmounts, setCustomSuggestedAmounts] = useState<Record<string, number>>({});
+
+    // Inline inputs for inventing items
+    const [inventedName, setInventedName] = useState<Record<string, string>>({});
+    const [inventedCost, setInventedCost] = useState<Record<string, string>>({});
+    const [inventedAmount, setInventedAmount] = useState<Record<string, string>>({});
+
+    // Catalog search query inside each supplier card
+    const [catalogSearchQueries, setCatalogSearchQueries] = useState<Record<string, string>>({});
 
     // Supplier specific settings: lead time (days) and custom notes
     const [leadTimes, setLeadTimes] = useState<Record<string, number>>(() => {
@@ -121,7 +137,24 @@ const RestockDesktop: React.FC = () => {
     const restockData = useMemo(() => {
         const grouped: Record<string, SupplierRestock> = {};
 
+        // 1. Incorporate all manually started suppliers into group keys
+        manuallyStartedSuppliers.forEach(sId => {
+            if (!grouped[sId]) {
+                const supplier = suppliers.find(s => s.id === sId);
+                grouped[sId] = {
+                    supplierId: sId === 'unassigned' ? null : sId,
+                    supplierName: supplier ? supplier.name : 'Sin Proveedor Asignado',
+                    supplierPhone: supplier ? supplier.phone : null,
+                    items: []
+                };
+            }
+        });
+
+        // 2. Loop over standard products to determine critical/predictive additions or manually added catalog items
         const filteredProducts = products.filter(p => {
+            const supplierId = p.supplierId || 'unassigned';
+            const isManuallyAdded = manuallyAddedProducts[supplierId]?.includes(p.id);
+
             const matchesSearch = !searchQuery || 
                 p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                 (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -129,19 +162,18 @@ const RestockDesktop: React.FC = () => {
             const matchesCategory = !selectedCategory || p.category === selectedCategory;
             const matchesSupplier = !selectedSupplierFilter || p.supplierId === selectedSupplierFilter;
 
-            return matchesSearch && matchesCategory && matchesSupplier;
+            return (matchesSearch && matchesCategory && matchesSupplier) || isManuallyAdded;
         });
 
         filteredProducts.forEach(p => {
             const supplierId = p.supplierId || 'unassigned';
-            const leadTime = leadTimes[supplierId] || 3; // Default 3 days
+            const leadTime = leadTimes[supplierId] || 3;
 
-            // Ventas diarias promedio (Mock or fallback using weeklySales)
-            const dailySales = p.weeklySales ? (p.weeklySales / 7) : 0.4; // fallback standard daily rate
+            const dailySales = p.weeklySales ? (p.weeklySales / 7) : 0.4;
             const runoutDays = dailySales > 0 ? (p.stock / dailySales) : 999;
-
-            // Merma rate (fallback dynamic rates based on category or default 0.08)
             const mermaRate = p.category?.toLowerCase().includes('flor') ? 0.12 : 0.05;
+
+            const isManuallyAdded = manuallyAddedProducts[supplierId]?.includes(p.id);
 
             // Suggested Restocking Amount
             let suggestedAmount = 0;
@@ -151,23 +183,26 @@ const RestockDesktop: React.FC = () => {
                 triggerRestock = p.stock <= p.min;
                 suggestedAmount = triggerRestock ? (p.min * 2 - p.stock) : 0;
             } else if (strategy === 'predictive') {
-                // If runout days is less than Lead Time + 5 safety buffer
                 triggerRestock = runoutDays <= (leadTime + 5) || p.stock <= p.min;
-                // Replenish for 15 days of stock
                 suggestedAmount = Math.ceil(dailySales * 15) - p.stock;
             } else { // 'mermas' strategy
                 triggerRestock = runoutDays <= (leadTime + 5) || p.stock <= p.min;
-                // Replenish for 15 days + inflated for merma compensation
                 const baseReplenish = Math.ceil(dailySales * 15) - p.stock;
                 suggestedAmount = Math.ceil(baseReplenish * (1 + mermaRate));
             }
 
             if (suggestedAmount < 0) suggestedAmount = 0;
-            if (suggestedAmount === 0 && triggerRestock) suggestedAmount = 10; // minimum package standard
+            if (suggestedAmount === 0 && triggerRestock) suggestedAmount = 10;
+            if (isManuallyAdded && suggestedAmount === 0) suggestedAmount = 10; // default for manually catalog additions
 
-            // In critical strategy, only show actually depleted items
-            // In predictive/mermas, show items that are critical OR running out soon
-            const shouldShow = strategy === 'critical' ? p.stock <= p.min : (p.stock <= p.min || runoutDays <= (leadTime + 7));
+            // Apply overrides if customSuggestedAmounts exists
+            if (customSuggestedAmounts[p.id] !== undefined) {
+                suggestedAmount = customSuggestedAmounts[p.id];
+            }
+
+            const shouldShow = strategy === 'critical' 
+                ? (p.stock <= p.min || isManuallyAdded) 
+                : (p.stock <= p.min || runoutDays <= (leadTime + 7) || isManuallyAdded);
 
             if (shouldShow) {
                 if (!grouped[supplierId]) {
@@ -179,26 +214,77 @@ const RestockDesktop: React.FC = () => {
                         items: []
                     };
                 }
-                grouped[supplierId].items.push({
-                    id: p.id,
-                    code: p.code || 'S/C',
-                    name: p.name,
-                    stock: p.stock ?? 0,
-                    minStock: p.min ?? 0,
-                    cost: p.cost || 0,
-                    suggestedAmount,
-                    runoutDays,
-                    mermaRate,
-                    category: p.category
-                });
+                
+                // Avoid duplicates
+                if (!grouped[supplierId].items.some(item => item.id === p.id)) {
+                    grouped[supplierId].items.push({
+                        id: p.id,
+                        code: p.code || 'S/C',
+                        name: p.name,
+                        stock: p.stock ?? 0,
+                        minStock: p.min ?? 0,
+                        cost: p.cost || 0,
+                        suggestedAmount,
+                        runoutDays,
+                        mermaRate,
+                        category: p.category
+                    });
+                }
             }
         });
 
-        return Object.values(grouped).sort((a, b) => a.supplierName.localeCompare(b.supplierName));
-    }, [products, suppliers, strategy, searchQuery, selectedCategory, selectedSupplierFilter, leadTimes]);
+        // 3. Inject custom invented items
+        Object.keys(customOrderItems).forEach(sId => {
+            if (!grouped[sId]) {
+                const supplier = suppliers.find(s => s.id === sId);
+                grouped[sId] = {
+                    supplierId: sId === 'unassigned' ? null : sId,
+                    supplierName: supplier ? supplier.name : 'Sin Proveedor Asignado',
+                    supplierPhone: supplier ? supplier.phone : null,
+                    items: []
+                };
+            }
+            customOrderItems[sId].forEach(customItem => {
+                // Apply overriding amount if adjusted
+                let amount = customItem.suggestedAmount;
+                if (customSuggestedAmounts[customItem.id] !== undefined) {
+                    amount = customSuggestedAmounts[customItem.id];
+                }
 
-    // Handle inline update
+                if (!grouped[sId].items.some(item => item.id === customItem.id)) {
+                    grouped[sId].items.push({
+                        ...customItem,
+                        suggestedAmount: amount
+                    });
+                }
+            });
+        });
+
+        // Filter out completely empty groups if they are not manually started
+        return Object.values(grouped)
+            .filter(g => g.items.length > 0 || manuallyStartedSuppliers.includes(g.supplierId || 'unassigned'))
+            .sort((a, b) => a.supplierName.localeCompare(b.supplierName));
+    }, [products, suppliers, strategy, searchQuery, selectedCategory, selectedSupplierFilter, leadTimes, manuallyStartedSuppliers, manuallyAddedProducts, customOrderItems, customSuggestedAmounts]);
+
+    // Handle inline update of catalog products
     const handleInlineUpdate = async (productId: string, field: 'stock' | 'min' | 'cost', value: number) => {
+        if (productId.startsWith('invented_')) {
+            // Update inside custom invented items
+            setCustomOrderItems(prev => {
+                const updated = { ...prev };
+                Object.keys(updated).forEach(sId => {
+                    updated[sId] = updated[sId].map(item => {
+                        if (item.id === productId) {
+                            return { ...item, [field === 'min' ? 'minStock' : field]: value };
+                        }
+                        return item;
+                    });
+                });
+                return updated;
+            });
+            return;
+        }
+
         try {
             await updateProduct(productId, { [field === 'min' ? 'min' : field]: value });
         } catch (error) {
@@ -206,7 +292,68 @@ const RestockDesktop: React.FC = () => {
         }
     };
 
-    // Fast product creation
+    // Add dynamic invented item (inventar producto desde este espacio)
+    const handleAddInventedItem = (supplierId: string) => {
+        const name = inventedName[supplierId] || '';
+        const cost = parseFloat(inventedCost[supplierId]) || 0;
+        const amount = parseInt(inventedAmount[supplierId]) || 10;
+
+        if (!name.trim()) {
+            addNotification('El nombre es obligatorio', 'warning');
+            return;
+        }
+
+        const newItem: RestockItem = {
+            id: `invented_${Date.now()}`,
+            code: 'INV',
+            name: name,
+            stock: 0,
+            minStock: 0,
+            cost: cost,
+            suggestedAmount: amount,
+            runoutDays: 0,
+            mermaRate: 0,
+            category: 'Flores Frescas',
+            isCustomItem: true
+        };
+
+        setCustomOrderItems(prev => ({
+            ...prev,
+            [supplierId]: [...(prev[supplierId] || []), newItem]
+        }));
+
+        // Reset inputs
+        setInventedName({ ...inventedName, [supplierId]: '' });
+        setInventedCost({ ...inventedCost, [supplierId]: '' });
+        setInventedAmount({ ...inventedAmount, [supplierId]: '' });
+
+        // Ensure supplier is started
+        const key = supplierId || 'unassigned';
+        if (!manuallyStartedSuppliers.includes(key)) {
+            setManuallyStartedSuppliers(prev => [...prev, key]);
+        }
+
+        addNotification('Ítem inventado añadido al pedido', 'success');
+    };
+
+    // Remove item from replenishment card
+    const handleRemoveItem = (supplierId: string, itemId: string) => {
+        const sKey = supplierId || 'unassigned';
+        if (itemId.startsWith('invented_')) {
+            setCustomOrderItems(prev => ({
+                ...prev,
+                [sKey]: (prev[sKey] || []).filter(item => item.id !== itemId)
+            }));
+        } else {
+            setManuallyAddedProducts(prev => ({
+                ...prev,
+                [sKey]: (prev[sKey] || []).filter(id => id !== itemId)
+            }));
+        }
+        addNotification('Ítem removido de la orden', 'info');
+    };
+
+    // Fast catalog creation
     const handleFastCreateProduct = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newProductName.trim()) {
@@ -228,7 +375,6 @@ const RestockDesktop: React.FC = () => {
             });
 
             setIsDrawerOpen(false);
-            // Reset fields
             setNewProductName('');
             setNewProductCode('');
             setNewProductCost('');
@@ -260,7 +406,6 @@ const RestockDesktop: React.FC = () => {
         const dateStr = new Date().toLocaleDateString('es-AR').replace(/\//g, '-');
         const filename = `Pedido_${supplier.supplierName.replace(/\s+/g, '_')}_${dateStr}.xlsx`;
 
-        // Check columns template
         const columns = [
             { key: 'code', label: 'Código', width: 120 },
             { key: 'name', label: 'Producto', width: 250 },
@@ -293,11 +438,9 @@ const RestockDesktop: React.FC = () => {
             }
         };
 
-        // Append and persist
         customItemsList.push(newFile);
         localStorage.setItem(itemsKey, JSON.stringify(customItemsList));
 
-        // Show animation
         setSuccessVFSItem({
             supplierName: supplier.supplierName,
             filename
@@ -328,7 +471,7 @@ const RestockDesktop: React.FC = () => {
         message += `⏰ *Plazo de entrega solicitado*: ${lead} días hábiles.\n`;
         
         if (notes.trim()) {
-            message += `📌 *Nota adjunta*: ${notes}\n`;
+            message += `📌 *Notas / Comentarios*: ${notes}\n`;
         }
         
         message += `\nQuedo a la espera de tu confirmación de stock y costos. ¡Muchas gracias!`;
@@ -376,8 +519,6 @@ const RestockDesktop: React.FC = () => {
         }
     };
 
-    const totalItems = restockData.reduce((acc, curr) => acc + curr.items.length, 0);
-
     return (
         <div className="restock-page">
             <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #4F7A5A, #37563f)', padding: '1.75rem', borderRadius: '16px', color: 'white', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
@@ -388,12 +529,12 @@ const RestockDesktop: React.FC = () => {
                         <span style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '99px', fontWeight: 'bold' }}>BI Suite v2</span>
                     </h1>
                     <p className="text-body mt-2" style={{ color: 'rgba(255,255,255,0.85)', margin: 0 }}>
-                        Identifica, planifica y automatiza el stock crítico del negocio. {totalItems} artículos sugieren reabastecimiento.
+                        Identifica, planifica y automatiza el stock crítico del negocio o genera pedidos manuales en caliente.
                     </p>
                 </div>
                 <button onClick={() => setIsDrawerOpen(true)} className="btn flex items-center gap-2" style={{ background: '#ffffff', color: '#4F7A5A', fontWeight: 'bold', padding: '0.6rem 1.25rem', borderRadius: '8px', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}>
                     <Plus size={18} />
-                    <span>Nuevo Producto</span>
+                    <span>Nuevo Catálogo</span>
                 </button>
             </header>
 
@@ -464,6 +605,46 @@ const RestockDesktop: React.FC = () => {
                 </div>
             </section>
 
+            {/* Dynamic manually start supplier order widget when filter or empty is active */}
+            <section style={{ background: '#ffffff', border: '1px dashed #cbd5e1', padding: '1rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <h4 style={{ margin: 0, fontSize: '0.85rem', color: '#475569', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Plus size={16} />
+                    ¿Deseas iniciar un pedido manual con algún proveedor?
+                </h4>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {suppliers.map(s => {
+                        const isAlreadyStarted = manuallyStartedSuppliers.includes(s.id);
+                        return (
+                            <button
+                                key={s.id}
+                                onClick={() => {
+                                    if (isAlreadyStarted) {
+                                        setManuallyStartedSuppliers(prev => prev.filter(id => id !== s.id));
+                                        addNotification(`Orden manual de ${s.name} cancelada`, 'info');
+                                    } else {
+                                        setManuallyStartedSuppliers(prev => [...prev, s.id]);
+                                        addNotification(`Orden manual iniciada para ${s.name}`, 'success');
+                                    }
+                                }}
+                                style={{ 
+                                    padding: '6px 12px', 
+                                    background: isAlreadyStarted ? '#e2e8f0' : 'white', 
+                                    border: `1px solid ${isAlreadyStarted ? '#94a3b8' : '#cbd5e1'}`, 
+                                    borderRadius: '8px', 
+                                    fontSize: '0.8rem', 
+                                    cursor: 'pointer', 
+                                    fontWeight: 'bold', 
+                                    color: isAlreadyStarted ? '#475569' : '#4F7A5A',
+                                    transition: 'all 0.15s'
+                                }}
+                            >
+                                {isAlreadyStarted ? `✓ Activo: ${s.name}` : `+ Iniciar ${s.name}`}
+                            </button>
+                        );
+                    })}
+                </div>
+            </section>
+
             {/* VFS Workspace success overlay banner */}
             {successVFSItem && (
                 <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', padding: '1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', animation: 'fadeIn 0.3s ease-out' }}>
@@ -495,7 +676,7 @@ const RestockDesktop: React.FC = () => {
                     <PackageOpen size={48} className="text-primary opacity-50 mb-4" />
                     <h2 className="text-h2">¡Todo en Orden!</h2>
                     <p className="text-body text-muted mt-2">
-                        No hay productos que requieran reposición bajo la estrategia seleccionada.
+                        No hay productos que requieran reposición automática bajo la estrategia seleccionada.
                     </p>
                 </div>
             ) : (
@@ -576,7 +757,7 @@ const RestockDesktop: React.FC = () => {
 
                                 {/* Custom notes and Lead times per supplier */}
                                 {!isUnassigned && (
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                             <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}>Demora del Proveedor</label>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -593,17 +774,94 @@ const RestockDesktop: React.FC = () => {
                                         </div>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}>Notas internas de pedido</label>
-                                            <input 
-                                                type="text"
-                                                placeholder="Agregar comentario de pedido para este proveedor..."
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}>Notas / Instrucciones del Pedido</label>
+                                            <textarea 
+                                                placeholder="Agregar comentario de pedido, plazos especiales, especificaciones..."
                                                 value={orderNotes[sId] || ''}
                                                 onChange={e => setOrderNotes({ ...orderNotes, [sId]: e.target.value })}
-                                                style={{ width: '100%', padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.8rem', background: '#ffffff' }}
+                                                rows={2}
+                                                style={{ width: '100%', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.8rem', background: '#ffffff', resize: 'vertical' }}
                                             />
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Advanced Section: Add catalog products & Invent custom items */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '1.5rem', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                                    {/* Catalog Search & Add */}
+                                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}>🔍 Sumar Producto Existente</label>
+                                        <input 
+                                            type="text"
+                                            placeholder="Buscar en catálogo..."
+                                            value={catalogSearchQueries[sId] || ''}
+                                            onChange={e => setCatalogSearchQueries({ ...catalogSearchQueries, [sId]: e.target.value })}
+                                            style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'white' }}
+                                        />
+                                        {catalogSearchQueries[sId] && (
+                                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '180px', overflowY: 'auto' }}>
+                                                {products
+                                                    .filter(p => p.name.toLowerCase().includes(catalogSearchQueries[sId].toLowerCase()) && (!p.supplierId || p.supplierId === sId))
+                                                    .slice(0, 5)
+                                                    .map(p => (
+                                                        <div 
+                                                            key={p.id}
+                                                            onClick={() => {
+                                                                setManuallyAddedProducts(prev => ({
+                                                                    ...prev,
+                                                                    [sId]: [...(prev[sId] || []).filter(id => id !== p.id), p.id]
+                                                                }));
+                                                                if (sId !== 'unassigned' && !manuallyStartedSuppliers.includes(sId)) {
+                                                                    setManuallyStartedSuppliers(prev => [...prev, sId]);
+                                                                }
+                                                                setCatalogSearchQueries({ ...catalogSearchQueries, [sId]: '' });
+                                                                addNotification(`Producto ${p.name} sumado a la orden`, 'success');
+                                                            }}
+                                                            style={{ padding: '8px 10px', fontSize: '0.8rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}
+                                                        >
+                                                            <span>{p.name}</span>
+                                                            <strong style={{ color: '#4F7A5A' }}>Stock: {p.stock}</strong>
+                                                        </div>
+                                                    ))
+                                                }
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Invent New Item */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}>✨ Inventar Producto Temporal (No Registrado)</label>
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            <input 
+                                                type="text"
+                                                placeholder="Nombre del ítem..."
+                                                value={inventedName[sId] || ''}
+                                                onChange={e => setInventedName({ ...inventedName, [sId]: e.target.value })}
+                                                style={{ flex: 2, padding: '6px 8px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'white' }}
+                                            />
+                                            <input 
+                                                type="number"
+                                                placeholder="Costo ($)..."
+                                                value={inventedCost[sId] || ''}
+                                                onChange={e => setInventedCost({ ...inventedCost, [sId]: e.target.value })}
+                                                style={{ width: '80px', padding: '6px 8px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'white', textAlign: 'center' }}
+                                            />
+                                            <input 
+                                                type="number"
+                                                placeholder="Cant..."
+                                                value={inventedAmount[sId] || ''}
+                                                onChange={e => setInventedAmount({ ...inventedAmount, [sId]: e.target.value })}
+                                                style={{ width: '65px', padding: '6px 8px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'white', textAlign: 'center' }}
+                                            />
+                                            <button 
+                                                onClick={() => handleAddInventedItem(sId)}
+                                                style={{ background: '#4F7A5A', color: 'white', border: 'none', padding: '0 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}
+                                            >
+                                                Agregar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 {isUnassigned && (
                                     <div className="bulk-assign-bar p-3 bg-white rounded-lg border border-gray-200 flex flex-wrap gap-3 items-center justify-between" style={{ padding: '12px', border: '1px solid #fed7aa', background: '#fffbeb', borderRadius: '8px' }}>
@@ -629,7 +887,7 @@ const RestockDesktop: React.FC = () => {
                                                 ))}
                                             </select>
                                             <button
-                                                className="btn btn-secondary btn-sm flex-shrink-0"
+                                                className="btn-assign"
                                                 onClick={handleBulkAssign}
                                                 disabled={isAssigning || selectedProducts.length === 0 || !targetSupplierId}
                                                 style={{ padding: '6px 12px', background: '#4F7A5A', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' }}
@@ -643,13 +901,14 @@ const RestockDesktop: React.FC = () => {
 
                                 <div className="supplier-items-list" style={{ display: 'flex', flexDirection: 'column' }}>
                                     {/* Table Headers */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '3fr 1.5fr 1.5fr 1.5fr 1.5fr 1.5fr', padding: '8px', borderBottom: '2px solid #f1f5f9', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '3fr 1.2fr 1.2fr 1.2fr 1.4fr 1.2fr 0.8fr', padding: '8px', borderBottom: '2px solid #f1f5f9', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>
                                         <div>Producto</div>
-                                        <div style={{ textAlign: 'center' }}>Stock actual</div>
-                                        <div style={{ textAlign: 'center' }}>Stock mínimo</div>
+                                        <div style={{ textAlign: 'center' }}>Stock act</div>
+                                        <div style={{ textAlign: 'center' }}>Stock mín</div>
                                         <div style={{ textAlign: 'center' }}>Costo ref ($)</div>
-                                        <div style={{ textAlign: 'center' }}>{strategy === 'critical' ? 'Faltante' : 'Sugerencia'}</div>
+                                        <div style={{ textAlign: 'center' }}>Pedir (Editar)</div>
                                         <div style={{ textAlign: 'center' }}>Autonomía</div>
+                                        <div style={{ textAlign: 'center' }}>Acciones</div>
                                     </div>
 
                                     {supplier.items.map(item => {
@@ -660,7 +919,11 @@ const RestockDesktop: React.FC = () => {
                                         let badgeBg = '#d1fae5';
                                         let badgeLabel = `${item.runoutDays.toFixed(0)} días`;
 
-                                        if (item.runoutDays <= 5) {
+                                        if (item.id.startsWith('invented_')) {
+                                            badgeColor = '#8b5cf6';
+                                            badgeBg = '#ede9fe';
+                                            badgeLabel = 'Inventado';
+                                        } else if (item.runoutDays <= 5) {
                                             badgeColor = '#ef4444';
                                             badgeBg = '#fee2e2';
                                             badgeLabel = 'Faltante';
@@ -674,7 +937,7 @@ const RestockDesktop: React.FC = () => {
                                             <div
                                                 key={item.id}
                                                 className={`restock-item ${isUnassigned ? 'selectable' : ''} ${isSelected ? 'selected' : ''}`}
-                                                style={{ display: 'grid', gridTemplateColumns: '3fr 1.5fr 1.5fr 1.5fr 1.5fr 1.5fr', alignItems: 'center', padding: '12px 8px', borderBottom: '1px solid #f1f5f9', background: isSelected ? '#ecfdf5' : 'transparent', cursor: isUnassigned ? 'pointer' : 'default' }}
+                                                style={{ display: 'grid', gridTemplateColumns: '3fr 1.2fr 1.2fr 1.2fr 1.4fr 1.2fr 0.8fr', alignItems: 'center', padding: '12px 8px', borderBottom: '1px solid #f1f5f9', background: isSelected ? '#ecfdf5' : 'transparent', cursor: isUnassigned ? 'pointer' : 'default' }}
                                                 onClick={() => isUnassigned && handleToggleProduct(item.id)}
                                             >
                                                 {/* Product Info */}
@@ -699,6 +962,7 @@ const RestockDesktop: React.FC = () => {
                                                     <input 
                                                         type="number"
                                                         defaultValue={item.stock}
+                                                        disabled={item.id.startsWith('invented_')}
                                                         onBlur={e => handleInlineUpdate(item.id, 'stock', parseFloat(e.target.value) || 0)}
                                                         style={{ width: '60px', padding: '2px 4px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.8rem', textAlign: 'center' }}
                                                     />
@@ -709,6 +973,7 @@ const RestockDesktop: React.FC = () => {
                                                     <input 
                                                         type="number"
                                                         defaultValue={item.minStock}
+                                                        disabled={item.id.startsWith('invented_')}
                                                         onBlur={e => handleInlineUpdate(item.id, 'min', parseFloat(e.target.value) || 0)}
                                                         style={{ width: '60px', padding: '2px 4px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.8rem', textAlign: 'center' }}
                                                     />
@@ -724,11 +989,18 @@ const RestockDesktop: React.FC = () => {
                                                     />
                                                 </div>
 
-                                                {/* Suggested Replenishment */}
+                                                {/* Suggested Replenishment input - fully editable! */}
                                                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4F7A5A', background: '#ecfdf5', padding: '3px 8px', borderRadius: '6px' }}>
-                                                        {item.suggestedAmount} und
-                                                    </span>
+                                                    <input 
+                                                        type="number"
+                                                        min="0"
+                                                        value={item.suggestedAmount}
+                                                        onChange={e => {
+                                                            const val = parseInt(e.target.value) || 0;
+                                                            setCustomSuggestedAmounts(prev => ({ ...prev, [item.id]: val }));
+                                                        }}
+                                                        style={{ width: '70px', padding: '2px 4px', border: '1px solid #4F7A5A', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center', fontWeight: 'bold', color: '#4F7A5A', background: '#ecfdf5' }}
+                                                    />
                                                 </div>
 
                                                 {/* Runout Days Badges */}
@@ -736,6 +1008,17 @@ const RestockDesktop: React.FC = () => {
                                                     <span style={{ background: badgeBg, color: badgeColor, fontSize: '0.7rem', padding: '3px 8px', borderRadius: '99px', fontWeight: 'bold' }}>
                                                         {badgeLabel}
                                                     </span>
+                                                </div>
+
+                                                {/* Delete/remove manual row */}
+                                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                                    <button
+                                                        onClick={() => handleRemoveItem(sId, item.id)}
+                                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }}
+                                                        title="Remover este producto del pedido"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
                                             </div>
                                         );
@@ -753,7 +1036,7 @@ const RestockDesktop: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #e2e8f0', background: '#4F7A5A', color: 'white' }}>
                         <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <UserPlus size={20} />
-                            + Crear Producto
+                            + Registrar Catálogo
                         </h2>
                         <button onClick={() => setIsDrawerOpen(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
                             <X size={24} />
