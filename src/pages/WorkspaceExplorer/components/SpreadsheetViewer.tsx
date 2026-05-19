@@ -152,6 +152,10 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
       emptyRow.stock_quantity = 0;
       emptyRow.cost = 0;
       emptyRow.price = 0;
+      
+      if (file.id.startsWith('category_file_')) {
+        emptyRow.category_name = file.name.replace('.xlsx', '');
+      }
     }
     
     setLocalRows(prev => [...prev, emptyRow]);
@@ -181,12 +185,18 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
   // Inline Cell Editing Trigger
   const handleCellDoubleClick = (row: any, idx: number, col: Column, value: any) => {
     // Only allow editing editable keys (no virtual headers / relations not editable)
-    if (col.key === 'category_name' || col.key === 'parent_name' || col.key === 'orderNumber' || col.key === 'deliveryMethod') {
+    if (col.key === 'parent_name' || col.key === 'orderNumber' || col.key === 'deliveryMethod') {
       return; // static visual fields
     }
 
     setEditingCell({ rowId: row.id || idx, colKey: col.key });
     setEditValue(value === null || value === undefined ? '' : String(value));
+  };
+
+  // Delete new row helper
+  const handleDeleteNewRow = (rowId: string | number) => {
+    setLocalRows(prev => prev.filter(r => r.id !== rowId));
+    setPendingChanges(prev => prev.filter(c => c.id !== rowId));
   };
 
   // Save temporary cell change
@@ -367,7 +377,20 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
                 const rowId = row.id || idx;
                 return (
                   <tr key={rowId}>
-                    <td className="row-index-cell">{idx + 1}</td>
+                    <td className="row-index-cell">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                        {idx + 1}
+                        {String(rowId).startsWith('new_') && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteNewRow(rowId); }}
+                            style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: '0 2px', fontWeight: 'bold' }}
+                            title="Descartar esta fila nueva"
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     {columns.map((col) => {
                       const cellVal = row[col.key];
                       const isBadge = col.badge;
