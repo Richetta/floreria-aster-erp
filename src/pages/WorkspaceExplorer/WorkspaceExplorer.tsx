@@ -16,6 +16,7 @@ export const WorkspaceExplorer: React.FC = () => {
     closeFile,
     breadcrumbs,
     currentItems,
+    allItems,
     goBack,
     activeFile,
     spreadsheetColumns,
@@ -23,6 +24,10 @@ export const WorkspaceExplorer: React.FC = () => {
     totalCount,
     filteredCount,
     isLoading,
+    createFolder,
+    createExcelFile,
+    moveItem,
+    saveSpreadsheetChanges,
   } = useWorkspaceExplorer();
 
   return (
@@ -132,12 +137,18 @@ export const WorkspaceExplorer: React.FC = () => {
             totalCount={totalCount}
             filteredCount={filteredCount}
             isLoading={isLoading}
+            onSaveChanges={saveSpreadsheetChanges}
           />
         ) : (
           <VFSBrowser
             items={currentItems}
+            allItems={allItems}
+            currentFolderId={currentFolderId}
             onFolderClick={navigateToFolder}
             onFileClick={openFile}
+            onCreateFolder={createFolder}
+            onCreateExcelFile={createExcelFile}
+            onMoveItem={moveItem}
           />
         )}
       </main>

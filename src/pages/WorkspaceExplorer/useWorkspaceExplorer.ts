@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
+import { useAuth } from '../../store/useAuth';
 
 export interface Column {
   key: string;
@@ -15,9 +16,14 @@ export interface VFSItem {
   name: string;
   parentId: string | null;
   type: 'folder' | 'file';
-  entity?: 'products' | 'categories' | 'orders' | 'customers' | 'suppliers';
+  entity?: 'products' | 'categories' | 'orders' | 'customers' | 'suppliers' | 'custom';
   description?: string;
   color?: string; // modern pastel color for the card or icon
+  isCustom?: boolean;
+  customData?: {
+    columns: Column[];
+    rows: any[];
+  };
 }
 
 // Define the static virtual structure
@@ -125,33 +131,194 @@ const getDescendantCategoryIds = (catId: string, categories: any[]): string[] =>
   return ids;
 };
 
-
 export const useWorkspaceExplorer = () => {
   const [currentFolderId, setCurrentFolderId] = useState<string>('root');
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Access existing Zustand stores
   const store = useStore();
+  const { user } = useAuth();
+  const businessId = user?.business_id || 'default_business';
 
-  // Dynamically compute the combined VFS structure including dynamic category folders and files
+  // State for user created items (folders and files)
+  const [customItems, setCustomItems] = useState<VFSItem[]>([]);
+
+  // State for custom Drag & Drop location overrides of items
+  const [itemParents, setItemParents] = useState<Record<string, string>>({});
+
+  // Load user data on startup/auth change
+  useEffect(() => {
+    if (businessId) {
+      const itemsKey = `explorer_custom_items_${businessId}`;
+      const parentsKey = `explorer_item_parents_${businessId}`;
+      
+      const customItemsData = localStorage.getItem(itemsKey);
+      if (customItemsData) {
+        try {
+          setCustomItems(JSON.parse(customItemsData));
+        } catch (e) {
+          console.error('Failed to parse custom items:', e);
+        }
+      } else {
+        setCustomItems([]);
+      }
+
+      const parentsData = localStorage.getItem(parentsKey);
+      if (parentsData) {
+        try {
+          setItemParents(JSON.parse(parentsData));
+        } catch (e) {
+          console.error('Failed to parse item parents:', e);
+        }
+      } else {
+        setItemParents({});
+      }
+    }
+  }, [businessId]);
+
+  const persistCustomItems = (newItems: VFSItem[]) => {
+    setCustomItems(newItems);
+    if (businessId) {
+      localStorage.setItem(`explorer_custom_items_${businessId}`, JSON.stringify(newItems));
+    }
+  };
+
+  const persistItemParent = (itemId: string, newParentId: string) => {
+    setItemParents(prev => {
+      const next = { ...prev, [itemId]: newParentId };
+      if (businessId) {
+        localStorage.setItem(`explorer_item_parents_${businessId}`, JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
+  // Helper to create a folder
+  const createFolder = (name: string) => {
+    const newFolder: VFSItem = {
+      id: `custom_folder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: name.trim() || 'Nueva Carpeta',
+      parentId: currentFolderId,
+      type: 'folder',
+      description: 'Carpeta creada por el usuario',
+      color: '#f8fafc',
+      isCustom: true
+    };
+    persistCustomItems([...customItems, newFolder]);
+  };
+
+  // Helper to create an Excel file
+  const createExcelFile = (name: string, templateType: 'empty' | 'products' | 'customers' | 'orders' = 'empty') => {
+    let fileName = name.trim();
+    if (!fileName.toLowerCase().endsWith('.xlsx')) {
+      fileName += '.xlsx';
+    }
+
+    let columns: Column[] = [];
+    let rows: any[] = [];
+
+    if (templateType === 'empty') {
+      columns = [
+        { key: 'col1', label: 'Columna 1', width: 150 },
+        { key: 'col2', label: 'Columna 2', width: 150 },
+        { key: 'col3', label: 'Columna 3', width: 150 }
+      ];
+      rows = [
+        { id: '1', col1: 'Valor A', col2: 'Valor B', col3: 'Valor C' },
+        { id: '2', col1: '', col2: '', col3: '' }
+      ];
+    } else if (templateType === 'products') {
+      columns = [
+        { key: 'code', label: 'Código', width: 120 },
+        { key: 'name', label: 'Nombre del Producto', width: 250 },
+        { key: 'stock_quantity', label: 'Stock Actual', width: 110, align: 'right', badge: true },
+        { key: 'cost', label: 'Costo ($)', width: 110, align: 'right', format: 'currency' },
+        { key: 'price', label: 'Precio Venta ($)', width: 120, align: 'right', format: 'currency' }
+      ];
+      rows = store.products.map(p => ({
+        id: p.id,
+        code: p.code || 'S/C',
+        name: p.name,
+        stock_quantity: p.stock ?? 0,
+        cost: p.cost ?? 0,
+        price: p.price ?? 0
+      }));
+    } else if (templateType === 'customers') {
+      columns = [
+        { key: 'name', label: 'Nombre Completo', width: 250 },
+        { key: 'phone', label: 'Teléfono', width: 150 },
+        { key: 'email', label: 'Correo Electrónico', width: 220 }
+      ];
+      rows = store.customers.map(c => ({
+        id: c.id,
+        name: c.name,
+        phone: c.phone || 'Sin Teléfono',
+        email: c.email || 'Sin Email'
+      }));
+    } else if (templateType === 'orders') {
+      columns = [
+        { key: 'orderNumber', label: 'Pedido #', width: 100, align: 'center' },
+        { key: 'customerName', label: 'Cliente', width: 220 },
+        { key: 'total', label: 'Total ($)', width: 120, align: 'right', format: 'currency' }
+      ];
+      rows = store.orders.map(o => ({
+        id: o.id,
+        orderNumber: o.orderNumber ? `#${o.orderNumber}` : 'S/N',
+        customerName: o.customerName,
+        total: o.total
+      }));
+    }
+
+    const newFile: VFSItem = {
+      id: `custom_file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: fileName,
+      parentId: currentFolderId,
+      type: 'file',
+      entity: 'custom',
+      description: `Planilla personalizada (${templateType === 'empty' ? 'Vacía' : 'Plantilla ' + templateType})`,
+      isCustom: true,
+      customData: { columns, rows }
+    };
+
+    persistCustomItems([...customItems, newFile]);
+  };
+
+  // Helper to drag and drop move an item
+  const moveItem = (itemId: string, newParentId: string) => {
+    persistItemParent(itemId, newParentId);
+  };
+
+  // Dynamically compute the combined VFS structure including dynamic category folders, files and user custom elements
   const allVFSItems = useMemo<VFSItem[]>(() => {
-    const items = [...VFS_ITEMS];
+    // Merge base items with custom items
+    const rawItems = [...VFS_ITEMS, ...customItems];
+    
+    // Apply path/parent overrides from drag and drop
+    const items = rawItems.map(item => {
+      const overridenParentId = itemParents[item.id];
+      return {
+        ...item,
+        parentId: overridenParentId !== undefined ? overridenParentId : item.parentId
+      };
+    });
 
     // Lazy load categories if they are empty
     if (store.categoriesData.length === 0 && !store.isLoading) {
       store.loadCategories(true);
     }
 
-    // 1. Add "Explorar por Categoría" virtual folder under 'inventario'
-    items.push({
-      id: 'categorias_folder',
-      name: 'Explorar por Categoría',
-      parentId: 'inventario',
-      type: 'folder',
-      description: 'Navegá tu catálogo agrupado por sus carpetas de categorías',
-      color: '#f0fdf4', // pastel light green
-    });
+    // 1. Add "Explorar por Categoría" virtual folder under 'inventario' if not moved
+    const catFolderParent = itemParents['categorias_folder'] !== undefined ? itemParents['categorias_folder'] : 'inventario';
+    if (catFolderParent !== null) {
+      items.push({
+        id: 'categorias_folder',
+        name: 'Explorar por Categoría',
+        parentId: catFolderParent,
+        type: 'folder',
+        description: 'Navegá tu catálogo agrupado por sus carpetas de categorías',
+        color: '#f0fdf4', // pastel light green
+      });
+    }
 
     // 2. Normalize categories into a tree structure
     const categoriesData = store.categoriesData || [];
@@ -175,26 +342,33 @@ export const useWorkspaceExplorer = () => {
     const collectCategories = (cats: any[], parentFolderId: string) => {
       cats.forEach(c => {
         const folderId = `category_dir_${c.id}`;
-        
-        // Add category folder
-        items.push({
-          id: folderId,
-          name: c.name,
-          parentId: parentFolderId,
-          type: 'folder',
-          description: `Productos en categoría ${c.name}`,
-          color: '#f0fdf4',
-        });
+        const folderParent = itemParents[folderId] !== undefined ? itemParents[folderId] : parentFolderId;
+        const fileId = `category_file_${c.id}`;
+        const fileParent = itemParents[fileId] !== undefined ? itemParents[fileId] : folderId;
+
+        // Add category folder if parent exists
+        if (folderParent !== null) {
+          items.push({
+            id: folderId,
+            name: c.name,
+            parentId: folderParent,
+            type: 'folder',
+            description: `Productos en categoría ${c.name}`,
+            color: '#f0fdf4',
+          });
+        }
 
         // Add category products spreadsheet inside its category folder
-        items.push({
-          id: `category_file_${c.id}`,
-          name: `${c.name}.xlsx`,
-          parentId: folderId,
-          type: 'file',
-          entity: 'products',
-          description: `Planilla con los productos de la categoría ${c.name}`,
-        });
+        if (fileParent !== null) {
+          items.push({
+            id: fileId,
+            name: `${c.name}.xlsx`,
+            parentId: fileParent,
+            type: 'file',
+            entity: 'products',
+            description: `Planilla con los productos de la categoría ${c.name}`,
+          });
+        }
 
         // Recursively add children as subfolders
         if (c.children && c.children.length > 0) {
@@ -208,7 +382,7 @@ export const useWorkspaceExplorer = () => {
     }
 
     return items;
-  }, [store.categoriesData, store.isLoading]);
+  }, [store.categoriesData, store.isLoading, customItems, itemParents]);
 
   // Reset active file when folder changes
   const navigateToFolder = (folderId: string) => {
@@ -305,6 +479,13 @@ export const useWorkspaceExplorer = () => {
     const entity = activeFile.entity;
     if (!entity) return { columns: [], rows: [] };
 
+    if (entity === 'custom') {
+      return {
+        columns: activeFile.customData?.columns || [],
+        rows: activeFile.customData?.rows || []
+      };
+    }
+
     // Trigger lazy loading
     triggerLoadData(entity);
 
@@ -328,8 +509,7 @@ export const useWorkspaceExplorer = () => {
             { key: 'category_name', label: 'Categoría', width: 150 },
             { key: 'stock_quantity', label: 'Stock Actual', width: 110, align: 'right', badge: true },
             { key: 'cost', label: 'Costo ($)', width: 110, align: 'right', format: 'currency' },
-            { key: 'price', label: 'Precio Venta ($)', width: 120, align: 'right', format: 'currency' },
-            { key: 'is_active', label: 'Estado', width: 100, align: 'center', badge: true }
+            { key: 'price', label: 'Precio Venta ($)', width: 120, align: 'right', format: 'currency' }
           ],
           rows: productsList.map(p => ({
             id: p.id,
@@ -338,8 +518,7 @@ export const useWorkspaceExplorer = () => {
             category_name: p.category || 'Sin Categoría',
             stock_quantity: p.stock ?? 0,
             cost: p.cost ?? 0,
-            price: p.price ?? 0,
-            is_active: 'Activo'
+            price: p.price ?? 0
           }))
         };
       }
@@ -348,16 +527,14 @@ export const useWorkspaceExplorer = () => {
         return {
           columns: [
             { key: 'name', label: 'Categoría', width: 250 },
-            { key: 'parent_name', label: 'Categoría Padre', width: 200 },
-            { key: 'is_active', label: 'Estado', width: 120, align: 'center', badge: true }
+            { key: 'parent_name', label: 'Categoría Padre', width: 200 }
           ],
           rows: store.categoriesData.map(c => {
             const parent = store.categoriesData.find(pc => pc.id === c.parent_id);
             return {
               id: c.id,
               name: c.name,
-              parent_name: parent ? parent.name : 'Raíz',
-              is_active: 'Activo'
+              parent_name: parent ? parent.name : 'Raíz'
             };
           })
         };
@@ -442,14 +619,13 @@ export const useWorkspaceExplorer = () => {
       default:
         return { columns: [], rows: [] };
     }
-  }, [activeFile, store.products, store.categoriesData, store.orders, store.customers, store.suppliers]);
+  }, [activeFile, store.products, store.categoriesData, store.orders, store.customers, store.suppliers, customItems]);
 
   // Global search filtering of files/folders + internal search for spreadsheet active view
   const filteredItems = useMemo(() => {
     if (!searchQuery) return currentItems;
     const lowerQuery = searchQuery.toLowerCase();
     
-    // In root/folder view, search filters matching items recursively or matching currently listed items
     return currentItems.filter(
       (item) =>
         item.name.toLowerCase().includes(lowerQuery) ||
@@ -470,6 +646,81 @@ export const useWorkspaceExplorer = () => {
     });
   }, [spreadsheetData, searchQuery]);
 
+  // Handle saving cell modifications made in SpreadsheetViewer back to Zustand stores or custom local list
+  const saveSpreadsheetChanges = async (fileId: string, updatedRows: any[], changes: Array<{ id: string; key: string; oldValue: any; newValue: any }>) => {
+    const isCustom = customItems.some(i => i.id === fileId);
+    
+    if (isCustom) {
+      const updated = customItems.map(item => {
+        if (item.id === fileId) {
+          return {
+            ...item,
+            customData: {
+              columns: item.customData?.columns || [],
+              rows: updatedRows
+            }
+          };
+        }
+        return item;
+      });
+      persistCustomItems(updated);
+    } else {
+      const file = allVFSItems.find(i => i.id === fileId);
+      const entity = file?.entity;
+      if (!entity) return;
+
+      // Persist changes one by one into the live database stores
+      for (const change of changes) {
+        const { id, key, newValue } = change;
+        
+        if (entity === 'products') {
+          const mappedUpdates: any = {};
+          if (key === 'name') mappedUpdates.name = String(newValue);
+          if (key === 'code') mappedUpdates.code = String(newValue);
+          if (key === 'stock_quantity') mappedUpdates.stock = Number(newValue);
+          if (key === 'cost') mappedUpdates.cost = Number(newValue);
+          if (key === 'price') mappedUpdates.price = Number(newValue);
+          
+          await store.updateProduct(id, mappedUpdates);
+        } else if (entity === 'customers') {
+          const mappedUpdates: any = {};
+          if (key === 'name') mappedUpdates.name = String(newValue);
+          if (key === 'phone') mappedUpdates.phone = String(newValue);
+          if (key === 'email') mappedUpdates.email = String(newValue);
+          if (key === 'debtBalance') mappedUpdates.debtBalance = Number(newValue);
+          
+          await store.updateCustomer(id, mappedUpdates);
+        } else if (entity === 'suppliers') {
+          const mappedUpdates: any = {};
+          if (key === 'name') mappedUpdates.name = String(newValue);
+          if (key === 'contactName') mappedUpdates.contactName = String(newValue);
+          if (key === 'phone') mappedUpdates.phone = String(newValue);
+          if (key === 'address') mappedUpdates.address = String(newValue);
+          if (key === 'category') mappedUpdates.category = String(newValue);
+          
+          await store.updateSupplier(id, mappedUpdates);
+        } else if (entity === 'orders') {
+          if (key === 'status') {
+            const statusMap: Record<string, string> = {
+              'Pendiente': 'pending',
+              'Armando': 'assembling',
+              'Listo para retirar': 'ready',
+              'En camino': 'out_for_delivery',
+              'Entregado': 'delivered',
+              'Cancelado': 'cancelled',
+              'Archivado': 'archived'
+            };
+            const apiStatus = statusMap[newValue] || newValue;
+            await store.updateOrderStatus(id, apiStatus as any);
+          }
+        }
+      }
+
+      // Re-trigger loading of store to refresh the table representation
+      await triggerLoadData(entity);
+    }
+  };
+
   return {
     currentFolderId,
     activeFileId,
@@ -480,6 +731,7 @@ export const useWorkspaceExplorer = () => {
     closeFile,
     breadcrumbs,
     currentItems: filteredItems,
+    allItems: allVFSItems,
     goBack,
     activeFile,
     spreadsheetColumns: spreadsheetData.columns,
@@ -487,5 +739,9 @@ export const useWorkspaceExplorer = () => {
     totalCount: spreadsheetData.rows.length,
     filteredCount: filteredSpreadsheetRows.length,
     isLoading: store.isLoading,
+    createFolder,
+    createExcelFile,
+    moveItem,
+    saveSpreadsheetChanges,
   };
 };
