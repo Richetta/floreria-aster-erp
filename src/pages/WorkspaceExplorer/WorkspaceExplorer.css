@@ -579,6 +579,7 @@
   overflow: auto;
   position: relative;
   background-color: #fcfdfe;
+  padding-bottom: 90px;
 }
 
 /* Table layout styling rules */

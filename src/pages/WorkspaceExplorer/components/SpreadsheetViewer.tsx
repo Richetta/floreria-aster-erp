@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Download, Search, AlertCircle, Loader, AlertTriangle, ShieldAlert, Sparkles, Check, Plus } from 'lucide-react';
 import type { VFSItem, Column } from '../useWorkspaceExplorer';
 import * as XLSX from 'xlsx';
@@ -42,6 +43,7 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
 
   // Track edits in state
   const [editingCell, setEditingCell] = useState<{ rowId: string | number; colKey: string } | null>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   const [editValue, setEditValue] = useState<string>('');
   
   // Accumulated pending changes list
@@ -166,6 +168,14 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
         newValue: emptyRow.name || 'Nuevo Elemento'
       }
     ]);
+
+    setEditingCell({ rowId: newId, colKey: columns[0].key });
+
+    setTimeout(() => {
+      if (tableContainerRef.current) {
+        tableContainerRef.current.scrollTop = tableContainerRef.current.scrollHeight;
+      }
+    }, 50);
   };
 
   // Inline Cell Editing Trigger
@@ -320,7 +330,7 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
       </div>
 
       {/* Spreadsheet Grid Table */}
-      <div className="sheet-grid-container">
+      <div className="sheet-grid-container" ref={tableContainerRef}>
         {isLoading ? (
           <div className="sheet-loading-overlay">
             <Loader className="spinner" size={32} />
@@ -455,7 +465,7 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
       </div>
 
       {/* Changes Audit Security Modal */}
-      {showSecurityModal && (
+      {showSecurityModal && createPortal(
         <div className="explorer-security-overlay">
           <div className="explorer-security-modal animate-scale-up">
             <div className="modal-security-header">
@@ -522,7 +532,8 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

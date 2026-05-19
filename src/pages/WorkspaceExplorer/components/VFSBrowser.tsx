@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Folder, 
   FileSpreadsheet, 
@@ -605,7 +606,7 @@ export const VFSBrowser: React.FC<VFSBrowserProps> = ({
       )}
 
       {/* Drag & Drop Security Authorization Modal Overlay */}
-      {pendingMove && (
+      {pendingMove && createPortal(
         <div className="explorer-security-overlay">
           <div className="explorer-security-modal alert-modal animate-scale-up">
             <div className="modal-security-header">
@@ -655,7 +656,8 @@ export const VFSBrowser: React.FC<VFSBrowserProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
