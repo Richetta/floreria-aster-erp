@@ -118,10 +118,10 @@ const navItems: NavItem[] = [
     desc: 'Control económico',
     permission: 'canViewFinances',
     children: [
-      { path: '/finanzas', label: 'Movimientos', permission: 'canManageFinances' },
-      { path: '/ventas', label: 'Ventas', icon: FileText },
-      { path: '/caja', label: 'Caja', icon: Vault, feature: 'cashRegister', permission: 'canManageFinances' },
-      { path: '/reportes', label: 'Reportes', icon: BarChart3, feature: 'reports' },
+      { path: '/finanzas', label: 'Cerebro BI', permission: 'canManageFinances' },
+      { path: '/ventas', label: 'Movimientos', icon: FileText },
+      { path: '/caja', label: 'Caja Chica', icon: Vault, feature: 'cashRegister', permission: 'canManageFinances' },
+      { path: '/reportes', label: 'Reportes y Metas', icon: BarChart3, feature: 'reports' },
     ]
   },
   {

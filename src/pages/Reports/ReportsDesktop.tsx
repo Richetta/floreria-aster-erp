@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     TrendingUp,
     TrendingDown,
@@ -8,18 +8,52 @@ import {
     Package,
     Download,
     Calendar,
-    Filter
+    Filter,
+    Edit2,
+    Check,
+    X,
+    Target,
+    Scale,
+    AlertCircle
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../../components/ui/Modals';
+import { analyzeFinances } from '../Finances/utils/financesAnalyzer';
 import './ReportsDesktop.css';
 
 type Period = 'today' | 'week' | 'month' | 'custom';
 
 export const ReportsDesktop = () => {
+    const transactions = useStore((state) => state.transactions);
+    const customers = useStore((state) => state.customers);
+    const orders = useStore((state) => state.orders) || [];
+    const products = useStore((state) => state.products) || [];
+    const loadTransactions = useStore((state) => state.loadTransactions);
+    const loadCustomers = useStore((state) => state.loadCustomers);
+    const loadOrders = useStore((state) => state.loadOrders);
+
+    const [monthlyGoal, setMonthlyGoal] = useState<number>(() => {
+        const stored = localStorage.getItem('finances_monthly_goal');
+        return stored ? parseFloat(stored) : 1500000;
+    });
+    const [isEditingGoal, setIsEditingGoal] = useState(false);
+    const [goalInput, setGoalInput] = useState(monthlyGoal.toString());
+
+    const [fixedCosts, setFixedCosts] = useState<number>(() => {
+        const stored = localStorage.getItem('finances_fixed_costs');
+        return stored ? parseFloat(stored) : 350000;
+    });
+    const [isEditingFixedCosts, setIsEditingFixedCosts] = useState(false);
+    const [fixedCostsInput, setFixedCostsInput] = useState(fixedCosts.toString());
+
+    const [wasteLogs] = useState<any[]>([]);
+    const analytics = useMemo(() => {
+        return analyzeFinances(transactions, orders, products, customers, wasteLogs, fixedCosts);
+    }, [transactions, orders, products, customers, wasteLogs, fixedCosts]);
+
     const [period, setPeriod] = useState<Period>('month');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
@@ -67,6 +101,13 @@ export const ReportsDesktop = () => {
             const { from, to } = getDateRange();
 
             try {
+                // Load general finances ledger datasets in parallel
+                await Promise.allSettled([
+                    loadTransactions(),
+                    loadCustomers(),
+                    loadOrders ? loadOrders() : Promise.resolve()
+                ]);
+
                 if (activeTab === 'sales') {
                     const [summary, byPeriod] = await Promise.all([
                         api.getSalesSummary(from, to),
@@ -178,6 +219,130 @@ export const ReportsDesktop = () => {
                             />
                         </div>
                     )}
+                </div>
+            </div>
+
+            {/* TARGET TRACKER & BREAK-EVEN ANALYZER ROW */}
+            <div className="reports-executive-grid mb-6" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                {/* Target Tracker */}
+                <div className="bi-card goal-card" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.5)', padding: '1.25rem', borderRadius: '16px' }}>
+                    <div className="bi-card-header mb-3" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Target size={20} className="text-primary" style={{ color: '#4F7A5A' }} />
+                            <h2 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0, color: '#1e293b' }}>Meta Mensual de Ventas (Target Tracker)</h2>
+                        </div>
+                        
+                        {!isEditingGoal ? (
+                            <button onClick={() => { setGoalInput(monthlyGoal.toString()); setIsEditingGoal(true); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748b', fontSize: '0.8rem', gap: '4px' }}>
+                                <Edit2 size={12} />
+                                Ajustar Meta
+                            </button>
+                        ) : (
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                                <input
+                                    type="number"
+                                    value={goalInput}
+                                    onChange={e => setGoalInput(e.target.value)}
+                                    style={{ width: '100px', padding: '2px 6px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                />
+                                <button onClick={() => {
+                                    const val = parseFloat(goalInput);
+                                    if (val > 0) {
+                                        setMonthlyGoal(val);
+                                        localStorage.setItem('finances_monthly_goal', val.toString());
+                                    }
+                                    setIsEditingGoal(false);
+                                }} style={{ background: '#4F7A5A', color: 'white', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer' }}><Check size={12} /></button>
+                                <button onClick={() => setIsEditingGoal(false)} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer' }}><X size={12} /></button>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="goal-body">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                Facturado este mes: <strong style={{ color: '#1e293b' }}>${analytics.totalIncome.toLocaleString()}</strong>
+                            </span>
+                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                Meta: <strong style={{ color: '#1e293b' }}>${monthlyGoal.toLocaleString()}</strong>
+                            </span>
+                        </div>
+                        
+                        {/* Progress bar */}
+                        <div style={{ width: '100%', height: '14px', background: '#e2e8f0', borderRadius: '7px', overflow: 'hidden', position: 'relative', marginBottom: '8px' }}>
+                            <div style={{
+                                width: `${Math.min(100, (analytics.totalIncome / monthlyGoal) * 100)}%`,
+                                height: '100%',
+                                background: 'linear-gradient(90deg, #4F7A5A 0%, #608d6d 100%)',
+                                borderRadius: '7px',
+                                transition: 'width 0.4s ease'
+                            }}></div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                            <span style={{ fontWeight: 'bold', color: '#4F7A5A' }}>
+                                {((analytics.totalIncome / monthlyGoal) * 100).toFixed(0)}% Alcanzado
+                            </span>
+                            <span style={{ color: '#475569', fontStyle: 'italic' }}>
+                                {analytics.totalIncome >= monthlyGoal ? '¡Excelente! Meta superada 🥳' : '¡Fuerza! Cada venta cuenta 🌸'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Break-Even Analyzer */}
+                <div className="bi-card break-even-card" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.5)', padding: '1.25rem', borderRadius: '16px' }}>
+                    <div className="bi-card-header mb-3" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Scale size={20} className="text-amber-500" style={{ color: '#b45309' }} />
+                            <h2 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0, color: '#1e293b' }}>Punto de Equilibrio (Break-Even)</h2>
+                        </div>
+                        
+                        {!isEditingFixedCosts ? (
+                            <button onClick={() => { setFixedCostsInput(fixedCosts.toString()); setIsEditingFixedCosts(true); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748b', fontSize: '0.8rem', gap: '4px' }}>
+                                <Edit2 size={12} />
+                                Ajustar Costos Fijos
+                            </button>
+                        ) : (
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                                <input
+                                    type="number"
+                                    value={fixedCostsInput}
+                                    onChange={e => setFixedCostsInput(e.target.value)}
+                                    style={{ width: '100px', padding: '2px 6px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                />
+                                <button onClick={() => {
+                                    const val = parseFloat(fixedCostsInput);
+                                    if (val > 0) {
+                                        setFixedCosts(val);
+                                        localStorage.setItem('finances_fixed_costs', val.toString());
+                                    }
+                                    setIsEditingFixedCosts(false);
+                                }} style={{ background: '#b45309', color: 'white', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer' }}><Check size={12} /></button>
+                                <button onClick={() => setIsEditingFixedCosts(false)} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer' }}><X size={12} /></button>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="break-even-body">
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div style={{ padding: '8px', background: 'rgba(255,255,255,0.3)', borderRadius: '8px' }}>
+                                <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Costos Fijos del Mes</span>
+                                <strong style={{ fontSize: '1.1rem', color: '#be123c' }}>${fixedCosts.toLocaleString()}</strong>
+                            </div>
+                            <div style={{ padding: '8px', background: 'rgba(255,255,255,0.3)', borderRadius: '8px' }}>
+                                <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Punto de Equilibrio</span>
+                                <strong style={{ fontSize: '1.1rem', color: '#166534' }}>${fixedCosts.toLocaleString()}</strong>
+                            </div>
+                        </div>
+                        
+                        <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#475569', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <AlertCircle size={14} className="text-amber-500" style={{ color: '#d97706' }} />
+                            <span>
+                                Necesitás concretar <strong style={{ color: '#1e293b' }}>{(fixedCosts / (analytics.ticketPromedio || 4500)).toFixed(0)} pedidos</strong> de ${Math.round(analytics.ticketPromedio || 4500).toLocaleString()} promedio para cubrir gastos.
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
 

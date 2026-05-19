@@ -3,16 +3,24 @@ import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../../components/ui/Modals';
+import { analyzeFinances } from '../Finances/utils/financesAnalyzer';
 import './CashRegisterMobile.css';
 
 export const CashRegisterMobile = () => {
+    const transactions = useStore((state) => state.transactions);
+    const customers = useStore((state) => state.customers);
+    const orders = useStore((state) => state.orders) || [];
+    const products = useStore((state) => state.products);
+    const packages = useStore((state) => state.packages);
+    const loadTransactions = useStore((state) => state.loadTransactions);
+    const loadCustomers = useStore((state) => state.loadCustomers);
+    const loadOrders = useStore((state) => state.loadOrders);
+
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [dailySummary, setDailySummary] = useState<any>(null);
     const [cashInDrawer, setCashInDrawer] = useState<any>(null);
     const [cashStatus, setCashStatus] = useState<any>(null);
     const shopInfo = useStore((state) => state.shopInfo);
-    const products = useStore((state) => state.products);
-    const packages = useStore((state) => state.packages);
 
     // Modal states
     const [showOpeningModal, setShowOpeningModal] = useState(false);
@@ -34,6 +42,13 @@ export const CashRegisterMobile = () => {
             setCashStatus(status);
             setDailySummary(summary);
             setCashInDrawer(drawer);
+
+            // Sync finance stores
+            await Promise.allSettled([
+                loadTransactions(),
+                loadCustomers(),
+                loadOrders ? loadOrders() : Promise.resolve()
+            ]);
         } catch (error) {
             console.error('CajaMobile: Error loading data', error);
         }
@@ -42,6 +57,11 @@ export const CashRegisterMobile = () => {
     useEffect(() => {
         loadData();
     }, [selectedDate]);
+
+    // Live analytics computation for multi-boxes
+    const [wasteLogs] = useState<any[]>([]);
+    const [fixedCosts] = useState<number>(350000);
+    const analytics = analyzeFinances(transactions, orders, products, customers, wasteLogs, fixedCosts);
 
     const handleOpenCaja = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -81,14 +101,14 @@ export const CashRegisterMobile = () => {
     };
 
     const formatCurrency = (val: number) => {
-        return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val || 0);
+        return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val || 0);
     };
 
     return (
         <div className="cash-mobile-wrapper">
             <header className="mobile-cash-header">
                 <div className="cash-header-top">
-                    <h2>Caja</h2>
+                    <h2>Caja Chica</h2>
                     <div className="date-picker-wrap">
                         <input
                             type="date"
@@ -109,10 +129,28 @@ export const CashRegisterMobile = () => {
             </header>
 
             <div className="cash-scroll-content">
+                {/* Live treasury multi-boxes availability */}
+                <section className="m-treasury-section" style={{ padding: '8px', marginBottom: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                        <div style={{ background: '#f0fdf4', padding: '8px', borderRadius: '8px', border: '1px solid #bbf7d0', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', display: 'block', color: '#166534', fontWeight: 'bold' }}>💵 Efectivo</span>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#166534' }}>{formatCurrency(analytics.treasury.cash)}</span>
+                        </div>
+                        <div style={{ background: '#f0f9ff', padding: '8px', borderRadius: '8px', border: '1px solid #bae6fd', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', display: 'block', color: '#075985', fontWeight: 'bold' }}>📱 MPago</span>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#0284c7' }}>{formatCurrency(analytics.treasury.mercadopago)}</span>
+                        </div>
+                        <div style={{ background: '#faf5ff', padding: '8px', borderRadius: '8px', border: '1px solid #e9d5ff', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', display: 'block', color: '#6b21a8', fontWeight: 'bold' }}>🏦 Banco</span>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#7e22ce' }}>{formatCurrency(analytics.treasury.bank)}</span>
+                        </div>
+                    </div>
+                </section>
+
                 {/* Main Balance Card */}
                 {cashInDrawer && (
                     <section className="cash-balance-hero">
-                        <div className="hero-label">Efectivo en Caja</div>
+                        <div className="hero-label">Fondo Físico en Local</div>
                         <div className="hero-value">{formatCurrency(cashInDrawer.cash_in_drawer)}</div>
                         <div className="hero-footer">
                             <span>Inicial: {formatCurrency(cashInDrawer.opening_balance)}</span>

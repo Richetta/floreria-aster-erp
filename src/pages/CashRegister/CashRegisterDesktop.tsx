@@ -17,9 +17,18 @@ import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../../components/ui/Modals';
+import { analyzeFinances } from '../Finances/utils/financesAnalyzer';
 import './CashRegister.css';
 
 export const CashRegisterDesktop = () => {
+    const transactions = useStore((state) => state.transactions);
+    const customers = useStore((state) => state.customers);
+    const orders = useStore((state) => state.orders) || [];
+    const products = useStore((state) => state.products) || [];
+    const loadTransactions = useStore((state) => state.loadTransactions);
+    const loadCustomers = useStore((state) => state.loadCustomers);
+    const loadOrders = useStore((state) => state.loadOrders);
+
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [dailySummary, setDailySummary] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -27,8 +36,6 @@ export const CashRegisterDesktop = () => {
     const [showClosingModal, setShowClosingModal] = useState(false);
     const [showOpeningModal, setShowOpeningModal] = useState(false);
     const shopInfo = useStore((state) => state.shopInfo);
-    const products = useStore((state) => state.products);
-    const packages = useStore((state) => state.packages);
     const [openingData, setOpeningData] = useState({
         opening_balance: 0,
         notes: ''
@@ -44,6 +51,11 @@ export const CashRegisterDesktop = () => {
 
     const { alertModal, showAlert } = useModal();
 
+    const packages = useStore((state) => state.packages) || [];
+    const [wasteLogs] = useState<any[]>([]);
+    const [fixedCosts] = useState<number>(350000);
+    const analytics = analyzeFinances(transactions, orders, products, customers, wasteLogs, fixedCosts);
+
     // Load daily summary
     useEffect(() => {
         const loadData = async () => {
@@ -56,6 +68,13 @@ export const CashRegisterDesktop = () => {
                 // Load summary
                 const summary = await api.getDailySummary(selectedDate);
                 setDailySummary(summary);
+
+                // Load general finances ledger datasets
+                await Promise.allSettled([
+                    loadTransactions(),
+                    loadCustomers(),
+                    loadOrders ? loadOrders() : Promise.resolve()
+                ]);
             } catch (error) {
                 console.error('Error loading data:', error);
             } finally {
@@ -215,6 +234,40 @@ export const CashRegisterDesktop = () => {
                     </button>
                 </div>
             </header>
+
+            {/* Live Availability Cajas de Tesorería */}
+            <div className="bi-card treasury-card mb-6" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.5)', padding: '1.25rem', borderRadius: '16px' }}>
+                <div className="bi-card-header mb-4" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Wallet size={18} className="text-emerald" style={{ color: '#10b981' }} />
+                    <h2 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0, color: '#1e293b' }}>Cajas de Tesorería (Disponibilidad en Vivo)</h2>
+                </div>
+                <div className="treasury-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                    <div className="treasury-box box-cash" style={{ background: '#f0fdf4', padding: '1rem', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                        <div className="tbox-header" style={{ display: 'flex', gap: '6px', fontSize: '0.85rem', color: '#166534', fontWeight: 'bold', marginBottom: '4px' }}>
+                            <span>💵</span>
+                            <span>Caja Chica (Efectivo)</span>
+                        </div>
+                        <h3 className="tbox-amount" style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#166534', margin: '4px 0' }}>{formatCurrency(analytics.treasury.cash)}</h3>
+                        <div className="tbox-footer" style={{ fontSize: '0.75rem', color: '#15803d' }}>Fondos físicos en local</div>
+                    </div>
+                    <div className="treasury-box box-mp" style={{ background: '#f0f9ff', padding: '1rem', borderRadius: '12px', border: '1px solid #bae6fd' }}>
+                        <div className="tbox-header" style={{ display: 'flex', gap: '6px', fontSize: '0.85rem', color: '#075985', fontWeight: 'bold', marginBottom: '4px' }}>
+                            <span>📱</span>
+                            <span>Mercado Pago</span>
+                        </div>
+                        <h3 className="tbox-amount text-blue" style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#0284c7', margin: '4px 0' }}>{formatCurrency(analytics.treasury.mercadopago)}</h3>
+                        <div className="tbox-footer" style={{ fontSize: '0.75rem', color: '#0369a1' }}>Liquidez digital / QR</div>
+                    </div>
+                    <div className="treasury-box box-bank" style={{ background: '#faf5ff', padding: '1rem', borderRadius: '12px', border: '1px solid #e9d5ff' }}>
+                        <div className="tbox-header" style={{ display: 'flex', gap: '6px', fontSize: '0.85rem', color: '#6b21a8', fontWeight: 'bold', marginBottom: '4px' }}>
+                            <span>🏦</span>
+                            <span>Banco & Transf.</span>
+                        </div>
+                        <h3 className="tbox-amount text-purple" style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#7e22ce', margin: '4px 0' }}>{formatCurrency(analytics.treasury.bank)}</h3>
+                        <div className="tbox-footer" style={{ fontSize: '0.75rem', color: '#6b21a8' }}>Cuentas y cobro tarjeta</div>
+                    </div>
+                </div>
+            </div>
 
             {/* Date Selector */}
             <div className="card mb-6">
