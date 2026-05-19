@@ -1126,3 +1126,676 @@
     color: #B0B0B0;
     font-weight: 600;
 }
+
+/* ==========================================================================
+   ADVANCED FINANCES COCKPIT / BUSINESS INTELLIGENCE STYLES
+   ========================================================================== */
+
+/* Tabs Navigation */
+.finances-tabs {
+    display: flex;
+    background: #eae8e3;
+    padding: 0.25rem;
+    border-radius: 12px;
+    gap: 0.25rem;
+}
+
+.tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tab-btn:hover {
+    color: #334155;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.tab-btn.active {
+    color: #4F7A5A;
+    background: white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Grids and Layouts */
+.finances-main-grid {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 1.5rem;
+    animation: pageFadeIn 0.4s ease-out;
+}
+
+@media (max-width: 1100px) {
+    .finances-main-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.finances-column-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.finances-column-right {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.bi-grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+
+@media (max-width: 600px) {
+    .bi-grid-two {
+        grid-template-columns: 1fr;
+    }
+}
+
+.bi-card {
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    border: 1px solid #EAE8E3;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+.bi-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.bi-card-header h2 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.bi-card-header h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #475569;
+    margin: 0;
+}
+
+/* Smart Alerts */
+.alerts-card {
+    border-left: 5px solid #f97316;
+}
+
+.alerts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.smart-alert {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-radius: 14px;
+    border: 1.5px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.smart-alert:hover {
+    transform: translateX(3px);
+}
+
+.smart-alert.alert-danger {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+
+.smart-alert.alert-warning {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+.smart-alert.alert-success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.alert-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-content h3 {
+    margin: 0 0 0.15rem 0;
+    font-size: 0.875rem;
+    font-weight: 800;
+}
+
+.alert-content p {
+    margin: 0;
+    font-size: 0.775rem;
+    line-height: 1.4;
+    font-weight: 550;
+    opacity: 0.9;
+}
+
+/* Colors Utilities */
+.text-orange { color: #f97316; }
+.text-amber { color: #d97706; }
+.text-red { color: #ef4444; }
+.text-blue { color: #3b82f6; }
+.text-sage { color: #4F7A5A; }
+.text-emerald { color: #10b981; }
+.text-purple { color: #8b5cf6; }
+
+/* Large metrics cards */
+.metric-large {
+    font-size: 1.75rem;
+    font-weight: 900;
+    color: #1e293b;
+    margin: 0 0 0.25rem 0;
+    letter-spacing: -0.02em;
+}
+
+.metric-large.red-text {
+    color: #ef4444;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+/* VIP Customers List */
+.vip-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.vip-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.65rem 0.85rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+}
+
+.vip-rank {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.vip-item:nth-child(1) .vip-rank {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.vip-item:nth-child(2) .vip-rank {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.vip-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.vip-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.vip-orders {
+    font-size: 0.7rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.vip-amount {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #4f7a5a;
+}
+
+/* Payment Methods Breakdown */
+.methods-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.method-flow-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.method-flow-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.flow-method-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.825rem;
+    font-weight: 700;
+    color: #334155;
+}
+
+.flow-amounts {
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.font-green { color: #166534; }
+.font-red { color: #991b1b; }
+
+/* Planning & Sales Targets */
+.target-progress-card {
+    border-left: 5px solid #10b981;
+}
+
+.target-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.target-title-block {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.target-title-block h2 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0;
+}
+
+.target-title-block p {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.goal-settings-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.goal-settings-btn:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.goal-edit-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.goal-input-inline {
+    width: 100px;
+    padding: 0.25rem 0.5rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    outline: none;
+}
+
+.goal-save-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: #10b981;
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* Gamified Progress Bar */
+.gamified-progress-bar-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.progress-labels {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.progress-current {
+    color: #10b981;
+    font-size: 1.1rem;
+}
+
+.progress-max {
+    color: #64748b;
+}
+
+.progress-percent-badge {
+    background: #d1fae5;
+    color: #065f46;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+}
+
+.progress-bar-track {
+    width: 100%;
+    height: 12px;
+    background: #e2e8f0;
+    border-radius: 100px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981 0%, #34d399(129, 212, 170) 100%);
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+    border-radius: 100px;
+    position: relative;
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.progress-bar-fill.gold-glow {
+    background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.star-sparkle {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    animation: spinSparkle 3s linear infinite;
+}
+
+@keyframes spinSparkle {
+    to { transform: translateY(-50%) rotate(360deg); }
+}
+
+.progress-motivation-text {
+    font-size: 0.75rem;
+    color: #475569;
+    font-weight: 550;
+    line-height: 1.4;
+}
+
+/* Seasonality details */
+.season-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.season-tag {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.season-intensity {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 0.25rem 0.65rem;
+    border-radius: 6px;
+}
+
+.season-intensity.alta {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.season-intensity.media {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.season-intensity.baja {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.season-desc {
+    font-size: 0.825rem;
+    color: #475569;
+    line-height: 1.45;
+    margin: 0 0 1.25rem 0;
+    font-weight: 550;
+}
+
+.season-countdown-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #faf5ff;
+    border: 1px solid #f3e8ff;
+    padding: 1rem;
+    border-radius: 16px;
+    margin-bottom: 1.25rem;
+}
+
+.countdown-number {
+    font-size: 2.25rem;
+    font-weight: 900;
+    color: #8b5cf6;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.countdown-info h4 {
+    margin: 0 0 0.15rem 0;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #581c87;
+}
+
+.countdown-info p {
+    margin: 0;
+    font-size: 0.725rem;
+    color: #7e22ce;
+    font-weight: 550;
+}
+
+.recommended-actions h4 {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0 0 0.5rem 0;
+}
+
+.recommended-actions ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.recommended-actions li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.775rem;
+    font-weight: 550;
+    color: #475569;
+    line-height: 1.35;
+}
+
+.recommended-actions li svg {
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+}
+
+/* Linear Forecasting Trend styles */
+.forecast-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 16px;
+    margin-bottom: 1.25rem;
+    position: relative;
+}
+
+.forecast-label {
+    font-size: 0.725rem;
+    font-weight: 700;
+    color: #166534;
+    text-transform: uppercase;
+}
+
+.forecast-val {
+    font-size: 1.85rem;
+    font-weight: 900;
+    color: #166534;
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.forecast-trend {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0.25rem 0.65rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.forecast-trend.trend-up {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.forecast-trend.trend-down {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.forecast-trend.trend-flat {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.forecast-interpretation {
+    font-size: 0.8rem;
+    color: #334155;
+    line-height: 1.45;
+    margin-bottom: 1.25rem;
+    font-weight: 550;
+}
+
+.forecast-meta-info {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.675rem;
+    color: #64748b;
+    line-height: 1.35;
+    font-weight: 500;
+}
+
+.forecast-meta-info svg {
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+/* Extra Margin utilities */
+.mt-4 { margin-top: 1rem; }
+.collect-all-btn-sm {
+    background: white;
+    border: 1px solid #FFB74D;
+    color: #E65100;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.collect-all-btn-sm:hover {
+    background: #E65100;
+    color: white;
+    border-color: #E65100;
+}

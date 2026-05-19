@@ -2,25 +2,35 @@ import { useState, useEffect } from 'react';
 import {
     DollarSign,
     TrendingUp,
-    TrendingDown,
     Plus,
     AlertCircle,
     ArrowUpRight,
     ArrowDownLeft,
     Wallet,
-    Calendar,
     Users,
     Receipt,
     X,
     Check,
     CreditCard,
     Banknote,
-    ChevronDown
+    ChevronDown,
+    Target,
+    Sparkles,
+    Clock,
+    Settings,
+    AlertTriangle,
+    CheckCircle2,
+    CalendarDays,
+    Hourglass,
+    Trash2,
+    TrendingUp as TrendUpIcon
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useModal } from '../../hooks/useModal';
 import { ConfirmModal } from '../../components/ui/Modals';
+import { api, type WasteLog } from '../../services/api';
+import { analyzeFinances } from './utils/financesAnalyzer';
 import './Finances.css';
 
 // --- UTILS ---
@@ -176,11 +186,24 @@ const DebtorCard = ({ debtor, onCollect }: { debtor: any; onCollect: (id: string
 export const FinancesDesktop = () => {
     const transactions = useStore((state) => state.transactions);
     const customers = useStore((state) => state.customers);
+    const orders = useStore((state) => state.orders) || [];
+    const products = useStore((state) => state.products) || [];
     const addTransaction = useStore((state) => state.addTransaction);
     const registerPayment = useStore((state) => state.registerPayment);
     const loadTransactions = useStore((state) => state.loadTransactions);
     const loadCustomers = useStore((state) => state.loadCustomers);
+    const loadOrders = useStore((state) => state.loadOrders);
     const shopInfo = useStore((state) => state.shopInfo);
+
+    // --- COCKPIT STATES ---
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'planning' | 'history'>('dashboard');
+    const [wasteLogs, setWasteLogs] = useState<WasteLog[]>([]);
+    const [monthlyGoal, setMonthlyGoal] = useState<number>(() => {
+        const stored = localStorage.getItem('finances_monthly_goal');
+        return stored ? parseFloat(stored) : 1500000;
+    });
+    const [isEditingGoal, setIsEditingGoal] = useState(false);
+    const [goalInput, setGoalInput] = useState(monthlyGoal.toString());
 
     const [isLoading, setIsLoading] = useState(true);
     const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -199,13 +222,26 @@ export const FinancesDesktop = () => {
     useEffect(() => {
         const loadData = async () => {
             setIsLoading(true);
-            await Promise.all([loadTransactions(), loadCustomers()]);
-            setIsLoading(false);
+            try {
+                await Promise.all([
+                    loadTransactions(), 
+                    loadCustomers(),
+                    loadOrders ? loadOrders() : Promise.resolve()
+                ]);
+                const logs = await api.getWasteLogs({ limit: 100 });
+                setWasteLogs(logs || []);
+            } catch (err) {
+                console.error('[FINANCES DATA LOAD ERROR]', err);
+            } finally {
+                setIsLoading(false);
+            }
         };
         loadData();
     }, []);
 
-    // --- CALCULATIONS ---
+    // --- BUSINESS INTELLIGENCE ENGINE ---
+    const analytics = analyzeFinances(transactions, orders, products, customers, wasteLogs);
+
     const transactionsByMethod = (transactions || []).reduce((acc: any, t) => {
         const method = t.method || 'cash';
         if (!acc[method]) acc[method] = { income: 0, expense: 0 };
@@ -214,15 +250,25 @@ export const FinancesDesktop = () => {
         return acc;
     }, {});
 
-    const totalIncome = (transactions || []).filter(t => t.type === 'income').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    const totalExpense = (transactions || []).filter(t => t.type === 'expense').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    const netBalance = totalIncome - totalExpense;
+    const totalIncome = analytics.totalIncome;
     const totalDebt = (customers || []).reduce((sum, c) => sum + (Number(c.debtBalance) || 0), 0);
     const debtors = (customers || []).filter(c => (Number(c.debtBalance) || 0) > 0).sort((a, b) => (Number(b.debtBalance) || 0) - (Number(a.debtBalance) || 0));
     const incomeCount = (transactions || []).filter(t => t.type === 'income').length;
     const expenseCount = (transactions || []).filter(t => t.type === 'expense').length;
 
+    // --- GOAL PROGRESS ---
+    const goalPercentage = Math.min(100, Math.round((totalIncome / monthlyGoal) * 100));
+
     // --- HANDLERS ---
+    const handleSaveGoal = () => {
+        const parsed = parseFloat(goalInput);
+        if (parsed > 0) {
+            setMonthlyGoal(parsed);
+            localStorage.setItem('finances_monthly_goal', parsed.toString());
+            setIsEditingGoal(false);
+        }
+    };
+
     const handleAddExpense = async (e: React.FormEvent) => {
         e.preventDefault();
         const amt = parseFloat(expenseForm.amount);
@@ -299,8 +345,6 @@ export const FinancesDesktop = () => {
         setPaymentModal({ isOpen: true, customerId, amount, method: shopInfo.paymentMethods?.[0]?.name || 'cash' });
     };
 
-    // Payment method breakdown data - handled dynamically in the JSX breakdown section
-
     return (
         <div className="finances-page">
             {/* Loading State */}
@@ -313,201 +357,434 @@ export const FinancesDesktop = () => {
                 </div>
             )}
 
-            {/* Page Header */}
+            {/* Premium Header */}
             <header className="finances-header">
                 <div className="header-left">
                     <div className="header-icon">
-                        <Wallet size={28} />
+                        <Wallet size={24} />
                     </div>
                     <div className="header-text">
-                        <h1>Movimientos</h1>
-                        <p>Control de ingresos, egresos y cuentas pendientes</p>
+                        <h1>Cerebro de Finanzas</h1>
+                        <p>Control estratégico y panel inteligente de Mi Jardín</p>
                     </div>
                 </div>
+                
+                {/* Navigation Tabs */}
+                <div className="finances-tabs">
+                    <button 
+                        className={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('dashboard')}
+                    >
+                        <Sparkles size={16} />
+                        Panel Inteligente
+                    </button>
+                    <button 
+                        className={`tab-btn ${activeTab === 'planning' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('planning')}
+                    >
+                        <Target size={16} />
+                        Metas y Proyecciones
+                    </button>
+                    <button 
+                        className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('history')}
+                    >
+                        <Clock size={16} />
+                        Libro Diario
+                    </button>
+                </div>
+
                 <button className="btn-add-expense" onClick={() => setShowExpenseModal(true)}>
                     <Plus size={18} />
                     Registrar Gasto
                 </button>
             </header>
 
-            {/* Summary Cards */}
+            {/* Smart Summary KPIs Cards */}
             <div className="summary-cards">
-                {/* Income Card */}
+                {/* Net Income Card */}
                 <div className="summary-card card-income">
                     <div className="card-top">
                         <div className="card-badge">
                             <TrendingUp size={14} />
-                            Ingresos
+                            Ingresos Totales
                         </div>
-                        <span className="card-count">{incomeCount} movimientos</span>
+                        <span className="card-count">{incomeCount} ventas</span>
                     </div>
                     <div className="card-amount amount-green">{formatCurrency(totalIncome)}</div>
-                    <div className="card-breakdown">
-                        {Object.entries(transactionsByMethod).filter(([_, val]: any) => val.income > 0).map(([method, val]: any) => {
-                            const methodConfig = shopInfo.paymentMethods?.find(m => m.name === method || m.id === method);
-                            return (
-                                <div key={method} className="breakdown-item">
-                                    {methodConfig?.type === 'cash' ? <Banknote size={12} style={{ color: '#4CAF50' }} /> : <CreditCard size={12} style={{ color: '#3B82F6' }} />}
-                                    <span>{methodConfig?.name || method}</span>
-                                    <strong>{formatCurrency(val.income)}</strong>
-                                </div>
-                            );
-                        })}
+                    <div className="card-footer-text">
+                        {goalPercentage >= 80 ? '🔥 ¡Excelente ritmo de ventas!' : '💪 Sigamos impulsando la temporada'}
                     </div>
                 </div>
 
-                {/* Expense Card */}
-                <div className="summary-card card-expense">
-                    <div className="card-top">
-                        <div className="card-badge badge-red">
-                            <TrendingDown size={14} />
-                            Egresos
-                        </div>
-                        <span className="card-count">{expenseCount} movimientos</span>
-                    </div>
-                    <div className="card-amount amount-red">{formatCurrency(totalExpense)}</div>
-                    <div className="card-breakdown">
-                        {Object.entries(transactionsByMethod).filter(([_, val]: any) => val.expense > 0).map(([method, val]: any) => {
-                            const methodConfig = shopInfo.paymentMethods?.find(m => m.name === method || m.id === method);
-                            return (
-                                <div key={method} className="breakdown-item">
-                                    {methodConfig?.type === 'cash' ? <Banknote size={12} style={{ color: '#E57373' }} /> : <CreditCard size={12} style={{ color: '#FFA726' }} />}
-                                    <span>{methodConfig?.name || method}</span>
-                                    <strong>{formatCurrency(val.expense)}</strong>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Balance Card */}
+                {/* Ticket Promedio */}
                 <div className="summary-card card-balance">
                     <div className="card-top">
                         <div className="card-badge badge-sage">
                             <DollarSign size={14} />
-                            Balance
+                            Ticket Promedio
                         </div>
-                        <div className="balance-indicator">
-                            <Calendar size={12} />
-                            <span>Hoy</span>
-                        </div>
+                        <span className="card-count">Pedido Medio</span>
                     </div>
-                    <div className={`card-amount ${netBalance >= 0 ? 'amount-sage' : 'amount-red'}`}>
-                        {formatCurrency(netBalance)}
-                    </div>
-                    <div className="card-footer-text">
-                        {netBalance >= 0 ? 'Balance positivo ✓' : 'Balance negativo ⚠'}
-                    </div>
+                    <div className="card-amount amount-sage">{formatCurrency(analytics.ticketPromedio)}</div>
+                    <div className="card-footer-text">Valor medio por cada venta</div>
                 </div>
 
-                {/* Debt Card */}
+                {/* Margen de Ganancia */}
                 <div className="summary-card card-debt">
                     <div className="card-top">
                         <div className="card-badge badge-amber">
+                            <Sparkles size={14} />
+                            Margen Estimado
+                        </div>
+                        <span className="card-count">Retorno Neto</span>
+                    </div>
+                    <div className="card-amount amount-amber">{analytics.estimatedProfitMargin}%</div>
+                    <div className="card-footer-text">
+                        Promedio bruto sobre costos
+                    </div>
+                </div>
+
+                {/* Deudas Clientes */}
+                <div className="summary-card card-expense">
+                    <div className="card-top">
+                        <div className="card-badge badge-red">
                             <AlertCircle size={14} />
                             Cuentas Fiadas
                         </div>
-                        <span className="card-count">{debtors.length} clientes</span>
+                        <span className="card-count">{debtors.length} morosos</span>
                     </div>
-                    <div className="card-amount amount-amber">{formatCurrency(totalDebt)}</div>
+                    <div className="card-amount amount-red">{formatCurrency(totalDebt)}</div>
                     <div className="card-footer-text">
-                        {totalDebt > 0 && (
-                            <button className="collect-all-btn" onClick={handleCollectAll}>
+                        {totalDebt > 0 ? (
+                            <button className="collect-all-btn-sm" onClick={handleCollectAll}>
                                 Cobrar todas las cuentas
                             </button>
-                        )}
-                        {totalDebt === 0 && <span>✨ Sin deudas pendientes</span>}
+                        ) : '✨ Todo cobrado y al día'}
                     </div>
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="finances-main">
-                {/* Transactions Section */}
-                <section className="finances-section transactions-section">
-                    <div className="section-header">
-                        <div className="section-title">
-                            <Receipt size={20} />
-                            <h2>Historial de Movimientos</h2>
+            {/* TAB CONTENT: DASHBOARD */}
+            {activeTab === 'dashboard' && (
+                <div className="finances-main-grid">
+                    {/* Left Column: Alerts & Operational Health */}
+                    <div className="finances-column-left">
+                        {/* Smart Alerts Box */}
+                        <div className="bi-card alerts-card">
+                            <div className="bi-card-header">
+                                <AlertTriangle size={20} className="text-orange" />
+                                <h2>Centro de Control Estratégico</h2>
+                            </div>
+                            <div className="alerts-container">
+                                {analytics.alertas.map(alert => (
+                                    <div key={alert.id} className={`smart-alert alert-${alert.type}`}>
+                                        <div className="alert-icon-wrap">
+                                            <span className="material-symbols-rounded">{alert.icon}</span>
+                                        </div>
+                                        <div className="alert-content">
+                                            <h3>{alert.title}</h3>
+                                            <p>{alert.description}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                        <div className="section-badges">
-                            <span className="badge-green">{incomeCount} ingresos</span>
-                            <span className="badge-red">{expenseCount} egresos</span>
+
+                        {/* Inventory & Flower Waste Diagnostics */}
+                        <div className="bi-grid-two">
+                            <div className="bi-card">
+                                <div className="bi-card-header">
+                                    <Hourglass size={18} className="text-amber" />
+                                    <h3>Capital Inmovilizado</h3>
+                                </div>
+                                <div className="bi-card-body">
+                                    <h4 className="metric-large">{formatCurrency(analytics.dineroInmovilizado)}</h4>
+                                    <p className="metric-label">Dinero atascado en flores o plantas sin rotar en 30 días.</p>
+                                </div>
+                            </div>
+
+                            <div className="bi-card">
+                                <div className="bi-card-header">
+                                    <Trash2 size={18} className="text-red" />
+                                    <h3>Costo de Mermas</h3>
+                                </div>
+                                <div className="bi-card-body">
+                                    <h4 className="metric-large red-text">{formatCurrency(analytics.costoMermas)}</h4>
+                                    <p className="metric-label">Pérdida neta de capital floral por desperdicio o marchitado.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="transactions-grid">
-                        {/* Income Column */}
-                        <div className="transactions-column">
-                            <div className="column-header header-green">
-                                <div className="header-dot dot-green"></div>
-                                <span>Ingresos</span>
+                    {/* Right Column: VIP Clients & Sales Channels */}
+                    <div className="finances-column-right">
+                        {/* VIP Customers */}
+                        <div className="bi-card vip-card">
+                            <div className="bi-card-header">
+                                <Users size={18} className="text-sage" />
+                                <h2>Top Clientes del Negocio (VIP)</h2>
                             </div>
-                            <div className="transactions-list">
-                                {(transactions || []).filter(t => t.type === 'income').length === 0 ? (
-                                    <div className="empty-column">
-                                        <div className="empty-icon">📥</div>
-                                        <p>Sin ingresos aún</p>
-                                    </div>
+                            <div className="vip-list">
+                                {analytics.vipCustomers.length === 0 ? (
+                                    <p className="empty-label">Registra tus primeros pedidos para identificar clientes recurrentes.</p>
                                 ) : (
-                                    [...(transactions || [])].filter(t => t.type === 'income').map(t => (
-                                        <TransactionItem key={t.id} t={t} />
+                                    analytics.vipCustomers.map((vip, idx) => (
+                                        <div key={vip.id} className="vip-item">
+                                            <div className="vip-rank">{idx + 1}</div>
+                                            <div className="vip-info">
+                                                <span className="vip-name">{vip.name}</span>
+                                                <span className="vip-orders">{vip.orderCount} compras</span>
+                                            </div>
+                                            <div className="vip-amount">{formatCurrency(vip.totalSpent)}</div>
+                                        </div>
                                     ))
                                 )}
                             </div>
                         </div>
 
-                        {/* Expense Column */}
-                        <div className="transactions-column">
-                            <div className="column-header header-red">
-                                <div className="header-dot dot-red"></div>
-                                <span>Egresos</span>
+                        {/* Breakdown by Payment Methods */}
+                        <div className="bi-card methods-card">
+                            <div className="bi-card-header">
+                                <CreditCard size={18} className="text-blue" />
+                                <h2>Flujos por Medio de Cobro</h2>
                             </div>
-                            <div className="transactions-list">
-                                {(transactions || []).filter(t => t.type === 'expense').length === 0 ? (
-                                    <div className="empty-column">
-                                        <div className="empty-icon">📤</div>
-                                        <p>Sin egresos aún</p>
+                            <div className="methods-list">
+                                {Object.entries(transactionsByMethod).map(([method, val]: any) => {
+                                    const methodConfig = shopInfo.paymentMethods?.find(m => m.name === method || m.id === method);
+                                    return (
+                                        <div key={method} className="method-flow-row">
+                                            <div className="flow-method-name">
+                                                {methodConfig?.type === 'cash' ? <Banknote size={14} className="text-green" /> : <CreditCard size={14} className="text-blue" />}
+                                                <span>{methodConfig?.name || method}</span>
+                                            </div>
+                                            <div className="flow-amounts">
+                                                <span className="flow-income font-green">+{formatCurrency(val.income)}</span>
+                                                <span className="flow-expense font-red">-{formatCurrency(val.expense)}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB CONTENT: PLANNING & GOALS */}
+            {activeTab === 'planning' && (
+                <div className="planning-tab-container">
+                    {/* Monthly Targets Card */}
+                    <div className="bi-card target-progress-card">
+                        <div className="target-header-row">
+                            <div className="target-title-block">
+                                <Target size={24} className="text-emerald" />
+                                <div>
+                                    <h2>Meta Mensual de Ventas</h2>
+                                    <p>Gamificación y evolución del negocio</p>
+                                </div>
+                            </div>
+                            <div className="target-actions">
+                                {isEditingGoal ? (
+                                    <div className="goal-edit-input-wrap">
+                                        <input 
+                                            type="number" 
+                                            value={goalInput}
+                                            onChange={e => setGoalInput(e.target.value)}
+                                            className="goal-input-inline"
+                                            autoFocus
+                                        />
+                                        <button className="goal-save-btn" onClick={handleSaveGoal}>
+                                            <Check size={14} />
+                                        </button>
                                     </div>
                                 ) : (
-                                    [...(transactions || [])].filter(t => t.type === 'expense').map(t => (
-                                        <TransactionItem key={t.id} t={t} />
-                                    ))
+                                    <button className="goal-settings-btn" onClick={() => { setGoalInput(monthlyGoal.toString()); setIsEditingGoal(true); }}>
+                                        <Settings size={16} />
+                                        Ajustar Meta
+                                    </button>
                                 )}
                             </div>
                         </div>
-                    </div>
-                </section>
 
-                {/* Debtors Section */}
-                <section className="finances-section debtors-section">
-                    <div className="section-header">
-                        <div className="section-title">
-                            <Users size={20} />
-                            <h2>Cuentas Fiadas</h2>
-                        </div>
-                        {debtors.length > 0 && (
-                            <span className="badge-amber">{debtors.length} pendientes</span>
-                        )}
-                    </div>
-
-                    <div className="debtors-list">
-                        {debtors.length === 0 ? (
-                            <div className="empty-debtors">
-                                <div className="empty-debtors-icon">✅</div>
-                                <h3>¡Todo al día!</h3>
-                                <p>No hay cuentas pendientes</p>
+                        {/* Gamified progress bar */}
+                        <div className="gamified-progress-bar-container">
+                            <div className="progress-labels">
+                                <span className="progress-current">{formatCurrency(totalIncome)}</span>
+                                <span className="progress-percent-badge">{goalPercentage}%</span>
+                                <span className="progress-max">{formatCurrency(monthlyGoal)}</span>
                             </div>
-                        ) : (
-                            debtors.map(d => (
-                                <DebtorCard key={d.id} debtor={d} onCollect={openPaymentModal} />
-                            ))
-                        )}
+                            <div className="progress-bar-track">
+                                <div 
+                                    className={`progress-bar-fill ${goalPercentage >= 100 ? 'gold-glow' : ''}`}
+                                    style={{ width: `${goalPercentage}%` }}
+                                >
+                                    {goalPercentage >= 100 && <Sparkles size={12} className="star-sparkle" />}
+                                </div>
+                            </div>
+                            <div className="progress-motivation-text">
+                                {goalPercentage >= 100 
+                                    ? '🏆 ¡Felicidades! Has superado con creces el objetivo mensual del local.' 
+                                    : `Faltan ${formatCurrency(Math.max(0, monthlyGoal - totalIncome))} para concretar tu meta mensual.`}
+                            </div>
+                        </div>
                     </div>
-                </section>
-            </div>
 
-            {/* Expense Modal */}
+                    <div className="bi-grid-two mt-4">
+                        {/* Florist Seasonality */}
+                        <div className="bi-card seasonality-card">
+                            <div className="bi-card-header">
+                                <CalendarDays size={20} className="text-purple" />
+                                <h2>Estacionalidad & Temporada</h2>
+                            </div>
+                            <div className="seasonality-details">
+                                <div className="season-hero">
+                                    <div className="season-tag">{analytics.seasonality.currentSeasonName}</div>
+                                    <div className={`season-intensity ${analytics.seasonality.seasonType}`}>
+                                        Demanda {analytics.seasonality.seasonType.toUpperCase()}
+                                    </div>
+                                </div>
+                                <p className="season-desc">{analytics.seasonality.description}</p>
+                                
+                                <div className="season-countdown-box">
+                                    <div className="countdown-number">{analytics.seasonality.daysToNextKeyDate}</div>
+                                    <div className="countdown-info">
+                                        <h4>Días para {analytics.seasonality.nextKeyDateName}</h4>
+                                        <p>Preparación operativa y logística recomendada.</p>
+                                    </div>
+                                </div>
+
+                                <div className="recommended-actions">
+                                    <h4>🎯 Acciones Estratégicas Sugeridas:</h4>
+                                    <ul>
+                                        {analytics.seasonality.recommendedActions.map((action, idx) => (
+                                            <li key={idx}>
+                                                <CheckCircle2 size={14} className="text-emerald" />
+                                                <span>{action}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Forecast Prediction Card */}
+                        <div className="bi-card forecast-card">
+                            <div className="bi-card-header">
+                                <TrendUpIcon size={20} className="text-emerald" />
+                                <h2>Predicción de Ventas</h2>
+                            </div>
+                            <div className="forecast-body">
+                                <div className="forecast-hero">
+                                    <span className="forecast-label">Proyección Próxima Semana</span>
+                                    <h3 className="forecast-val">{formatCurrency(analytics.forecast.projectedNextWeekSales)}</h3>
+                                    <div className={`forecast-trend trend-${analytics.forecast.trendDirection}`}>
+                                        {analytics.forecast.trendDirection === 'up' ? '↗' : analytics.forecast.trendDirection === 'down' ? '↘' : '→'}
+                                        {analytics.forecast.trendPercentage}%
+                                    </div>
+                                </div>
+                                <div className="forecast-interpretation">
+                                    <p>{analytics.forecast.humanInterpretation}</p>
+                                </div>
+                                <div className="forecast-meta-info">
+                                    <AlertCircle size={14} className="text-blue" />
+                                    <span>Calculado dinámicamente mediante regresión lineal sobre las últimas 4 semanas de pedidos y compras.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB CONTENT: HISTORY & LEDGER (Preserves all original functionalities) */}
+            {activeTab === 'history' && (
+                <div className="finances-main">
+                    {/* Transactions Section */}
+                    <section className="finances-section transactions-section">
+                        <div className="section-header">
+                            <div className="section-title">
+                                <Receipt size={20} />
+                                <h2>Historial de Movimientos</h2>
+                            </div>
+                            <div className="section-badges">
+                                <span className="badge-green">{incomeCount} ingresos</span>
+                                <span className="badge-red">{expenseCount} egresos</span>
+                            </div>
+                        </div>
+
+                        <div className="transactions-grid">
+                            {/* Income Column */}
+                            <div className="transactions-column">
+                                <div className="column-header header-green">
+                                    <div className="header-dot dot-green"></div>
+                                    <span>Ingresos</span>
+                                </div>
+                                <div className="transactions-list">
+                                    {(transactions || []).filter(t => t.type === 'income').length === 0 ? (
+                                        <div className="empty-column">
+                                            <div className="empty-icon">📥</div>
+                                            <p>Sin ingresos aún</p>
+                                        </div>
+                                    ) : (
+                                        [...(transactions || [])].filter(t => t.type === 'income').map(t => (
+                                            <TransactionItem key={t.id} t={t} />
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Expense Column */}
+                            <div className="transactions-column">
+                                <div className="column-header header-red">
+                                    <div className="header-dot dot-red"></div>
+                                    <span>Egresos</span>
+                                </div>
+                                <div className="transactions-list">
+                                    {(transactions || []).filter(t => t.type === 'expense').length === 0 ? (
+                                        <div className="empty-column">
+                                            <div className="empty-icon">📤</div>
+                                            <p>Sin egresos aún</p>
+                                        </div>
+                                    ) : (
+                                        [...(transactions || [])].filter(t => t.type === 'expense').map(t => (
+                                            <TransactionItem key={t.id} t={t} />
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Debtors Section */}
+                    <section className="finances-section debtors-section">
+                        <div className="section-header">
+                            <div className="section-title">
+                                <Users size={20} />
+                                <h2>Cuentas Fiadas</h2>
+                            </div>
+                            {debtors.length > 0 && (
+                                <span className="badge-amber">{debtors.length} pendientes</span>
+                            )}
+                        </div>
+
+                        <div className="debtors-list">
+                            {debtors.length === 0 ? (
+                                <div className="empty-debtors">
+                                    <div className="empty-debtors-icon">✅</div>
+                                    <h3>¡Todo al día!</h3>
+                                    <p>No hay cuentas pendientes</p>
+                                </div>
+                            ) : (
+                                debtors.map(d => (
+                                    <DebtorCard key={d.id} debtor={d} onCollect={openPaymentModal} />
+                                ))
+                            )}
+                        </div>
+                    </section>
+                </div>
+            )}
+
+            {/* Expense Modal (Preserved exactly) */}
             {showExpenseModal && (
                 <div className="modal-overlay" onClick={() => setShowExpenseModal(false)}>
                     <div className="modal-container" onClick={e => e.stopPropagation()}>
@@ -602,7 +879,7 @@ export const FinancesDesktop = () => {
                 </div>
             )}
 
-            {/* Payment Modal */}
+            {/* Payment Modal (Preserved exactly) */}
             {paymentModal.isOpen && (
                 <div className="modal-overlay" onClick={() => setPaymentModal({ ...paymentModal, isOpen: false, customerId: '', amount: '' })}>
                     <div className="modal-container modal-sm" onClick={e => e.stopPropagation()}>

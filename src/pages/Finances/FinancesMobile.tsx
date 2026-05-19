@@ -4,21 +4,32 @@ import { generateIdWithPrefix } from '../../utils/idGenerator';
 import { useModal } from '../../hooks/useModal';
 import { useNavigate } from 'react-router-dom';
 import { AlertModal } from '../../components/ui/Modals';
+import { api, type WasteLog } from '../../services/api';
+import { analyzeFinances } from './utils/financesAnalyzer';
 import './FinancesMobile.css';
 
 export const FinancesMobile = () => {
     const navigate = useNavigate();
     const transactions = useStore((state) => state.transactions);
     const customers = useStore((state) => state.customers);
+    const orders = useStore((state) => state.orders) || [];
+    const products = useStore((state) => state.products) || [];
     const addTransaction = useStore((state) => state.addTransaction);
     const loadTransactions = useStore((state) => state.loadTransactions);
     const loadCustomers = useStore((state) => state.loadCustomers);
+    const loadOrders = useStore((state) => state.loadOrders);
     const shopInfo = useStore((state) => state.shopInfo);
-    const products = useStore((state) => state.products);
     const packages = useStore((state) => state.packages);
 
+    // --- COCKPIT STATES ---
+    const [wasteLogs, setWasteLogs] = useState<WasteLog[]>([]);
+    const [monthlyGoal] = useState<number>(() => {
+        const stored = localStorage.getItem('finances_monthly_goal');
+        return stored ? parseFloat(stored) : 1500000;
+    });
     const [showExpenseSheet, setShowExpenseSheet] = useState(false);
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [mobileTab, setMobileTab] = useState<'control' | 'history'>('control');
     const [expenseForm, setExpenseForm] = useState({
         amount: '',
         category: 'Insumos',
@@ -30,17 +41,39 @@ export const FinancesMobile = () => {
 
     useEffect(() => {
         const loadData = async () => {
-            await Promise.allSettled([loadTransactions(), loadCustomers()]);
+            try {
+                await Promise.allSettled([
+                    loadTransactions(), 
+                    loadCustomers(),
+                    loadOrders ? loadOrders() : Promise.resolve()
+                ]);
+                const logs = await api.getWasteLogs({ limit: 50 });
+                setWasteLogs(logs || []);
+            } catch (err) {
+                console.error('[FINANCES MOBILE LOAD ERROR]', err);
+            }
         };
         loadData();
     }, []);
 
-    const metrics = useMemo(() => {
-        const income = (transactions || []).filter(t => t.type === 'income').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-        const expense = (transactions || []).filter(t => t.type === 'expense').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-        const debt = (customers || []).reduce((sum, c) => sum + (Number(c.debtBalance) || 0), 0);
-        return { income, expense, balance: income - expense, debt };
-    }, [transactions, customers]);
+    // --- BUSINESS INTELLIGENCE CALCULATIONS ---
+    const analytics = useMemo(() => {
+        return analyzeFinances(transactions, orders, products, customers, wasteLogs);
+    }, [transactions, orders, products, customers, wasteLogs]);
+
+    const goalPercentage = Math.min(100, Math.round((analytics.totalIncome / monthlyGoal) * 100));
+
+    // --- NATURAL LANGUAGE COGNITIVE DIAGNOSIS (Apple Health Style) ---
+    const healthDiagnosis = useMemo(() => {
+        const balance = analytics.netBalance;
+        if (balance > 100000) {
+            return `¡Excelente! Tus ingresos superan tus gastos por ${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(balance)} este mes. El ticket promedio ronda los ${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(analytics.ticketPromedio)}.`;
+        } else if (balance >= 0) {
+            return `Tus finanzas están estables. Balance positivo de ${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(balance)}. Sugerimos activar deudores para robustecer caja.`;
+        } else {
+            return `Alerta: Registras un saldo negativo temporal de ${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Math.abs(balance))}. Revisa el dinero inmovilizado y los gastos operativos.`;
+        }
+    }, [analytics]);
 
     const handleAddExpense = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,132 +97,233 @@ export const FinancesMobile = () => {
     };
 
     const formatCurrency = (val: number) => {
-        return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val || 0);
+        return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val || 0);
     };
 
     return (
         <div className="finances-mobile-wrapper">
+            {/* Header */}
             <header className="mobile-finances-header">
                 <div className="finances-header-top">
-                    <h2>Movimientos</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <h2>Cockpit Finanzas</h2>
+                        <span className="mobile-subtitle">Control estratégico en vivo</span>
+                    </div>
                     <button className="add-expense-btn" onClick={() => setShowExpenseSheet(true)}>
                         <span className="material-symbols-rounded">add</span>
                         Gasto
                     </button>
                 </div>
+
+                {/* Sub Tab Navigation */}
+                <div className="mobile-tabs-container">
+                    <button 
+                        className={`m-tab-btn ${mobileTab === 'control' ? 'active' : ''}`}
+                        onClick={() => setMobileTab('control')}
+                    >
+                        <span className="material-symbols-rounded">analytics</span>
+                        Salud del Local
+                    </button>
+                    <button 
+                        className={`m-tab-btn ${mobileTab === 'history' ? 'active' : ''}`}
+                        onClick={() => setMobileTab('history')}
+                    >
+                        <span className="material-symbols-rounded">receipt_long</span>
+                        Movimientos
+                    </button>
+                </div>
             </header>
 
             <div className="finances-scroll-content">
-                {/* Balance Hero */}
-                <section className="finances-hero-card">
-                    <div className="hero-main">
-                        <span className="hero-label">Balance Neto</span>
-                        <h2 className={`hero-val ${metrics.balance >= 0 ? 'pos' : 'neg'}`}>{formatCurrency(metrics.balance)}</h2>
-                    </div>
-                    <div className="hero-grid">
-                        <div className="h-stat">
-                            <span className="h-stat-label">Ingresos</span>
-                            <span className="h-stat-val pos">{formatCurrency(metrics.income)}</span>
-                        </div>
-                        <div className="h-stat">
-                            <span className="h-stat-label">Egresos</span>
-                            <span className="h-stat-val neg">{formatCurrency(metrics.expense)}</span>
-                        </div>
-                    </div>
-                </section>
+                {mobileTab === 'control' ? (
+                    <>
+                        {/* Apple Health style Diagnosis card */}
+                        <section className="m-diagnosis-card">
+                            <div className="diag-header">
+                                <span className="material-symbols-rounded spark-icon">spark</span>
+                                <h3>DIAGNÓSTICO COMERCIAL</h3>
+                            </div>
+                            <p className="diag-text">{healthDiagnosis}</p>
+                            <div className="diag-footer">
+                                <span>Estación: {analytics.seasonality.currentSeasonName}</span>
+                            </div>
+                        </section>
 
-                {/* Debt Call to Action */}
-                {metrics.debt > 0 && (
-                    <section className="finances-debt-banner" onClick={() => navigate('/clientes')}>
-                        <div className="d-icon">
-                            <span className="material-symbols-rounded">person_alert</span>
+                        {/* Balance Hero */}
+                        <section className="finances-hero-card">
+                            <div className="hero-main">
+                                <span className="hero-label">Balance Neto Real</span>
+                                <h2 className={`hero-val ${analytics.netBalance >= 0 ? 'pos' : 'neg'}`}>{formatCurrency(analytics.netBalance)}</h2>
+                            </div>
+                            <div className="hero-grid">
+                                <div className="h-stat">
+                                    <span className="h-stat-label">Ingresos</span>
+                                    <span className="h-stat-val pos">{formatCurrency(analytics.totalIncome)}</span>
+                                </div>
+                                <div className="h-stat">
+                                    <span className="h-stat-label">Egresos</span>
+                                    <span className="h-stat-val neg">{formatCurrency(analytics.totalExpense)}</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Smart Alerts Horizontal Scroll */}
+                        <section className="m-alerts-section">
+                            <h3 className="section-title-sm">Alertas del Cerebro de Ventas</h3>
+                            <div className="m-alerts-carousel">
+                                {analytics.alertas.map(alert => (
+                                    <div key={alert.id} className={`m-alert-slide type-${alert.type}`}>
+                                        <div className="m-alert-header">
+                                            <span className="material-symbols-rounded m-alert-icon">{alert.icon}</span>
+                                            <h4>{alert.title}</h4>
+                                        </div>
+                                        <p>{alert.description}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* Monthly target gamification bar */}
+                        <section className="m-target-card">
+                            <div className="m-target-header">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span className="material-symbols-rounded text-emerald">target</span>
+                                    <h3>Meta de Facturación</h3>
+                                </div>
+                                <span className="m-target-percentage">{goalPercentage}%</span>
+                            </div>
+                            
+                            <div className="m-progress-track">
+                                <div className="m-progress-fill" style={{ width: `${goalPercentage}%` }}></div>
+                            </div>
+                            
+                            <div className="m-progress-footer">
+                                <span>Facturado: {formatCurrency(analytics.totalIncome)}</span>
+                                <span>Meta: {formatCurrency(monthlyGoal)}</span>
+                            </div>
+                        </section>
+
+                        {/* Seasonality Quick Banner */}
+                        <section className="m-season-banner">
+                            <div className="m-season-left">
+                                <span className="material-symbols-rounded">calendar_month</span>
+                                <div>
+                                    <h4>Faltan {analytics.seasonality.daysToNextKeyDate} días</h4>
+                                    <p>Para {analytics.seasonality.nextKeyDateName}</p>
+                                </div>
+                            </div>
+                            <span className="m-season-badge">{analytics.seasonality.seasonType.toUpperCase()}</span>
+                        </section>
+
+                        {/* Debt Banner */}
+                        {analytics.deudaCriticaRatio > 0 && (
+                            <section className="finances-debt-banner" onClick={() => navigate('/clientes')}>
+                                <div className="d-icon">
+                                    <span className="material-symbols-rounded">person_alert</span>
+                                </div>
+                                <div className="d-info">
+                                    <span className="d-label">Cuentas Pendientes ({analytics.deudaCriticaRatio}% deuda)</span>
+                                    <span className="d-val">{formatCurrency(customers.reduce((sum, c) => sum + (c.debtBalance || 0), 0))}</span>
+                                </div>
+                                <span className="material-symbols-rounded d-arrow">chevron_right</span>
+                            </section>
+                        )}
+
+                        {/* Operational insights cards */}
+                        <section className="m-insights-grid">
+                            <div className="m-insight-card">
+                                <span className="material-symbols-rounded i-icon text-amber">hourglass_empty</span>
+                                <h4>Stock Inmovilizado</h4>
+                                <p>{formatCurrency(analytics.dineroInmovilizado)}</p>
+                            </div>
+                            <div className="m-insight-card">
+                                <span className="material-symbols-rounded i-icon text-red">delete_forever</span>
+                                <h4>Costo de Mermas</h4>
+                                <p>{formatCurrency(analytics.costoMermas)}</p>
+                            </div>
+                        </section>
+                    </>
+                ) : (
+                    /* Ledgers history screen */
+                    <section className="finances-history-sec">
+                        <div className="sec-header">
+                            <h3>Historial Completo</h3>
+                            <button onClick={loadTransactions}>Actualizar</button>
                         </div>
-                        <div className="d-info">
-                            <span className="d-label">Cuentas por Cobrar</span>
-                            <span className="d-val">{formatCurrency(metrics.debt)}</span>
+                        <div className="m-history-list">
+                            {(transactions || []).slice().reverse().map(t => {
+                                const isExpanded = expandedId === t.id;
+                                const items = t.metadata?.items || [];
+                                const hasDetails = items.length > 0 || t.notes;
+                                const isIncome = t.type === 'income';
+
+                                return (
+                                    <div 
+                                        key={t.id} 
+                                        className={`m-history-item-container ${isExpanded ? 'expanded' : ''}`}
+                                        onClick={() => hasDetails && setExpandedId(isExpanded ? null : t.id)}
+                                    >
+                                        <div className="m-history-item">
+                                            <div className={`m-h-icon ${isIncome ? 'income' : 'expense'}`}>
+                                                <span className="material-symbols-rounded">
+                                                    {isIncome ? 'arrow_upward' : 'arrow_downward'}
+                                                </span>
+                                            </div>
+                                            <div className="m-h-info">
+                                                <span className="m-h-cat">{t.category}</span>
+                                                <span className="m-h-desc">{t.description || 'Sin descripción'}</span>
+                                            </div>
+                                            <div className="m-h-amount-wrap">
+                                                <div className={`m-h-amount ${isIncome ? 'income' : 'expense'}`}>
+                                                    {isIncome ? '+' : '-'}{formatCurrency(t.amount)}
+                                                </div>
+                                                {hasDetails && (
+                                                    <span className={`material-symbols-rounded expand-icon ${isExpanded ? 'rotated' : ''}`}>
+                                                        expand_more
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        {isExpanded && (
+                                            <div className="m-history-details">
+                                                {items.length > 0 && (
+                                                    <div className="m-details-items">
+                                                        {items.map((item: any, idx: number) => (
+                                                            <div key={idx} className="m-detail-row">
+                                                                <div className="m-detail-main">
+                                                                    <span className="m-detail-qty">{item.qty || item.quantity}x</span>
+                                                                    <span className="m-detail-name">
+                                                                        {item.name || item.product_name || 
+                                                                         (item.product_id ? products.find(p => p.id === item.product_id)?.name : null) ||
+                                                                         (item.package_id ? packages.find(p => p.id === item.package_id)?.name : null) ||
+                                                                         'Producto'}
+                                                                    </span>
+                                                                </div>
+                                                                <span className="m-detail-total">{formatCurrency((item.price || item.unit_price) * (item.qty || item.quantity))}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {t.notes && (
+                                                    <div className="m-details-notes">
+                                                        <span className="notes-tag">Nota:</span>
+                                                        <p>{t.notes}</p>
+                                                    </div>
+                                                )}
+                                                <div className="m-details-meta">
+                                                    <span>ID: {t.id.slice(-6).toUpperCase()}</span>
+                                                    <span>•</span>
+                                                    <span>{new Date(t.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}hs</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
-                        <span className="material-symbols-rounded d-arrow">chevron_right</span>
                     </section>
                 )}
-
-                {/* Recent Transactions List */}
-                <section className="finances-history-sec">
-                    <div className="sec-header">
-                        <h3>Últimos Movimientos</h3>
-                        <button onClick={loadTransactions}>Ver Todo</button>
-                    </div>
-                    <div className="m-history-list">
-                        {(transactions || []).slice(0, 20).reverse().map(t => {
-                            const isExpanded = expandedId === t.id;
-                            const items = t.metadata?.items || [];
-                            const hasDetails = items.length > 0 || t.notes;
-
-                            return (
-                                <div 
-                                    key={t.id} 
-                                    className={`m-history-item-container ${isExpanded ? 'expanded' : ''}`}
-                                    onClick={() => hasDetails && setExpandedId(isExpanded ? null : t.id)}
-                                >
-                                    <div className="m-history-item">
-                                        <div className={`m-h-icon ${t.type}`}>
-                                            <span className="material-symbols-rounded">
-                                                {t.type === 'income' ? 'arrow_upward' : 'arrow_downward'}
-                                            </span>
-                                        </div>
-                                        <div className="m-h-info">
-                                            <span className="m-h-cat">{t.category}</span>
-                                            <span className="m-h-desc">{t.description}</span>
-                                        </div>
-                                        <div className="m-h-amount-wrap">
-                                            <div className={`m-h-amount ${t.type}`}>
-                                                {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                                            </div>
-                                            {hasDetails && (
-                                                <span className={`material-symbols-rounded expand-icon ${isExpanded ? 'rotated' : ''}`}>
-                                                    expand_more
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    
-                                    {isExpanded && (
-                                        <div className="m-history-details">
-                                            {items.length > 0 && (
-                                                <div className="m-details-items">
-                                                    {items.map((item: any, idx: number) => (
-                                                        <div key={idx} className="m-detail-row">
-                                                            <div className="m-detail-main">
-                                                                <span className="m-detail-qty">{item.qty || item.quantity}x</span>
-                                                                <span className="m-detail-name">
-                                                                    {item.name || item.product_name || 
-                                                                     (item.product_id ? products.find(p => p.id === item.product_id)?.name : null) ||
-                                                                     (item.package_id ? packages.find(p => p.id === item.package_id)?.name : null) ||
-                                                                     'Producto'}
-                                                                </span>
-                                                            </div>
-                                                            <span className="m-detail-total">{formatCurrency((item.price || item.unit_price) * (item.qty || item.quantity))}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {t.notes && (
-                                                <div className="m-details-notes">
-                                                    <span className="notes-tag">Nota:</span>
-                                                    <p>{t.notes}</p>
-                                                </div>
-                                            )}
-                                            <div className="m-details-meta">
-                                                <span>ID: {t.id.slice(-6).toUpperCase()}</span>
-                                                <span>•</span>
-                                                <span>{new Date(t.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}hs</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </section>
             </div>
 
             {/* Expense Bottom Sheet */}
@@ -212,11 +346,11 @@ export const FinancesMobile = () => {
                             <div className="m-form-group">
                                 <label>Categoría</label>
                                 <select value={expenseForm.category} onChange={e => setExpenseForm({ ...expenseForm, category: e.target.value })}>
-                                    <option value="Sueldos">Sueldos</option>
-                                    <option value="Insumos">Insumos</option>
-                                    <option value="Flores">Mercadería (Flores)</option>
-                                    <option value="Logística">Logística/Moto</option>
-                                    <option value="Servicios">Servicios</option>
+                                    <option value="Sueldos/Jornales">Sueldos/Jornales</option>
+                                    <option value="Insumos">Insumos Varios</option>
+                                    <option value="Mercadería (Flores)">Mercadería (Flores)</option>
+                                    <option value="Logística/Moto">Logística/Moto</option>
+                                    <option value="Servicios/Luz/Internet">Servicios Diarios</option>
                                     <option value="Otros">Otros</option>
                                 </select>
                             </div>
