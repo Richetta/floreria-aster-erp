@@ -753,7 +753,10 @@ export const useWorkspaceExplorer = () => {
               stock: Number(fields.stock_quantity) || 0,
               cost: Number(fields.cost) || 0,
               price: Number(fields.price) || 0,
-              category_id: 'default_category'
+              category_id: 'default_category',
+              min: 0,
+              category: 'Sin categoría',
+              tags: []
             });
           } else {
             const mappedUpdates: any = {};
