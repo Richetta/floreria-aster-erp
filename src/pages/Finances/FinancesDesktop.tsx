@@ -162,25 +162,41 @@ const TransactionItem = ({ t }: { t: any }) => {
 };
 
 // --- DEBTOR CARD COMPONENT ---
-const DebtorCard = ({ debtor, onCollect }: { debtor: any; onCollect: (id: string, amount: string) => void }) => (
-    <div className="debtor-card" onClick={() => onCollect(debtor.id, debtor.debtBalance.toString())}>
-        <div className="debtor-avatar">
-            <span>{debtor.name.charAt(0).toUpperCase()}</span>
+const DebtorCard = ({ debtor, onCollect }: { debtor: any; onCollect: (id: string, amount: string) => void }) => {
+    const handleWhatsApp = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const phoneClean = (debtor.phone || '').replace(/[^0-9]/g, '');
+        // Usar formato internacional si no empieza con prefijo. Asumimos Argentina +54 9 si tiene 10 dígitos.
+        const phoneFormatted = phoneClean.length === 10 ? `549${phoneClean}` : phoneClean;
+        const msg = encodeURIComponent(`¡Hola ${debtor.name}! Te escribimos de Florería Aster para enviarte un saludo y recordarte de manera amigable tu saldo pendiente en cuenta corriente por un total de ${formatCurrency(debtor.debtBalance)}. Te adjuntamos tu resumen. ¡Muchas gracias por tu confianza de siempre! 🌸`);
+        window.open(`https://api.whatsapp.com/send?phone=${phoneFormatted}&text=${msg}`, '_blank');
+    };
+
+    return (
+        <div className="debtor-card" onClick={() => onCollect(debtor.id, debtor.debtBalance.toString())}>
+            <div className="debtor-avatar">
+                <span>{debtor.name.charAt(0).toUpperCase()}</span>
+            </div>
+            <div className="debtor-details">
+                <div className="debtor-name">{debtor.name}</div>
+                <div className="debtor-contact">{debtor.phone || 'Sin teléfono'}</div>
+            </div>
+            <div className="debtor-balance">
+                <div className="debtor-label">Debe</div>
+                <div className="debtor-value">{formatCurrency(debtor.debtBalance)}</div>
+            </div>
+            <div className="debtor-actions">
+                <button className="debtor-whatsapp-btn" onClick={handleWhatsApp} title="Recordar por WhatsApp">
+                    💬 WhatsApp
+                </button>
+                <button className="debtor-collect-btn">
+                    <Receipt size={14} />
+                    Cobrar
+                </button>
+            </div>
         </div>
-        <div className="debtor-details">
-            <div className="debtor-name">{debtor.name}</div>
-            <div className="debtor-contact">{debtor.phone || 'Sin teléfono'}</div>
-        </div>
-        <div className="debtor-balance">
-            <div className="debtor-label">Debe</div>
-            <div className="debtor-value">{formatCurrency(debtor.debtBalance)}</div>
-        </div>
-        <button className="debtor-collect-btn">
-            <Receipt size={14} />
-            Cobrar
-        </button>
-    </div>
-);
+    );
+};
 
 // --- MAIN COMPONENT ---
 export const FinancesDesktop = () => {
@@ -204,6 +220,13 @@ export const FinancesDesktop = () => {
     });
     const [isEditingGoal, setIsEditingGoal] = useState(false);
     const [goalInput, setGoalInput] = useState(monthlyGoal.toString());
+
+    const [fixedCosts, setFixedCosts] = useState<number>(() => {
+        const stored = localStorage.getItem('finances_fixed_costs');
+        return stored ? parseFloat(stored) : 350000;
+    });
+    const [isEditingFixedCosts, setIsEditingFixedCosts] = useState(false);
+    const [fixedCostsInput, setFixedCostsInput] = useState(fixedCosts.toString());
 
     const [isLoading, setIsLoading] = useState(true);
     const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -240,7 +263,7 @@ export const FinancesDesktop = () => {
     }, []);
 
     // --- BUSINESS INTELLIGENCE ENGINE ---
-    const analytics = analyzeFinances(transactions, orders, products, customers, wasteLogs);
+    const analytics = analyzeFinances(transactions, orders, products, customers, wasteLogs, fixedCosts);
 
     const transactionsByMethod = (transactions || []).reduce((acc: any, t) => {
         const method = t.method || 'cash';
@@ -266,6 +289,15 @@ export const FinancesDesktop = () => {
             setMonthlyGoal(parsed);
             localStorage.setItem('finances_monthly_goal', parsed.toString());
             setIsEditingGoal(false);
+        }
+    };
+
+    const handleSaveFixedCosts = () => {
+        const parsed = parseFloat(fixedCostsInput);
+        if (parsed >= 0) {
+            setFixedCosts(parsed);
+            localStorage.setItem('finances_fixed_costs', parsed.toString());
+            setIsEditingFixedCosts(false);
         }
     };
 
@@ -543,6 +575,40 @@ export const FinancesDesktop = () => {
                             </div>
                         </div>
 
+                        {/* Treasury multi-boxes */}
+                        <div className="bi-card treasury-card">
+                            <div className="bi-card-header">
+                                <Wallet size={18} className="text-emerald" />
+                                <h2>Cajas de Tesorería (Disponibilidad)</h2>
+                            </div>
+                            <div className="treasury-grid">
+                                <div className="treasury-box box-cash">
+                                    <div className="tbox-header">
+                                        <span className="tbox-emoji">💵</span>
+                                        <span className="tbox-name">Caja Chica (Efectivo)</span>
+                                    </div>
+                                    <h3 className="tbox-amount">{formatCurrency(analytics.treasury.cash)}</h3>
+                                    <div className="tbox-footer">Fondos físicos en local</div>
+                                </div>
+                                <div className="treasury-box box-mp">
+                                    <div className="tbox-header">
+                                        <span className="tbox-emoji">📱</span>
+                                        <span className="tbox-name">Mercado Pago</span>
+                                    </div>
+                                    <h3 className="tbox-amount text-blue">{formatCurrency(analytics.treasury.mercadopago)}</h3>
+                                    <div className="tbox-footer">Liquidez digital / QR</div>
+                                </div>
+                                <div className="treasury-box box-bank">
+                                    <div className="tbox-header">
+                                        <span className="tbox-emoji">🏦</span>
+                                        <span className="tbox-name">Banco & Transf.</span>
+                                    </div>
+                                    <h3 className="tbox-amount text-purple">{formatCurrency(analytics.treasury.bank)}</h3>
+                                    <div className="tbox-footer">Cuentas y cobro tarjeta</div>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Breakdown by Payment Methods */}
                         <div className="bi-card methods-card">
                             <div className="bi-card-header">
@@ -626,6 +692,81 @@ export const FinancesDesktop = () => {
                                 {goalPercentage >= 100 
                                     ? '🏆 ¡Felicidades! Has superado con creces el objetivo mensual del local.' 
                                     : `Faltan ${formatCurrency(Math.max(0, monthlyGoal - totalIncome))} para concretar tu meta mensual.`}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Operational Break-Even Card */}
+                    <div className="bi-card target-progress-card mt-4">
+                        <div className="target-header-row">
+                            <div className="target-title-block">
+                                <Wallet size={24} className="text-blue" />
+                                <div>
+                                    <h2>Punto de Equilibrio Operativo</h2>
+                                    <p>Gastos fijos y rentabilidad del local comercial</p>
+                                </div>
+                            </div>
+                            <div className="target-actions">
+                                {isEditingFixedCosts ? (
+                                    <div className="goal-edit-input-wrap">
+                                        <input 
+                                            type="number" 
+                                            value={fixedCostsInput}
+                                            onChange={e => setFixedCostsInput(e.target.value)}
+                                            className="goal-input-inline"
+                                            autoFocus
+                                        />
+                                        <button className="goal-save-btn" onClick={handleSaveFixedCosts}>
+                                            <Check size={14} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button className="goal-settings-btn btn-blue-border" onClick={() => { setFixedCostsInput(fixedCosts.toString()); setIsEditingFixedCosts(true); }}>
+                                        <Settings size={16} />
+                                        Ajustar Costos Fijos
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="breakeven-info-grid">
+                            <div className="breakeven-stat">
+                                <span className="stat-label">Gastos Fijos Cargados</span>
+                                <h3 className="stat-value">{formatCurrency(fixedCosts)}</h3>
+                            </div>
+                            <div className="breakeven-stat">
+                                <span className="stat-label">Margen de Ganancia Promedio</span>
+                                <h3 className="stat-value text-amber">{analytics.estimatedProfitMargin}%</h3>
+                            </div>
+                            <div className="breakeven-stat">
+                                <span className="stat-label">Facturación Necesaria</span>
+                                <h3 className="stat-value text-blue">{formatCurrency(analytics.breakEven.breakEvenRevenue)}</h3>
+                            </div>
+                            <div className="breakeven-stat">
+                                <span className="stat-label">Pedidos Mínimos</span>
+                                <h3 className="stat-value text-purple">{analytics.breakEven.breakEvenTickets} ordenes</h3>
+                            </div>
+                        </div>
+
+                        {/* Break-Even progress bar */}
+                        <div className="gamified-progress-bar-container">
+                            <div className="progress-labels">
+                                <span className="progress-current">{formatCurrency(totalIncome)}</span>
+                                <span className="progress-percent-badge badge-blue">{analytics.breakEven.progressPercentage}%</span>
+                                <span className="progress-max">{formatCurrency(analytics.breakEven.breakEvenRevenue)}</span>
+                            </div>
+                            <div className="progress-bar-track">
+                                <div 
+                                    className={`progress-bar-fill bar-fill-blue ${analytics.breakEven.status === 'rentable' ? 'blue-glow' : ''}`}
+                                    style={{ width: `${analytics.breakEven.progressPercentage}%` }}
+                                >
+                                    {analytics.breakEven.status === 'rentable' && <Sparkles size={12} className="star-sparkle" />}
+                                </div>
+                            </div>
+                            <div className="progress-motivation-text">
+                                {analytics.breakEven.status === 'rentable' 
+                                    ? '🎉 ¡Negocio en Zona de Rentabilidad! Los costos fijos mensuales están cubiertos al 100%.' 
+                                    : `Faltan ${formatCurrency(analytics.breakEven.gapToCover)} de facturación neta para superar el punto de equilibrio.`}
                             </div>
                         </div>
                     </div>

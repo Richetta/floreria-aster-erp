@@ -27,6 +27,10 @@ export const FinancesMobile = () => {
         const stored = localStorage.getItem('finances_monthly_goal');
         return stored ? parseFloat(stored) : 1500000;
     });
+    const [fixedCosts] = useState<number>(() => {
+        const stored = localStorage.getItem('finances_fixed_costs');
+        return stored ? parseFloat(stored) : 350000;
+    });
     const [showExpenseSheet, setShowExpenseSheet] = useState(false);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [mobileTab, setMobileTab] = useState<'control' | 'history'>('control');
@@ -58,8 +62,8 @@ export const FinancesMobile = () => {
 
     // --- BUSINESS INTELLIGENCE CALCULATIONS ---
     const analytics = useMemo(() => {
-        return analyzeFinances(transactions, orders, products, customers, wasteLogs);
-    }, [transactions, orders, products, customers, wasteLogs]);
+        return analyzeFinances(transactions, orders, products, customers, wasteLogs, fixedCosts);
+    }, [transactions, orders, products, customers, wasteLogs, fixedCosts]);
 
     const goalPercentage = Math.min(100, Math.round((analytics.totalIncome / monthlyGoal) * 100));
 
@@ -201,6 +205,53 @@ export const FinancesMobile = () => {
                                 <span>Facturado: {formatCurrency(analytics.totalIncome)}</span>
                                 <span>Meta: {formatCurrency(monthlyGoal)}</span>
                             </div>
+                        </section>
+
+                        {/* Treasury Boxes */}
+                        <section className="m-target-card mt-3">
+                            <div className="m-target-header">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span className="material-symbols-rounded text-emerald">wallet</span>
+                                    <h3>Cajas de Tesorería</h3>
+                                </div>
+                            </div>
+                            <div className="m-treasury-boxes-grid">
+                                <div className="m-treasury-box">
+                                    <span className="mtb-label">💵 Efectivo</span>
+                                    <span className="mtb-val">{formatCurrency(analytics.treasury.cash)}</span>
+                                </div>
+                                <div className="m-treasury-box">
+                                    <span className="mtb-label">📱 MPago</span>
+                                    <span className="mtb-val text-blue">{formatCurrency(analytics.treasury.mercadopago)}</span>
+                                </div>
+                                <div className="m-treasury-box">
+                                    <span className="mtb-label">🏦 Banco</span>
+                                    <span className="mtb-val text-purple">{formatCurrency(analytics.treasury.bank)}</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Break Even Card */}
+                        <section className="m-target-card mt-3">
+                            <div className="m-target-header">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span className="material-symbols-rounded text-blue">account_balance</span>
+                                    <h3>Punto de Equilibrio</h3>
+                                </div>
+                                <span className="m-target-percentage text-blue">{analytics.breakEven.progressPercentage}%</span>
+                            </div>
+                            <div className="m-progress-track">
+                                <div className="m-progress-fill bar-fill-blue" style={{ width: `${analytics.breakEven.progressPercentage}%` }}></div>
+                            </div>
+                            <div className="m-progress-footer">
+                                <span>Costo Fijo: {formatCurrency(fixedCosts)}</span>
+                                <span>Margen: {analytics.estimatedProfitMargin}%</span>
+                            </div>
+                            <p className="m-breakeven-motivation">
+                                {analytics.breakEven.status === 'rentable' 
+                                    ? '🎉 ¡Costos fijos mensuales 100% cubiertos!' 
+                                    : `Faltan ${formatCurrency(analytics.breakEven.gapToCover)} para cubrir costos fijos.`}
+                            </p>
                         </section>
 
                         {/* Seasonality Quick Banner */}

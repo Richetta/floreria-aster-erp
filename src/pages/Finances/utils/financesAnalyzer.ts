@@ -25,6 +25,21 @@ export interface ForecastData {
     humanInterpretation: string;
 }
 
+export interface BreakEvenData {
+    fixedCosts: number;
+    breakEvenRevenue: number;
+    breakEvenTickets: number;
+    progressPercentage: number;
+    gapToCover: number;
+    status: 'deficit' | 'rentable';
+}
+
+export interface TreasuryBox {
+    cash: number;
+    bank: number;
+    mercadopago: number;
+}
+
 export interface BusinessIntelligenceMetrics {
     totalIncome: number;
     totalExpense: number;
@@ -38,6 +53,8 @@ export interface BusinessIntelligenceMetrics {
     alertas: SmartAlert[];
     seasonality: SeasonalityData;
     forecast: ForecastData;
+    breakEven: BreakEvenData;
+    treasury: TreasuryBox;
 }
 
 // Fechas especiales clave de la florería
@@ -55,7 +72,8 @@ export const analyzeFinances = (
     orders: Order[] = [],
     products: Product[] = [],
     customers: Customer[] = [],
-    wasteLogs: WasteLog[] = []
+    wasteLogs: WasteLog[] = [],
+    fixedCosts: number = 0
 ): BusinessIntelligenceMetrics => {
     
     // 1. Ingresos y Egresos básicos
@@ -307,7 +325,7 @@ export const analyzeFinances = (
     const forecast: ForecastData = {
         projectedNextWeekSales,
         trendDirection,
-        trendPercentage: Math.abs(trendPercentage),
+        trendPercentage,
         humanInterpretation
     };
 
@@ -378,6 +396,60 @@ export const analyzeFinances = (
         });
     }
 
+    // 11. Calcular Cajas de Tesorería
+    let cash = 0;
+    let bank = 0;
+    let mercadopago = 0;
+
+    transactions.forEach(t => {
+        const amount = Number(t.amount) || 0;
+        const isIncome = t.type === 'income';
+        const method = (t.method || 'cash').toLowerCase();
+
+        const change = isIncome ? amount : -amount;
+
+        if (method.includes('cash') || method.includes('efectivo') || method === 'cash') {
+            cash += change;
+        } else if (method.includes('mercadopago') || method.includes('mercado_pago') || method.includes('mp') || method === 'mercadopago') {
+            mercadopago += change;
+        } else {
+            bank += change;
+        }
+    });
+
+    const treasury: TreasuryBox = { cash, bank, mercadopago };
+
+    // 12. Calcular Punto de Equilibrio
+    const marginRatio = estimatedProfitMargin > 0 ? estimatedProfitMargin / 100 : 0.5;
+    const breakEvenRevenue = marginRatio > 0 ? Math.round(fixedCosts / marginRatio) : 0;
+    const breakEvenTickets = ticketPromedio > 0 ? Math.ceil(breakEvenRevenue / ticketPromedio) : 0;
+    
+    const progressPercentage = breakEvenRevenue > 0 
+        ? Math.min(100, Math.round((totalIncome / breakEvenRevenue) * 100)) 
+        : 0;
+    const gapToCover = Math.max(0, breakEvenRevenue - totalIncome);
+    const status = totalIncome >= breakEvenRevenue ? 'rentable' : 'deficit';
+
+    const breakEven: BreakEvenData = {
+        fixedCosts,
+        breakEvenRevenue,
+        breakEvenTickets,
+        progressPercentage,
+        gapToCover,
+        status
+    };
+
+    // Alerta 6: Alerta por déficit contable cercano al cierre del mes
+    if (status === 'deficit' && gapToCover > 0 && totalIncome > 0 && progressPercentage < 75) {
+        alertas.push({
+            id: 'breakeven_deficit',
+            title: 'Déficit Operativo Proyectado',
+            description: `Faltan $${gapToCover.toLocaleString('es-AR')} de facturación neta para cubrir los gastos fijos de este mes. ¡Planifica una campaña express!`,
+            type: 'warning',
+            icon: 'account_balance'
+        });
+    }
+
     // Alerta por defecto si todo marcha impecable
     if (alertas.length === 0) {
         alertas.push({
@@ -401,6 +473,8 @@ export const analyzeFinances = (
         vipCustomers,
         alertas,
         seasonality,
-        forecast
+        forecast,
+        breakEven,
+        treasury
     };
 };

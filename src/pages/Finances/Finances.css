@@ -1798,4 +1798,161 @@
     background: #E65100;
     color: white;
     border-color: #E65100;
+}
+
+/* Treasury Boxes Grid & Cards */
+.treasury-card {
+    margin-bottom: 1.25rem;
+}
+.treasury-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.treasury-box {
+    padding: 1.15rem;
+    border-radius: 16px;
+    background: #FAF8F5;
+    border: 1px solid #EAE6DF;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+.treasury-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+    background: white;
+}
+.treasury-box.box-cash {
+    border-left: 4px solid #10b981;
+}
+.treasury-box.box-mp {
+    border-left: 4px solid #3b82f6;
+}
+.treasury-box.box-bank {
+    border-left: 4px solid #8b5cf6;
+}
+.tbox-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.tbox-emoji {
+    font-size: 1.2rem;
+}
+.tbox-name {
+    font-size: 0.775rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.tbox-amount {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #10b981;
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+.tbox-amount.text-blue {
+    color: #3b82f6;
+}
+.tbox-amount.text-purple {
+    color: #8b5cf6;
+}
+.tbox-footer {
+    font-size: 0.675rem;
+    color: #94a3b8;
+    margin-top: 0.4rem;
+    font-weight: 500;
+}
+
+/* Break-Even Info Grid */
+.breakeven-info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    background: #FAF8F5;
+    border: 1px solid #EAE6DF;
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin: 1.25rem 0;
+}
+.breakeven-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.stat-label {
+    font-size: 0.725rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+.stat-value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+.stat-value.text-amber {
+    color: #d97706;
+}
+.stat-value.text-blue {
+    color: #2563eb;
+}
+.stat-value.text-purple {
+    color: #7c3aed;
+}
+
+/* Custom progress fill & glows */
+.bar-fill-blue {
+    background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%) !important;
+}
+.blue-glow {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+.badge-blue {
+    background: #eff6ff !important;
+    color: #1e40af !important;
+}
+.btn-blue-border {
+    border: 1.5px solid #bfdbfe !important;
+    color: #2563eb !important;
+    background: transparent !important;
+}
+.btn-blue-border:hover {
+    background: #eff6ff !important;
+}
+
+/* WhatsApp Debtor Billing Action Button */
+.debtor-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-shrink: 0;
+}
+.debtor-whatsapp-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #e8f5e9;
+    border: 1px solid #c8e6c9;
+    color: #2e7d32;
+    padding: 0.375rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.debtor-whatsapp-btn:hover {
+    background: #2e7d32;
+    color: white;
+    border-color: #2e7d32;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(46, 125, 50, 0.15);
 }
