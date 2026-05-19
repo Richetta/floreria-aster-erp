@@ -511,21 +511,87 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
                 <table className="security-changes-table">
                   <thead>
                     <tr>
-                      <th>Fila / Elemento</th>
-                      <th>Columna</th>
-                      <th>Valor Anterior</th>
-                      <th>Nuevo Valor</th>
+                      <th style={{ width: '200px' }}>Acción y Elemento</th>
+                      <th>Detalle de los Cambios</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pendingChanges.map((change, idx) => (
-                      <tr key={idx}>
-                        <td><strong>{change.rowName}</strong></td>
-                        <td><span className="col-badge">{change.label}</span></td>
-                        <td className="old-val">{String(change.oldValue) || '-'}</td>
-                        <td className="new-val">➔ {String(change.newValue) || '-'}</td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      const groups: Record<string, { isNew: boolean, rowName: string, changes: CellChange[] }> = {};
+                      pendingChanges.forEach(c => {
+                        if (!groups[c.id]) {
+                          groups[c.id] = { isNew: String(c.id).startsWith('new_'), rowName: c.rowName, changes: [] };
+                        }
+                        if (c.rowName !== 'Nueva Fila Creada' && c.rowName !== 'Nuevo Producto' && c.rowName !== 'Nuevo Elemento') {
+                          groups[c.id].rowName = c.rowName;
+                        }
+                        // Skip duplicate "name" dummy events for new rows
+                        if (groups[c.id].isNew && c.key === 'name' && c.oldValue === '') {
+                          // Allow the last name edit to overwrite, but don't clutter
+                          const existingNameIdx = groups[c.id].changes.findIndex(ch => ch.key === 'name');
+                          if (existingNameIdx >= 0) groups[c.id].changes[existingNameIdx] = c;
+                          else groups[c.id].changes.push(c);
+                        } else {
+                          groups[c.id].changes.push(c);
+                        }
+                      });
+
+                      return Object.entries(groups).map(([id, group]) => {
+                        if (group.isNew) {
+                          const nameChange = group.changes.find(c => c.key === 'name');
+                          const finalName = nameChange ? nameChange.newValue : group.rowName;
+                          
+                          const details = group.changes
+                            .filter(c => c.newValue !== '' && c.newValue !== null && c.key !== 'name')
+                            .map(c => `${c.label}: ${c.newValue}`)
+                            .join(' • ');
+
+                          return (
+                            <tr key={id}>
+                              <td>
+                                <div style={{ color: '#059669', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  ✨ Nuevo Elemento
+                                </div>
+                                <div style={{ fontSize: '0.9em', color: '#475569', marginTop: '4px', fontWeight: 500 }}>
+                                  {finalName}
+                                </div>
+                              </td>
+                              <td>
+                                <div style={{ fontSize: '0.85em', color: '#64748b', lineHeight: '1.4' }}>
+                                  {details || 'Registro creado sin valores extra'}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        } else {
+                          const updates = group.changes.map(c => (
+                            <span key={c.key} style={{ display: 'inline-block', background: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', fontSize: '0.85em', border: '1px solid #e2e8f0' }}>
+                              <strong style={{ color: '#475569', marginRight: '6px' }}>{c.label}:</strong>
+                              <s style={{ color: '#ef4444', marginRight: '6px' }}>{String(c.oldValue) || '-'}</s>
+                              <span style={{ color: '#059669', fontWeight: 'bold' }}>➔ {String(c.newValue) || '-'}</span>
+                            </span>
+                          ));
+
+                          return (
+                            <tr key={id}>
+                              <td>
+                                <div style={{ color: '#3b82f6', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  📝 Edición
+                                </div>
+                                <div style={{ fontSize: '0.9em', color: '#475569', marginTop: '4px', fontWeight: 500 }}>
+                                  {group.rowName}
+                                </div>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                  {updates}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        }
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>
