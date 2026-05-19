@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { StickyNote, X, Plus, Trash2, Maximize2, Minimize2 } from 'lucide-react';
-import { useStore } from '../../../store/useStore';
+import { useAuth } from '../../../store/useAuth';
 
 export const ElPapelito = () => {
-    const user = useStore(state => state.user);
+    const user = useAuth(state => state.user);
     const businessId = user?.business_id || 'default_business';
     const storageKey = `papelito_items_${businessId}`;
 
@@ -158,7 +158,7 @@ export const ElPapelito = () => {
                             </div>
                         ) : (
                             items.map(item => (
-                                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', group: 'true' }}>
+                                <div key={item.id} className="group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <input 
                                         type="checkbox" 
                                         checked={item.checked} 

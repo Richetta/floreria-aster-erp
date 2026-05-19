@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { 
-    Plus, Search, Truck, Package, DollarSign, Check, X, Minus, Trash2, 
+    Plus, Search, Truck, Package, Check, Trash2, 
     Printer, FileText, ArrowRight, Calendar, Filter 
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { useAuth } from '../../store/useAuth';
 import { useModal } from '../../hooks/useModal';
 import { AlertModal } from '../../components/ui/Modals';
 import './Purchases.css';
@@ -17,7 +18,7 @@ export const PurchasesDesktop = () => {
     const loadSuppliers = useStore(state => state.loadSuppliers);
     const loadProducts = useStore(state => state.loadProducts);
     const loadTransactions = useStore(state => state.loadTransactions);
-    const user = useStore(state => state.user);
+    const user = useAuth(state => state.user);
     const addNotification = useStore(state => state.addNotification);
     const businessId = user?.business_id || 'default_business';
 
@@ -85,7 +86,7 @@ export const PurchasesDesktop = () => {
         const list: any[] = [];
 
         // 1. Add Virtual orders
-        virtualOrders.forEach(vo => {
+        virtualOrders.forEach((vo: any) => {
             // Extract date from name or ID
             let dateVal = new Date();
             const parts = vo.id.split('_');

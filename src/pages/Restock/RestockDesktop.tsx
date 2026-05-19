@@ -618,6 +618,7 @@ const RestockDesktop: React.FC = () => {
                         >
                             <Scale size={14} />
                             Mermas + Seg
+                        </button>
                     </div>
                 </div>
 
