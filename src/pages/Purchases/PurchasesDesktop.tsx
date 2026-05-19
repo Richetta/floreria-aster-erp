@@ -375,8 +375,8 @@ export const PurchasesDesktop = () => {
                         gap: '6px'
                     }}
                 >
-                    <Plus size={18} />
-                    Registrar Compra Nueva
+                    <Truck size={18} />
+                    🚛 Llegó la Trafic! (Compra Directa)
                 </button>
             </div>
 
@@ -594,7 +594,18 @@ export const PurchasesDesktop = () => {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         {purchaseItems.map(item => (
                                             <div key={item.productId} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 40px', gap: '8px', background: 'white', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#1e293b' }}>{item.productName}</span>
+                                                {item.productId.startsWith('invented_') ? (
+                                                    <input 
+                                                        type="text"
+                                                        value={item.productName}
+                                                        onChange={(e) => setPurchaseItems(items => items.map(i => i.productId === item.productId ? { ...i, productName: e.target.value } : i))}
+                                                        placeholder="Nombre del ítem libre..."
+                                                        style={{ width: '100%', padding: '4px 8px', border: '1px dashed #ca8a04', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold', color: '#854d0e', background: '#fefce8', outline: 'none' }}
+                                                        autoFocus
+                                                    />
+                                                ) : (
+                                                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#1e293b' }}>{item.productName}</span>
+                                                )}
                                                 
                                                 {/* Qty Controls */}
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', borderRadius: '99px', padding: '2px 6px', justifyContent: 'space-between' }}>
@@ -735,6 +746,19 @@ export const PurchasesDesktop = () => {
 
                             {/* Product buttons list */}
                             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
+                                <button
+                                    onClick={() => handleAddProduct({ id: `invented_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, name: formSearchProduct || '', cost: 0, stock: 0 })}
+                                    style={{
+                                        width: '100%', textAlign: 'left', padding: '10px', borderRadius: '8px', border: '1px dashed #ca8a04', background: '#fefce8', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px'
+                                    }}
+                                    className="hover:bg-yellow-100"
+                                >
+                                    <Plus size={16} style={{ color: '#ca8a04' }} />
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#854d0e' }}>
+                                        {formSearchProduct ? `Agregar "${formSearchProduct}" libre` : 'Agregar ítem libre / fuera de catálogo'}
+                                    </span>
+                                </button>
+
                                 {filteredCatalogProducts.map(product => {
                                     const qtyInCart = purchaseItems.find(item => item.productId === product.id)?.quantity || 0;
                                     return (

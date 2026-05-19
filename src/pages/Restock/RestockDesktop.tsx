@@ -20,6 +20,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
+import { ElPapelito } from './components/ElPapelito';
 import './RestockDesktop.css';
 
 interface RestockItem {
@@ -1241,6 +1242,9 @@ const RestockDesktop: React.FC = () => {
                     </form>
                 </div>
             )}
+
+            {/* Float Sticky Note / Papelito */}
+            <ElPapelito />
         </div>
     );
 };

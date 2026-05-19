@@ -192,7 +192,7 @@ export const PurchasesMobile = () => {
             <header className="mobile-purchases-header" style={{ background: '#4F7A5A', color: 'white', padding: '15px' }}>
                 <div className="p-header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'white' }}>
-                        {view === 'history' ? 'Historial de Compras' : 'Registrar Compra'}
+                        {view === 'history' ? 'Historial de Compras' : '🚛 Llegó la Trafic!'}
                     </h2>
                     <button 
                         className={`p-toggle-btn ${view === 'new' ? 'active' : ''}`} 
@@ -306,6 +306,14 @@ export const PurchasesMobile = () => {
                         <div className="p-step-card" style={{ background: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                             <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>2. Agregar Productos</label>
                             <div className="p-product-grid" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', maxHeight: '180px', overflowY: 'auto', padding: '4px' }}>
+                                <button
+                                    onClick={() => handleAddProduct({ id: `invented_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, name: '', cost: 0, stock: 0 })}
+                                    style={{
+                                        padding: '6px 12px', border: '1px dashed #ca8a04', borderRadius: '20px', fontSize: '0.75rem', cursor: 'pointer', background: '#fefce8', color: '#854d0e', fontWeight: 'bold'
+                                    }}
+                                >
+                                    + Ítem Libre
+                                </button>
                                 {products?.filter(p => !p.category?.includes('Ramos')).map(p => {
                                     const qty = purchaseItems.find(i => i.productId === p.id)?.quantity || 0;
                                     return (
@@ -332,7 +340,17 @@ export const PurchasesMobile = () => {
                                     {purchaseItems.map(item => (
                                         <div key={item.productId} className="p-item-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '8px', borderRadius: '8px' }}>
                                             <div className="p-i-main" style={{ flex: 1 }}>
-                                                <span className="p-i-name" style={{ fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{item.productName}</span>
+                                                {item.productId.startsWith('invented_') ? (
+                                                    <input 
+                                                        type="text"
+                                                        value={item.productName}
+                                                        onChange={(e) => setPurchaseItems(items => items.map(i => i.productId === item.productId ? { ...i, productName: e.target.value } : i))}
+                                                        placeholder="Nombre del ítem libre..."
+                                                        style={{ width: '100%', padding: '4px 8px', border: '1px dashed #ca8a04', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold', color: '#854d0e', background: '#fefce8', outline: 'none', marginBottom: '4px' }}
+                                                    />
+                                                ) : (
+                                                    <span className="p-i-name" style={{ fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{item.productName}</span>
+                                                )}
                                                 <div className="p-i-qty" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <button 
                                                         onClick={() => setPurchaseItems(items => items.map(i => i.productId === item.productId ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i))}
