@@ -3,7 +3,7 @@ import {
     Search, Plus, Trash2, MessageCircle, FileSpreadsheet,
     ShoppingCart, PackageOpen, AlertTriangle, ChevronDown,
     ChevronUp, X, Check, Truck, StickyNote, RefreshCw,
-    Filter, Tag
+    Filter, Tag, Download, Printer
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
@@ -91,6 +91,10 @@ const RestockDesktop: React.FC = () => {
 
     // ── Workspace save banner ──
     const [savedFilename, setSavedFilename] = useState<string | null>(null);
+
+    // ── Tabs and Boleto state ──
+    const [activeTab, setActiveTab] = useState<'cart' | 'boleto'>('cart');
+    const [boletoSupplierId, setBoletoSupplierId] = useState<string>('');
 
     // ── Load data ──
     useEffect(() => {
@@ -320,6 +324,178 @@ const RestockDesktop: React.FC = () => {
         addNotification('Pedido guardado en el Workspace', 'success');
     };
 
+    // ── Grouped items by category/folder ──
+    const groupedItemsByFolder = useMemo(() => {
+        const filtered = boletoSupplierId
+            ? orderItems.filter(i => i.supplierId === boletoSupplierId)
+            : orderItems;
+
+        const groups: Record<string, OrderItem[]> = {};
+        filtered.forEach(item => {
+            const cat = item.category || 'Sin Categoría';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+        });
+        return groups;
+    }, [orderItems, boletoSupplierId]);
+
+    // ── Export to Word (.doc) ──
+    const exportToWord = () => {
+        if (orderItems.length === 0) {
+            addNotification('No hay ítems para exportar', 'warning');
+            return;
+        }
+
+        const dateStr = new Date().toLocaleDateString('es-AR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        const hourStr = new Date().toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const activeSupplier = suppliers.find(s => s.id === boletoSupplierId);
+        const supplierInfo = activeSupplier
+            ? `PROVEEDOR: ${activeSupplier.name.toUpperCase()}\nContacto: ${activeSupplier.phone || '—'} · ${(activeSupplier as any).email || '—'}`
+            : 'PROVEEDORES: Varios / General';
+
+        let docContent = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>Pedido de Reposición - Florería Aster</title>
+<style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #27272a; margin: 20px; line-height: 1.4; }
+    h1 { color: #4F7A5A; text-align: center; margin-bottom: 5px; font-size: 24px; font-weight: bold; }
+    .subtitle { text-align: center; color: #71717a; font-size: 11px; text-transform: uppercase; margin-bottom: 20px; font-weight: bold; }
+    .meta-box { width: 100%; margin-bottom: 20px; font-size: 12px; }
+    .meta-left { float: left; width: 45%; }
+    .meta-right { float: right; width: 45%; text-align: right; }
+    .clear { clear: both; }
+    .cat-title { font-size: 13px; font-weight: bold; color: #4F7A5A; background-color: #f4f4f5; padding: 5px; border-left: 4px solid #4F7A5A; margin-top: 15px; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    th { background-color: #4F7A5A; color: #ffffff; font-size: 11px; text-align: left; padding: 6px; border: 1px solid #cbd5e1; }
+    td { padding: 6px; border: 1px solid #e4e4e7; font-size: 12px; }
+    .txt-right { text-align: right; }
+    .total-box { text-align: right; font-weight: bold; font-size: 14px; margin-top: 20px; padding: 10px; background-color: #f4f4f5; border: 1px solid #e4e4e7; }
+    .note-box { border: 1px solid #fed7aa; background-color: #fff7ed; padding: 10px; border-radius: 4px; margin-top: 15px; font-size: 11px; }
+    .note-title { font-weight: bold; color: #c2410c; margin-bottom: 3px; }
+    .handwritten-box { margin-top: 30px; border-top: 1px dashed #d4d4d8; padding-top: 10px; font-size: 11px; color: #71717a; }
+    .handwritten-line { border-bottom: 1px dotted #a1a1aa; height: 30px; }
+</style>
+</head>
+<body>
+
+    <h1>FLORERÍA ASTER</h1>
+    <div class="subtitle">Orden de Compra y Reposición</div>
+
+    <table class="meta-box">
+        <tr>
+            <td style="border:none; width:50%; vertical-align:top;">
+                <strong>EMISOR:</strong> Florería Aster S.R.L.<br>
+                <strong>Solicitante:</strong> ${user?.name || 'Administrador'}<br>
+                <strong>Email:</strong> ${user?.email || '—'}<br>
+                <strong>Fecha:</strong> ${dateStr} a las ${hourStr}
+            </td>
+            <td style="border:none; width:50%; vertical-align:top; text-align:right;">
+                <strong>${supplierInfo.replace(/\n/g, '<br>')}</strong><br>
+                <strong>Estado:</strong> <span style="color:#15803d; font-weight:bold;">Abierto / En Proceso</span>
+            </td>
+        </tr>
+    </table>
+
+    <div class="clear"></div>
+`;
+
+        Object.entries(groupedItemsByFolder).forEach(([category, items]) => {
+            docContent += `
+    <div class="cat-title">${category.toUpperCase()}</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 15%;">Código</th>
+                <th style="width: 45%;">Producto</th>
+                <th style="width: 15%; text-align: right;">Cantidad</th>
+                <th style="width: 12%; text-align: right;">Costo Unit.</th>
+                <th style="width: 13%; text-align: right;">Total Est.</th>
+            </tr>
+        </thead>
+        <tbody>
+`;
+            items.forEach(item => {
+                const total = item.quantity * item.cost;
+                docContent += `
+            <tr>
+                <td>${item.code}</td>
+                <td>${item.name}</td>
+                <td class="txt-right"><strong>${item.quantity}</strong></td>
+                <td class="txt-right">$${item.cost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                <td class="txt-right">$${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+            </tr>
+`;
+            });
+
+            docContent += `
+        </tbody>
+    </table>
+`;
+        });
+
+        const grandTotal = Object.values(groupedItemsByFolder)
+            .flat()
+            .reduce((sum, item) => sum + item.quantity * item.cost, 0);
+
+        if (grandTotal > 0) {
+            docContent += `
+    <div class="total-box">
+        TOTAL ESTIMADO: <span style="color:#4F7A5A;">$${grandTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+    </div>
+`;
+        }
+
+        if (orderNote.trim()) {
+            docContent += `
+    <div class="note-box">
+        <div class="note-title">📝 Observaciones del Pedido:</div>
+        <div>${orderNote}</div>
+    </div>
+`;
+        }
+
+        docContent += `
+    <div class="handwritten-box">
+        <strong>✍️ Ajustes y Notas a Mano (Espacio de Trabajo):</strong>
+        <div class="handwritten-line"></div>
+        <div class="handwritten-line"></div>
+        <div class="handwritten-line"></div>
+    </div>
+
+</body>
+</html>
+`;
+
+        const blob = new Blob(['\ufeff' + docContent], { type: 'application/msword;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const filename = activeSupplier
+            ? `Pedido_${activeSupplier.name.replace(/\s+/g, '_')}_${dateStr.replace(/\s+/g, '_')}.doc`
+            : `Pedido_General_${dateStr.replace(/\s+/g, '_')}.doc`;
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        addNotification('Archivo de Word generado', 'success');
+    };
+
+    // ── Print / Save PDF ──
+    const printBoleto = () => {
+        window.print();
+    };
+
     // ── Urgency badge ──
     const urgencyBadge = (u: StockAlert['urgency'], stock: number) => {
         if (u === 'critical') return <span className="rd-badge rd-badge--critical">Sin Stock ({stock})</span>;
@@ -446,165 +622,307 @@ const RestockDesktop: React.FC = () => {
                 </section>
 
                 {/* ════════════════════════════════
-                    RIGHT PANEL: Open Order Cart
+                    RIGHT PANEL: Open Order Cart & Live Boleto Preview
                     ════════════════════════════════ */}
                 <section className="rd-cart-panel">
-                    <div className="rd-cart-panel__header">
-                        <h2 className="rd-section-title">
-                            <ShoppingCart size={18} />
-                            Lista del Pedido
-                            {orderItems.length > 0 && (
-                                <span className="rd-cart-count">{orderItems.length}</span>
-                            )}
-                        </h2>
-                        {orderItems.length > 0 && (
-                            <button className="rd-btn rd-btn--danger-ghost rd-btn--sm" onClick={clearCart} title="Limpiar lista">
-                                <Trash2 size={13} /> Limpiar
-                            </button>
-                        )}
+                    {/* Tabs navigation */}
+                    <div className="rd-tabs-header">
+                        <button
+                            type="button"
+                            className={`rd-tab-btn ${activeTab === 'cart' ? 'rd-tab-btn--active' : ''}`}
+                            onClick={() => setActiveTab('cart')}
+                            title="Ver y editar la lista de compras"
+                        >
+                            <ShoppingCart size={15} />
+                            Lista Rápida ({orderItems.length})
+                        </button>
+                        <button
+                            type="button"
+                            className={`rd-tab-btn ${activeTab === 'boleto' ? 'rd-tab-btn--active' : ''}`}
+                            onClick={() => setActiveTab('boleto')}
+                            title="Ver vista previa membretada del pedido"
+                        >
+                            <FileSpreadsheet size={15} />
+                            Boleto Membretado
+                        </button>
                     </div>
 
-                    {/* Cart items */}
-                    <div className="rd-cart-list">
-                        {orderItems.length === 0 ? (
-                            <div className="rd-cart-empty">
-                                <ShoppingCart size={36} />
-                                <p>La lista está vacía.</p>
-                                <p className="rd-cart-empty__hint">Tocá el <strong>+</strong> en cualquier producto o agregá uno manualmente abajo.</p>
+                    {activeTab === 'cart' ? (
+                        <>
+                            <div className="rd-cart-panel__header">
+                                <h2 className="rd-section-title">
+                                    <ShoppingCart size={18} />
+                                    Lista del Pedido
+                                    {orderItems.length > 0 && (
+                                        <span className="rd-cart-count">{orderItems.length}</span>
+                                    )}
+                                </h2>
+                                {orderItems.length > 0 && (
+                                    <button className="rd-btn rd-btn--danger-ghost rd-btn--sm" onClick={clearCart} title="Limpiar lista">
+                                        <Trash2 size={13} /> Limpiar
+                                    </button>
+                                )}
                             </div>
-                        ) : (
-                            orderItems.map(item => (
-                                <div key={item.id} className="rd-cart-item">
-                                    <div className="rd-cart-item__info">
-                                        <span className="rd-cart-item__name">
-                                            {item.isCustom && <span className="rd-libre-badge">LIBRE</span>}
-                                            {item.name}
-                                        </span>
-                                        {item.currentStock !== undefined && (
-                                            <span className="rd-cart-item__meta">
-                                                Stock actual: {item.currentStock} · Mín: {item.minStock}
-                                            </span>
-                                        )}
+
+                            {/* Cart items */}
+                            <div className="rd-cart-list">
+                                {orderItems.length === 0 ? (
+                                    <div className="rd-cart-empty">
+                                        <ShoppingCart size={36} />
+                                        <p>La lista está vacía.</p>
+                                        <p className="rd-cart-empty__hint">Tocá el <strong>+</strong> en cualquier producto o agregá uno manualmente abajo.</p>
                                     </div>
-                                    <div className="rd-cart-item__controls">
+                                ) : (
+                                    orderItems.map(item => (
+                                        <div key={item.id} className="rd-cart-item">
+                                            <div className="rd-cart-item__info">
+                                                <span className="rd-cart-item__name">
+                                                    {item.isCustom && <span className="rd-libre-badge">LIBRE</span>}
+                                                    {item.name}
+                                                </span>
+                                                {item.currentStock !== undefined && (
+                                                    <span className="rd-cart-item__meta">
+                                                        Stock actual: {item.currentStock} · Mín: {item.minStock}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="rd-cart-item__controls">
+                                                <select
+                                                    className="rd-input rd-select rd-select--sm"
+                                                    value={item.supplierId || ''}
+                                                    onChange={e => updateItemSupplier(item.id, e.target.value)}
+                                                    title="Proveedor (opcional)"
+                                                >
+                                                    <option value="">Sin proveedor</option>
+                                                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                </select>
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    value={item.quantity}
+                                                    onChange={e => updateQty(item.id, parseInt(e.target.value) || 1)}
+                                                    className="rd-input rd-qty-input"
+                                                    title="Cantidad"
+                                                />
+                                                <button className="rd-remove-btn" onClick={() => removeFromCart(item.id)} title="Quitar">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Custom item form */}
+                            <div className="rd-custom-form">
+                                <p className="rd-custom-form__label">
+                                    <Plus size={13} /> Agregar ítem manualmente
+                                </p>
+                                <div className="rd-custom-form__row">
+                                    <input
+                                        type="text"
+                                        placeholder="Nombre del producto..."
+                                        value={customName}
+                                        onChange={e => setCustomName(e.target.value)}
+                                        className="rd-input rd-input--grow"
+                                        onKeyDown={e => e.key === 'Enter' && addCustomItem()}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Cant."
+                                        min={1}
+                                        value={customQty}
+                                        onChange={e => setCustomQty(e.target.value)}
+                                        className="rd-input rd-qty-input"
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="$Costo"
+                                        min={0}
+                                        value={customCost}
+                                        onChange={e => setCustomCost(e.target.value)}
+                                        className="rd-input rd-cost-input"
+                                    />
+                                </div>
+                                <div className="rd-custom-form__row">
+                                    <select
+                                        className="rd-input rd-select rd-input--grow"
+                                        value={customSupplier}
+                                        onChange={e => setCustomSupplier(e.target.value)}
+                                    >
+                                        <option value="">Proveedor (opcional)</option>
+                                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                    <button className="rd-btn rd-btn--primary" onClick={addCustomItem}>
+                                        <Plus size={15} /> Agregar
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Note */}
+                            <div className="rd-note-section">
+                                <button className="rd-note-toggle" onClick={() => setShowNote(v => !v)}>
+                                    <StickyNote size={14} />
+                                    {showNote ? 'Ocultar nota' : 'Agregar nota al pedido'}
+                                    {showNote ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                </button>
+                                {showNote && (
+                                    <textarea
+                                        className="rd-note-input"
+                                        placeholder="Ej: Pedir las flores para el jueves antes del mediodía..."
+                                        value={orderNote}
+                                        onChange={e => setOrderNote(e.target.value)}
+                                        rows={3}
+                                    />
+                                )}
+                            </div>
+
+                            {/* Footer actions */}
+                            {orderItems.length > 0 && (
+                                <div className="rd-cart-footer">
+                                    <div className="rd-cart-total">
+                                        Total estimado: <strong>${cartTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+                                    </div>
+
+                                    {/* WhatsApp */}
+                                    <div className="rd-wa-row">
                                         <select
-                                            className="rd-input rd-select rd-select--sm"
-                                            value={item.supplierId || ''}
-                                            onChange={e => updateItemSupplier(item.id, e.target.value)}
-                                            title="Proveedor (opcional)"
+                                            className="rd-input rd-select rd-input--grow"
+                                            value={waSupplierId}
+                                            onChange={e => setWaSupplierId(e.target.value)}
                                         >
-                                            <option value="">Sin proveedor</option>
-                                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                            <option value="">Enviar todo por WhatsApp</option>
+                                            {suppliers.map(s => <option key={s.id} value={s.id}>Solo {s.name}</option>)}
                                         </select>
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            value={item.quantity}
-                                            onChange={e => updateQty(item.id, parseInt(e.target.value) || 1)}
-                                            className="rd-input rd-qty-input"
-                                            title="Cantidad"
-                                        />
-                                        <button className="rd-remove-btn" onClick={() => removeFromCart(item.id)} title="Quitar">
-                                            <X size={14} />
+                                        <button className="rd-btn rd-btn--whatsapp" onClick={generateWAMessage}>
+                                            <MessageCircle size={16} />
+                                            Enviar
                                         </button>
                                     </div>
+
+                                    <button className="rd-btn rd-btn--workspace rd-btn--full" onClick={saveToWorkspace}>
+                                        <FileSpreadsheet size={16} />
+                                        Guardar Pedido en Workspace
+                                    </button>
                                 </div>
-                            ))
-                        )}
-                    </div>
-
-                    {/* Custom item form */}
-                    <div className="rd-custom-form">
-                        <p className="rd-custom-form__label">
-                            <Plus size={13} /> Agregar ítem manualmente
-                        </p>
-                        <div className="rd-custom-form__row">
-                            <input
-                                type="text"
-                                placeholder="Nombre del producto..."
-                                value={customName}
-                                onChange={e => setCustomName(e.target.value)}
-                                className="rd-input rd-input--grow"
-                                onKeyDown={e => e.key === 'Enter' && addCustomItem()}
-                            />
-                            <input
-                                type="number"
-                                placeholder="Cant."
-                                min={1}
-                                value={customQty}
-                                onChange={e => setCustomQty(e.target.value)}
-                                className="rd-input rd-qty-input"
-                            />
-                            <input
-                                type="number"
-                                placeholder="$Costo"
-                                min={0}
-                                value={customCost}
-                                onChange={e => setCustomCost(e.target.value)}
-                                className="rd-input rd-cost-input"
-                            />
-                        </div>
-                        <div className="rd-custom-form__row">
-                            <select
-                                className="rd-input rd-select rd-input--grow"
-                                value={customSupplier}
-                                onChange={e => setCustomSupplier(e.target.value)}
-                            >
-                                <option value="">Proveedor (opcional)</option>
-                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                            <button className="rd-btn rd-btn--primary" onClick={addCustomItem}>
-                                <Plus size={15} /> Agregar
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Note */}
-                    <div className="rd-note-section">
-                        <button className="rd-note-toggle" onClick={() => setShowNote(v => !v)}>
-                            <StickyNote size={14} />
-                            {showNote ? 'Ocultar nota' : 'Agregar nota al pedido'}
-                            {showNote ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </button>
-                        {showNote && (
-                            <textarea
-                                className="rd-note-input"
-                                placeholder="Ej: Pedir las flores para el jueves antes del mediodía..."
-                                value={orderNote}
-                                onChange={e => setOrderNote(e.target.value)}
-                                rows={3}
-                            />
-                        )}
-                    </div>
-
-                    {/* Footer actions */}
-                    {orderItems.length > 0 && (
-                        <div className="rd-cart-footer">
-                            <div className="rd-cart-total">
-                                Total estimado: <strong>${cartTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            {/* Boleto tab content */}
+                            <div className="rd-boleto-controls">
+                                <div className="rd-boleto-filter">
+                                    <span className="rd-boleto-filter__label"><Truck size={13} /> Ver Proveedor:</span>
+                                    <select
+                                        className="rd-input rd-select rd-input--grow"
+                                        value={boletoSupplierId}
+                                        onChange={e => setBoletoSupplierId(e.target.value)}
+                                    >
+                                        <option value="">Todos los Proveedores</option>
+                                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
                             </div>
 
-                            {/* WhatsApp */}
-                            <div className="rd-wa-row">
-                                <select
-                                    className="rd-input rd-select rd-input--grow"
-                                    value={waSupplierId}
-                                    onChange={e => setWaSupplierId(e.target.value)}
-                                >
-                                    <option value="">Enviar todo por WhatsApp</option>
-                                    {suppliers.map(s => <option key={s.id} value={s.id}>Solo {s.name}</option>)}
-                                </select>
-                                <button className="rd-btn rd-btn--whatsapp" onClick={generateWAMessage}>
-                                    <MessageCircle size={16} />
-                                    Enviar
-                                </button>
+                            {/* Live Letterhead Preview Paper Canvas */}
+                            <div className="rd-paper-wrapper">
+                                <div id="rd-paper-to-print" className="rd-paper-sheet">
+                                    {/* Header / Logo */}
+                                    <div className="rd-paper-header">
+                                        <div className="rd-paper-header__logo">FLORERÍA ASTER</div>
+                                        <div className="rd-paper-header__subtitle">Orden de Compra y Reposición</div>
+                                        <div className="rd-paper-header__line"></div>
+                                    </div>
+
+                                    {/* Metadata Grid */}
+                                    <div className="rd-paper-meta-grid">
+                                        <div className="rd-paper-meta-section">
+                                            <p><strong>EMISOR:</strong> Florería Aster S.R.L.</p>
+                                            <p><strong>Solicitante:</strong> {user?.name || 'Administrador'}</p>
+                                            <p><strong>Email:</strong> {user?.email || '—'}</p>
+                                            <p className="rd-paper-meta-hint">Florería Aster ERP v2.0</p>
+                                        </div>
+                                        <div className="rd-paper-meta-section rd-paper-meta-section--right">
+                                            <p><strong>Fecha:</strong> {new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                            <p><strong>Hora:</strong> {new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</p>
+                                            <p><strong>Estado:</strong> <span className="rd-paper-status-badge">Abierto / En Proceso</span></p>
+                                        </div>
+                                    </div>
+
+                                    {/* Document Contents */}
+                                    <div className="rd-paper-content-list">
+                                        {Object.keys(groupedItemsByFolder).length === 0 ? (
+                                            <div className="rd-paper-empty-items">
+                                                No hay ítems cargados en esta orden.
+                                            </div>
+                                        ) : (
+                                            Object.entries(groupedItemsByFolder).map(([category, items]) => (
+                                                <div key={category} className="rd-paper-category-group">
+                                                    <h3 className="rd-paper-category-title">{category.toUpperCase()}</h3>
+                                                    <table className="rd-paper-items-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th style={{ width: '15%' }}>Código</th>
+                                                                <th style={{ width: '45%' }}>Producto</th>
+                                                                <th style={{ width: '15%' }} className="rd-txt-right">Cant.</th>
+                                                                <th style={{ width: '12%' }} className="rd-txt-right">Cost. Un.</th>
+                                                                <th style={{ width: '13%' }} className="rd-txt-right">Subtotal</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {items.map(item => (
+                                                                <tr key={item.id}>
+                                                                    <td>{item.code}</td>
+                                                                    <td>{item.name}</td>
+                                                                    <td className="rd-txt-right"><strong>{item.quantity}</strong></td>
+                                                                    <td className="rd-txt-right">${item.cost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                                                                    <td className="rd-txt-right">${(item.quantity * item.cost).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    {/* Totals */}
+                                    {Object.keys(groupedItemsByFolder).length > 0 && (
+                                        <div className="rd-paper-totals-box">
+                                            Total Estimado: <strong>${Object.values(groupedItemsByFolder).flat().reduce((sum, item) => sum + item.quantity * item.cost, 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+                                        </div>
+                                    )}
+
+                                    {/* Order Note */}
+                                    {orderNote.trim() && (
+                                        <div className="rd-paper-note-block">
+                                            <h4>📝 Observaciones del Pedido:</h4>
+                                            <p>{orderNote}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Dotted lines for handwritten notes */}
+                                    <div className="rd-paper-handwritten">
+                                        <h4>✍️ Ajustes y Notas a Mano (Espacio de Trabajo):</h4>
+                                        <div className="rd-paper-handwritten-dotted"></div>
+                                        <div className="rd-paper-handwritten-dotted"></div>
+                                        <div className="rd-paper-handwritten-dotted"></div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <button className="rd-btn rd-btn--workspace rd-btn--full" onClick={saveToWorkspace}>
-                                <FileSpreadsheet size={16} />
-                                Guardar Pedido en Workspace
-                            </button>
-                        </div>
+                            {/* Export / Print actions */}
+                            {orderItems.length > 0 && (
+                                <div className="rd-boleto-footer-actions">
+                                    <button type="button" className="rd-btn rd-btn--workspace rd-btn--full" onClick={exportToWord}>
+                                        <Download size={15} /> Descargar Word (.doc)
+                                    </button>
+                                    <button type="button" className="rd-btn rd-btn--primary rd-btn--full" onClick={printBoleto}>
+                                        <Printer size={15} /> Imprimir / Guardar PDF
+                                    </button>
+                                </div>
+                            )}
+                        </>
                     )}
 
                     {/* Saved banner */}
