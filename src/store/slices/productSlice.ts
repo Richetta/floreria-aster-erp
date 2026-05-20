@@ -122,7 +122,27 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
 
     addProduct: async (productData) => {
         try {
-            const apiProduct = await api.createProduct(mapFrontendToApiProduct(productData as Product, get().categoriesData));
+            let categoryId = productData.category_id || undefined;
+            const categoryName = productData.category;
+            
+            if (!categoryId && categoryName) {
+                const catNameLower = categoryName.toLowerCase().trim();
+                const foundCat = get().categoriesData.find(c => c.name.toLowerCase().trim() === catNameLower);
+                
+                if (!foundCat && catNameLower !== 'sin categoría' && catNameLower !== 'sin categoria') {
+                    const newCat = await api.createCategory({ name: categoryName });
+                    set(state => ({
+                        categories: [...state.categories, categoryName!],
+                        categoriesData: [...state.categoriesData, newCat]
+                    }));
+                    categoryId = newCat.id;
+                } else if (foundCat) {
+                    categoryId = foundCat.id;
+                }
+            }
+
+            const updatedData = { ...productData, category_id: categoryId };
+            const apiProduct = await api.createProduct(mapFrontendToApiProduct(updatedData as Product, get().categoriesData));
             const newProduct = mapApiProductToFrontend(apiProduct, get().categoriesData);
             set(state => ({
                 products: [...state.products, newProduct]
@@ -138,11 +158,33 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
         try {
             const current = get().products.find(p => p.id === id);
             if (!current) return;
-            const updatedProduct = { ...current, ...updates };
-            await api.updateProduct(id, mapFrontendToApiProduct(updatedProduct, get().categoriesData));
+
+            let categoryId = updates.category_id || undefined;
+            const categoryName = updates.category;
+
+            if (!categoryId && categoryName) {
+                const catNameLower = categoryName.toLowerCase().trim();
+                const foundCat = get().categoriesData.find(c => c.name.toLowerCase().trim() === catNameLower);
+
+                if (!foundCat && catNameLower !== 'sin categoría' && catNameLower !== 'sin categoria') {
+                    const newCat = await api.createCategory({ name: categoryName });
+                    set(state => ({
+                        categories: [...state.categories, categoryName!],
+                        categoriesData: [...state.categoriesData, newCat]
+                    }));
+                    categoryId = newCat.id;
+                } else if (foundCat) {
+                    categoryId = foundCat.id;
+                }
+            }
+
+            const updatedProduct = { ...current, ...updates, category_id: categoryId };
+            const apiUpdates = mapFrontendToApiProduct(updatedProduct, get().categoriesData);
+            const apiProduct = await api.updateProduct(id, apiUpdates);
+            const returnedProduct = mapApiProductToFrontend(apiProduct, get().categoriesData);
 
             set(state => ({
-                products: state.products.map(p => p.id === id ? updatedProduct : p)
+                products: state.products.map(p => p.id === id ? returnedProduct : p)
             }));
             get().addNotification('Producto actualizado', 'success');
         } catch (error: any) {

@@ -212,7 +212,19 @@ export const useWorkspaceExplorer = () => {
   };
 
   // Helper to create a folder
-  const createFolder = (name: string) => {
+  const createFolder = async (name: string) => {
+    const isCategoryContext = currentFolderId === 'categorias_folder' || currentFolderId.startsWith('category_dir_');
+    
+    if (isCategoryContext) {
+      const parentId = currentFolderId.startsWith('category_dir_') 
+        ? currentFolderId.replace('category_dir_', '') 
+        : undefined;
+      
+      await store.addCategory(name.trim() || 'Nueva Categoría', parentId);
+      await store.loadCategories(true);
+      return;
+    }
+
     const newFolder: VFSItem = {
       id: `custom_folder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: name.trim() || 'Nueva Carpeta',
@@ -307,7 +319,27 @@ export const useWorkspaceExplorer = () => {
   };
 
   // Helper to rename a custom item
-  const renameItem = (itemId: string, newName: string) => {
+  const renameItem = async (itemId: string, newName: string) => {
+    if (itemId.startsWith('category_dir_')) {
+      const categoryId = itemId.replace('category_dir_', '');
+      const category = store.categoriesData.find(c => c.id === categoryId);
+      if (category) {
+        await store.renameCategory(category.name, newName.trim());
+        await store.loadCategories(true);
+      }
+      return;
+    }
+    if (itemId.startsWith('category_file_')) {
+      const categoryId = itemId.replace('category_file_', '');
+      const category = store.categoriesData.find(c => c.id === categoryId);
+      const cleanName = newName.replace('.xlsx', '').trim();
+      if (category) {
+        await store.renameCategory(category.name, cleanName);
+        await store.loadCategories(true);
+      }
+      return;
+    }
+
     const updated = customItems.map(item => {
       if (item.id === itemId) {
         return { ...item, name: newName };
@@ -323,7 +355,15 @@ export const useWorkspaceExplorer = () => {
   };
 
   // Helper to delete custom VFS items recursively
-  const deleteItem = (itemId: string) => {
+  const deleteItem = async (itemId: string) => {
+    if (itemId.startsWith('category_dir_') || itemId.startsWith('category_file_')) {
+      const categoryId = itemId.replace('category_dir_', '').replace('category_file_', '');
+      await store.deleteCategory(categoryId, false);
+      await store.loadCategories(true);
+      await store.loadProducts();
+      return;
+    }
+
     const getCustomChildIds = (id: string): string[] => {
       const ids = [id];
       const children = customItems.filter(item => item.parentId === id);
