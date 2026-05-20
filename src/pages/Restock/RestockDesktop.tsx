@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Search, Plus, Trash2, MessageCircle, FileSpreadsheet,
     ShoppingCart, PackageOpen, AlertTriangle, ChevronDown,
-    ChevronUp, X, Check, Clock, Truck, StickyNote, RefreshCw,
+    ChevronUp, X, Check, Truck, StickyNote, RefreshCw,
     Filter, Tag
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
