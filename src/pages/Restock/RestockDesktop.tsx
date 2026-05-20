@@ -1,1251 +1,623 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-    PackageOpen, 
-    AlertTriangle, 
-    MessageCircle, 
-    CheckSquare, 
-    Square, 
-    Truck, 
-    Search, 
-    Plus, 
-    Check, 
-    Scale, 
-    Target, 
-    FileSpreadsheet, 
-    UserPlus,
-    X,
-    Trash2
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+    Search, Plus, Trash2, MessageCircle, FileSpreadsheet,
+    ShoppingCart, PackageOpen, AlertTriangle, ChevronDown,
+    ChevronUp, X, Check, Clock, Truck, StickyNote, RefreshCw,
+    Filter, Tag
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
-import { ElPapelito } from './components/ElPapelito';
 import './RestockDesktop.css';
 
-interface RestockItem {
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
+interface OrderItem {
     id: string;
-    code: string;
     name: string;
+    code: string;
+    quantity: number;
+    cost: number;
+    supplierId?: string;
+    supplierName?: string;
+    category?: string;
+    isCustom?: boolean;
+    currentStock?: number;
+    minStock?: number;
+}
+
+interface StockAlert {
+    id: string;
+    name: string;
+    code: string;
     stock: number;
     minStock: number;
     cost: number;
-    suggestedAmount: number;
-    runoutDays: number;
-    mermaRate: number;
     category: string;
-    isCustomItem?: boolean;
+    supplierId?: string;
+    supplierName?: string;
+    tags?: string[];
+    urgency: 'critical' | 'low' | 'ok';
 }
 
-interface SupplierRestock {
-    supplierId: string | null;
-    supplierName: string;
-    supplierPhone: string | null;
-    items: RestockItem[];
-}
+// ─────────────────────────────────────────────
+// Persistence key
+// ─────────────────────────────────────────────
+const CART_STORAGE_KEY = (bId: string) => `restock_open_order_${bId}`;
 
 const RestockDesktop: React.FC = () => {
-    const suppliers = useStore(state => state.suppliers);
-    const loadSuppliers = useStore(state => state.loadSuppliers);
-    const products = useStore(state => state.products);
-    const loadProducts = useStore(state => state.loadProducts);
-    const updateProduct = useStore(state => state.updateProduct);
-    const addProduct = useStore(state => state.addProduct);
-    const categoriesData = useStore(state => state.categoriesData) || [];
-    const loadCategories = useStore(state => state.loadCategories);
-    const addNotification = useStore(state => state.addNotification);
+    const products = useStore(s => s.products);
+    const suppliers = useStore(s => s.suppliers);
+    const categoriesData = useStore(s => s.categoriesData) || [];
+    const loadProducts = useStore(s => s.loadProducts);
+    const loadSuppliers = useStore(s => s.loadSuppliers);
+    const loadCategories = useStore(s => s.loadCategories);
+    const addNotification = useStore(s => s.addNotification);
     const { user } = useAuth();
-    const businessId = user?.business_id || 'default_business';
+    const businessId = user?.business_id || 'default';
 
+    // ── Loading ──
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
-    // Replenishment strategy
-    const [strategy, setStrategy] = useState<'critical' | 'predictive' | 'mermas'>('predictive');
-    const [showAllCatalogProducts, setShowAllCatalogProducts] = useState(false);
+    // ── Filters ──
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [selectedSupplierFilter, setSelectedSupplierFilter] = useState('');
     const [selectedTag, setSelectedTag] = useState('');
+    const [showAll, setShowAll] = useState(false);
 
-    // Dynamic Category Tree options with indentation
-    const categoryOptions = useMemo(() => {
-        const buildOptions = (parentId: string | null = null, depth = 0): { id: string; name: string; label: string }[] => {
-            const list: { id: string; name: string; label: string }[] = [];
-            const filtered = categoriesData.filter(c => c.parent_id === parentId || (parentId === null && !c.parent_id));
-            filtered.forEach(c => {
-                const indent = '\u00A0\u00A0'.repeat(depth);
-                list.push({
-                    id: c.id,
-                    name: c.name,
-                    label: `${indent}${depth > 0 ? '↳ ' : '📁 '}${c.name}`
-                });
-                list.push(...buildOptions(c.id, depth + 1));
-            });
-            return list;
-        };
-        return buildOptions(null, 0);
-    }, [categoriesData]);
-
-    // Unique tags extractor
-    const allTags = useMemo(() => {
-        const tagsSet = new Set<string>();
-        products.forEach(p => {
-            if (p.tags && Array.isArray(p.tags)) {
-                p.tags.forEach(t => tagsSet.add(t));
-            }
-        });
-        return Array.from(tagsSet).sort();
-    }, [products]);
-
-    // Bulk assignment state
-    const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-    const [targetSupplierId, setTargetSupplierId] = useState<string>('');
-    const [isAssigning, setIsAssigning] = useState(false);
-
-    // Custom manually started suppliers, catalog selections, invented items, and suggested amounts
-    const [manuallyStartedSuppliers, setManuallyStartedSuppliers] = useState<string[]>([]);
-    const [manuallyAddedProducts, setManuallyAddedProducts] = useState<Record<string, string[]>>({});
-    const [customOrderItems, setCustomOrderItems] = useState<Record<string, RestockItem[]>>({});
-    const [customSuggestedAmounts, setCustomSuggestedAmounts] = useState<Record<string, number>>({});
-
-    // Inline inputs for inventing items
-    const [inventedName, setInventedName] = useState<Record<string, string>>({});
-    const [inventedCost, setInventedCost] = useState<Record<string, string>>({});
-    const [inventedAmount, setInventedAmount] = useState<Record<string, string>>({});
-
-    // Catalog search query inside each supplier card
-    const [catalogSearchQueries, setCatalogSearchQueries] = useState<Record<string, string>>({});
-
-    // Supplier specific settings: lead time (days) and custom notes
-    const [leadTimes, setLeadTimes] = useState<Record<string, number>>(() => {
-        const stored = localStorage.getItem(`restock_lead_times_${businessId}`);
-        return stored ? JSON.parse(stored) : {};
-    });
-    const [orderNotes, setOrderNotes] = useState<Record<string, string>>({});
-
-    // New product drawer state
-    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [newProductName, setNewProductName] = useState('');
-    const [newProductCode, setNewProductCode] = useState('');
-    const [newProductCost, setNewProductCost] = useState('');
-    const [newProductPrice, setNewProductPrice] = useState('');
-    const [newProductStock, setNewProductStock] = useState('');
-    const [newProductMinStock, setNewProductMinStock] = useState('');
-    const [newProductCategory, setNewProductCategory] = useState('');
-    const [newProductSupplierId, setNewProductSupplierId] = useState('');
-
-    // VFS Success indicator
-    const [successVFSItem, setSuccessVFSItem] = useState<{ supplierName: string; filename: string } | null>(null);
-
-    const fetchRestock = async () => {
+    // ── Cart (open order) ──
+    const [orderItems, setOrderItems] = useState<OrderItem[]>(() => {
         try {
+            const stored = localStorage.getItem(CART_STORAGE_KEY(businessId));
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    });
+    const [orderNote, setOrderNote] = useState(() =>
+        localStorage.getItem(`restock_note_${businessId}`) || ''
+    );
+    const [showNote, setShowNote] = useState(false);
+
+    // ── Custom (free-text) item form ──
+    const [customName, setCustomName] = useState('');
+    const [customQty, setCustomQty] = useState('');
+    const [customCost, setCustomCost] = useState('');
+    const [customSupplier, setCustomSupplier] = useState('');
+
+    // ── WhatsApp ──
+    const [waSupplierId, setWaSupplierId] = useState('');
+
+    // ── Workspace save banner ──
+    const [savedFilename, setSavedFilename] = useState<string | null>(null);
+
+    // ── Load data ──
+    useEffect(() => {
+        (async () => {
             setLoading(true);
             await Promise.allSettled([
                 loadProducts(),
                 loadSuppliers(),
                 loadCategories ? loadCategories(true) : Promise.resolve()
             ]);
-            setError(null);
-        } catch (err: any) {
-            setError('Error al obtener faltantes de stock');
-            console.error(err);
-        } finally {
             setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchRestock();
+        })();
     }, []);
 
-    // Save lead times
-    const handleSetLeadTime = (supplierId: string, days: number) => {
-        const updated = { ...leadTimes, [supplierId]: days };
-        setLeadTimes(updated);
-        localStorage.setItem(`restock_lead_times_${businessId}`, JSON.stringify(updated));
-    };
+    // ── Persist cart ──
+    useEffect(() => {
+        localStorage.setItem(CART_STORAGE_KEY(businessId), JSON.stringify(orderItems));
+    }, [orderItems, businessId]);
 
-    // Calculate suggested stock amount based on strategy
-    const restockData = useMemo(() => {
-        const grouped: Record<string, SupplierRestock> = {};
+    useEffect(() => {
+        localStorage.setItem(`restock_note_${businessId}`, orderNote);
+    }, [orderNote, businessId]);
 
-        // 1. Incorporate all manually started suppliers into group keys
-        manuallyStartedSuppliers.forEach(sId => {
-            if (!grouped[sId]) {
-                const supplier = suppliers.find(s => s.id === sId);
-                grouped[sId] = {
-                    supplierId: sId === 'unassigned' ? null : sId,
-                    supplierName: supplier ? supplier.name : 'Sin Proveedor Asignado',
-                    supplierPhone: supplier ? supplier.phone : null,
-                    items: []
-                };
-            }
-        });
-
-        // 2. Loop over standard products to determine critical/predictive additions or manually added catalog items
-        const filteredProducts = products.filter(p => {
-            const supplierId = p.supplierId || 'unassigned';
-            const isManuallyAdded = manuallyAddedProducts[supplierId]?.includes(p.id);
-
-            const matchesSearch = !searchQuery || 
-                p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()));
-
-            // Category matching recursively
-            const getCategoryWithDescendants = (catName: string): string[] => {
-                const matchingCat = categoriesData.find(c => c.name === catName);
-                if (!matchingCat) return [catName];
-                
-                const names = [matchingCat.name];
-                const collectChildren = (parentId: string) => {
-                    const children = categoriesData.filter(c => c.parent_id === parentId);
-                    children.forEach(ch => {
-                        names.push(ch.name);
-                        collectChildren(ch.id);
-                    });
-                };
-                collectChildren(matchingCat.id);
-                return names;
-            };
-
-            const allowedCategories = selectedCategory ? getCategoryWithDescendants(selectedCategory) : [];
-            const matchesCategory = !selectedCategory || allowedCategories.includes(p.category || '');
-            const matchesSupplier = !selectedSupplierFilter || p.supplierId === selectedSupplierFilter;
-            const matchesTag = !selectedTag || (p.tags && p.tags.includes(selectedTag));
-
-            return (matchesSearch && matchesCategory && matchesSupplier && matchesTag) || isManuallyAdded;
-        });
-
-        filteredProducts.forEach(p => {
-            const supplierId = p.supplierId || 'unassigned';
-            const leadTime = leadTimes[supplierId] || 3;
-
-            const dailySales = p.weeklySales ? (p.weeklySales / 7) : 0.4;
-            const runoutDays = dailySales > 0 ? (p.stock / dailySales) : 999;
-            const mermaRate = p.category?.toLowerCase().includes('flor') ? 0.12 : 0.05;
-
-            const isManuallyAdded = manuallyAddedProducts[supplierId]?.includes(p.id);
-
-            // Suggested Restocking Amount
-            let suggestedAmount = 0;
-            let triggerRestock = false;
-
-            if (strategy === 'critical') {
-                triggerRestock = p.stock <= p.min;
-                suggestedAmount = triggerRestock ? (p.min * 2 - p.stock) : 0;
-            } else if (strategy === 'predictive') {
-                triggerRestock = runoutDays <= (leadTime + 5) || p.stock <= p.min;
-                suggestedAmount = Math.ceil(dailySales * 15) - p.stock;
-            } else { // 'mermas' strategy
-                triggerRestock = runoutDays <= (leadTime + 5) || p.stock <= p.min;
-                const baseReplenish = Math.ceil(dailySales * 15) - p.stock;
-                suggestedAmount = Math.ceil(baseReplenish * (1 + mermaRate));
-            }
-
-            if (suggestedAmount < 0) suggestedAmount = 0;
-            if (suggestedAmount === 0 && triggerRestock) suggestedAmount = 10;
-            if (isManuallyAdded && suggestedAmount === 0) suggestedAmount = 10; // default for manually catalog additions
-
-            // Apply overrides if customSuggestedAmounts exists
-            if (customSuggestedAmounts[p.id] !== undefined) {
-                suggestedAmount = customSuggestedAmounts[p.id];
-            }
-
-            const shouldShow = showAllCatalogProducts || (
-                strategy === 'critical' 
-                    ? (p.stock <= p.min || isManuallyAdded) 
-                    : (p.stock <= p.min || runoutDays <= (leadTime + 7) || isManuallyAdded)
+    // ── Category options flat list ──
+    const categoryOptions = useMemo(() => {
+        const build = (parentId: string | null = null, depth = 0): { id: string; name: string; label: string }[] => {
+            const list: { id: string; name: string; label: string }[] = [];
+            const filtered = categoriesData.filter(c =>
+                parentId === null ? !c.parent_id : c.parent_id === parentId
             );
-
-            if (shouldShow) {
-                if (!grouped[supplierId]) {
-                    const supplier = suppliers.find(s => s.id === supplierId);
-                    grouped[supplierId] = {
-                        supplierId: supplierId === 'unassigned' ? null : supplierId,
-                        supplierName: supplier ? supplier.name : 'Sin Proveedor Asignado',
-                        supplierPhone: supplier ? supplier.phone : null,
-                        items: []
-                    };
-                }
-                
-                // Avoid duplicates
-                if (!grouped[supplierId].items.some(item => item.id === p.id)) {
-                    grouped[supplierId].items.push({
-                        id: p.id,
-                        code: p.code || 'S/C',
-                        name: p.name,
-                        stock: p.stock ?? 0,
-                        minStock: p.min ?? 0,
-                        cost: p.cost || 0,
-                        suggestedAmount,
-                        runoutDays,
-                        mermaRate,
-                        category: p.category
-                    });
-                }
-            }
-        });
-
-        // 3. Inject custom invented items
-        Object.keys(customOrderItems).forEach(sId => {
-            if (!grouped[sId]) {
-                const supplier = suppliers.find(s => s.id === sId);
-                grouped[sId] = {
-                    supplierId: sId === 'unassigned' ? null : sId,
-                    supplierName: supplier ? supplier.name : 'Sin Proveedor Asignado',
-                    supplierPhone: supplier ? supplier.phone : null,
-                    items: []
-                };
-            }
-            customOrderItems[sId].forEach(customItem => {
-                // Apply overriding amount if adjusted
-                let amount = customItem.suggestedAmount;
-                if (customSuggestedAmounts[customItem.id] !== undefined) {
-                    amount = customSuggestedAmounts[customItem.id];
-                }
-
-                if (!grouped[sId].items.some(item => item.id === customItem.id)) {
-                    grouped[sId].items.push({
-                        ...customItem,
-                        suggestedAmount: amount
-                    });
-                }
+            filtered.forEach(c => {
+                list.push({ id: c.id, name: c.name, label: `${'  '.repeat(depth)}${depth > 0 ? '↳ ' : '📁 '}${c.name}` });
+                list.push(...build(c.id, depth + 1));
             });
-        });
-
-        // Filter out completely empty groups if they are not manually started
-        return Object.values(grouped)
-            .filter(g => g.items.length > 0 || manuallyStartedSuppliers.includes(g.supplierId || 'unassigned'))
-            .sort((a, b) => a.supplierName.localeCompare(b.supplierName));
-    }, [products, suppliers, strategy, showAllCatalogProducts, searchQuery, selectedCategory, selectedSupplierFilter, selectedTag, categoriesData, leadTimes, manuallyStartedSuppliers, manuallyAddedProducts, customOrderItems, customSuggestedAmounts]);
-
-    // Handle inline update of catalog products
-    const handleInlineUpdate = async (productId: string, field: 'stock' | 'min' | 'cost', value: number) => {
-        if (productId.startsWith('invented_')) {
-            // Update inside custom invented items
-            setCustomOrderItems(prev => {
-                const updated = { ...prev };
-                Object.keys(updated).forEach(sId => {
-                    updated[sId] = updated[sId].map(item => {
-                        if (item.id === productId) {
-                            return { ...item, [field === 'min' ? 'minStock' : field]: value };
-                        }
-                        return item;
-                    });
-                });
-                return updated;
-            });
-            return;
-        }
-
-        try {
-            await updateProduct(productId, { [field === 'min' ? 'min' : field]: value });
-        } catch (error) {
-            console.error('Error updating in-line value:', error);
-        }
-    };
-
-    // Add dynamic invented item (inventar producto desde este espacio)
-    const handleAddInventedItem = (supplierId: string) => {
-        const name = inventedName[supplierId] || '';
-        const cost = parseFloat(inventedCost[supplierId]) || 0;
-        const amount = parseInt(inventedAmount[supplierId]) || 10;
-
-        if (!name.trim()) {
-            addNotification('El nombre es obligatorio', 'warning');
-            return;
-        }
-
-        const newItem: RestockItem = {
-            id: `invented_${Date.now()}`,
-            code: 'INV',
-            name: name,
-            stock: 0,
-            minStock: 0,
-            cost: cost,
-            suggestedAmount: amount,
-            runoutDays: 0,
-            mermaRate: 0,
-            category: 'Flores Frescas',
-            isCustomItem: true
+            return list;
         };
+        return build(null, 0);
+    }, [categoriesData]);
 
-        setCustomOrderItems(prev => ({
-            ...prev,
-            [supplierId]: [...(prev[supplierId] || []), newItem]
-        }));
+    const allTags = useMemo(() => {
+        const set = new Set<string>();
+        products.forEach(p => p.tags?.forEach((t: string) => set.add(t)));
+        return Array.from(set).sort();
+    }, [products]);
 
-        // Reset inputs
-        setInventedName({ ...inventedName, [supplierId]: '' });
-        setInventedCost({ ...inventedCost, [supplierId]: '' });
-        setInventedAmount({ ...inventedAmount, [supplierId]: '' });
+    // ── Stock alerts ──
+    const stockAlerts = useMemo((): StockAlert[] => {
+        return products
+            .filter(p => {
+                const matchSearch = !searchQuery ||
+                    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()));
+                const matchCat = !selectedCategory || p.category === selectedCategory;
+                const matchTag = !selectedTag || (p.tags && p.tags.includes(selectedTag));
 
-        // Ensure supplier is started
-        const key = supplierId || 'unassigned';
-        if (!manuallyStartedSuppliers.includes(key)) {
-            setManuallyStartedSuppliers(prev => [...prev, key]);
-        }
+                if (!matchSearch || !matchCat || !matchTag) return false;
+                if (showAll) return true;
+                return (p.stock ?? 0) <= (p.min ?? 5);
+            })
+            .map(p => {
+                const stock = p.stock ?? 0;
+                const min = p.min ?? 5;
+                const sup = suppliers.find(s => s.id === p.supplierId);
+                let urgency: StockAlert['urgency'] = 'ok';
+                if (stock <= 0) urgency = 'critical';
+                else if (stock <= min) urgency = 'low';
+                return {
+                    id: p.id,
+                    name: p.name,
+                    code: p.code || 'S/C',
+                    stock,
+                    minStock: min,
+                    cost: p.cost ?? 0,
+                    category: p.category || 'Sin Categoría',
+                    supplierId: p.supplierId,
+                    supplierName: sup?.name,
+                    tags: p.tags || [],
+                    urgency
+                };
+            })
+            .sort((a, b) => {
+                const order = { critical: 0, low: 1, ok: 2 };
+                return order[a.urgency] - order[b.urgency];
+            });
+    }, [products, suppliers, searchQuery, selectedCategory, selectedTag, showAll]);
 
-        addNotification('Ítem inventado añadido al pedido', 'success');
-    };
+    // ── Cart helpers ──
+    const isInCart = useCallback((id: string) => orderItems.some(i => i.id === id), [orderItems]);
 
-    // Remove item from replenishment card
-    const handleRemoveItem = (supplierId: string, itemId: string) => {
-        const sKey = supplierId || 'unassigned';
-        if (itemId.startsWith('invented_')) {
-            setCustomOrderItems(prev => ({
-                ...prev,
-                [sKey]: (prev[sKey] || []).filter(item => item.id !== itemId)
-            }));
-        } else {
-            setManuallyAddedProducts(prev => ({
-                ...prev,
-                [sKey]: (prev[sKey] || []).filter(id => id !== itemId)
-            }));
-        }
-        addNotification('Ítem removido de la orden', 'info');
-    };
-
-    // Fast catalog creation
-    const handleFastCreateProduct = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newProductName.trim()) {
-            addNotification('El nombre es obligatorio', 'warning');
+    const addToCart = (alert: StockAlert) => {
+        if (isInCart(alert.id)) {
+            addNotification('Ese producto ya está en la lista', 'warning');
             return;
         }
-
-        try {
-            await addProduct({
-                name: newProductName,
-                code: newProductCode || `P-${Date.now().toString().slice(-4)}`,
-                category: newProductCategory || 'Flores Frescas',
-                price: parseFloat(newProductPrice) || 0,
-                cost: parseFloat(newProductCost) || 0,
-                stock: parseInt(newProductStock) || 0,
-                min: parseInt(newProductMinStock) || 10,
-                tags: [],
-                supplierId: newProductSupplierId || undefined
-            });
-
-            setIsDrawerOpen(false);
-            setNewProductName('');
-            setNewProductCode('');
-            setNewProductCost('');
-            setNewProductPrice('');
-            setNewProductStock('');
-            setNewProductMinStock('');
-            setNewProductCategory('');
-            setNewProductSupplierId('');
-            
-            await fetchRestock();
-        } catch (error) {
-            console.error('Error creating product in-line:', error);
-        }
+        const suggested = Math.max(1, (alert.minStock * 2) - alert.stock);
+        setOrderItems(prev => [...prev, {
+            id: alert.id,
+            name: alert.name,
+            code: alert.code,
+            quantity: suggested,
+            cost: alert.cost,
+            supplierId: alert.supplierId,
+            supplierName: alert.supplierName,
+            category: alert.category,
+            currentStock: alert.stock,
+            minStock: alert.minStock
+        }]);
     };
 
-    // Save to Workspace
-    const handleSaveToWorkspace = (supplier: SupplierRestock) => {
-        const itemsKey = `explorer_custom_items_${businessId}`;
-        const storedItems = localStorage.getItem(itemsKey);
-        let customItemsList = [];
-        if (storedItems) {
-            try {
-                customItemsList = JSON.parse(storedItems);
-            } catch (e) {
-                console.error(e);
-            }
+    const removeFromCart = (id: string) =>
+        setOrderItems(prev => prev.filter(i => i.id !== id));
+
+    const updateQty = (id: string, qty: number) =>
+        setOrderItems(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(1, qty) } : i));
+
+    const updateItemSupplier = (id: string, supplierId: string) => {
+        const sup = suppliers.find(s => s.id === supplierId);
+        setOrderItems(prev => prev.map(i =>
+            i.id === id ? { ...i, supplierId, supplierName: sup?.name || '' } : i
+        ));
+    };
+
+    const addCustomItem = () => {
+        if (!customName.trim()) {
+            addNotification('Escribí el nombre del producto', 'warning');
+            return;
         }
+        const sup = suppliers.find(s => s.id === customSupplier);
+        setOrderItems(prev => [...prev, {
+            id: `custom_${Date.now()}`,
+            name: customName.trim(),
+            code: 'LIBRE',
+            quantity: parseInt(customQty) || 1,
+            cost: parseFloat(customCost) || 0,
+            supplierId: customSupplier || undefined,
+            supplierName: sup?.name,
+            isCustom: true
+        }]);
+        setCustomName('');
+        setCustomQty('');
+        setCustomCost('');
+        setCustomSupplier('');
+    };
 
-        const dateStr = new Date().toLocaleDateString('es-AR').replace(/\//g, '-');
-        const filename = `Pedido_${supplier.supplierName.replace(/\s+/g, '_')}_${dateStr}.xlsx`;
+    const clearCart = () => {
+        setOrderItems([]);
+        setOrderNote('');
+        addNotification('Lista de pedido limpiada', 'info');
+    };
 
-        const columns = [
-            { key: 'code', label: 'Código', width: 120 },
-            { key: 'name', label: 'Producto', width: 250 },
-            { key: 'quantity', label: 'Cantidad a Pedir', width: 130, align: 'right', badge: true },
-            { key: 'cost', label: 'Costo Unitario ($)', width: 130, align: 'right', format: 'currency' },
-            { key: 'total', label: 'Total Estimado ($)', width: 140, align: 'right', format: 'currency' }
-        ];
+    // ── Totals ──
+    const cartTotal = useMemo(() =>
+        orderItems.reduce((s, i) => s + i.quantity * i.cost, 0), [orderItems]);
 
-        const rows = supplier.items.map(item => ({
-            id: item.id,
-            code: item.code,
-            name: item.name,
-            quantity: item.suggestedAmount,
-            cost: item.cost,
-            total: item.suggestedAmount * item.cost
-        }));
+    // ── WhatsApp message ──
+    const generateWAMessage = () => {
+        const itemsToSend = waSupplierId
+            ? orderItems.filter(i => i.supplierId === waSupplierId || (!i.supplierId && waSupplierId === 'none'))
+            : orderItems;
 
-        const newFile = {
-            id: `restock_order_${supplier.supplierId || 'unassigned'}_${Date.now()}`,
+        const sup = suppliers.find(s => s.id === waSupplierId);
+        const phone = sup?.phone || '';
+        let msg = `*FLORERÍA MI JARDÍN – PEDIDO DE REPOSICIÓN*\n\n`;
+        if (sup) msg += `Hola ${sup.name}, por favor coordinar entrega de:\n\n`;
+        else msg += `Detalle del pedido:\n\n`;
+
+        itemsToSend.forEach(i => {
+            msg += `• *${i.quantity}x* ${i.name} (${i.code})`;
+            if (i.cost > 0) msg += ` – Ref: $${i.cost.toLocaleString('es-AR')} c/u`;
+            msg += '\n';
+        });
+
+        const total = itemsToSend.reduce((s, i) => s + i.quantity * i.cost, 0);
+        if (total > 0) msg += `\n💰 *Total estimado:* $${total.toLocaleString('es-AR')}`;
+        if (orderNote.trim()) msg += `\n📝 *Nota:* ${orderNote}`;
+        msg += `\n\n¡Muchas gracias!`;
+
+        const url = phone
+            ? `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`
+            : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+    };
+
+    // ── Save to Workspace ──
+    const saveToWorkspace = () => {
+        if (orderItems.length === 0) {
+            addNotification('La lista está vacía', 'warning');
+            return;
+        }
+        const key = `explorer_custom_items_${businessId}`;
+        let stored: any[] = [];
+        try { stored = JSON.parse(localStorage.getItem(key) || '[]'); } catch {}
+        const date = new Date().toLocaleDateString('es-AR').replace(/\//g, '-');
+        const filename = `Pedido_${date}.xlsx`;
+        stored.push({
+            id: `restock_order_${Date.now()}`,
             name: filename,
             parentId: 'pedidos_compra_folder',
             type: 'file',
             entity: 'custom',
-            description: `Orden de reposición sugerida para ${supplier.supplierName}. Notas: ${orderNotes[supplier.supplierId || ''] || 'Sin notas'}.`,
+            description: `Orden de reposición. Nota: ${orderNote || 'Sin notas'}`,
             color: '#fef3c7',
             isCustom: true,
             customData: {
-                columns,
-                rows
+                columns: [
+                    { key: 'code', label: 'Código', width: 110 },
+                    { key: 'name', label: 'Producto', width: 250 },
+                    { key: 'quantity', label: 'Cantidad', width: 100, align: 'right', badge: true },
+                    { key: 'supplierName', label: 'Proveedor', width: 160 },
+                    { key: 'cost', label: 'Costo Unit.', width: 120, align: 'right', format: 'currency' },
+                    { key: 'total', label: 'Total Est.', width: 130, align: 'right', format: 'currency' }
+                ],
+                rows: orderItems.map(i => ({
+                    id: i.id,
+                    code: i.code,
+                    name: i.name,
+                    quantity: i.quantity,
+                    supplierName: i.supplierName || '—',
+                    cost: i.cost,
+                    total: i.quantity * i.cost
+                }))
             }
-        };
-
-        customItemsList.push(newFile);
-        localStorage.setItem(itemsKey, JSON.stringify(customItemsList));
-
-        setSuccessVFSItem({
-            supplierName: supplier.supplierName,
-            filename
         });
-        addNotification('Pedido guardado exitosamente en el Workspace virtual', 'success');
-
-        setTimeout(() => {
-            setSuccessVFSItem(null);
-        }, 5000);
+        localStorage.setItem(key, JSON.stringify(stored));
+        setSavedFilename(filename);
+        setTimeout(() => setSavedFilename(null), 6000);
+        addNotification('Pedido guardado en el Workspace', 'success');
     };
 
-    const generateWhatsAppLink = (supplier: SupplierRestock) => {
-        if (!supplier.supplierPhone) return '#';
-        const lead = leadTimes[supplier.supplierId || ''] || 3;
-        const notes = orderNotes[supplier.supplierId || ''] || '';
-
-        let message = `*FLORERÍA MI JARDÍN - ORDEN DE REPOSICIÓN*\n`;
-        message += `Hola ${supplier.supplierName}, deseo coordinar la entrega de los siguientes artículos:\n\n`;
-
-        let totalEstimado = 0;
-        supplier.items.forEach(item => {
-            const totalItem = item.suggestedAmount * item.cost;
-            totalEstimado += totalItem;
-            message += `- *${item.suggestedAmount}x* _${item.name}_ (Cod: ${item.code}) | Costo ref: $${item.cost.toLocaleString('es-AR')}\n`;
-        });
-
-        message += `\n💰 *Total Estimado*: $${totalEstimado.toLocaleString('es-AR')}\n`;
-        message += `⏰ *Plazo de entrega solicitado*: ${lead} días hábiles.\n`;
-        
-        if (notes.trim()) {
-            message += `📌 *Notas / Comentarios*: ${notes}\n`;
-        }
-        
-        message += `\nQuedo a la espera de tu confirmación de stock y costos. ¡Muchas gracias!`;
-
-        return `https://wa.me/${supplier.supplierPhone}?text=${encodeURIComponent(message)}`;
-    };
-
-    const handleToggleProduct = (productId: string) => {
-        setSelectedProducts(prev =>
-            prev.includes(productId)
-                ? prev.filter(id => id !== productId)
-                : [...prev, productId]
-        );
-    };
-
-    const handleToggleAllUnassigned = (unassignedItems: RestockItem[]) => {
-        if (selectedProducts.length === unassignedItems.length) {
-            setSelectedProducts([]);
-        } else {
-            setSelectedProducts(unassignedItems.map(item => item.id));
-        }
-    };
-
-    const handleBulkAssign = async () => {
-        if (selectedProducts.length === 0) {
-            addNotification('Selecciona al menos un producto', 'warning');
-            return;
-        }
-        if (!targetSupplierId) {
-            addNotification('Selecciona un proveedor de destino', 'warning');
-            return;
-        }
-
-        try {
-            setIsAssigning(true);
-            await api.bulkAssignSupplier(selectedProducts, targetSupplierId);
-            addNotification('Proveedor asignado correctamente', 'success');
-            setSelectedProducts([]);
-            setTargetSupplierId('');
-            await fetchRestock();
-        } catch (err) {
-            addNotification('Error al asignar proveedor', 'error');
-        } finally {
-            setIsAssigning(false);
-        }
+    // ── Urgency badge ──
+    const urgencyBadge = (u: StockAlert['urgency'], stock: number) => {
+        if (u === 'critical') return <span className="rd-badge rd-badge--critical">Sin Stock ({stock})</span>;
+        if (u === 'low') return <span className="rd-badge rd-badge--low">Bajo ({stock})</span>;
+        return <span className="rd-badge rd-badge--ok">OK ({stock})</span>;
     };
 
     return (
-        <div className="restock-page">
-            <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #4F7A5A, #37563f)', padding: '1.75rem', borderRadius: '16px', color: 'white', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
+        <div className="rd-root">
+            {/* ── Header ── */}
+            <header className="rd-header">
                 <div>
-                    <h1 className="text-h1" style={{ color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '1.85rem' }}>
-                        <span className="material-symbols-rounded" style={{ fontSize: '32px' }}>local_shipping</span>
-                        Reposición Inteligente
-                        <span style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '99px', fontWeight: 'bold' }}>BI Suite v2</span>
+                    <h1 className="rd-header__title">
+                        <span className="material-symbols-rounded">inventory_2</span>
+                        Reposición
                     </h1>
-                    <p className="text-body mt-2" style={{ color: 'rgba(255,255,255,0.85)', margin: 0 }}>
-                        Identifica, planifica y automatiza el stock crítico del negocio o genera pedidos manuales en caliente.
-                    </p>
+                    <p className="rd-header__sub">Armá tu lista de pedido y enviala cuando esté lista</p>
                 </div>
-                <button onClick={() => setIsDrawerOpen(true)} className="btn flex items-center gap-2" style={{ background: '#ffffff', color: '#4F7A5A', fontWeight: 'bold', padding: '0.6rem 1.25rem', borderRadius: '8px', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}>
-                    <Plus size={18} />
-                    <span>Nuevo Catálogo</span>
-                </button>
+                <div className="rd-header__actions">
+                    <button
+                        className="rd-btn rd-btn--ghost"
+                        onClick={() => { loadProducts(); loadSuppliers(); addNotification('Datos actualizados', 'info'); }}
+                        title="Actualizar datos"
+                    >
+                        <RefreshCw size={16} />
+                    </button>
+                    <Link to="/workspace" className="rd-btn rd-btn--ghost" title="Ver pedidos guardados">
+                        <FileSpreadsheet size={16} />
+                        <span>Workspace</span>
+                    </Link>
+                </div>
             </header>
 
-            {/* Strategy Selection and Search Filter Bar */}
-            <section className="filter-strategy-bar" style={{ display: 'grid', gridTemplateColumns: '2fr 3fr', gap: '1rem', background: '#ffffff', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                {/* Algorithmic Modes Selector */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>Estrategia de Abastecimiento</span>
-                    <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '3px' }}>
-                        <button 
-                            onClick={() => setStrategy('critical')}
-                            style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem', fontWeight: 'bold', borderRadius: '6px', border: 'none', background: strategy === 'critical' ? '#ffffff' : 'transparent', color: strategy === 'critical' ? '#4F7A5A' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', boxShadow: strategy === 'critical' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
+            {/* ── Body: 2 columns ── */}
+            <div className="rd-body">
+
+                {/* ════════════════════════════════
+                    LEFT PANEL: Alerts
+                    ════════════════════════════════ */}
+                <section className="rd-alerts-panel">
+                    <div className="rd-alerts-panel__header">
+                        <h2 className="rd-section-title">
+                            <AlertTriangle size={18} />
+                            Alertas de Stock
+                        </h2>
+                        <button
+                            className={`rd-btn rd-btn--sm ${showAll ? 'rd-btn--active' : 'rd-btn--ghost'}`}
+                            onClick={() => setShowAll(v => !v)}
                         >
-                            <AlertTriangle size={14} />
-                            Crítico
-                        </button>
-                        <button 
-                            onClick={() => setStrategy('predictive')}
-                            style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem', fontWeight: 'bold', borderRadius: '6px', border: 'none', background: strategy === 'predictive' ? '#ffffff' : 'transparent', color: strategy === 'predictive' ? '#4F7A5A' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', boxShadow: strategy === 'predictive' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
-                        >
-                            <Target size={14} />
-                            Predictivo (IA)
-                        </button>
-                        <button 
-                            onClick={() => setStrategy('mermas')}
-                            style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem', fontWeight: 'bold', borderRadius: '6px', border: 'none', background: strategy === 'mermas' ? '#ffffff' : 'transparent', color: strategy === 'mermas' ? '#4F7A5A' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', boxShadow: strategy === 'mermas' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
-                        >
-                            <Scale size={14} />
-                            Mermas + Seg
+                            <Filter size={13} />
+                            {showAll ? 'Ver solo bajos' : 'Ver todos'}
                         </button>
                     </div>
-                </div>
 
-                {/* Free Restocking Toggle Switch */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', justifyContent: 'center' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}>🔓 Modo Abastecimiento</label>
-                    <button
-                        type="button"
-                        onClick={() => setShowAllCatalogProducts(prev => !prev)}
-                        style={{
-                            padding: '8px 14px',
-                            fontSize: '0.8rem',
-                            fontWeight: 'bold',
-                            borderRadius: '8px',
-                            border: `1px solid ${showAllCatalogProducts ? '#4F7A5A' : '#cbd5e1'}`,
-                            background: showAllCatalogProducts ? '#ecfdf5' : '#ffffff',
-                            color: showAllCatalogProducts ? '#4F7A5A' : '#475569',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            transition: 'all 0.2s',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                        }}
-                    >
-                        <span>{showAllCatalogProducts ? '🌟 Ver Todo el Catálogo (Libre)' : '⚠️ Solo Stock Crítico / IA'}</span>
-                    </button>
-                </div>
-
-                {/* Filters */}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-                    <div style={{ position: 'relative', flex: 1 }}>
-                        <Search size={16} style={{ position: 'absolute', left: '10px', top: '10px', color: '#94a3b8' }} />
-                        <input 
-                            type="text" 
-                            placeholder="Buscar código o nombre..." 
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            style={{ width: '100%', padding: '8px 10px 8px 32px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                        />
+                    {/* Filters */}
+                    <div className="rd-filters">
+                        <div className="rd-search-wrap">
+                            <Search size={14} className="rd-search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Buscar producto..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                className="rd-input rd-search"
+                            />
+                            {searchQuery && (
+                                <button className="rd-clear-search" onClick={() => setSearchQuery('')}>
+                                    <X size={13} />
+                                </button>
+                            )}
+                        </div>
+                        <select className="rd-input rd-select" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
+                            <option value="">📁 Todas las categorías</option>
+                            {categoryOptions.map(o => <option key={o.id} value={o.name}>{o.label}</option>)}
+                        </select>
+                        {allTags.length > 0 && (
+                            <select className="rd-input rd-select" value={selectedTag} onChange={e => setSelectedTag(e.target.value)}>
+                                <option value=""><Tag size={12} /> Todas las etiquetas</option>
+                                {allTags.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                        )}
                     </div>
 
-                    <select
-                        value={selectedCategory}
-                        onChange={e => setSelectedCategory(e.target.value)}
-                        style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', background: '#ffffff', minWidth: '150px' }}
-                    >
-                        <option value="">Todas las Carpetas</option>
-                        {categoryOptions.map(opt => (
-                            <option key={opt.id} value={opt.name}>{opt.label}</option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={selectedTag}
-                        onChange={e => setSelectedTag(e.target.value)}
-                        style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', background: '#ffffff', minWidth: '130px' }}
-                    >
-                        <option value="">Todas las Etiquetas</option>
-                        {allTags.map(tag => (
-                            <option key={tag} value={tag}>{tag}</option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={selectedSupplierFilter}
-                        onChange={e => setSelectedSupplierFilter(e.target.value)}
-                        style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', background: '#ffffff', minWidth: '150px' }}
-                    >
-                        <option value="">Todos los Proveedores</option>
-                        {suppliers.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                    </select>
-                </div>
-            </section>
-
-            {/* Dynamic manually start supplier order widget when filter or empty is active */}
-            <section style={{ background: '#ffffff', border: '1px dashed #cbd5e1', padding: '1rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <h4 style={{ margin: 0, fontSize: '0.85rem', color: '#475569', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Plus size={16} />
-                    ¿Deseas iniciar un pedido manual con algún proveedor?
-                </h4>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {suppliers.map(s => {
-                        const isAlreadyStarted = manuallyStartedSuppliers.includes(s.id);
-                        return (
-                            <button
-                                key={s.id}
-                                onClick={() => {
-                                    if (isAlreadyStarted) {
-                                        setManuallyStartedSuppliers(prev => prev.filter(id => id !== s.id));
-                                        addNotification(`Orden manual de ${s.name} cancelada`, 'info');
-                                    } else {
-                                        setManuallyStartedSuppliers(prev => [...prev, s.id]);
-                                        addNotification(`Orden manual iniciada para ${s.name}`, 'success');
-                                    }
-                                }}
-                                style={{ 
-                                    padding: '6px 12px', 
-                                    background: isAlreadyStarted ? '#e2e8f0' : 'white', 
-                                    border: `1px solid ${isAlreadyStarted ? '#94a3b8' : '#cbd5e1'}`, 
-                                    borderRadius: '8px', 
-                                    fontSize: '0.8rem', 
-                                    cursor: 'pointer', 
-                                    fontWeight: 'bold', 
-                                    color: isAlreadyStarted ? '#475569' : '#4F7A5A',
-                                    transition: 'all 0.15s'
-                                }}
-                            >
-                                {isAlreadyStarted ? `✓ Activo: ${s.name}` : `+ Iniciar ${s.name}`}
+                    {/* Alert list */}
+                    {loading ? (
+                        <div className="rd-loading"><div className="rd-spinner" /></div>
+                    ) : stockAlerts.length === 0 ? (
+                        <div className="rd-empty">
+                            <PackageOpen size={40} />
+                            <p>{showAll ? 'No hay productos que coincidan' : '¡Todo el stock está en orden!'}</p>
+                            <button className="rd-btn rd-btn--ghost" onClick={() => setShowAll(true)}>
+                                Ver todo el catálogo
                             </button>
-                        );
-                    })}
-                </div>
-            </section>
-
-            {/* VFS Workspace success overlay banner */}
-            {successVFSItem && (
-                <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', padding: '1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', animation: 'fadeIn 0.3s ease-out' }}>
-                    <div style={{ background: '#f59e0b', color: 'white', borderRadius: '50%', padding: '6px', display: 'flex' }}>
-                        <Check size={18} />
-                    </div>
-                    <div>
-                        <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#78350f', fontWeight: 'bold' }}>¡Pedido Guardado en Workspace!</h4>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#b45309' }}>
-                            El archivo virtual <strong>{successVFSItem.filename}</strong> se generó en la carpeta <strong>Proveedores y Compras</strong> de tu <Link to="/workspace" style={{ fontWeight: 'bold', color: '#78350f', textDecoration: 'underline' }}>Workspace</Link>.
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {error && (
-                <div className="bg-danger-light text-danger p-4 rounded-lg flex items-center gap-2">
-                    <AlertTriangle size={20} />
-                    <span>{error}</span>
-                </div>
-            )}
-
-            {loading && restockData.length === 0 ? (
-                <div className="flex justify-center items-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                </div>
-            ) : restockData.length === 0 ? (
-                <div className="empty-state">
-                    <PackageOpen size={48} className="text-primary opacity-50 mb-4" />
-                    <h2 className="text-h2">¡Todo en Orden!</h2>
-                    <p className="text-body text-muted mt-2">
-                        No hay productos que requieran reposición automática bajo la estrategia seleccionada.
-                    </p>
-                </div>
-            ) : (
-                <div className="suppliers-grid">
-                    {restockData.map((supplier) => {
-                        const isUnassigned = !supplier.supplierId;
-                        const sId = supplier.supplierId || 'unassigned';
-
-                        // Calculate total suggested cost
-                        const totalCostEstimado = supplier.items.reduce((sum, item) => sum + (item.suggestedAmount * item.cost), 0);
-
-                        return (
-                            <div key={sId} className={`supplier-restock-card ${isUnassigned ? 'unassigned' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid #e2e8f0', background: '#ffffff', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                                <div className="supplier-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem', marginBottom: 0 }}>
-                                    <div className="flex flex-col">
-                                        <h3 className="text-h3 font-semibold flex items-center gap-2" style={{ margin: 0, fontSize: '1.15rem', color: '#1e293b' }}>
-                                            {isUnassigned ? (
-                                                <>
-                                                    <AlertTriangle size={20} className="text-warning-dark" style={{ color: '#d97706' }} />
-                                                    {supplier.supplierName}
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Truck size={20} className="text-primary" style={{ color: '#4F7A5A' }} />
-                                                    {supplier.supplierName}
-                                                </>
-                                            )}
-                                        </h3>
-                                        <span className="text-small text-muted" style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
-                                            {supplier.items.length} artículos en reposición | Total Ref: <strong>${totalCostEstimado.toLocaleString('es-AR')}</strong>
-                                        </span>
-                                    </div>
-
-                                    {!isUnassigned && (
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button 
-                                                onClick={() => handleSaveToWorkspace(supplier)}
-                                                className="btn flex items-center gap-1.5"
-                                                style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
-                                                title="Guardar como planilla Excel en tu Workspace virtual"
+                        </div>
+                    ) : (
+                        <div className="rd-alert-list">
+                            {stockAlerts.map(alert => {
+                                const inCart = isInCart(alert.id);
+                                return (
+                                    <div key={alert.id} className={`rd-alert-item rd-alert-item--${alert.urgency} ${inCart ? 'rd-alert-item--in-cart' : ''}`}>
+                                        <div className="rd-alert-item__info">
+                                            <span className="rd-alert-item__name">{alert.name}</span>
+                                            <span className="rd-alert-item__meta">
+                                                {alert.code} · {alert.category}
+                                                {alert.supplierName && <> · <Truck size={11} /> {alert.supplierName}</>}
+                                            </span>
+                                        </div>
+                                        <div className="rd-alert-item__right">
+                                            {urgencyBadge(alert.urgency, alert.stock)}
+                                            <button
+                                                className={`rd-add-btn ${inCart ? 'rd-add-btn--added' : ''}`}
+                                                onClick={() => !inCart && addToCart(alert)}
+                                                disabled={inCart}
+                                                title={inCart ? 'Ya está en la lista' : 'Agregar al pedido'}
                                             >
-                                                <FileSpreadsheet size={16} />
-                                                Workspace
+                                                {inCart ? <Check size={16} /> : <Plus size={16} />}
                                             </button>
-
-                                            <Link
-                                                to="/compras"
-                                                state={{
-                                                    supplierId: supplier.supplierId,
-                                                    items: supplier.items.map(item => ({
-                                                        productId: item.id,
-                                                        productName: item.name,
-                                                        quantity: item.suggestedAmount,
-                                                        cost: item.cost
-                                                    }))
-                                                }}
-                                                className="btn btn-primary btn-sm flex items-center gap-1"
-                                                style={{ background: '#4F7A5A', color: 'white', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8rem', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                            >
-                                                <PackageOpen size={15} />
-                                                Comprar
-                                            </Link>
-
-                                            {supplier.supplierPhone && (
-                                                <a
-                                                    href={generateWhatsAppLink(supplier)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="btn btn-secondary whatsapp-btn btn-sm"
-                                                    style={{ background: '#25D366', color: 'white', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                                >
-                                                    <MessageCircle size={16} />
-                                                </a>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Custom notes and Lead times per supplier */}
-                                {!isUnassigned && (
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}>Demora del Proveedor</label>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <input 
-                                                    type="number"
-                                                    min="1"
-                                                    max="60"
-                                                    value={leadTimes[sId] || 3}
-                                                    onChange={e => handleSetLeadTime(sId, parseInt(e.target.value) || 3)}
-                                                    style={{ width: '60px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.8rem', background: '#ffffff' }}
-                                                />
-                                                <span style={{ fontSize: '0.75rem', color: '#475569' }}>días</span>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}>Notas / Instrucciones del Pedido</label>
-                                            <textarea 
-                                                placeholder="Agregar comentario de pedido, plazos especiales, especificaciones..."
-                                                value={orderNotes[sId] || ''}
-                                                onChange={e => setOrderNotes({ ...orderNotes, [sId]: e.target.value })}
-                                                rows={2}
-                                                style={{ width: '100%', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.8rem', background: '#ffffff', resize: 'vertical' }}
-                                            />
                                         </div>
                                     </div>
-                                )}
+                                );
+                            })}
+                        </div>
+                    )}
+                </section>
 
-                                {/* Advanced Section: Add catalog products & Invent custom items */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '1.5rem', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                                    {/* Catalog Search & Add */}
-                                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}>🔍 Sumar Producto Existente</label>
-                                        <input 
-                                            type="text"
-                                            placeholder="Buscar en catálogo..."
-                                            value={catalogSearchQueries[sId] || ''}
-                                            onChange={e => setCatalogSearchQueries({ ...catalogSearchQueries, [sId]: e.target.value })}
-                                            style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'white' }}
-                                        />
-                                        {catalogSearchQueries[sId] && (
-                                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '180px', overflowY: 'auto' }}>
-                                                {products
-                                                    .filter(p => p.name.toLowerCase().includes(catalogSearchQueries[sId].toLowerCase()) && (!p.supplierId || p.supplierId === sId))
-                                                    .slice(0, 5)
-                                                    .map(p => (
-                                                        <div 
-                                                            key={p.id}
-                                                            onClick={() => {
-                                                                setManuallyAddedProducts(prev => ({
-                                                                    ...prev,
-                                                                    [sId]: [...(prev[sId] || []).filter(id => id !== p.id), p.id]
-                                                                }));
-                                                                if (sId !== 'unassigned' && !manuallyStartedSuppliers.includes(sId)) {
-                                                                    setManuallyStartedSuppliers(prev => [...prev, sId]);
-                                                                }
-                                                                setCatalogSearchQueries({ ...catalogSearchQueries, [sId]: '' });
-                                                                addNotification(`Producto ${p.name} sumado a la orden`, 'success');
-                                                            }}
-                                                            style={{ padding: '8px 10px', fontSize: '0.8rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}
-                                                        >
-                                                            <span>{p.name}</span>
-                                                            <strong style={{ color: '#4F7A5A' }}>Stock: {p.stock}</strong>
-                                                        </div>
-                                                    ))
-                                                }
-                                            </div>
+                {/* ════════════════════════════════
+                    RIGHT PANEL: Open Order Cart
+                    ════════════════════════════════ */}
+                <section className="rd-cart-panel">
+                    <div className="rd-cart-panel__header">
+                        <h2 className="rd-section-title">
+                            <ShoppingCart size={18} />
+                            Lista del Pedido
+                            {orderItems.length > 0 && (
+                                <span className="rd-cart-count">{orderItems.length}</span>
+                            )}
+                        </h2>
+                        {orderItems.length > 0 && (
+                            <button className="rd-btn rd-btn--danger-ghost rd-btn--sm" onClick={clearCart} title="Limpiar lista">
+                                <Trash2 size={13} /> Limpiar
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Cart items */}
+                    <div className="rd-cart-list">
+                        {orderItems.length === 0 ? (
+                            <div className="rd-cart-empty">
+                                <ShoppingCart size={36} />
+                                <p>La lista está vacía.</p>
+                                <p className="rd-cart-empty__hint">Tocá el <strong>+</strong> en cualquier producto o agregá uno manualmente abajo.</p>
+                            </div>
+                        ) : (
+                            orderItems.map(item => (
+                                <div key={item.id} className="rd-cart-item">
+                                    <div className="rd-cart-item__info">
+                                        <span className="rd-cart-item__name">
+                                            {item.isCustom && <span className="rd-libre-badge">LIBRE</span>}
+                                            {item.name}
+                                        </span>
+                                        {item.currentStock !== undefined && (
+                                            <span className="rd-cart-item__meta">
+                                                Stock actual: {item.currentStock} · Mín: {item.minStock}
+                                            </span>
                                         )}
                                     </div>
-
-                                    {/* Invent New Item */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}>✨ Inventar Producto Temporal (No Registrado)</label>
-                                        <div style={{ display: 'flex', gap: '6px' }}>
-                                            <input 
-                                                type="text"
-                                                placeholder="Nombre del ítem..."
-                                                value={inventedName[sId] || ''}
-                                                onChange={e => setInventedName({ ...inventedName, [sId]: e.target.value })}
-                                                style={{ flex: 2, padding: '6px 8px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'white' }}
-                                            />
-                                            <input 
-                                                type="number"
-                                                placeholder="Costo ($)..."
-                                                value={inventedCost[sId] || ''}
-                                                onChange={e => setInventedCost({ ...inventedCost, [sId]: e.target.value })}
-                                                style={{ width: '80px', padding: '6px 8px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'white', textAlign: 'center' }}
-                                            />
-                                            <input 
-                                                type="number"
-                                                placeholder="Cant..."
-                                                value={inventedAmount[sId] || ''}
-                                                onChange={e => setInventedAmount({ ...inventedAmount, [sId]: e.target.value })}
-                                                style={{ width: '65px', padding: '6px 8px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'white', textAlign: 'center' }}
-                                            />
-                                            <button 
-                                                onClick={() => handleAddInventedItem(sId)}
-                                                style={{ background: '#4F7A5A', color: 'white', border: 'none', padding: '0 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}
-                                            >
-                                                Agregar
-                                            </button>
-                                        </div>
+                                    <div className="rd-cart-item__controls">
+                                        <select
+                                            className="rd-input rd-select rd-select--sm"
+                                            value={item.supplierId || ''}
+                                            onChange={e => updateItemSupplier(item.id, e.target.value)}
+                                            title="Proveedor (opcional)"
+                                        >
+                                            <option value="">Sin proveedor</option>
+                                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        </select>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            value={item.quantity}
+                                            onChange={e => updateQty(item.id, parseInt(e.target.value) || 1)}
+                                            className="rd-input rd-qty-input"
+                                            title="Cantidad"
+                                        />
+                                        <button className="rd-remove-btn" onClick={() => removeFromCart(item.id)} title="Quitar">
+                                            <X size={14} />
+                                        </button>
                                     </div>
                                 </div>
-
-                                {isUnassigned && (
-                                    <div className="bulk-assign-bar p-3 bg-white rounded-lg border border-gray-200 flex flex-wrap gap-3 items-center justify-between" style={{ padding: '12px', border: '1px solid #fed7aa', background: '#fffbeb', borderRadius: '8px' }}>
-                                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleToggleAllUnassigned(supplier.items)}>
-                                            {selectedProducts.length === supplier.items.length ? (
-                                                <CheckSquare size={20} className="text-primary" style={{ color: '#4F7A5A' }} />
-                                            ) : (
-                                                <Square size={20} className="text-muted" style={{ color: '#94a3b8' }} />
-                                            )}
-                                            <span className="text-sm font-medium" style={{ fontSize: '0.8rem', color: '#1e293b' }}>Seleccionar todos los huérfanos</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-2 flex-1 max-w-sm" style={{ display: 'flex', gap: '6px' }}>
-                                            <select
-                                                className="form-input text-sm py-1.5"
-                                                value={targetSupplierId}
-                                                onChange={(e) => setTargetSupplierId(e.target.value)}
-                                                style={{ padding: '6px 10px', fontSize: '0.8rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: 'white' }}
-                                            >
-                                                <option value="">Seleccionar proveedor de destino...</option>
-                                                {suppliers.map(s => (
-                                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                                ))}
-                                            </select>
-                                            <button
-                                                className="btn-assign"
-                                                onClick={handleBulkAssign}
-                                                disabled={isAssigning || selectedProducts.length === 0 || !targetSupplierId}
-                                                style={{ padding: '6px 12px', background: '#4F7A5A', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' }}
-                                            >
-                                                <Truck size={15} />
-                                                {isAssigning ? 'Asignando...' : 'Asignar'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="supplier-items-list" style={{ display: 'flex', flexDirection: 'column' }}>
-                                    {/* Table Headers */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '3fr 1.2fr 1.2fr 1.2fr 1.4fr 1.2fr 0.8fr', padding: '8px', borderBottom: '2px solid #f1f5f9', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>
-                                        <div>Producto</div>
-                                        <div style={{ textAlign: 'center' }}>Stock act</div>
-                                        <div style={{ textAlign: 'center' }}>Stock mín</div>
-                                        <div style={{ textAlign: 'center' }}>Costo ref ($)</div>
-                                        <div style={{ textAlign: 'center' }}>Pedir (Editar)</div>
-                                        <div style={{ textAlign: 'center' }}>Autonomía</div>
-                                        <div style={{ textAlign: 'center' }}>Acciones</div>
-                                    </div>
-
-                                    {supplier.items.map(item => {
-                                        const isSelected = selectedProducts.includes(item.id);
-
-                                        // Badge styling for Runout Days
-                                        let badgeColor = '#10b981';
-                                        let badgeBg = '#d1fae5';
-                                        let badgeLabel = `${item.runoutDays.toFixed(0)} días`;
-
-                                        if (item.id.startsWith('invented_')) {
-                                            badgeColor = '#8b5cf6';
-                                            badgeBg = '#ede9fe';
-                                            badgeLabel = 'Inventado';
-                                        } else if (item.runoutDays <= 5) {
-                                            badgeColor = '#ef4444';
-                                            badgeBg = '#fee2e2';
-                                            badgeLabel = 'Faltante';
-                                        } else if (item.runoutDays <= 15) {
-                                            badgeColor = '#d97706';
-                                            badgeBg = '#fef3c7';
-                                            badgeLabel = `${item.runoutDays.toFixed(0)} d (Bajo)`;
-                                        }
-
-                                        return (
-                                            <div
-                                                key={item.id}
-                                                className={`restock-item ${isUnassigned ? 'selectable' : ''} ${isSelected ? 'selected' : ''}`}
-                                                style={{ display: 'grid', gridTemplateColumns: '3fr 1.2fr 1.2fr 1.2fr 1.4fr 1.2fr 0.8fr', alignItems: 'center', padding: '12px 8px', borderBottom: '1px solid #f1f5f9', background: isSelected ? '#ecfdf5' : 'transparent', cursor: isUnassigned ? 'pointer' : 'default' }}
-                                                onClick={() => isUnassigned && handleToggleProduct(item.id)}
-                                            >
-                                                {/* Product Info */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    {isUnassigned && (
-                                                        <div className="item-checkbox mr-2">
-                                                            {isSelected ? (
-                                                                <CheckSquare size={18} className="text-primary" style={{ color: '#4F7A5A' }} />
-                                                            ) : (
-                                                                <Square size={18} className="text-muted" style={{ color: '#94a3b8' }} />
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                        {item.code && <span className="item-code" style={{ fontSize: '0.65rem', background: '#f1f5f9', padding: '1px 4px', borderRadius: '4px', width: 'fit-content' }}>{item.code}</span>}
-                                                        <span className="item-name font-medium" style={{ fontSize: '0.85rem', color: '#1e293b', fontWeight: 600 }}>{item.name}</span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Stock actual editable */}
-                                                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                    <input 
-                                                        type="number"
-                                                        defaultValue={item.stock}
-                                                        disabled={item.id.startsWith('invented_')}
-                                                        onBlur={e => handleInlineUpdate(item.id, 'stock', parseFloat(e.target.value) || 0)}
-                                                        style={{ width: '60px', padding: '2px 4px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.8rem', textAlign: 'center' }}
-                                                    />
-                                                </div>
-
-                                                {/* Stock mínimo editable */}
-                                                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                    <input 
-                                                        type="number"
-                                                        defaultValue={item.minStock}
-                                                        disabled={item.id.startsWith('invented_')}
-                                                        onBlur={e => handleInlineUpdate(item.id, 'min', parseFloat(e.target.value) || 0)}
-                                                        style={{ width: '60px', padding: '2px 4px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.8rem', textAlign: 'center' }}
-                                                    />
-                                                </div>
-
-                                                {/* Costo ref editable */}
-                                                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                    <input 
-                                                        type="number"
-                                                        defaultValue={item.cost}
-                                                        onBlur={e => handleInlineUpdate(item.id, 'cost', parseFloat(e.target.value) || 0)}
-                                                        style={{ width: '70px', padding: '2px 4px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.8rem', textAlign: 'center' }}
-                                                    />
-                                                </div>
-
-                                                {/* Suggested Replenishment input - fully editable! */}
-                                                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                    <input 
-                                                        type="number"
-                                                        min="0"
-                                                        value={item.suggestedAmount}
-                                                        onChange={e => {
-                                                            const val = parseInt(e.target.value) || 0;
-                                                            setCustomSuggestedAmounts(prev => ({ ...prev, [item.id]: val }));
-                                                        }}
-                                                        style={{ width: '70px', padding: '2px 4px', border: '1px solid #4F7A5A', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center', fontWeight: 'bold', color: '#4F7A5A', background: '#ecfdf5' }}
-                                                    />
-                                                </div>
-
-                                                {/* Runout Days Badges */}
-                                                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                    <span style={{ background: badgeBg, color: badgeColor, fontSize: '0.7rem', padding: '3px 8px', borderRadius: '99px', fontWeight: 'bold' }}>
-                                                        {badgeLabel}
-                                                    </span>
-                                                </div>
-
-                                                {/* Delete/remove manual row */}
-                                                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                    <button
-                                                        onClick={() => handleRemoveItem(sId, item.id)}
-                                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }}
-                                                        title="Remover este producto del pedido"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* Fast Product Creation Slider Drawer */}
-            {isDrawerOpen && (
-                <div style={{ position: 'fixed', top: 0, right: 0, width: '450px', height: '100vh', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', borderLeft: '1px solid #cbd5e1', zIndex: 9999, display: 'flex', flexDirection: 'column', animation: 'slideIn 0.3s ease-out', boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #e2e8f0', background: '#4F7A5A', color: 'white' }}>
-                        <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <UserPlus size={20} />
-                            + Registrar Catálogo
-                        </h2>
-                        <button onClick={() => setIsDrawerOpen(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
-                            <X size={24} />
-                        </button>
+                            ))
+                        )}
                     </div>
 
-                    <form onSubmit={handleFastCreateProduct} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto', flex: 1 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569' }}>Nombre del Producto *</label>
-                            <input 
+                    {/* Custom item form */}
+                    <div className="rd-custom-form">
+                        <p className="rd-custom-form__label">
+                            <Plus size={13} /> Agregar ítem manualmente
+                        </p>
+                        <div className="rd-custom-form__row">
+                            <input
                                 type="text"
-                                placeholder="Ej: Rosas Importadas Rojas x12"
-                                required
-                                value={newProductName}
-                                onChange={e => setNewProductName(e.target.value)}
-                                style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem' }}
+                                placeholder="Nombre del producto..."
+                                value={customName}
+                                onChange={e => setCustomName(e.target.value)}
+                                className="rd-input rd-input--grow"
+                                onKeyDown={e => e.key === 'Enter' && addCustomItem()}
+                            />
+                            <input
+                                type="number"
+                                placeholder="Cant."
+                                min={1}
+                                value={customQty}
+                                onChange={e => setCustomQty(e.target.value)}
+                                className="rd-input rd-qty-input"
+                            />
+                            <input
+                                type="number"
+                                placeholder="$Costo"
+                                min={0}
+                                value={customCost}
+                                onChange={e => setCustomCost(e.target.value)}
+                                className="rd-input rd-cost-input"
                             />
                         </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569' }}>Código de barras / Ref</label>
-                            <input 
-                                type="text"
-                                placeholder="Ej: 7791234567"
-                                value={newProductCode}
-                                onChange={e => setNewProductCode(e.target.value)}
-                                style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem' }}
-                            />
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569' }}>Costo Unitario ($)</label>
-                                <input 
-                                    type="number"
-                                    placeholder="Ej: 450"
-                                    value={newProductCost}
-                                    onChange={e => setNewProductCost(e.target.value)}
-                                    style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem' }}
-                                />
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569' }}>Precio de Venta ($)</label>
-                                <input 
-                                    type="number"
-                                    placeholder="Ej: 1200"
-                                    value={newProductPrice}
-                                    onChange={e => setNewProductPrice(e.target.value)}
-                                    style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem' }}
-                                />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569' }}>Stock Inicial</label>
-                                <input 
-                                    type="number"
-                                    placeholder="Ej: 15"
-                                    value={newProductStock}
-                                    onChange={e => setNewProductStock(e.target.value)}
-                                    style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem' }}
-                                />
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569' }}>Stock Mínimo</label>
-                                <input 
-                                    type="number"
-                                    placeholder="Ej: 10"
-                                    value={newProductMinStock}
-                                    onChange={e => setNewProductMinStock(e.target.value)}
-                                    style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem' }}
-                                />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569' }}>Carpeta / Categoría</label>
+                        <div className="rd-custom-form__row">
                             <select
-                                value={newProductCategory}
-                                onChange={e => setNewProductCategory(e.target.value)}
-                                style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem', background: 'white' }}
+                                className="rd-input rd-select rd-input--grow"
+                                value={customSupplier}
+                                onChange={e => setCustomSupplier(e.target.value)}
                             >
-                                <option value="">Seleccionar carpeta...</option>
-                                {categoriesData.map(c => (
-                                    <option key={c.id} value={c.name}>{c.name}</option>
-                                ))}
+                                <option value="">Proveedor (opcional)</option>
+                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
+                            <button className="rd-btn rd-btn--primary" onClick={addCustomItem}>
+                                <Plus size={15} /> Agregar
+                            </button>
                         </div>
+                    </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569' }}>Proveedor Asociado</label>
-                            <select
-                                value={newProductSupplierId}
-                                onChange={e => setNewProductSupplierId(e.target.value)}
-                                style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem', background: 'white' }}
-                            >
-                                <option value="">Seleccionar proveedor...</option>
-                                {suppliers.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <button 
-                            type="submit" 
-                            style={{ background: '#4F7A5A', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', marginTop: '1rem' }}
-                        >
-                            ✓ Registrar Producto
+                    {/* Note */}
+                    <div className="rd-note-section">
+                        <button className="rd-note-toggle" onClick={() => setShowNote(v => !v)}>
+                            <StickyNote size={14} />
+                            {showNote ? 'Ocultar nota' : 'Agregar nota al pedido'}
+                            {showNote ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
-                    </form>
-                </div>
-            )}
+                        {showNote && (
+                            <textarea
+                                className="rd-note-input"
+                                placeholder="Ej: Pedir las flores para el jueves antes del mediodía..."
+                                value={orderNote}
+                                onChange={e => setOrderNote(e.target.value)}
+                                rows={3}
+                            />
+                        )}
+                    </div>
 
-            {/* Float Sticky Note / Papelito */}
-            <ElPapelito />
+                    {/* Footer actions */}
+                    {orderItems.length > 0 && (
+                        <div className="rd-cart-footer">
+                            <div className="rd-cart-total">
+                                Total estimado: <strong>${cartTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+                            </div>
+
+                            {/* WhatsApp */}
+                            <div className="rd-wa-row">
+                                <select
+                                    className="rd-input rd-select rd-input--grow"
+                                    value={waSupplierId}
+                                    onChange={e => setWaSupplierId(e.target.value)}
+                                >
+                                    <option value="">Enviar todo por WhatsApp</option>
+                                    {suppliers.map(s => <option key={s.id} value={s.id}>Solo {s.name}</option>)}
+                                </select>
+                                <button className="rd-btn rd-btn--whatsapp" onClick={generateWAMessage}>
+                                    <MessageCircle size={16} />
+                                    Enviar
+                                </button>
+                            </div>
+
+                            <button className="rd-btn rd-btn--workspace rd-btn--full" onClick={saveToWorkspace}>
+                                <FileSpreadsheet size={16} />
+                                Guardar Pedido en Workspace
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Saved banner */}
+                    {savedFilename && (
+                        <div className="rd-saved-banner">
+                            <Check size={16} />
+                            Pedido guardado como <strong>{savedFilename}</strong>
+                            {' — '}
+                            <Link to="/workspace" style={{ color: '#92400e', fontWeight: 'bold' }}>Ver en Workspace</Link>
+                        </div>
+                    )}
+                </section>
+            </div>
         </div>
     );
 };
