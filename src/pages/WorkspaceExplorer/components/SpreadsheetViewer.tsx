@@ -541,10 +541,17 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
                           const nameChange = group.changes.find(c => c.key === 'name');
                           const finalName = nameChange ? nameChange.newValue : group.rowName;
                           
-                          const details = group.changes
-                            .filter(c => c.newValue !== '' && c.newValue !== null && c.key !== 'name')
-                            .map(c => `${c.label}: ${c.newValue}`)
-                            .join(' • ');
+                          // Look up the actual row in localRows to get its category_name even if not explicitly modified
+                          const row = localRows.find(r => String(r.id) === String(id));
+                          const categoryDetail = row?.category_name ? `Categoría: ${row.category_name}` : '';
+                          const detailsList: string[] = [];
+                          if (categoryDetail) detailsList.push(categoryDetail);
+
+                          group.changes
+                            .filter(c => c.newValue !== '' && c.newValue !== null && c.key !== 'name' && c.key !== 'category_name')
+                            .forEach(c => detailsList.push(`${c.label}: ${c.newValue}`));
+
+                          const details = detailsList.join(' • ');
 
                           return (
                             <tr key={id}>

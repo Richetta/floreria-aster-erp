@@ -787,15 +787,36 @@ export const useWorkspaceExplorer = () => {
         
         if (entity === 'products') {
           if (isNew) {
+            // Find the full row in updatedRows to get both pre-filled and edited values
+            const row = updatedRows.find(r => String(r.id) === String(id));
+            const rowFields = row || {};
+
+            // Check if the spreadsheet is a category spreadsheet file
+            const isCategoryFile = fileId.startsWith('category_file_');
+            const fileCategoryId = isCategoryFile ? fileId.replace('category_file_', '') : null;
+            const categoryObj = fileCategoryId ? store.categoriesData.find(c => c.id === fileCategoryId) : null;
+
+            let category_id = categoryObj ? categoryObj.id : '';
+            let categoryName = categoryObj ? categoryObj.name : String(rowFields.category_name || fields.category_name || 'Sin categoría');
+
+            if (!category_id && categoryName) {
+              const catNameLower = categoryName.toLowerCase().trim();
+              const foundCat = store.categoriesData.find(c => c.name.toLowerCase().trim() === catNameLower);
+              if (foundCat) {
+                category_id = foundCat.id;
+                categoryName = foundCat.name;
+              }
+            }
+
             await store.addProduct({
-              name: String(fields.name || 'Nuevo Producto'),
-              code: String(fields.code || `PROD-${Date.now()}`),
-              stock: Number(fields.stock_quantity) || 0,
-              cost: Number(fields.cost) || 0,
-              price: Number(fields.price) || 0,
-              category_id: '',
+              name: String(rowFields.name || fields.name || 'Nuevo Producto'),
+              code: String(rowFields.code || fields.code || `PROD-${Date.now()}`),
+              stock: Number(rowFields.stock_quantity !== undefined ? rowFields.stock_quantity : fields.stock_quantity) || 0,
+              cost: Number(rowFields.cost !== undefined ? rowFields.cost : fields.cost) || 0,
+              price: Number(rowFields.price !== undefined ? rowFields.price : fields.price) || 0,
+              category_id: category_id,
               min: 1,
-              category: String(fields.category_name || 'Sin categoría'),
+              category: categoryName,
               tags: []
             });
           } else {
