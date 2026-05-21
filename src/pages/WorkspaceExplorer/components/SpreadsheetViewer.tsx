@@ -229,6 +229,7 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
     ]);
 
     setEditingCell({ rowId: newId, colKey: columns[0].key });
+    setEditValue(String(emptyRow[columns[0].key] || ''));
 
     setTimeout(() => {
       if (tableContainerRef.current) {

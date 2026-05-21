@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
+import { flattenCategories } from '../../store/slices/mappers';
 
 export interface Column {
   key: string;
@@ -377,7 +378,8 @@ export const useWorkspaceExplorer = () => {
   const renameItem = async (itemId: string, newName: string) => {
     if (itemId.startsWith('category_dir_')) {
       const categoryId = itemId.replace('category_dir_', '');
-      const category = store.categoriesData.find(c => c.id === categoryId);
+      const flatCategories = flattenCategories(store.categoriesData);
+      const category = flatCategories.find(c => c.id === categoryId);
       if (category) {
         await store.renameCategory(category.name, newName.trim());
         await store.loadCategories(true);
@@ -386,7 +388,8 @@ export const useWorkspaceExplorer = () => {
     }
     if (itemId.startsWith('category_file_')) {
       const categoryId = itemId.replace('category_file_', '');
-      const category = store.categoriesData.find(c => c.id === categoryId);
+      const flatCategories = flattenCategories(store.categoriesData);
+      const category = flatCategories.find(c => c.id === categoryId);
       const cleanName = newName.replace('.xlsx', '').trim();
       if (category) {
         await store.renameCategory(category.name, cleanName);
@@ -684,14 +687,15 @@ export const useWorkspaceExplorer = () => {
         };
       }
 
-      case 'categories':
+      case 'categories': {
+        const flatCategories = flattenCategories(store.categoriesData);
         return {
           columns: [
             { key: 'name', label: 'Categoría', width: 250 },
             { key: 'parent_name', label: 'Categoría Padre', width: 200 }
           ],
-          rows: store.categoriesData.map(c => {
-            const parent = store.categoriesData.find(pc => pc.id === c.parent_id);
+          rows: flatCategories.map(c => {
+            const parent = flatCategories.find(pc => pc.id === c.parent_id);
             return {
               id: c.id,
               name: c.name,
@@ -699,6 +703,7 @@ export const useWorkspaceExplorer = () => {
             };
           })
         };
+      }
 
       case 'orders':
         return {
@@ -849,14 +854,15 @@ export const useWorkspaceExplorer = () => {
             // Check if the spreadsheet is a category spreadsheet file
             const isCategoryFile = fileId.startsWith('category_file_');
             const fileCategoryId = isCategoryFile ? fileId.replace('category_file_', '') : null;
-            const categoryObj = fileCategoryId ? store.categoriesData.find(c => c.id === fileCategoryId) : null;
+            const flatCategories = flattenCategories(store.categoriesData);
+            const categoryObj = fileCategoryId ? flatCategories.find(c => c.id === fileCategoryId) : null;
 
             let category_id = categoryObj ? categoryObj.id : '';
             let categoryName = categoryObj ? categoryObj.name : String(rowFields.category_name || fields.category_name || 'Sin categoría');
 
             if (!category_id && categoryName) {
               const catNameLower = categoryName.toLowerCase().trim();
-              const foundCat = store.categoriesData.find(c => c.name.toLowerCase().trim() === catNameLower);
+              const foundCat = flatCategories.find(c => c.name.toLowerCase().trim() === catNameLower);
               if (foundCat) {
                 category_id = foundCat.id;
                 categoryName = foundCat.name;

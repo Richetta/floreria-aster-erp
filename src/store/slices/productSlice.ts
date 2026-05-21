@@ -2,7 +2,7 @@ import { type StateCreator } from 'zustand';
 import type { Product, Category, Brand, CustomFilter } from './types';
 import type { AppState } from '../useStore';
 import { api } from '../../services/api';
-import { mapApiProductToFrontend, mapFrontendToApiProduct } from './mappers';
+import { mapApiProductToFrontend, mapFrontendToApiProduct, flattenCategories } from './mappers';
 
 export interface ProductSlice {
     products: Product[];
@@ -127,7 +127,8 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
             
             if (!categoryId && categoryName) {
                 const catNameLower = categoryName.toLowerCase().trim();
-                const foundCat = get().categoriesData.find(c => c.name.toLowerCase().trim() === catNameLower);
+                const flatCategories = flattenCategories(get().categoriesData);
+                const foundCat = flatCategories.find(c => c.name.toLowerCase().trim() === catNameLower);
                 
                 if (!foundCat && catNameLower !== 'sin categoría' && catNameLower !== 'sin categoria') {
                     const newCat = await api.createCategory({ name: categoryName });
@@ -164,7 +165,8 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
 
             if (!categoryId && categoryName) {
                 const catNameLower = categoryName.toLowerCase().trim();
-                const foundCat = get().categoriesData.find(c => c.name.toLowerCase().trim() === catNameLower);
+                const flatCategories = flattenCategories(get().categoriesData);
+                const foundCat = flatCategories.find(c => c.name.toLowerCase().trim() === catNameLower);
 
                 if (!foundCat && catNameLower !== 'sin categoría' && catNameLower !== 'sin categoria') {
                     const newCat = await api.createCategory({ name: categoryName });

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { VFSItem } from '../useWorkspaceExplorer';
 import { useStore } from '../../../store/useStore';
+import { flattenCategories } from '../../../store/slices/mappers';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 
@@ -159,8 +160,9 @@ export const VFSBrowser: React.FC<VFSBrowserProps> = ({
     if (!catId) return [];
     const path: string[] = [];
     let currId = catId;
+    const flatCategories = flattenCategories(store.categoriesData);
     while (currId) {
-      const cat = store.categoriesData.find(c => c.id === currId);
+      const cat = flatCategories.find(c => c.id === currId);
       if (cat) {
         path.unshift(cat.name);
         currId = cat.parent_id || '';
@@ -232,8 +234,9 @@ export const VFSBrowser: React.FC<VFSBrowserProps> = ({
             { key: 'name', label: 'Categoría' },
             { key: 'parent_name', label: 'Categoría Padre' }
           ];
-          rows = store.categoriesData.map(c => {
-            const parent = store.categoriesData.find(pc => pc.id === c.parent_id);
+          const flatCategories = flattenCategories(store.categoriesData);
+          rows = flatCategories.map(c => {
+            const parent = flatCategories.find(pc => pc.id === c.parent_id);
             return {
               name: c.name,
               parent_name: parent ? parent.name : 'Raíz'
