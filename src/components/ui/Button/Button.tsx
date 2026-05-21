@@ -12,6 +12,8 @@ export interface ButtonProps {
   icon?: React.ReactNode;
   fullWidth?: boolean;
   loading?: boolean;
+  style?: React.CSSProperties;
+  title?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -24,7 +26,9 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   icon,
   fullWidth = false,
-  loading = false
+  loading = false,
+  style,
+  title
 }) => {
   return (
     <button
@@ -39,6 +43,8 @@ export const Button: React.FC<ButtonProps> = ({
       `.trim()}
       onClick={onClick}
       disabled={disabled || loading}
+      style={style}
+      title={title}
     >
       {loading && (
         <span className="btn-spinner">

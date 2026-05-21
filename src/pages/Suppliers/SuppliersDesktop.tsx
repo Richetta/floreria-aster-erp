@@ -18,6 +18,7 @@ import {
     Tag,
     Edit2
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import type { SupplierLocal } from '../../store/useStore';
 import { ocrService } from '../../services/OCRService';
@@ -31,6 +32,7 @@ import { useFeatureGuard } from '../../store/useSubscription';
 import './Suppliers.css';
 
 export const SuppliersDesktop = () => {
+    const navigate = useNavigate();
     const suppliers = useStore(state => state.suppliers);
     const products = useStore(state => state.products);
     const updateProduct = useStore(state => state.updateProduct);
@@ -292,20 +294,33 @@ export const SuppliersDesktop = () => {
                             <Button
                                 variant="secondary"
                                 size="sm"
-                                fullWidth
                                 onClick={() => {
                                     setEditingSupplier(sup);
                                     setIsModalOpen(true);
                                 }}
+                                style={{ padding: '8px' }}
+                                title="Editar Proveedor"
                             >
-                                Editar
+                                <Edit2 size={16} />
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => {
+                                    navigate(`/reposicion?supplierId=${sup.id}`);
+                                }}
+                                className="flex items-center justify-center gap-1.5"
+                                style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', flex: 2 }}
+                            >
+                                <Truck size={16} />
+                                <span style={{ fontSize: '0.78rem', fontWeight: 'bold' }}>Pedir Reposición</span>
                             </Button>
                             <Button
                                 variant="primary"
                                 size="sm"
-                                fullWidth
+                                style={{ flex: 1 }}
                             >
-                                Ver Compras
+                                Compras
                             </Button>
                         </div>
                     </Card>

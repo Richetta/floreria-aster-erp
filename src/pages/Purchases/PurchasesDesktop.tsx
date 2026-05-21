@@ -36,6 +36,7 @@ export const PurchasesDesktop = () => {
     // Purchase Form State
     const [selectedSupplier, setSelectedSupplier] = useState('');
     const [purchaseItems, setPurchaseItems] = useState<any[]>([]);
+    const [activeVirtualOrderId, setActiveVirtualOrderId] = useState<string | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('transfer');
     const [formSearchProduct, setFormSearchProduct] = useState('');
     const [purchaseNotes, setPurchaseNotes] = useState('');
@@ -152,6 +153,7 @@ export const PurchasesDesktop = () => {
     // Handle converting virtual order to form inputs immediately
     const handleConvertVirtualToPurchase = (historyItem: any) => {
         const vo = historyItem.raw;
+        setActiveVirtualOrderId(vo.id);
         const mappedItems = (vo.customData?.rows || []).map((row: any) => {
             // Attempt to match catalog product
             const matchedProd = products.find(p => p.id === row.id || p.code === row.code || p.name.toLowerCase() === row.name.toLowerCase());
@@ -265,6 +267,40 @@ export const PurchasesDesktop = () => {
             });
 
             if (success) {
+                // If this purchase was converted from a virtual restock draft, finalize the draft in VFS
+                if (activeVirtualOrderId && activeVirtualOrderId.startsWith('restock_draft_')) {
+                    const itemsKey = `explorer_custom_items_${businessId}`;
+                    const stored = localStorage.getItem(itemsKey);
+                    if (stored) {
+                        try {
+                            const list = JSON.parse(stored);
+                            const draftIndex = list.findIndex((item: any) => item.id === activeVirtualOrderId);
+                            if (draftIndex > -1) {
+                                const draft = list[draftIndex];
+                                const supplierName = getSupplierName(selectedSupplier);
+                                const formattedDate = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+                                
+                                // 1. Change its id to pull it out of active drafts
+                                draft.id = `restock_order_${Date.now()}`;
+                                
+                                // 2. Rename its name to Pedido_Finalizado_[Proveedor]_[FormattedDate].xlsx
+                                draft.name = `Pedido_Finalizado_${supplierName.replace(/\s+/g, '_')}_${formattedDate}.xlsx`;
+                                
+                                // 3. Update its description to "Pedido recibido y contabilizado"
+                                draft.description = `Pedido recibido y contabilizado. Notas: ${purchaseNotes || 'Sin notas'}`;
+                                
+                                // 4. Soften its color to #cbd5e1 (grayed out)
+                                draft.color = '#cbd5e1';
+                                
+                                list[draftIndex] = draft;
+                                localStorage.setItem(itemsKey, JSON.stringify(list));
+                            }
+                        } catch (e) {
+                            console.error('Error finalizing virtual draft:', e);
+                        }
+                    }
+                }
+
                 showAlert({ title: '¡Compra registrada!', message: 'El stock fue actualizado y la compra fue registrada en finanzas.', variant: 'success' });
                 setTimeout(() => {
                     setView('list');
@@ -272,6 +308,7 @@ export const PurchasesDesktop = () => {
                     setSelectedSupplier('');
                     setPurchaseItems([]);
                     setPurchaseNotes('');
+                    setActiveVirtualOrderId(null);
                     setRefreshKey(prev => prev + 1);
                 }, 1500);
             }
@@ -360,7 +397,7 @@ export const PurchasesDesktop = () => {
                     Historial de Pedidos y Compras
                 </button>
                 <button
-                    onClick={() => { setActiveTab('registrar'); setView('new'); }}
+                    onClick={() => { setActiveTab('registrar'); setView('new'); setActiveVirtualOrderId(null); }}
                     style={{
                         padding: '10px 20px',
                         fontSize: '0.9rem',
@@ -711,7 +748,7 @@ export const PurchasesDesktop = () => {
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                                 <button
                                     type="button"
-                                    onClick={() => { setView('list'); setActiveTab('historial'); }}
+                                    onClick={() => { setView('list'); setActiveTab('historial'); setActiveVirtualOrderId(null); }}
                                     style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer' }}
                                 >
                                     Cancelar

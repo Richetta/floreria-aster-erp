@@ -1,1166 +1,1278 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+    Search, Plus, Trash2, MessageCircle, FileSpreadsheet,
+    ShoppingCart, PackageOpen, ChevronDown,
+    ChevronUp, X, Check, Truck, RefreshCw,
+    Filter, Download, Printer, Layers, Eye
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { api } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
 import { ElPapelito } from './components/ElPapelito';
 import './RestockMobile.css';
 
-interface RestockItem {
+interface StockAlert {
     id: string;
-    code: string;
     name: string;
+    code: string;
     stock: number;
     minStock: number;
     cost: number;
-    suggestedAmount: number;
-    runoutDays: number;
-    mermaRate: number;
     category: string;
-    isCustomItem?: boolean;
+    supplierId?: string;
+    supplierName?: string;
+    tags?: string[];
+    urgency: 'critical' | 'low' | 'ok';
 }
 
-interface SupplierRestock {
-    supplierId: string | null;
-    supplierName: string;
-    supplierPhone: string | null;
-    items: RestockItem[];
+interface VFSItem {
+    id: string;
+    name: string;
+    parentId: string | null;
+    type: 'folder' | 'file';
+    entity?: string;
+    description?: string;
+    color?: string;
+    isCustom?: boolean;
+    customData?: {
+        columns: any[];
+        rows: any[];
+        notes?: string;
+        leadTime?: string;
+    };
 }
 
 export const RestockMobile: React.FC = () => {
-    const suppliers = useStore(state => state.suppliers);
-    const loadSuppliers = useStore(state => state.loadSuppliers);
-    const products = useStore(state => state.products);
-    const loadProducts = useStore(state => state.loadProducts);
-    const updateProduct = useStore(state => state.updateProduct);
-    const addProduct = useStore(state => state.addProduct);
-    const categoriesData = useStore(state => state.categoriesData) || [];
-    const loadCategories = useStore(state => state.loadCategories);
-    const addNotification = useStore(state => state.addNotification);
+    const products = useStore(s => s.products);
+    const suppliers = useStore(s => s.suppliers);
+    const categoriesData = useStore(s => s.categoriesData) || [];
+    const loadProducts = useStore(s => s.loadProducts);
+    const loadSuppliers = useStore(s => s.loadSuppliers);
+    const loadCategories = useStore(s => s.loadCategories);
+    const addNotification = useStore(s => s.addNotification);
     const { user } = useAuth();
-    const businessId = user?.business_id || 'default_business';
+    const businessId = user?.business_id || 'default';
 
+    // ── HUD State & Tabs ──
+    const [activeTab, setActiveTab] = useState<'selection' | 'drafts' | 'boleto'>('selection');
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [expandedSupplier, setExpandedSupplier] = useState<string | null>(null);
+    const [refreshKey, setRefreshKey] = useState(0);
 
-    // Replenishment strategy & filters
-    const [strategy, setStrategy] = useState<'critical' | 'predictive' | 'mermas'>('predictive');
-    const [showAllCatalogProducts, setShowAllCatalogProducts] = useState(false);
+    // ── Catalog Filters ──
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [selectedSupplierFilter, setSelectedSupplierFilter] = useState('');
     const [selectedTag, setSelectedTag] = useState('');
+    const [selectedSupplierFilter, setSelectedSupplierFilter] = useState('');
+    const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'critical' | 'low' | 'ok'>('all');
 
-    // Dynamic Category Tree options with indentation
-    const categoryOptions = useMemo(() => {
-        const buildOptions = (parentId: string | null = null, depth = 0): { id: string; name: string; label: string }[] => {
-            const list: { id: string; name: string; label: string }[] = [];
-            const filtered = categoriesData.filter(c => c.parent_id === parentId || (parentId === null && !c.parent_id));
-            filtered.forEach(c => {
-                const indent = '\u00A0\u00A0'.repeat(depth);
-                list.push({
-                    id: c.id,
-                    name: c.name,
-                    label: `${indent}${depth > 0 ? '↳ ' : '📁 '}${c.name}`
-                });
-                list.push(...buildOptions(c.id, depth + 1));
-            });
-            return list;
-        };
-        return buildOptions(null, 0);
-    }, [categoriesData]);
+    // ── Mobile Expandable Filters ──
+    const [filtersExpanded, setFiltersExpanded] = useState(false);
 
-    // Unique tags extractor
-    const allTags = useMemo(() => {
-        const tagsSet = new Set<string>();
-        products.forEach(p => {
-            if (p.tags && Array.isArray(p.tags)) {
-                p.tags.forEach(t => tagsSet.add(t));
-            }
-        });
-        return Array.from(tagsSet).sort();
-    }, [products]);
+    // ── Checkbox Selection ──
+    const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+    
+    // ── Bulk Assignment state ──
+    const [bulkSupplierId, setBulkSupplierId] = useState('');
+    const [bulkQuantity, setBulkQuantity] = useState(10);
 
-    // Bulk assignment
-    const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-    const [targetSupplierId, setTargetSupplierId] = useState<string>('');
-    const [isAssigning, setIsAssigning] = useState(false);
+    // ── Accordion expanded drafts ──
+    const [expandedDrafts, setExpandedDrafts] = useState<Record<string, boolean>>({});
 
-    // Custom manually started suppliers, catalog selections, invented items, and suggested amounts
-    const [manuallyStartedSuppliers, setManuallyStartedSuppliers] = useState<string[]>([]);
-    const [manuallyAddedProducts, setManuallyAddedProducts] = useState<Record<string, string[]>>({});
-    const [customOrderItems, setCustomOrderItems] = useState<Record<string, RestockItem[]>>({});
-    const [customSuggestedAmounts, setCustomSuggestedAmounts] = useState<Record<string, number>>({});
+    // ── Boleto supplier preview selection ──
+    const [boletoSupplierId, setBoletoSupplierId] = useState<string>('');
 
-    // Inline inputs for inventing items
-    const [inventedName, setInventedName] = useState<Record<string, string>>({});
-    const [inventedCost, setInventedCost] = useState<Record<string, string>>({});
-    const [inventedAmount, setInventedAmount] = useState<Record<string, string>>({});
+    // ── Inline Custom item form per draft ──
+    const [customNameMap, setCustomNameMap] = useState<Record<string, string>>({});
+    const [customQtyMap, setCustomQtyMap] = useState<Record<string, string>>({});
+    const [customCostMap, setCustomCostMap] = useState<Record<string, string>>({});
 
-    // Catalog search query inside each supplier card
-    const [catalogSearchQueries, setCatalogSearchQueries] = useState<Record<string, string>>({});
+    // ── Deep-link check from Suppliers agenda ──
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const urlSupplierId = params.get('supplierId');
+        if (urlSupplierId) {
+            setSelectedSupplierFilter(urlSupplierId);
+            setActiveTab('selection');
+            // Clean URL query param visually to prevent persistent filtering if navigated away
+            window.history.replaceState({}, document.title, window.location.pathname);
+            addNotification('Filtro de catálogo aplicado según el proveedor elegido', 'info');
+        }
+    }, [addNotification]);
 
-    // Supplier specific settings: lead time (days) and custom notes
-    const [leadTimes, setLeadTimes] = useState<Record<string, number>>(() => {
-        const stored = localStorage.getItem(`restock_lead_times_${businessId}`);
-        return stored ? JSON.parse(stored) : {};
-    });
-    const [orderNotes, setOrderNotes] = useState<Record<string, string>>({});
-
-    // New product drawer state
-    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [newProductName, setNewProductName] = useState('');
-    const [newProductCode, setNewProductCode] = useState('');
-    const [newProductCost, setNewProductCost] = useState('');
-    const [newProductPrice, setNewProductPrice] = useState('');
-    const [newProductStock, setNewProductStock] = useState('');
-    const [newProductMinStock, setNewProductMinStock] = useState('');
-    const [newProductCategory, setNewProductCategory] = useState('');
-    const [newProductSupplierId, setNewProductSupplierId] = useState('');
-
-    // VFS Success indicator
-    const [successVFSItem, setSuccessVFSItem] = useState<{ supplierName: string; filename: string } | null>(null);
-
-    const fetchRestock = async () => {
-        try {
+    // ── Load Catalog Data ──
+    useEffect(() => {
+        (async () => {
             setLoading(true);
             await Promise.allSettled([
                 loadProducts(),
                 loadSuppliers(),
                 loadCategories ? loadCategories(true) : Promise.resolve()
             ]);
-            setError(null);
-        } catch (err: any) {
-            setError('Error al obtener faltantes');
-            console.error(err);
-        } finally {
             setLoading(false);
-        }
-    };
+        })();
+    }, [refreshKey]);
 
-    useEffect(() => {
-        fetchRestock();
-    }, []);
-
-    // Save lead times
-    const handleSetLeadTime = (supplierId: string, days: number) => {
-        const updated = { ...leadTimes, [supplierId]: days };
-        setLeadTimes(updated);
-        localStorage.setItem(`restock_lead_times_${businessId}`, JSON.stringify(updated));
-    };
-
-    // Calculate suggested stock amount based on strategy
-    const restockData = useMemo(() => {
-        const grouped: Record<string, SupplierRestock> = {};
-
-        // 1. Incorporate all manually started suppliers into group keys
-        manuallyStartedSuppliers.forEach(sId => {
-            if (!grouped[sId]) {
-                const supplier = suppliers.find(s => s.id === sId);
-                grouped[sId] = {
-                    supplierId: sId === 'unassigned' ? null : sId,
-                    supplierName: supplier ? supplier.name : 'Sin Proveedor Asignado',
-                    supplierPhone: supplier ? supplier.phone : null,
-                    items: []
-                };
-            }
-        });
-
-        // 2. Loop over standard products
-        const filteredProducts = products.filter(p => {
-            const supplierId = p.supplierId || 'unassigned';
-            const isManuallyAdded = manuallyAddedProducts[supplierId]?.includes(p.id);
-
-            const matchesSearch = !searchQuery || 
-                p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()));
-
-            // Category matching recursively
-            const getCategoryWithDescendants = (catName: string): string[] => {
-                const matchingCat = categoriesData.find(c => c.name === catName);
-                if (!matchingCat) return [catName];
-                
-                const names = [matchingCat.name];
-                const collectChildren = (parentId: string) => {
-                    const children = categoriesData.filter(c => c.parent_id === parentId);
-                    children.forEach(ch => {
-                        names.push(ch.name);
-                        collectChildren(ch.id);
-                    });
-                };
-                collectChildren(matchingCat.id);
-                return names;
-            };
-
-            const allowedCategories = selectedCategory ? getCategoryWithDescendants(selectedCategory) : [];
-            const matchesCategory = !selectedCategory || allowedCategories.includes(p.category || '');
-            const matchesSupplier = !selectedSupplierFilter || p.supplierId === selectedSupplierFilter;
-            const matchesTag = !selectedTag || (p.tags && p.tags.includes(selectedTag));
-
-            return (matchesSearch && matchesCategory && matchesSupplier && matchesTag) || isManuallyAdded;
-        });
-
-        filteredProducts.forEach(p => {
-            const supplierId = p.supplierId || 'unassigned';
-            const leadTime = leadTimes[supplierId] || 3;
-
-            const dailySales = p.weeklySales ? (p.weeklySales / 7) : 0.4;
-            const runoutDays = dailySales > 0 ? (p.stock / dailySales) : 999;
-            const mermaRate = p.category?.toLowerCase().includes('flor') ? 0.12 : 0.05;
-
-            const isManuallyAdded = manuallyAddedProducts[supplierId]?.includes(p.id);
-
-            // Suggested Restocking Amount
-            let suggestedAmount = 0;
-            let triggerRestock = false;
-
-            if (strategy === 'critical') {
-                triggerRestock = p.stock <= p.min;
-                suggestedAmount = triggerRestock ? (p.min * 2 - p.stock) : 0;
-            } else if (strategy === 'predictive') {
-                triggerRestock = runoutDays <= (leadTime + 5) || p.stock <= p.min;
-                suggestedAmount = Math.ceil(dailySales * 15) - p.stock;
-            } else {
-                triggerRestock = runoutDays <= (leadTime + 5) || p.stock <= p.min;
-                const baseReplenish = Math.ceil(dailySales * 15) - p.stock;
-                suggestedAmount = Math.ceil(baseReplenish * (1 + mermaRate));
-            }
-
-            if (suggestedAmount < 0) suggestedAmount = 0;
-            if (suggestedAmount === 0 && triggerRestock) suggestedAmount = 10;
-            if (isManuallyAdded && suggestedAmount === 0) suggestedAmount = 10;
-
-            // Apply overrides if customSuggestedAmounts exists
-            if (customSuggestedAmounts[p.id] !== undefined) {
-                suggestedAmount = customSuggestedAmounts[p.id];
-            }
-
-            const shouldShow = showAllCatalogProducts || (
-                strategy === 'critical' 
-                    ? (p.stock <= p.min || isManuallyAdded) 
-                    : (p.stock <= p.min || runoutDays <= (leadTime + 7) || isManuallyAdded)
-            );
-
-            if (shouldShow) {
-                if (!grouped[supplierId]) {
-                    const supplier = suppliers.find(s => s.id === supplierId);
-                    grouped[supplierId] = {
-                        supplierId: supplierId === 'unassigned' ? null : supplierId,
-                        supplierName: supplier ? supplier.name : 'Sin Proveedor Asignado',
-                        supplierPhone: supplier ? supplier.phone : null,
-                        items: []
-                    };
-                }
-                
-                if (!grouped[supplierId].items.some(item => item.id === p.id)) {
-                    grouped[supplierId].items.push({
-                        id: p.id,
-                        code: p.code || 'S/C',
-                        name: p.name,
-                        stock: p.stock ?? 0,
-                        minStock: p.min ?? 0,
-                        cost: p.cost || 0,
-                        suggestedAmount,
-                        runoutDays,
-                        mermaRate,
-                        category: p.category
-                    });
-                }
-            }
-        });
-
-        // 3. Inject custom invented items
-        Object.keys(customOrderItems).forEach(sId => {
-            if (!grouped[sId]) {
-                const supplier = suppliers.find(s => s.id === sId);
-                grouped[sId] = {
-                    supplierId: sId === 'unassigned' ? null : sId,
-                    supplierName: supplier ? supplier.name : 'Sin Proveedor Asignado',
-                    supplierPhone: supplier ? supplier.phone : null,
-                    items: []
-                };
-            }
-            customOrderItems[sId].forEach(customItem => {
-                let amount = customItem.suggestedAmount;
-                if (customSuggestedAmounts[customItem.id] !== undefined) {
-                    amount = customSuggestedAmounts[customItem.id];
-                }
-
-                if (!grouped[sId].items.some(item => item.id === customItem.id)) {
-                    grouped[sId].items.push({
-                        ...customItem,
-                        suggestedAmount: amount
-                    });
-                }
-            });
-        });
-
-        return Object.values(grouped)
-            .filter(g => g.items.length > 0 || manuallyStartedSuppliers.includes(g.supplierId || 'unassigned'))
-            .sort((a, b) => a.supplierName.localeCompare(b.supplierName));
-    }, [products, suppliers, strategy, showAllCatalogProducts, searchQuery, selectedCategory, selectedSupplierFilter, selectedTag, categoriesData, leadTimes, manuallyStartedSuppliers, manuallyAddedProducts, customOrderItems, customSuggestedAmounts]);
-
-    // Handle inline update
-    const handleInlineUpdate = async (productId: string, field: 'stock' | 'min' | 'cost', value: number) => {
-        if (productId.startsWith('invented_')) {
-            setCustomOrderItems(prev => {
-                const updated = { ...prev };
-                Object.keys(updated).forEach(sId => {
-                    updated[sId] = updated[sId].map(item => {
-                        if (item.id === productId) {
-                            return { ...item, [field === 'min' ? 'minStock' : field]: value };
-                        }
-                        return item;
-                    });
-                });
-                return updated;
-            });
-            return;
-        }
-
+    // ── VFS Draft Loader ──
+    const drafts = useMemo((): VFSItem[] => {
+        const key = `explorer_custom_items_${businessId}`;
         try {
-            await updateProduct(productId, { [field === 'min' ? 'min' : field]: value });
-        } catch (error) {
-            console.error('Error updating in-line value:', error);
-        }
-    };
-
-    // Adddynamic invented item
-    const handleAddInventedItem = (supplierId: string) => {
-        const name = inventedName[supplierId] || '';
-        const cost = parseFloat(inventedCost[supplierId]) || 0;
-        const amount = parseInt(inventedAmount[supplierId]) || 10;
-
-        if (!name.trim()) {
-            addNotification('El nombre es obligatorio', 'warning');
-            return;
-        }
-
-        const newItem: RestockItem = {
-            id: `invented_${Date.now()}`,
-            code: 'INV',
-            name: name,
-            stock: 0,
-            minStock: 0,
-            cost: cost,
-            suggestedAmount: amount,
-            runoutDays: 0,
-            mermaRate: 0,
-            category: 'Flores Frescas',
-            isCustomItem: true
-        };
-
-        setCustomOrderItems(prev => ({
-            ...prev,
-            [supplierId]: [...(prev[supplierId] || []), newItem]
-        }));
-
-        setInventedName({ ...inventedName, [supplierId]: '' });
-        setInventedCost({ ...inventedCost, [supplierId]: '' });
-        setInventedAmount({ ...inventedAmount, [supplierId]: '' });
-
-        const key = supplierId || 'unassigned';
-        if (!manuallyStartedSuppliers.includes(key)) {
-            setManuallyStartedSuppliers(prev => [...prev, key]);
-        }
-
-        addNotification('Ítem inventado añadido', 'success');
-    };
-
-    // Remove item
-    const handleRemoveItem = (supplierId: string, itemId: string) => {
-        const sKey = supplierId || 'unassigned';
-        if (itemId.startsWith('invented_')) {
-            setCustomOrderItems(prev => ({
-                ...prev,
-                [sKey]: (prev[sKey] || []).filter(item => item.id !== itemId)
-            }));
-        } else {
-            setManuallyAddedProducts(prev => ({
-                ...prev,
-                [sKey]: (prev[sKey] || []).filter(id => id !== itemId)
-            }));
-        }
-        addNotification('Ítem removido', 'info');
-    };
-
-    // Fast product creation
-    const handleFastCreateProduct = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newProductName.trim()) {
-            addNotification('El nombre es obligatorio', 'warning');
-            return;
-        }
-
-        try {
-            await addProduct({
-                name: newProductName,
-                code: newProductCode || `P-${Date.now().toString().slice(-4)}`,
-                category: newProductCategory || 'Flores Frescas',
-                price: parseFloat(newProductPrice) || 0,
-                cost: parseFloat(newProductCost) || 0,
-                stock: parseInt(newProductStock) || 0,
-                min: parseInt(newProductMinStock) || 10,
-                tags: [],
-                supplierId: newProductSupplierId || undefined
-            });
-
-            setIsDrawerOpen(false);
-            setNewProductName('');
-            setNewProductCode('');
-            setNewProductCost('');
-            setNewProductPrice('');
-            setNewProductStock('');
-            setNewProductMinStock('');
-            setNewProductCategory('');
-            setNewProductSupplierId('');
-            
-            await fetchRestock();
-        } catch (error) {
-            console.error('Error creating product in-line:', error);
-        }
-    };
-
-    // Save to Workspace
-    const handleSaveToWorkspace = (supplier: SupplierRestock) => {
-        const itemsKey = `explorer_custom_items_${businessId}`;
-        const storedItems = localStorage.getItem(itemsKey);
-        let customItemsList = [];
-        if (storedItems) {
-            try {
-                customItemsList = JSON.parse(storedItems);
-            } catch (e) {
-                console.error(e);
+            const stored = localStorage.getItem(key);
+            if (stored) {
+                const parsed = JSON.parse(stored) as VFSItem[];
+                return parsed.filter(item => 
+                    item.parentId === 'pedidos_compra_folder' && 
+                    item.isCustom && 
+                    item.id.startsWith('restock_draft_')
+                );
             }
+        } catch (e) {
+            console.error('Failed to load drafts from VFS:', e);
         }
+        return [];
+    }, [businessId, refreshKey, activeTab]);
 
-        const dateStr = new Date().toLocaleDateString('es-AR').replace(/\//g, '-');
-        const filename = `Pedido_${supplier.supplierName.replace(/\s+/g, '_')}_${dateStr}.xlsx`;
-
+    // ── Save/Update VFS Draft ──
+    const saveVFSDraft = useCallback((supplierId: string, supplierName: string, items: any[], notes = '', leadTime = '') => {
+        const key = `explorer_custom_items_${businessId}`;
+        let stored: VFSItem[] = [];
+        try {
+            stored = JSON.parse(localStorage.getItem(key) || '[]') as VFSItem[];
+        } catch {}
+        
+        const draftId = `restock_draft_${supplierId}`;
+        const filename = `Borrador_Pedido_${supplierName.replace(/\s+/g, '_')}.xlsx`;
+        
+        const existingIndex = stored.findIndex(item => item.id === draftId);
+        
         const columns = [
-            { key: 'code', label: 'Código', width: 120 },
+            { key: 'code', label: 'Código', width: 110 },
             { key: 'name', label: 'Producto', width: 250 },
-            { key: 'quantity', label: 'Cantidad a Pedir', width: 130, align: 'right', badge: true },
-            { key: 'cost', label: 'Costo Unitario ($)', width: 130, align: 'right', format: 'currency' },
-            { key: 'total', label: 'Total Estimado ($)', width: 140, align: 'right', format: 'currency' }
+            { key: 'quantity', label: 'Cantidad', width: 100, align: 'right', badge: true },
+            { key: 'supplierName', label: 'Proveedor', width: 160 },
+            { key: 'cost', label: 'Costo Unit.', width: 120, align: 'right', format: 'currency' },
+            { key: 'total', label: 'Total Est.', width: 130, align: 'right', format: 'currency' }
         ];
-
-        const rows = supplier.items.map(item => ({
-            id: item.id,
-            code: item.code,
-            name: item.name,
-            quantity: item.suggestedAmount,
-            cost: item.cost,
-            total: item.suggestedAmount * item.cost
+        
+        const rows = items.map(i => ({
+            id: i.id,
+            code: i.code,
+            name: i.name,
+            quantity: Number(i.quantity) || 1,
+            supplierName: i.supplierName || supplierName,
+            cost: Number(i.cost) || 0,
+            total: (Number(i.quantity) || 1) * (Number(i.cost) || 0),
+            isCustom: i.isCustom || false
         }));
 
-        const newFile = {
-            id: `restock_order_${supplier.supplierId || 'unassigned'}_${Date.now()}`,
+        const draftItem: VFSItem = {
+            id: draftId,
             name: filename,
             parentId: 'pedidos_compra_folder',
             type: 'file',
             entity: 'custom',
-            description: `Orden de reposición sugerida para ${supplier.supplierName}. Notas: ${orderNotes[supplier.supplierId || ''] || 'Sin notas'}.`,
-            color: '#fef3c7',
+            description: `Borrador de reposición para ${supplierName}. Notas: ${notes || 'Sin notas'}. Plazo: ${leadTime || 'No definido'}`,
+            color: '#a7f3d0', // Light green
             isCustom: true,
             customData: {
                 columns,
-                rows
+                rows,
+                notes,
+                leadTime
             }
         };
-
-        customItemsList.push(newFile);
-        localStorage.setItem(itemsKey, JSON.stringify(customItemsList));
-
-        setSuccessVFSItem({
-            supplierName: supplier.supplierName,
-            filename
-        });
-        addNotification('Pedido guardado exitosamente en el Workspace virtual', 'success');
-
-        setTimeout(() => {
-            setSuccessVFSItem(null);
-        }, 5000);
-    };
-
-    const generateWhatsAppLink = (supplier: SupplierRestock) => {
-        if (!supplier.supplierPhone) return '#';
-        const lead = leadTimes[supplier.supplierId || ''] || 3;
-        const notes = orderNotes[supplier.supplierId || ''] || '';
-
-        let message = `*FLORERÍA MI JARDÍN - ORDEN DE REPOSICIÓN*\n`;
-        message += `Hola ${supplier.supplierName}, deseo coordinar la entrega de los siguientes artículos:\n\n`;
-
-        let totalEstimado = 0;
-        supplier.items.forEach(item => {
-            const totalItem = item.suggestedAmount * item.cost;
-            totalEstimado += totalItem;
-            message += `- *${item.suggestedAmount}x* _${item.name}_ (Cod: ${item.code}) | Costo ref: $${item.cost.toLocaleString('es-AR')}\n`;
-        });
-
-        message += `\n💰 *Total Estimado*: $${totalEstimado.toLocaleString('es-AR')}\n`;
-        message += `⏰ *Plazo de entrega solicitado*: ${lead} días hábiles.\n`;
         
-        if (notes.trim()) {
-            message += `📌 *Notas / Comentarios*: ${notes}\n`;
-        }
-        
-        message += `\nQuedo a la espera de tu confirmación de stock y costos. ¡Muchas gracias!`;
-
-        return `https://wa.me/${supplier.supplierPhone}?text=${encodeURIComponent(message)}`;
-    };
-
-    const handleToggleProduct = (productId: string) => {
-        setSelectedProducts(prev =>
-            prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
-        );
-    };
-
-    const handleToggleAllUnassigned = (unassignedItems: RestockItem[]) => {
-        if (selectedProducts.length === unassignedItems.length) {
-            setSelectedProducts([]);
+        if (existingIndex > -1) {
+            stored[existingIndex] = draftItem;
         } else {
-            setSelectedProducts(unassignedItems.map(item => item.id));
+            stored.push(draftItem);
         }
-    };
+        
+        localStorage.setItem(key, JSON.stringify(stored));
+        setRefreshKey(prev => prev + 1);
+    }, [businessId]);
 
-    const handleBulkAssign = async () => {
-        if (selectedProducts.length === 0) {
-            addNotification('Selecciona al menos un producto', 'warning');
-            return;
-        }
-        if (!targetSupplierId) {
-            addNotification('Selecciona un proveedor', 'warning');
-            return;
-        }
-
+    // ── Delete VFS Draft ──
+    const deleteVFSDraft = useCallback((draftId: string) => {
+        if (!window.confirm('¿Estás seguro de que querés eliminar este borrador?')) return;
+        const key = `explorer_custom_items_${businessId}`;
+        let stored: VFSItem[] = [];
         try {
-            setIsAssigning(true);
-            await api.bulkAssignSupplier(selectedProducts, targetSupplierId);
-            addNotification('Proveedor asignado correctamente', 'success');
-            setSelectedProducts([]);
-            setTargetSupplierId('');
-            await fetchRestock();
-        } catch (err) {
-            addNotification('Error al asignar proveedor', 'error');
-        } finally {
-            setIsAssigning(false);
+            stored = JSON.parse(localStorage.getItem(key) || '[]') as VFSItem[];
+        } catch {}
+        
+        const filtered = stored.filter(item => item.id !== draftId);
+        localStorage.setItem(key, JSON.stringify(filtered));
+        setRefreshKey(prev => prev + 1);
+        addNotification('Borrador eliminado del Workspace virtual', 'info');
+    }, [businessId, addNotification]);
+
+    // ── Category options flat list with indents ──
+    const categoryOptions = useMemo(() => {
+        const build = (parentId: string | null = null, depth = 0): { id: string; name: string; label: string }[] => {
+            const list: { id: string; name: string; label: string }[] = [];
+            const filtered = categoriesData.filter(c =>
+                parentId === null ? !c.parent_id : c.parent_id === parentId
+            );
+            filtered.forEach(c => {
+                list.push({ id: c.id, name: c.name, label: `${'  '.repeat(depth)}${depth > 0 ? '↳ ' : '📁 '}${c.name}` });
+                list.push(...build(c.id, depth + 1));
+            });
+            return list;
+        };
+        return build(null, 0);
+    }, [categoriesData]);
+
+    const allTags = useMemo(() => {
+        const set = new Set<string>();
+        products.forEach(p => p.tags?.forEach((t: string) => set.add(t)));
+        return Array.from(set).sort();
+    }, [products]);
+
+    // ── Generate Stock Alerts ──
+    const stockAlerts = useMemo((): StockAlert[] => {
+        return products
+            .filter(p => {
+                const matchSearch = !searchQuery ||
+                    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()));
+                
+                // Recursive category matcher helper
+                const getCategoryWithDescendants = (catName: string): string[] => {
+                    const matchingCat = categoriesData.find(c => c.name === catName);
+                    if (!matchingCat) return [catName];
+                    
+                    const names = [matchingCat.name];
+                    const collectChildren = (parentId: string) => {
+                        const children = categoriesData.filter(c => c.parent_id === parentId);
+                        children.forEach(ch => {
+                            names.push(ch.name);
+                            collectChildren(ch.id);
+                        });
+                    };
+                    collectChildren(matchingCat.id);
+                    return names;
+                };
+
+                const allowedCategories = selectedCategory ? getCategoryWithDescendants(selectedCategory) : [];
+                const matchCat = !selectedCategory || allowedCategories.includes(p.category || '');
+                const matchTag = !selectedTag || (p.tags && p.tags.includes(selectedTag));
+                const matchSupplier = !selectedSupplierFilter || p.supplierId === selectedSupplierFilter;
+
+                if (!matchSearch || !matchCat || !matchTag || !matchSupplier) return false;
+
+                const stock = p.stock ?? 0;
+                const min = p.min ?? 5;
+                const itemUrgency = stock <= 0 ? 'critical' : stock <= min ? 'low' : 'ok';
+                
+                if (urgencyFilter === 'all') return true;
+                return itemUrgency === urgencyFilter;
+            })
+            .map(p => {
+                const stock = p.stock ?? 0;
+                const min = p.min ?? 5;
+                const sup = suppliers.find(s => s.id === p.supplierId);
+                let urgency: StockAlert['urgency'] = 'ok';
+                if (stock <= 0) urgency = 'critical';
+                else if (stock <= min) urgency = 'low';
+                return {
+                    id: p.id,
+                    name: p.name,
+                    code: p.code || 'S/C',
+                    stock,
+                    minStock: min,
+                    cost: p.cost ?? 0,
+                    category: p.category || 'Sin Categoría',
+                    supplierId: p.supplierId,
+                    supplierName: sup?.name,
+                    tags: p.tags || [],
+                    urgency
+                };
+            })
+            .sort((a, b) => {
+                const order = { critical: 0, low: 1, ok: 2 };
+                return order[a.urgency] - order[b.urgency];
+            });
+    }, [products, suppliers, searchQuery, selectedCategory, selectedTag, selectedSupplierFilter, urgencyFilter, categoriesData]);
+
+    // ── Bulk Add Handler ──
+    const handleBulkAdd = () => {
+        if (selectedProductIds.length === 0) {
+            addNotification('No seleccionaste ningún producto', 'warning');
+            return;
+        }
+
+        const supplierId = bulkSupplierId || 'unassigned';
+        const supplier = suppliers.find(s => s.id === supplierId);
+        const supplierName = supplier ? supplier.name : 'Sin Proveedor';
+
+        // Load existing items in the draft from VFS
+        const draftId = `restock_draft_${supplierId}`;
+        const existingDraft = drafts.find(d => d.id === draftId);
+        let draftItems: any[] = [];
+        let existingNotes = '';
+        let existingLeadTime = '';
+
+        if (existingDraft && existingDraft.customData) {
+            draftItems = [...(existingDraft.customData.rows || [])];
+            existingNotes = existingDraft.customData.notes || '';
+            existingLeadTime = existingDraft.customData.leadTime || '';
+        }
+
+        // Add each selected product
+        selectedProductIds.forEach(id => {
+            const alert = stockAlerts.find(a => a.id === id);
+            if (!alert) return;
+
+            const existingIdx = draftItems.findIndex(item => item.id === id);
+            if (existingIdx > -1) {
+                draftItems[existingIdx].quantity += Number(bulkQuantity) || 10;
+                draftItems[existingIdx].total = draftItems[existingIdx].quantity * draftItems[existingIdx].cost;
+            } else {
+                draftItems.push({
+                    id: alert.id,
+                    code: alert.code,
+                    name: alert.name,
+                    quantity: Number(bulkQuantity) || 10,
+                    supplierName,
+                    cost: alert.cost,
+                    total: (Number(bulkQuantity) || 10) * alert.cost,
+                    isCustom: false
+                });
+            }
+        });
+
+        saveVFSDraft(supplierId, supplierName, draftItems, existingNotes, existingLeadTime);
+        setSelectedProductIds([]);
+        addNotification(`Productos agregados al borrador de ${supplierName}`, 'success');
+        
+        // Open this draft accordion automatically so they see it
+        setExpandedDrafts(prev => ({ ...prev, [draftId]: true }));
+        setActiveTab('drafts');
+    };
+
+    // ── Checkbox Helpers ──
+    const handleSelectProduct = (id: string) => {
+        setSelectedProductIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAllVisible = () => {
+        const visibleIds = stockAlerts.map(a => a.id);
+        const allSelected = visibleIds.every(id => selectedProductIds.includes(id));
+        
+        if (allSelected) {
+            setSelectedProductIds(prev => prev.filter(id => !visibleIds.includes(id)));
+        } else {
+            setSelectedProductIds(prev => Array.from(new Set([...prev, ...visibleIds])));
         }
     };
 
-    const toggleSupplier = (id: string) => {
-        setExpandedSupplier(expandedSupplier === id ? null : id);
+    // ── Add Item to Draft Directly (Single Item Quick Action) ──
+    const handleQuickAdd = (alert: StockAlert) => {
+        const supplierId = alert.supplierId || 'unassigned';
+        const supplierName = alert.supplierName || 'Sin Proveedor';
+        const suggested = Math.max(10, (alert.minStock * 2) - alert.stock);
+
+        const draftId = `restock_draft_${supplierId}`;
+        const existingDraft = drafts.find(d => d.id === draftId);
+        let draftItems: any[] = [];
+        let existingNotes = '';
+        let existingLeadTime = '';
+
+        if (existingDraft && existingDraft.customData) {
+            draftItems = [...(existingDraft.customData.rows || [])];
+            existingNotes = existingDraft.customData.notes || '';
+            existingLeadTime = existingDraft.customData.leadTime || '';
+        }
+
+        const existingIdx = draftItems.findIndex(item => item.id === alert.id);
+        if (existingIdx > -1) {
+            draftItems[existingIdx].quantity += suggested;
+            draftItems[existingIdx].total = draftItems[existingIdx].quantity * draftItems[existingIdx].cost;
+        } else {
+            draftItems.push({
+                id: alert.id,
+                code: alert.code,
+                name: alert.name,
+                quantity: suggested,
+                supplierName,
+                cost: alert.cost,
+                total: suggested * alert.cost,
+                isCustom: false
+            });
+        }
+
+        saveVFSDraft(supplierId, supplierName, draftItems, existingNotes, existingLeadTime);
+        addNotification(`Agregado a borrador de ${supplierName}`, 'success');
     };
 
-    if (loading && restockData.length === 0) {
-        return (
-            <div className="restock-loading">
-                <div className="spinner-restock"></div>
-                <p>Analizando inventarios...</p>
-            </div>
-        );
-    }
+    // ── Edit Single Item Quantity/Cost in Draft inline ──
+    const handleUpdateDraftItem = (draftId: string, itemId: string, field: 'quantity' | 'cost', value: number) => {
+        const draft = drafts.find(d => d.id === draftId);
+        if (!draft || !draft.customData) return;
 
-    const totalItems = restockData.reduce((acc, curr) => acc + curr.items.length, 0);
+        const supplierId = draftId.replace('restock_draft_', '');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+
+        const updatedRows = (draft.customData.rows || []).map(row => {
+            if (row.id === itemId) {
+                const updatedVal = Math.max(0, value);
+                return {
+                    ...row,
+                    [field]: updatedVal,
+                    total: field === 'quantity' ? updatedVal * row.cost : row.quantity * updatedVal
+                };
+            }
+            return row;
+        });
+
+        saveVFSDraft(supplierId, supplierName, updatedRows, draft.customData.notes, draft.customData.leadTime);
+    };
+
+    const handleRemoveDraftItem = (draftId: string, itemId: string) => {
+        const draft = drafts.find(d => d.id === draftId);
+        if (!draft || !draft.customData) return;
+
+        const supplierId = draftId.replace('restock_draft_', '');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+
+        const updatedRows = (draft.customData.rows || []).filter(row => row.id !== itemId);
+        saveVFSDraft(supplierId, supplierName, updatedRows, draft.customData.notes, draft.customData.leadTime);
+        addNotification('Producto quitado del borrador', 'info');
+    };
+
+    // ── Inline Custom item form per draft card ──
+    const handleAddCustomItem = (draftId: string) => {
+        const name = customNameMap[draftId] || '';
+        const qtyStr = customQtyMap[draftId] || '';
+        const costStr = customCostMap[draftId] || '';
+
+        if (!name.trim()) {
+            addNotification('Escribí el nombre del producto', 'warning');
+            return;
+        }
+
+        const draft = drafts.find(d => d.id === draftId);
+        if (!draft || !draft.customData) return;
+
+        const supplierId = draftId.replace('restock_draft_', '');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+
+        const draftItems = [...(draft.customData.rows || [])];
+        draftItems.push({
+            id: `custom_${Date.now()}`,
+            code: 'LIBRE',
+            name: name.trim(),
+            quantity: parseInt(qtyStr) || 1,
+            cost: parseFloat(costStr) || 0,
+            supplierName,
+            total: (parseInt(qtyStr) || 1) * (parseFloat(costStr) || 0),
+            isCustom: true
+        });
+
+        saveVFSDraft(supplierId, supplierName, draftItems, draft.customData.notes, draft.customData.leadTime);
+
+        // Reset fields
+        setCustomNameMap(prev => ({ ...prev, [draftId]: '' }));
+        setCustomQtyMap(prev => ({ ...prev, [draftId]: '' }));
+        setCustomCostMap(prev => ({ ...prev, [draftId]: '' }));
+        addNotification('Producto libre agregado al borrador', 'success');
+    };
+
+    const handleUpdateDraftNotes = (draftId: string, notes: string) => {
+        const draft = drafts.find(d => d.id === draftId);
+        if (!draft || !draft.customData) return;
+        const supplierId = draftId.replace('restock_draft_', '');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+        saveVFSDraft(supplierId, supplierName, draft.customData.rows || [], notes, draft.customData.leadTime);
+    };
+
+    const handleUpdateDraftLeadTime = (draftId: string, leadTime: string) => {
+        const draft = drafts.find(d => d.id === draftId);
+        if (!draft || !draft.customData) return;
+        const supplierId = draftId.replace('restock_draft_', '');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+        saveVFSDraft(supplierId, supplierName, draft.customData.rows || [], draft.customData.notes, leadTime);
+    };
+
+    // ── WhatsApp Message Generator for VFS Draft ──
+    const generateWAMessage = (draft: VFSItem) => {
+        const items = draft.customData?.rows || [];
+        const phone = suppliers.find(s => `restock_draft_${s.id}` === draft.id)?.phone || '';
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+
+        let msg = `*FLORERÍA ASTER – PEDIDO DE REPOSICIÓN*\n\n`;
+        msg += `Hola *${supplierName}*, por favor coordinar entrega de:\n\n`;
+
+        items.forEach((i: any) => {
+            msg += `• *${i.quantity}x* ${i.name} (${i.code})`;
+            if (i.cost > 0) msg += ` – Ref: $${i.cost.toLocaleString('es-AR')} c/u`;
+            msg += '\n';
+        });
+
+        const total = items.reduce((s, i) => s + (i.quantity * i.cost), 0);
+        if (total > 0) msg += `\n💰 *Total estimado:* $${total.toLocaleString('es-AR')}`;
+        if (draft.customData?.notes) msg += `\n📝 *Nota:* ${draft.customData.notes}`;
+        msg += `\n\n¡Muchas gracias!`;
+
+        const url = phone
+            ? `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`
+            : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+    };
+
+    // ── Export to Word (.doc) ──
+    const exportToWord = (draft: VFSItem) => {
+        const items = draft.customData?.rows || [];
+        if (items.length === 0) {
+            addNotification('No hay ítems para exportar', 'warning');
+            return;
+        }
+
+        const dateStr = new Date().toLocaleDateString('es-AR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        const hourStr = new Date().toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+        const matchingSupplier = suppliers.find(s => `restock_draft_${s.id}` === draft.id);
+        const supplierInfo = matchingSupplier
+            ? `PROVEEDOR: ${matchingSupplier.name.toUpperCase()}\nContacto: ${matchingSupplier.phone || '—'} · ${(matchingSupplier as any).email || '—'}`
+            : `PROVEEDOR: ${supplierName.toUpperCase()}`;
+
+        const grouped: Record<string, any[]> = {};
+        items.forEach((item: any) => {
+            const matchedProd = products.find(p => p.id === item.id);
+            const cat = matchedProd?.category || 'Sin Categoría';
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push(item);
+        });
+
+        let docContent = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>Pedido de Reposición - Florería Aster</title>
+<style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #27272a; margin: 20px; line-height: 1.4; }
+    h1 { color: #4F7A5A; text-align: center; margin-bottom: 5px; font-size: 24px; font-weight: bold; }
+    .subtitle { text-align: center; color: #71717a; font-size: 11px; text-transform: uppercase; margin-bottom: 20px; font-weight: bold; }
+    .meta-box { width: 100%; margin-bottom: 20px; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    th { background-color: #4F7A5A; color: #ffffff; font-size: 11px; text-align: left; padding: 6px; border: 1px solid #cbd5e1; }
+    td { padding: 6px; border: 1px solid #e4e4e7; font-size: 12px; }
+    .txt-right { text-align: right; }
+    .total-box { text-align: right; font-weight: bold; font-size: 14px; margin-top: 20px; padding: 10px; background-color: #f4f4f5; border: 1px solid #e4e4e7; }
+    .note-box { border: 1px solid #fed7aa; background-color: #fff7ed; padding: 10px; border-radius: 4px; margin-top: 15px; font-size: 11px; }
+</style>
+</head>
+<body>
+    <h1>FLORERÍA ASTER</h1>
+    <div class="subtitle">Orden de Compra y Reposición (Móvil)</div>
+    <table class="meta-box">
+        <tr>
+            <td style="border:none; width:50%; vertical-align:top;">
+                <strong>EMISOR:</strong> Florería Aster S.R.L.<br>
+                <strong>Solicitante:</strong> ${user?.name || 'Administrador'}<br>
+                <strong>Fecha:</strong> ${dateStr} - ${hourStr}
+            </td>
+            <td style="border:none; width:50%; vertical-align:top; text-align:right;">
+                <strong>${supplierInfo.replace(/\n/g, '<br>')}</strong><br>
+                <strong>Estado:</strong> <span style="color:#15803d; font-weight:bold;">Abierto / En Proceso</span>
+            </td>
+        </tr>
+    </table>
+`;
+
+        Object.entries(grouped).forEach(([category, catItems]) => {
+            docContent += `
+    <h3 style="color:#4F7A5A; border-bottom: 2px solid #4F7A5A; padding-bottom: 4px; margin-top: 20px;">${category.toUpperCase()}</h3>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 15%;">Código</th>
+                <th style="width: 50%;">Producto</th>
+                <th style="width: 10%; text-align: right;">Cant.</th>
+                <th style="width: 12%; text-align: right;">Costo Unit.</th>
+                <th style="width: 13%; text-align: right;">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+`;
+            catItems.forEach((i: any) => {
+                docContent += `
+            <tr>
+                <td><code>${i.code}</code></td>
+                <td><strong>${i.name}</strong> ${i.isCustom ? ' (Manual)' : ''}</td>
+                <td style="text-align: right;">${i.quantity}</td>
+                <td style="text-align: right;">$${i.cost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align: right;">$${i.total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+            </tr>
+`;
+            });
+            docContent += `</tbody></table>`;
+        });
+
+        const total = items.reduce((s, i) => s + (i.quantity * i.cost), 0);
+        docContent += `<div class="total-box">TOTAL ESTIMADO DE LA COMPRA: $${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>`;
+
+        if (draft.customData?.notes) {
+            docContent += `
+    <div class="note-box">
+        <div style="font-weight: bold; color: #c2410c; margin-bottom: 3px;">📝 OBSERVACIONES:</div>
+        <div>${draft.customData.notes}</div>
+    </div>
+`;
+        }
+
+        docContent += `</body></html>`;
+
+        const blob = new Blob(['\ufeff' + docContent], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Pedido_${supplierName.replace(/\s+/g, '_')}_Movil.doc`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        addNotification('Pedido exportado en formato de Microsoft Word', 'success');
+    };
+
+    // ── Toggle Draft Accordion ──
+    const toggleDraftAccordion = (id: string) => {
+        setExpandedDrafts(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    // ── Get Active Draft for Boleto Letterhead View ──
+    const activeBoletoDraft = useMemo(() => {
+        if (!boletoSupplierId) {
+            if (drafts.length > 0) {
+                const sId = drafts[0].id.replace('restock_draft_', '');
+                setBoletoSupplierId(sId);
+                return drafts[0];
+            }
+            return null;
+        }
+        return drafts.find(d => d.id === `restock_draft_${boletoSupplierId}`) || null;
+    }, [drafts, boletoSupplierId]);
+
+    const groupedBoletoItems = useMemo(() => {
+        if (!activeBoletoDraft || !activeBoletoDraft.customData) return {};
+        const items = activeBoletoDraft.customData.rows || [];
+        const groups: Record<string, any[]> = {};
+        
+        items.forEach(item => {
+            const matchedProd = products.find(p => p.id === item.id);
+            const cat = matchedProd?.category || 'Sin Categoría';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+        });
+        return groups;
+    }, [activeBoletoDraft, products]);
 
     return (
-        <div className="restock-mobile-wrapper">
-            <header className="restock-mobile-header" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: '#ffffff', borderBottom: '1px solid #cbd5e1' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                    <div className="header-info">
-                        <h2>Reposición Inteligente</h2>
-                        <span className="header-count">{totalItems} productos sugeridos</span>
-                    </div>
-                    <button 
-                        onClick={() => setIsDrawerOpen(true)}
-                        style={{ background: '#4F7A5A', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                        <span className="material-symbols-rounded" style={{ fontSize: '16px' }}>add</span>
-                        Crear
-                    </button>
+        <div className="rm-root">
+            {/* ── Mobile HUD Top Bar ── */}
+            <header className="rm-header">
+                <div className="rm-header__left">
+                    <h1 className="rm-header__title">
+                        <span className="material-symbols-rounded">dashboard</span>
+                        Reposición HUD
+                    </h1>
+                    <span className="rm-header__subtitle">Sincronizado VFS / Workspace</span>
                 </div>
-
-                {/* Strategy Buttons */}
-                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '3px', width: '100%' }}>
+                <div className="rm-header__actions">
                     <button 
-                        onClick={() => setStrategy('critical')}
-                        style={{ flex: 1, padding: '6px 4px', fontSize: '0.7rem', fontWeight: 'bold', borderRadius: '6px', border: 'none', background: strategy === 'critical' ? '#ffffff' : 'transparent', color: strategy === 'critical' ? '#4F7A5A' : '#64748b' }}
+                        className="rm-action-btn"
+                        onClick={() => { setRefreshKey(prev => prev + 1); addNotification('Workspace VFS actualizado', 'success'); }}
+                        title="Sincronizar"
                     >
-                        Crítico
+                        <RefreshCw size={18} />
                     </button>
-                    <button 
-                        onClick={() => setStrategy('predictive')}
-                        style={{ flex: 1, padding: '6px 4px', fontSize: '0.7rem', fontWeight: 'bold', borderRadius: '6px', border: 'none', background: strategy === 'predictive' ? '#ffffff' : 'transparent', color: strategy === 'predictive' ? '#4F7A5A' : '#64748b' }}
-                    >
-                        Predictivo
-                    </button>
-                    <button 
-                        onClick={() => setStrategy('mermas')}
-                        style={{ flex: 1, padding: '6px 4px', fontSize: '0.7rem', fontWeight: 'bold', borderRadius: '6px', border: 'none', background: strategy === 'mermas' ? '#ffffff' : 'transparent', color: strategy === 'mermas' ? '#4F7A5A' : '#64748b' }}
-                    >
-                        + Mermas
-                    </button>
-                </div>
-
-                {/* Free Restocking Toggle Switch */}
-                <button
-                    type="button"
-                    onClick={() => setShowAllCatalogProducts(prev => !prev)}
-                    style={{
-                        width: '100%',
-                        padding: '8px',
-                        fontSize: '0.75rem',
-                        fontWeight: 'bold',
-                        borderRadius: '8px',
-                        border: `1px solid ${showAllCatalogProducts ? '#4F7A5A' : '#cbd5e1'}`,
-                        background: showAllCatalogProducts ? '#ecfdf5' : '#ffffff',
-                        color: showAllCatalogProducts ? '#4F7A5A' : '#475569',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        transition: 'all 0.2s',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                    }}
-                >
-                    <span>{showAllCatalogProducts ? '🌟 Ver Todo el Catálogo (Abastecimiento Libre)' : '⚠️ Solo Stock Crítico / IA'}</span>
-                </button>
-
-                {/* Mobile Filters */}
-                <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
-                    <div style={{ position: 'relative', flex: 1 }}>
-                        <span className="material-symbols-rounded" style={{ position: 'absolute', left: '8px', top: '8px', fontSize: '18px', color: '#94a3b8' }}>search</span>
-                        <input 
-                            type="text" 
-                            placeholder="Buscar..."
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            style={{ width: '100%', padding: '6px 6px 6px 28px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#f8fafc' }}
-                        />
-                    </div>
-
-                    <select
-                        value={selectedCategory}
-                        onChange={e => setSelectedCategory(e.target.value)}
-                        style={{ padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.75rem', background: 'white', maxWidth: '90px' }}
-                    >
-                        <option value="">Carpetas</option>
-                        {categoryOptions.map(opt => (
-                            <option key={opt.id} value={opt.name}>{opt.label}</option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={selectedTag}
-                        onChange={e => setSelectedTag(e.target.value)}
-                        style={{ padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.75rem', background: 'white', maxWidth: '85px' }}
-                    >
-                        <option value="">Tags</option>
-                        {allTags.map(tag => (
-                            <option key={tag} value={tag}>{tag}</option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={selectedSupplierFilter}
-                        onChange={e => setSelectedSupplierFilter(e.target.value)}
-                        style={{ padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.75rem', background: 'white', maxWidth: '85px' }}
-                    >
-                        <option value="">Provs</option>
-                        {suppliers.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                    </select>
+                    <Link to="/workspace" className="rm-workspace-link" title="Abrir Workspace">
+                        <FileSpreadsheet size={18} />
+                    </Link>
                 </div>
             </header>
 
-            {/* Quick manual supplier order selectors */}
-            <div style={{ background: '#ffffff', padding: '10px 12px', borderBottom: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#64748b' }}>¿Iniciar pedido manual con un proveedor?</span>
-                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-                    {suppliers.map(s => {
-                        const isStarted = manuallyStartedSuppliers.includes(s.id);
-                        return (
-                            <button
-                                key={s.id}
-                                onClick={() => {
-                                    if (isStarted) {
-                                        setManuallyStartedSuppliers(prev => prev.filter(id => id !== s.id));
-                                    } else {
-                                        setManuallyStartedSuppliers(prev => [...prev, s.id]);
-                                    }
-                                }}
-                                style={{ 
-                                    padding: '4px 8px', 
-                                    background: isStarted ? '#e2e8f0' : 'white', 
-                                    border: '1px solid #cbd5e1', 
-                                    borderRadius: '6px', 
-                                    fontSize: '0.7rem', 
-                                    whiteSpace: 'nowrap',
-                                    color: isStarted ? '#475569' : '#4F7A5A',
-                                    fontWeight: 'bold'
-                                }}
-                            >
-                                {isStarted ? `✓ ${s.name}` : `+ ${s.name}`}
-                            </button>
-                        );
-                    })}
-                </div>
+            {/* ── Sub Navigation Tabs ── */}
+            <div className="rm-tabs-nav">
+                <button 
+                    className={`rm-tab-btn ${activeTab === 'selection' ? 'rm-tab-btn--active' : ''}`}
+                    onClick={() => setActiveTab('selection')}
+                >
+                    <Layers size={16} />
+                    <span>Catálogo ({stockAlerts.length})</span>
+                </button>
+                <button 
+                    className={`rm-tab-btn ${activeTab === 'drafts' ? 'rm-tab-btn--active' : ''}`}
+                    onClick={() => setActiveTab('drafts')}
+                >
+                    <ShoppingCart size={16} />
+                    <span>Borradores ({drafts.length})</span>
+                </button>
+                <button 
+                    className={`rm-tab-btn ${activeTab === 'boleto' ? 'rm-tab-btn--active' : ''}`}
+                    onClick={() => setActiveTab('boleto')}
+                >
+                    <Printer size={16} />
+                    <span>Boleto</span>
+                </button>
             </div>
 
-            {successVFSItem && (
-                <div style={{ background: '#fef3c7', borderBottom: '1px solid #f59e0b', padding: '10px 12px', fontSize: '0.75rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span className="material-symbols-rounded" style={{ color: '#d97706', fontSize: '18px' }}>check_circle</span>
-                    <span style={{ color: '#78350f' }}>
-                        ¡Pedido guardado en VFS! <strong>{successVFSItem.filename}</strong> se agregó a Proveedores y Compras.
-                    </span>
-                </div>
-            )}
+            {/* ── Main Content Area ── */}
+            <main className="rm-main">
 
-            {error && (
-                <div className="restock-error">
-                    <span className="material-symbols-rounded">error</span>
-                    <span>{error}</span>
-                </div>
-            )}
+                {/* ════════════════════════════════════════════
+                    SUB-PAGE 1: Catalog & Stock Selection
+                    ════════════════════════════════════════════ */}
+                {activeTab === 'selection' && (
+                    <section className="rm-selection-view animate-fade-in">
+                        
+                        {/* Filters Header toggle */}
+                        <div className="rm-hud-card rm-filters-card">
+                            <div className="rm-filters-toggle" onClick={() => setFiltersExpanded(!filtersExpanded)}>
+                                <div className="flex items-center gap-2">
+                                    <Filter size={16} className="text-emerald" />
+                                    <span className="font-bold text-sm">Filtros Avanzados</span>
+                                </div>
+                                <div className="text-muted">
+                                    {filtersExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                </div>
+                            </div>
 
-            {!loading && restockData.length === 0 ? (
-                <div className="restock-empty">
-                    <span className="material-symbols-rounded">check_circle</span>
-                    <h3>¡Todo en orden!</h3>
-                    <p>No hay productos con stock bajo. Usa el selector de arriba para iniciar un pedido manual.</p>
-                </div>
-            ) : (
-                <div className="restock-content">
-                    {restockData.map((supplier) => {
-                        const isUnassigned = !supplier.supplierId;
-                        const supplierKey = supplier.supplierId || 'unassigned';
-                        const isExpanded = expandedSupplier === supplierKey;
-
-                        const totalCostEstimado = supplier.items.reduce((sum, item) => sum + (item.suggestedAmount * item.cost), 0);
-
-                        return (
-                            <div key={supplierKey} className={`supplier-card-mobile ${isUnassigned ? 'unassigned' : ''}`}>
-                                <div className="supplier-header" onClick={() => toggleSupplier(supplierKey)} style={{ background: isExpanded ? '#f8fafc' : '#ffffff' }}>
-                                    <div className="supplier-info">
-                                        <span className="material-symbols-rounded">
-                                            {isUnassigned ? 'warning' : 'local_shipping'}
-                                        </span>
-                                        <div>
-                                            <h3>{supplier.supplierName}</h3>
-                                            <span className="supplier-count" style={{ fontSize: '0.7rem' }}>
-                                                {supplier.items.length} productos | Est: <strong>${totalCostEstimado.toLocaleString('es-AR')}</strong>
-                                            </span>
+                            {(filtersExpanded || searchQuery || selectedCategory || selectedTag || selectedSupplierFilter || urgencyFilter !== 'all') && (
+                                <div className="rm-filters-expanded-fields animate-slide-down">
+                                    <div className="rm-filter-field">
+                                        <label>Buscar Producto</label>
+                                        <div className="rm-search-wrapper">
+                                            <Search size={14} className="rm-search-icon" />
+                                            <input 
+                                                type="text"
+                                                placeholder="Nombre o código..."
+                                                value={searchQuery}
+                                                onChange={e => setSearchQuery(e.target.value)}
+                                                className="rm-input rm-input--with-icon"
+                                            />
+                                            {searchQuery && (
+                                                <button className="rm-clear-btn" onClick={() => setSearchQuery('')}>
+                                                    <X size={12} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
-                                    <span className={`material-symbols-rounded chevron ${isExpanded ? 'expanded' : ''}`}>
-                                        expand_more
-                                    </span>
+                                    <div className="rm-filter-field">
+                                        <label>Categoría / Carpeta</label>
+                                        <select className="rm-input" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
+                                            <option value="">📁 Todas las categorías</option>
+                                            {categoryOptions.map(c => <option key={c.id} value={c.name}>{c.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="rm-filter-field">
+                                        <label>Etiqueta</label>
+                                        <select className="rm-input" value={selectedTag} onChange={e => setSelectedTag(e.target.value)}>
+                                            <option value="">🏷️ Todas las etiquetas</option>
+                                            {allTags.map(t => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="rm-filter-field">
+                                        <label>Proveedor</label>
+                                        <select className="rm-input" value={selectedSupplierFilter} onChange={e => setSelectedSupplierFilter(e.target.value)}>
+                                            <option value="">🚛 Todos los proveedores</option>
+                                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="rm-filter-field">
+                                        <label>Urgencia de Stock</label>
+                                        <select className="rm-input" value={urgencyFilter} onChange={e => setUrgencyFilter(e.target.value as any)}>
+                                            <option value="all">Ver todo el catálogo</option>
+                                            <option value="critical">🔴 Sin Stock</option>
+                                            <option value="low">🟡 Stock Bajo</option>
+                                            <option value="ok">🟢 Stock Óptimo</option>
+                                        </select>
+                                    </div>
                                 </div>
+                            )}
+                        </div>
 
-                                {isExpanded && (
-                                    <div className="supplier-items-list" style={{ background: '#f8fafc', padding: '8px' }}>
-                                        {/* Notes and Lead times for Mobile */}
-                                        {!isUnassigned && (
-                                            <div style={{ background: '#ffffff', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <div style={{ display: 'flex', justifySelf: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#64748b' }}>Demora Proveedor:</span>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        <input 
-                                                            type="number"
-                                                            value={leadTimes[supplierKey] || 3}
-                                                            onChange={e => handleSetLeadTime(supplierKey, parseInt(e.target.value) || 3)}
-                                                            style={{ width: '45px', padding: '2px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center', fontSize: '0.75rem' }}
-                                                        />
-                                                        <span style={{ fontSize: '0.7rem', color: '#475569' }}>días</span>
-                                                    </div>
-                                                </div>
-                                                <textarea 
-                                                    placeholder="Notas de pedido especiales..."
-                                                    value={orderNotes[supplierKey] || ''}
-                                                    onChange={e => setOrderNotes({ ...orderNotes, [supplierKey]: e.target.value })}
-                                                    rows={2}
-                                                    style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', width: '100%', resize: 'vertical' }}
-                                                />
-                                            </div>
-                                        )}
+                        {/* Master Selector Bar */}
+                        <div className="rm-master-select-bar">
+                            <span className="text-xs text-muted">
+                                Mostrando <strong>{stockAlerts.length}</strong> productos
+                            </span>
+                            {stockAlerts.length > 0 && (
+                                <button className="rm-btn-select-all" onClick={handleSelectAllVisible}>
+                                    {stockAlerts.every(a => selectedProductIds.includes(a.id)) ? 'Deseleccionar todos' : 'Seleccionar visibles'}
+                                </button>
+                            )}
+                        </div>
 
-                                        {/* Add Catalog Item & Invent Items inside supplier card for mobile */}
-                                        <div style={{ background: '#ffffff', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {/* Catalog sum */}
-                                            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b' }}>🔍 Sumar producto del catálogo:</span>
+                        {/* Compact Cards Grid for Catalog items */}
+                        <div className="rm-catalog-list">
+                            {loading ? (
+                                <div className="rm-loading-box">
+                                    <div className="rm-spinner" />
+                                    <p>Sincronizando existencias...</p>
+                                </div>
+                            ) : stockAlerts.length === 0 ? (
+                                <div className="rm-empty-box">
+                                    <PackageOpen size={48} className="text-muted mb-2" />
+                                    <h4>Sin productos que mostrar</h4>
+                                    <p className="text-xs text-muted">Ajustá los filtros o el estado de búsqueda</p>
+                                </div>
+                            ) : (
+                                stockAlerts.map(alert => {
+                                    const isSelected = selectedProductIds.includes(alert.id);
+                                    const inAnyDraft = drafts.some(d => d.customData?.rows?.some((r: any) => r.id === alert.id));
+                                    
+                                    return (
+                                        <div 
+                                            key={alert.id}
+                                            className={`rm-catalog-card rm-card--${alert.urgency} ${isSelected ? 'rm-catalog-card--selected' : ''}`}
+                                            onClick={() => handleSelectProduct(alert.id)}
+                                        >
+                                            <div className="rm-card-checkbox" onClick={e => e.stopPropagation()}>
                                                 <input 
-                                                    type="text"
-                                                    placeholder="Buscar en catálogo..."
-                                                    value={catalogSearchQueries[supplierKey] || ''}
-                                                    onChange={e => setCatalogSearchQueries({ ...catalogSearchQueries, [supplierKey]: e.target.value })}
-                                                    style={{ padding: '4px 8px', fontSize: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '4px', width: '100%' }}
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => handleSelectProduct(alert.id)}
                                                 />
-                                                {catalogSearchQueries[supplierKey] && (
-                                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '120px', overflowY: 'auto' }}>
-                                                        {products
-                                                            .filter(p => p.name.toLowerCase().includes(catalogSearchQueries[supplierKey].toLowerCase()) && (!p.supplierId || p.supplierId === supplierKey))
-                                                            .slice(0, 4)
-                                                            .map(p => (
-                                                                <div 
-                                                                    key={p.id}
-                                                                    onClick={() => {
-                                                                        setManuallyAddedProducts(prev => ({
-                                                                            ...prev,
-                                                                            [supplierKey]: [...(prev[supplierKey] || []).filter(id => id !== p.id), p.id]
-                                                                        }));
-                                                                        if (supplierKey !== 'unassigned' && !manuallyStartedSuppliers.includes(supplierKey)) {
-                                                                            setManuallyStartedSuppliers(prev => [...prev, supplierKey]);
-                                                                        }
-                                                                        setCatalogSearchQueries({ ...catalogSearchQueries, [supplierKey]: '' });
-                                                                        addNotification(`Producto ${p.name} sumado`, 'success');
-                                                                    }}
-                                                                    style={{ padding: '6px 8px', fontSize: '0.7rem', borderBottom: '1px solid #f1f5f9' }}
-                                                                >
-                                                                    {p.name} (Stock: {p.stock})
-                                                                </div>
-                                                            ))
-                                                        }
-                                                    </div>
-                                                )}
                                             </div>
-
-                                            {/* Invent custom item */}
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b' }}>✨ Inventar producto temporal:</span>
-                                                <div style={{ display: 'flex', gap: '4px' }}>
-                                                    <input 
-                                                        type="text"
-                                                        placeholder="Nombre..."
-                                                        value={inventedName[supplierKey] || ''}
-                                                        onChange={e => setInventedName({ ...inventedName, [supplierKey]: e.target.value })}
-                                                        style={{ flex: 1, padding: '4px 6px', fontSize: '0.7rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
-                                                    />
-                                                    <input 
-                                                        type="number"
-                                                        placeholder="Cost..."
-                                                        value={inventedCost[supplierKey] || ''}
-                                                        onChange={e => setInventedCost({ ...inventedCost, [supplierKey]: e.target.value })}
-                                                        style={{ width: '50px', padding: '4px 6px', fontSize: '0.7rem', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center' }}
-                                                    />
-                                                    <input 
-                                                        type="number"
-                                                        placeholder="Cant..."
-                                                        value={inventedAmount[supplierKey] || ''}
-                                                        onChange={e => setInventedAmount({ ...inventedAmount, [supplierKey]: e.target.value })}
-                                                        style={{ width: '40px', padding: '4px 6px', fontSize: '0.7rem', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center' }}
-                                                    />
-                                                    <button 
-                                                        onClick={() => handleAddInventedItem(supplierKey)}
-                                                        style={{ background: '#4F7A5A', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' }}
-                                                    >
-                                                        Sumar
-                                                    </button>
+                                            <div className="rm-card-body">
+                                                <div className="rm-card-header">
+                                                    <span className="rm-card-code"><code>{alert.code}</code></span>
+                                                    {alert.urgency === 'critical' && <span className="rm-badge rm-badge--critical">Sin Stock</span>}
+                                                    {alert.urgency === 'low' && <span className="rm-badge rm-badge--low">Bajo</span>}
+                                                    {alert.urgency === 'ok' && <span className="rm-badge rm-badge--ok">OK</span>}
                                                 </div>
+                                                <h4 className="rm-card-name">{alert.name}</h4>
+                                                <div className="rm-card-meta">
+                                                    <span>📁 {alert.category}</span>
+                                                    {alert.supplierName && <span>🚛 {alert.supplierName}</span>}
+                                                </div>
+                                                <div className="rm-card-stock-grid">
+                                                    <div>
+                                                        <span className="rm-grid-label">Stock Actual</span>
+                                                        <span className="rm-grid-val font-bold">{alert.stock}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="rm-grid-label">Mínimo</span>
+                                                        <span className="rm-grid-val text-muted">{alert.minStock}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="rm-grid-label">Costo Ref.</span>
+                                                        <span className="rm-grid-val font-mono">${alert.cost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="rm-card-action" onClick={e => e.stopPropagation()}>
+                                                <button
+                                                    className={`rm-quick-add ${inAnyDraft ? 'rm-quick-add--in-draft' : ''}`}
+                                                    onClick={() => handleQuickAdd(alert)}
+                                                    title="Agregar rápido"
+                                                >
+                                                    {inAnyDraft ? <Check size={16} /> : <Plus size={16} />}
+                                                </button>
                                             </div>
                                         </div>
+                                    );
+                                })
+                            )}
+                        </div>
 
-                                        {isUnassigned && (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
-                                                <div 
-                                                    onClick={() => handleToggleAllUnassigned(supplier.items)}
-                                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.75rem', padding: '4px', color: '#475569' }}
-                                                >
-                                                    <span className="material-symbols-rounded" style={{ fontSize: '18px', color: '#4F7A5A' }}>
-                                                        {selectedProducts.length === supplier.items.length ? 'check_box' : 'check_box_outline_blank'}
-                                                    </span>
-                                                    <span>Seleccionar todos ({supplier.items.length})</span>
+                        {/* Floating bottom command bar for mobile */}
+                        <div className={`rm-floating-bar ${selectedProductIds.length > 0 ? 'rm-floating-bar--visible' : ''}`}>
+                            <div className="rm-floating-bar__content">
+                                <div className="rm-floating-bar__header">
+                                    <div className="flex items-center gap-2">
+                                        <span className="rm-floating-bar__count">{selectedProductIds.length}</span>
+                                        <span className="font-bold text-xs text-slate-800">Seleccionados</span>
+                                    </div>
+                                    <button className="rm-floating-bar__close" onClick={() => setSelectedProductIds([])}>
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                                <div className="rm-floating-bar__controls">
+                                    <div className="rm-floating-field">
+                                        <Truck size={14} className="rm-field-icon" />
+                                        <select
+                                            value={bulkSupplierId}
+                                            onChange={e => setBulkSupplierId(e.target.value)}
+                                            className="rm-floating-select"
+                                        >
+                                            <option value="">Vincular a Sin Proveedor</option>
+                                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="rm-floating-field">
+                                        <Layers size={14} className="rm-field-icon" />
+                                        <input 
+                                            type="number"
+                                            min={1}
+                                            value={bulkQuantity}
+                                            onChange={e => setBulkQuantity(parseInt(e.target.value) || 1)}
+                                            className="rm-floating-qty"
+                                            placeholder="Cant."
+                                        />
+                                    </div>
+                                    <button className="rm-btn rm-btn--primary w-full py-3 mt-1" onClick={handleBulkAdd}>
+                                        <Plus size={16} />
+                                        <span>Agregar al Pedido</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* ════════════════════════════════════════════
+                    SUB-PAGE 2: VFS Active Draft Carts (Borradores)
+                    ════════════════════════════════════════════ */}
+                {activeTab === 'drafts' && (
+                    <section className="rm-drafts-view animate-fade-in">
+                        {drafts.length === 0 ? (
+                            <div className="rm-hud-card rm-empty-state-mobile">
+                                <ShoppingCart size={48} className="text-emerald mb-2" />
+                                <h3>No hay borradores activos</h3>
+                                <p className="text-xs text-muted mb-4">
+                                    Agregá productos desde el catálogo para crear planillas de compras en el Workspace virtual.
+                                </p>
+                                <button className="rm-btn rm-btn--primary" onClick={() => setActiveTab('selection')}>
+                                    <Layers size={16} />
+                                    Explorar Catálogo
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="rm-drafts-accordion-list">
+                                {drafts.map(draft => {
+                                    const draftId = draft.id;
+                                    const supplierId = draftId.replace('restock_draft_', '');
+                                    const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+                                    const items = draft.customData?.rows || [];
+                                    const totalEstimated = items.reduce((sum, item) => sum + (item.quantity * item.cost), 0);
+                                    const isExpanded = !!expandedDrafts[draftId];
+
+                                    return (
+                                        <div key={draftId} className="rm-hud-card rm-draft-accordion-card">
+                                            {/* Accordion header */}
+                                            <div className="rm-draft-acc-header" onClick={() => toggleDraftAccordion(draftId)}>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="material-symbols-rounded text-emerald">receipt_long</span>
+                                                    <div>
+                                                        <h4 className="rm-draft-title">{supplierName}</h4>
+                                                        <p className="rm-draft-meta-text">
+                                                            {items.length} ítems · Est: <strong>${totalEstimated.toLocaleString('es-AR', { minimumFractionDigits: 0 })}</strong>
+                                                        </p>
+                                                    </div>
                                                 </div>
+                                                <div>
+                                                    {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                                </div>
+                                            </div>
 
-                                                {selectedProducts.length > 0 && (
-                                                    <div className="bulk-assign-bar" style={{ margin: 0 }}>
-                                                        <select
-                                                            value={targetSupplierId}
-                                                            onChange={(e) => setTargetSupplierId(e.target.value)}
+                                            {/* Expandable panel */}
+                                            {isExpanded && (
+                                                <div className="rm-draft-acc-content animate-slide-down">
+                                                    {/* Top buttons */}
+                                                    <div className="rm-draft-action-buttons">
+                                                        <button 
+                                                            className="rm-btn rm-btn--ghost flex-1 py-2 text-xs"
+                                                            onClick={() => generateWAMessage(draft)}
                                                         >
-                                                            <option value="">Seleccionar proveedor...</option>
-                                                            {suppliers.map(s => (
-                                                                <option key={s.id} value={s.id}>{s.name}</option>
-                                                            ))}
-                                                        </select>
-                                                        <button
-                                                            className="btn-assign"
-                                                            onClick={handleBulkAssign}
-                                                            disabled={isAssigning || selectedProducts.length === 0 || !targetSupplierId}
+                                                            <MessageCircle size={14} className="text-emerald" />
+                                                            <span>WhatsApp</span>
+                                                        </button>
+                                                        <button 
+                                                            className="rm-btn rm-btn--ghost flex-1 py-2 text-xs"
+                                                            onClick={() => {
+                                                                setBoletoSupplierId(supplierId);
+                                                                setActiveTab('boleto');
+                                                            }}
                                                         >
-                                                            {isAssigning ? 'Asignando...' : 'Asignar'}
+                                                            <Eye size={14} />
+                                                            <span>Boleto</span>
+                                                        </button>
+                                                        <button 
+                                                            className="rm-btn rm-btn--ghost flex-1 py-2 text-xs"
+                                                            onClick={() => exportToWord(draft)}
+                                                        >
+                                                            <Download size={14} />
+                                                            <span>Word</span>
+                                                        </button>
+                                                        <button 
+                                                            className="rm-btn rm-btn--danger-ghost py-2"
+                                                            onClick={() => deleteVFSDraft(draftId)}
+                                                            title="Eliminar borrador"
+                                                        >
+                                                            <Trash2 size={14} />
                                                         </button>
                                                     </div>
-                                                )}
-                                            </div>
-                                        )}
 
-                                        {/* Products grid */}
-                                        {supplier.items.map(item => {
-                                            const isSelected = selectedProducts.includes(item.id);
-                                            const isInvented = item.id.startsWith('invented_');
-                                            const runoutLabel = isInvented ? 'Inventado' : (item.runoutDays <= 5 ? 'Sin stock' : `${item.runoutDays.toFixed(0)}d`);
-
-                                            return (
-                                                <div
-                                                    key={item.id}
-                                                    className={`restock-item-mobile ${isUnassigned ? 'selectable' : ''} ${isSelected ? 'selected' : ''}`}
-                                                    onClick={() => isUnassigned && handleToggleProduct(item.id)}
-                                                    style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px', marginBottom: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}
-                                                >
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
-                                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                                            {isUnassigned && (
-                                                                <span className="material-symbols-rounded checkbox-icon">
-                                                                    {isSelected ? 'check_box' : 'check_box_outline_blank'}
-                                                                </span>
-                                                            )}
-                                                            <div className="item-mobile-info">
-                                                                {item.code && <span className="item-code-sm">{item.code}</span>}
-                                                                <div className="item-name-sm" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                    {item.name}
-                                                                    <span 
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleRemoveItem(supplierKey, item.id);
-                                                                        }}
-                                                                        className="material-symbols-rounded" 
-                                                                        style={{ fontSize: '15px', color: '#ef4444', cursor: 'pointer' }}
-                                                                    >
-                                                                        delete
-                                                                    </span>
+                                                    {/* Items density list */}
+                                                    <div className="rm-draft-items-box">
+                                                        {items.length === 0 ? (
+                                                            <p className="text-center text-xs text-muted py-4">Borrador vacío</p>
+                                                        ) : (
+                                                            items.map((item: any) => (
+                                                                <div key={item.id} className="rm-draft-item-row">
+                                                                    <div className="rm-draft-item-info">
+                                                                        <span className="rm-draft-item-code">
+                                                                            {item.isCustom && <span className="rm-custom-label">LIBRE</span>}
+                                                                            <code>{item.code}</code>
+                                                                        </span>
+                                                                        <span className="rm-draft-item-name">{item.name}</span>
+                                                                    </div>
+                                                                    <div className="rm-draft-item-inputs">
+                                                                        <div className="rm-draft-input-group">
+                                                                            <label>Cant.</label>
+                                                                            <input 
+                                                                                type="number"
+                                                                                min={1}
+                                                                                value={item.quantity}
+                                                                                onChange={e => handleUpdateDraftItem(draftId, item.id, 'quantity', parseInt(e.target.value) || 1)}
+                                                                            />
+                                                                        </div>
+                                                                        <div className="rm-draft-input-group">
+                                                                            <label>Cost.</label>
+                                                                            <input 
+                                                                                type="number"
+                                                                                min={0}
+                                                                                value={item.cost}
+                                                                                onChange={e => handleUpdateDraftItem(draftId, item.id, 'cost', parseFloat(e.target.value) || 0)}
+                                                                            />
+                                                                        </div>
+                                                                        <button 
+                                                                            className="rm-draft-item-delete-btn"
+                                                                            onClick={() => handleRemoveDraftItem(draftId, item.id)}
+                                                                        >
+                                                                            <X size={14} />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
-                                                                <span style={{ fontSize: '0.65rem', color: isInvented ? '#8b5cf6' : (item.runoutDays <= 5 ? '#ef4444' : '#d97706'), fontWeight: 'bold' }}>
-                                                                    Autonomía: {runoutLabel}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        {/* Suggested Replenishment Pill editable input */}
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                            <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Cant:</span>
+                                                            ))
+                                                        )}
+                                                    </div>
+
+                                                    {/* Custom item inline adder */}
+                                                    <div className="rm-draft-manual-form">
+                                                        <h5 className="rm-form-sec-title">Agregar producto manual</h5>
+                                                        <div className="rm-form-row">
+                                                            <input 
+                                                                type="text"
+                                                                placeholder="Nombre producto..."
+                                                                value={customNameMap[draftId] || ''}
+                                                                onChange={e => setCustomNameMap({ ...customNameMap, [draftId]: e.target.value })}
+                                                                className="rm-input flex-2"
+                                                            />
                                                             <input 
                                                                 type="number"
-                                                                min="0"
-                                                                value={item.suggestedAmount}
-                                                                onChange={e => {
-                                                                    const val = parseInt(e.target.value) || 0;
-                                                                    setCustomSuggestedAmounts(prev => ({ ...prev, [item.id]: val }));
-                                                                }}
-                                                                style={{ width: '45px', padding: '2px', border: '1px solid #4F7A5A', borderRadius: '4px', fontSize: '0.75rem', textAlign: 'center', fontWeight: 'bold', color: '#4F7A5A', background: '#ecfdf5' }}
+                                                                placeholder="Cant"
+                                                                value={customQtyMap[draftId] || ''}
+                                                                onChange={e => setCustomQtyMap({ ...customQtyMap, [draftId]: e.target.value })}
+                                                                className="rm-input flex-1"
                                                             />
+                                                            <input 
+                                                                type="number"
+                                                                placeholder="Cost"
+                                                                value={customCostMap[draftId] || ''}
+                                                                onChange={e => setCustomCostMap({ ...customCostMap, [draftId]: e.target.value })}
+                                                                className="rm-input flex-1"
+                                                            />
+                                                            <button 
+                                                                className="rm-btn rm-btn--primary px-3 py-2"
+                                                                onClick={() => handleAddCustomItem(draftId)}
+                                                            >
+                                                                <Plus size={16} />
+                                                            </button>
                                                         </div>
                                                     </div>
 
-                                                    {/* In-line parameter editing */}
-                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                            <label style={{ fontSize: '0.6rem', color: '#94a3b8' }}>Stock</label>
+                                                    {/* Lead Time & Notes */}
+                                                    <div className="rm-draft-meta-settings">
+                                                        <div className="rm-meta-setting-field">
+                                                            <label>⏱️ Plazo de Entrega (Días / Texto)</label>
                                                             <input 
-                                                                type="number"
-                                                                defaultValue={item.stock}
-                                                                disabled={isInvented}
-                                                                onBlur={e => handleInlineUpdate(item.id, 'stock', parseFloat(e.target.value) || 0)}
-                                                                style={{ padding: '2px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.75rem', textAlign: 'center' }}
+                                                                type="text"
+                                                                placeholder="Ej: 3 días, inmediato..."
+                                                                value={draft.customData?.leadTime || ''}
+                                                                onChange={e => handleUpdateDraftLeadTime(draftId, e.target.value)}
+                                                                className="rm-input"
                                                             />
                                                         </div>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                            <label style={{ fontSize: '0.6rem', color: '#94a3b8' }}>Mínimo</label>
-                                                            <input 
-                                                                type="number"
-                                                                defaultValue={item.minStock}
-                                                                disabled={isInvented}
-                                                                onBlur={e => handleInlineUpdate(item.id, 'min', parseFloat(e.target.value) || 0)}
-                                                                style={{ padding: '2px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.75rem', textAlign: 'center' }}
-                                                            />
-                                                        </div>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                            <label style={{ fontSize: '0.6rem', color: '#94a3b8' }}>Costo ($)</label>
-                                                            <input 
-                                                                type="number"
-                                                                defaultValue={item.cost}
-                                                                onBlur={e => handleInlineUpdate(item.id, 'cost', parseFloat(e.target.value) || 0)}
-                                                                style={{ padding: '2px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.75rem', textAlign: 'center' }}
+                                                        <div className="rm-meta-setting-field">
+                                                            <label>📝 Observaciones y Comentarios</label>
+                                                            <textarea 
+                                                                rows={2}
+                                                                placeholder="Instrucciones especiales para el proveedor..."
+                                                                value={draft.customData?.notes || ''}
+                                                                onChange={e => handleUpdateDraftNotes(draftId, e.target.value)}
+                                                                className="rm-input"
                                                             />
                                                         </div>
                                                     </div>
                                                 </div>
-                                            );
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </section>
+                )}
+
+                {/* ════════════════════════════════════════════
+                    SUB-PAGE 3: Printable Letterhead Boleto
+                    ════════════════════════════════════════════ */}
+                {activeTab === 'boleto' && (
+                    <section className="rm-boleto-view animate-fade-in">
+                        {drafts.length === 0 ? (
+                            <div className="rm-hud-card rm-empty-state-mobile">
+                                <Printer size={48} className="text-muted mb-2" />
+                                <h3>No hay datos para boleto</h3>
+                                <p className="text-xs text-muted mb-4">
+                                    Primero debés generar o agregar productos a un borrador activo.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="rm-boleto-container">
+                                {/* Selector of active draft to preview */}
+                                <div className="rm-hud-card p-3 mb-3">
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">Previsualizar Proveedor:</label>
+                                    <select 
+                                        value={boletoSupplierId}
+                                        onChange={e => setBoletoSupplierId(e.target.value)}
+                                        className="rm-input w-full"
+                                    >
+                                        {drafts.map(d => {
+                                            const sId = d.id.replace('restock_draft_', '');
+                                            const sName = d.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+                                            return <option key={d.id} value={sId}>{sName}</option>;
                                         })}
+                                    </select>
+                                    <button 
+                                        className="rm-btn rm-btn--primary w-full py-3 mt-3 flex items-center justify-center gap-2"
+                                        onClick={() => window.print()}
+                                    >
+                                        <Printer size={16} />
+                                        <span>Imprimir / Exportar PDF</span>
+                                    </button>
+                                </div>
 
-                                        {!isUnassigned && (
-                                            <div className="supplier-actions-bar" style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '6px', padding: '6px' }}>
-                                                {/* Save to Workspace */}
-                                                <button
-                                                    onClick={() => handleSaveToWorkspace(supplier)}
-                                                    style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '8px', padding: '8px 4px', fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                                                >
-                                                    <span className="material-symbols-rounded" style={{ fontSize: '16px' }}>folder_open</span>
-                                                    Workspace
-                                                </button>
-
-                                                <Link
-                                                    to="/compras"
-                                                    state={{
-                                                        supplierId: supplier.supplierId,
-                                                        items: supplier.items.map(item => ({
-                                                            productId: item.id,
-                                                            productName: item.name,
-                                                            quantity: item.suggestedAmount,
-                                                            cost: item.cost
-                                                        }))
-                                                    }}
-                                                    className="btn-generate-purchase"
-                                                    style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: '8px' }}
-                                                >
-                                                    <span className="material-symbols-rounded" style={{ fontSize: '16px' }}>shopping_cart</span>
-                                                    Pedir
-                                                </Link>
-
-                                                {supplier.supplierPhone && (
-                                                    <a
-                                                        href={generateWhatsAppLink(supplier)}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="btn-whatsapp-order"
-                                                        style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: '8px' }}
-                                                    >
-                                                        <span className="material-symbols-rounded" style={{ fontSize: '16px' }}>chat</span>
-                                                        WhatsApp
-                                                    </a>
-                                                )}
+                                {/* Paper Sheet Mockup */}
+                                <div className="rm-paper-canvas">
+                                    {activeBoletoDraft ? (
+                                        <div className="rm-paper-sheet">
+                                            {/* Watermark Logo */}
+                                            <div className="rm-paper-watermark">ASTER</div>
+                                            
+                                            {/* Header */}
+                                            <div className="rm-paper-header">
+                                                <div className="rm-paper-brand">
+                                                    <h3>FLORERÍA ASTER</h3>
+                                                    <span className="rm-paper-tagline">DISEÑO Y GESTIÓN FLORAL PREMIUM</span>
+                                                </div>
+                                                <div className="rm-paper-doc-type">
+                                                    <h4>ORDEN DE COMPRA</h4>
+                                                    <span>Virtual Sync ID: {activeBoletoDraft.id}</span>
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
-                                )}
+
+                                            {/* Meta data row */}
+                                            <div className="rm-paper-info-grid">
+                                                <div>
+                                                    <span className="rm-paper-info-title">EMISOR</span>
+                                                    <p><strong>Florería Aster S.R.L.</strong></p>
+                                                    <p>Solicitante: {user?.name || 'Administrador'}</p>
+                                                    <p>Email: {user?.email || 'aster@business.com'}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="rm-paper-info-title">PROVEEDOR RECEPTOR</span>
+                                                    <p><strong>{activeBoletoDraft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ').toUpperCase()}</strong></p>
+                                                    <p>Plazo de Entrega: {activeBoletoDraft.customData?.leadTime || 'Coordinar'}</p>
+                                                    <p>Fecha: {new Date().toLocaleDateString('es-AR')}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Products grouped */}
+                                            <div className="rm-paper-details">
+                                                {Object.entries(groupedBoletoItems).map(([category, catItems]) => (
+                                                    <div key={category} className="rm-paper-group">
+                                                        <h5 className="rm-paper-group-title">{category.toUpperCase()}</h5>
+                                                        <div className="rm-paper-table-wrap">
+                                                            <table className="rm-paper-table">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Código</th>
+                                                                        <th>Detalle del Ítem</th>
+                                                                        <th className="text-right">Cant</th>
+                                                                        <th className="text-right">Costo U.</th>
+                                                                        <th className="text-right">Total</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {catItems.map((i: any) => (
+                                                                        <tr key={i.id}>
+                                                                            <td><code>{i.code}</code></td>
+                                                                            <td>
+                                                                                <strong>{i.name}</strong>
+                                                                                {i.isCustom && <span className="text-[10px] ml-1 text-slate-400 font-normal">(Manual)</span>}
+                                                                            </td>
+                                                                            <td className="text-right font-bold">{i.quantity}</td>
+                                                                            <td className="text-right font-mono">${i.cost.toLocaleString('es-AR', { minimumFractionDigits: 1 })}</td>
+                                                                            <td className="text-right font-mono font-bold">${i.total.toLocaleString('es-AR', { minimumFractionDigits: 1 })}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Summary Box */}
+                                            <div className="rm-paper-summary-box">
+                                                <div className="rm-summary-row">
+                                                    <span>Total Estimado de Importación:</span>
+                                                    <strong className="text-emerald font-mono">
+                                                        ${(activeBoletoDraft.customData?.rows || []).reduce((sum: number, r: any) => sum + r.total, 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                                    </strong>
+                                                </div>
+                                            </div>
+
+                                            {/* Observaciones */}
+                                            {activeBoletoDraft.customData?.notes && (
+                                                <div className="rm-paper-observations">
+                                                    <strong>📝 Observaciones Especiales:</strong>
+                                                    <p>{activeBoletoDraft.customData.notes}</p>
+                                                </div>
+                                            )}
+
+                                            {/* Handwritten grid */}
+                                            <div className="rm-paper-handwritten">
+                                                <strong>✍️ Ajustes y Recepción (Anotaciones Físicas):</strong>
+                                                <div className="rm-paper-handwritten-line"></div>
+                                                <div className="rm-paper-handwritten-line"></div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-center text-xs text-muted py-6">Cargando borrador...</p>
+                                    )}
+                                </div>
                             </div>
-                        );
-                    })}
-                </div>
-            )}
+                        )}
+                    </section>
+                )}
 
-            {/* Quick Product Creation Drawer Modal */}
-            {isDrawerOpen && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100dvh', background: 'rgba(255,255,255,0.98)', zIndex: 9999, display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.2s ease-out' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px', borderBottom: '1px solid #cbd5e1', background: '#4F7A5A', color: 'white' }}>
-                        <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 'bold' }}>+ Registrar Producto</h2>
-                        <button onClick={() => setIsDrawerOpen(false)} style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '1rem' }}>
-                            Cerrar
-                        </button>
-                    </div>
+            </main>
 
-                    <form onSubmit={handleFastCreateProduct} style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', flex: 1 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#475569' }}>Nombre *</label>
-                            <input 
-                                type="text"
-                                placeholder="Ej: Rosas Importadas Rojas"
-                                required
-                                value={newProductName}
-                                onChange={e => setNewProductName(e.target.value)}
-                                style={{ padding: '6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.8rem' }}
-                            />
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#475569' }}>Código de barras</label>
-                            <input 
-                                type="text"
-                                placeholder="Ej: 7791234567"
-                                value={newProductCode}
-                                onChange={e => setNewProductCode(e.target.value)}
-                                style={{ padding: '6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.8rem' }}
-                            />
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#475569' }}>Costo ($)</label>
-                                <input 
-                                    type="number"
-                                    placeholder="450"
-                                    value={newProductCost}
-                                    onChange={e => setNewProductCost(e.target.value)}
-                                    style={{ padding: '6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.8rem' }}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#475569' }}>Venta ($)</label>
-                                <input 
-                                    type="number"
-                                    placeholder="1200"
-                                    value={newProductPrice}
-                                    onChange={e => setNewProductPrice(e.target.value)}
-                                    style={{ padding: '6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.8rem' }}
-                                />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#475569' }}>Stock Inicial</label>
-                                <input 
-                                    type="number"
-                                    placeholder="15"
-                                    value={newProductStock}
-                                    onChange={e => setNewProductStock(e.target.value)}
-                                    style={{ padding: '6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.8rem' }}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#475569' }}>Mínimo</label>
-                                <input 
-                                    type="number"
-                                    placeholder="10"
-                                    value={newProductMinStock}
-                                    onChange={e => setNewProductMinStock(e.target.value)}
-                                    style={{ padding: '6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.8rem' }}
-                                />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#475569' }}>Carpeta / Categoría</label>
-                            <select
-                                value={newProductCategory}
-                                onChange={e => setNewProductCategory(e.target.value)}
-                                style={{ padding: '6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.8rem', background: 'white' }}
-                            >
-                                <option value="">Seleccionar carpeta...</option>
-                                {categoriesData.map(c => (
-                                    <option key={c.id} value={c.name}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#475569' }}>Proveedor</label>
-                            <select
-                                value={newProductSupplierId}
-                                onChange={e => setNewProductSupplierId(e.target.value)}
-                                style={{ padding: '6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.8rem', background: 'white' }}
-                            >
-                                <option value="">Seleccionar proveedor...</option>
-                                {suppliers.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <button 
-                            type="submit" 
-                            style={{ background: '#4F7A5A', color: 'white', border: 'none', padding: '10px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}
-                        >
-                            ✓ Registrar Catálogo
-                        </button>
-                    </form>
-                </div>
-            )}
-
-            {/* Float Sticky Note / Papelito */}
+            {/* Sticky Yellow Notes component */}
             <ElPapelito />
         </div>
     );

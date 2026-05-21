@@ -1,31 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Search, Plus, Trash2, MessageCircle, FileSpreadsheet,
-    ShoppingCart, PackageOpen, AlertTriangle, ChevronDown,
-    ChevronUp, X, Check, Truck, StickyNote, RefreshCw,
-    Filter, Tag, Download, Printer
+    ShoppingCart, PackageOpen, X, Check, Truck, StickyNote, RefreshCw,
+    Download, Printer, Layers, Calendar, Eye
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
 import './RestockDesktop.css';
-
-// ─────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────
-interface OrderItem {
-    id: string;
-    name: string;
-    code: string;
-    quantity: number;
-    cost: number;
-    supplierId?: string;
-    supplierName?: string;
-    category?: string;
-    isCustom?: boolean;
-    currentStock?: number;
-    minStock?: number;
-}
 
 interface StockAlert {
     id: string;
@@ -41,10 +23,22 @@ interface StockAlert {
     urgency: 'critical' | 'low' | 'ok';
 }
 
-// ─────────────────────────────────────────────
-// Persistence key
-// ─────────────────────────────────────────────
-const CART_STORAGE_KEY = (bId: string) => `restock_open_order_${bId}`;
+interface VFSItem {
+    id: string;
+    name: string;
+    parentId: string | null;
+    type: 'folder' | 'file';
+    entity?: string;
+    description?: string;
+    color?: string;
+    isCustom?: boolean;
+    customData?: {
+        columns: any[];
+        rows: any[];
+        notes?: string;
+        leadTime?: string;
+    };
+}
 
 const RestockDesktop: React.FC = () => {
     const products = useStore(s => s.products);
@@ -57,46 +51,47 @@ const RestockDesktop: React.FC = () => {
     const { user } = useAuth();
     const businessId = user?.business_id || 'default';
 
-    // ── Loading ──
+    // ── HUD State & Tabs ──
+    const [activeTab, setActiveTab] = useState<'selection' | 'drafts' | 'boleto'>('selection');
     const [loading, setLoading] = useState(true);
+    const [refreshKey, setRefreshKey] = useState(0);
 
-    // ── Filters ──
+    // ── Catalog Filters ──
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedTag, setSelectedTag] = useState('');
-    const [showAll, setShowAll] = useState(false);
+    const [selectedSupplierFilter, setSelectedSupplierFilter] = useState('');
+    const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'critical' | 'low' | 'ok'>('all');
 
-    // ── Cart (open order) ──
-    const [orderItems, setOrderItems] = useState<OrderItem[]>(() => {
-        try {
-            const stored = localStorage.getItem(CART_STORAGE_KEY(businessId));
-            return stored ? JSON.parse(stored) : [];
-        } catch {
-            return [];
-        }
-    });
-    const [orderNote, setOrderNote] = useState(() =>
-        localStorage.getItem(`restock_note_${businessId}`) || ''
-    );
-    const [showNote, setShowNote] = useState(false);
+    // ── Checkbox Selection ──
+    const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+    
+    // ── Bulk Assignment panel state ──
+    const [bulkSupplierId, setBulkSupplierId] = useState('');
+    const [bulkQuantity, setBulkQuantity] = useState(10);
 
-    // ── Custom (free-text) item form ──
-    const [customName, setCustomName] = useState('');
-    const [customQty, setCustomQty] = useState('');
-    const [customCost, setCustomCost] = useState('');
-    const [customSupplier, setCustomSupplier] = useState('');
-
-    // ── WhatsApp ──
-    const [waSupplierId, setWaSupplierId] = useState('');
-
-    // ── Workspace save banner ──
-    const [savedFilename, setSavedFilename] = useState<string | null>(null);
-
-    // ── Tabs and Boleto state ──
-    const [activeTab, setActiveTab] = useState<'cart' | 'boleto'>('cart');
+    // ── Boleto supplier preview selection ──
     const [boletoSupplierId, setBoletoSupplierId] = useState<string>('');
 
-    // ── Load data ──
+    // ── Inline Custom item form per draft ──
+    const [customNameMap, setCustomNameMap] = useState<Record<string, string>>({});
+    const [customQtyMap, setCustomQtyMap] = useState<Record<string, string>>({});
+    const [customCostMap, setCustomCostMap] = useState<Record<string, string>>({});
+
+    // ── Deep-link check from Suppliers agenda ──
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const urlSupplierId = params.get('supplierId');
+        if (urlSupplierId) {
+            setSelectedSupplierFilter(urlSupplierId);
+            setActiveTab('selection');
+            // Clean URL query param visually to prevent persistent filtering if navigated away
+            window.history.replaceState({}, document.title, window.location.pathname);
+            addNotification('Filtro de catálogo aplicado según el proveedor elegido', 'info');
+        }
+    }, [addNotification]);
+
+    // ── Load Catalog Data ──
     useEffect(() => {
         (async () => {
             setLoading(true);
@@ -107,18 +102,102 @@ const RestockDesktop: React.FC = () => {
             ]);
             setLoading(false);
         })();
-    }, []);
+    }, [refreshKey]);
 
-    // ── Persist cart ──
-    useEffect(() => {
-        localStorage.setItem(CART_STORAGE_KEY(businessId), JSON.stringify(orderItems));
-    }, [orderItems, businessId]);
+    // ── VFS Draft Loader ──
+    const drafts = useMemo((): VFSItem[] => {
+        const key = `explorer_custom_items_${businessId}`;
+        try {
+            const stored = localStorage.getItem(key);
+            if (stored) {
+                const parsed = JSON.parse(stored) as VFSItem[];
+                return parsed.filter(item => 
+                    item.parentId === 'pedidos_compra_folder' && 
+                    item.isCustom && 
+                    item.id.startsWith('restock_draft_')
+                );
+            }
+        } catch (e) {
+            console.error('Failed to load drafts from VFS:', e);
+        }
+        return [];
+    }, [businessId, refreshKey, activeTab]);
 
-    useEffect(() => {
-        localStorage.setItem(`restock_note_${businessId}`, orderNote);
-    }, [orderNote, businessId]);
+    // ── Save/Update VFS Draft ──
+    const saveVFSDraft = useCallback((supplierId: string, supplierName: string, items: any[], notes = '', leadTime = '') => {
+        const key = `explorer_custom_items_${businessId}`;
+        let stored: VFSItem[] = [];
+        try {
+            stored = JSON.parse(localStorage.getItem(key) || '[]') as VFSItem[];
+        } catch {}
+        
+        const draftId = `restock_draft_${supplierId}`;
+        const filename = `Borrador_Pedido_${supplierName.replace(/\s+/g, '_')}.xlsx`;
+        
+        const existingIndex = stored.findIndex(item => item.id === draftId);
+        
+        const columns = [
+            { key: 'code', label: 'Código', width: 110 },
+            { key: 'name', label: 'Producto', width: 250 },
+            { key: 'quantity', label: 'Cantidad', width: 100, align: 'right', badge: true },
+            { key: 'supplierName', label: 'Proveedor', width: 160 },
+            { key: 'cost', label: 'Costo Unit.', width: 120, align: 'right', format: 'currency' },
+            { key: 'total', label: 'Total Est.', width: 130, align: 'right', format: 'currency' }
+        ];
+        
+        const rows = items.map(i => ({
+            id: i.id,
+            code: i.code,
+            name: i.name,
+            quantity: Number(i.quantity) || 1,
+            supplierName: i.supplierName || supplierName,
+            cost: Number(i.cost) || 0,
+            total: (Number(i.quantity) || 1) * (Number(i.cost) || 0),
+            isCustom: i.isCustom || false
+        }));
 
-    // ── Category options flat list ──
+        const draftItem: VFSItem = {
+            id: draftId,
+            name: filename,
+            parentId: 'pedidos_compra_folder',
+            type: 'file',
+            entity: 'custom',
+            description: `Borrador de reposición para ${supplierName}. Notas: ${notes || 'Sin notas'}. Plazo: ${leadTime || 'No definido'}`,
+            color: '#a7f3d0', // Light green
+            isCustom: true,
+            customData: {
+                columns,
+                rows,
+                notes,
+                leadTime
+            }
+        };
+        
+        if (existingIndex > -1) {
+            stored[existingIndex] = draftItem;
+        } else {
+            stored.push(draftItem);
+        }
+        
+        localStorage.setItem(key, JSON.stringify(stored));
+        setRefreshKey(prev => prev + 1);
+    }, [businessId]);
+
+    // ── Delete VFS Draft ──
+    const deleteVFSDraft = useCallback((draftId: string) => {
+        const key = `explorer_custom_items_${businessId}`;
+        let stored: VFSItem[] = [];
+        try {
+            stored = JSON.parse(localStorage.getItem(key) || '[]') as VFSItem[];
+        } catch {}
+        
+        const filtered = stored.filter(item => item.id !== draftId);
+        localStorage.setItem(key, JSON.stringify(filtered));
+        setRefreshKey(prev => prev + 1);
+        addNotification('Borrador eliminado del Workspace virtual', 'info');
+    }, [businessId, addNotification]);
+
+    // ── Category options flat list with indents ──
     const categoryOptions = useMemo(() => {
         const build = (parentId: string | null = null, depth = 0): { id: string; name: string; label: string }[] => {
             const list: { id: string; name: string; label: string }[] = [];
@@ -140,7 +219,7 @@ const RestockDesktop: React.FC = () => {
         return Array.from(set).sort();
     }, [products]);
 
-    // ── Stock alerts ──
+    // ── Generate Stock Alerts ──
     const stockAlerts = useMemo((): StockAlert[] => {
         return products
             .filter(p => {
@@ -149,10 +228,16 @@ const RestockDesktop: React.FC = () => {
                     (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()));
                 const matchCat = !selectedCategory || p.category === selectedCategory;
                 const matchTag = !selectedTag || (p.tags && p.tags.includes(selectedTag));
+                const matchSupplier = !selectedSupplierFilter || p.supplierId === selectedSupplierFilter;
 
-                if (!matchSearch || !matchCat || !matchTag) return false;
-                if (showAll) return true;
-                return (p.stock ?? 0) <= (p.min ?? 5);
+                if (!matchSearch || !matchCat || !matchTag || !matchSupplier) return false;
+
+                const stock = p.stock ?? 0;
+                const min = p.min ?? 5;
+                const itemUrgency = stock <= 0 ? 'critical' : stock <= min ? 'low' : 'ok';
+                
+                if (urgencyFilter === 'all') return true;
+                return itemUrgency === urgencyFilter;
             })
             .map(p => {
                 const stock = p.stock ?? 0;
@@ -179,97 +264,224 @@ const RestockDesktop: React.FC = () => {
                 const order = { critical: 0, low: 1, ok: 2 };
                 return order[a.urgency] - order[b.urgency];
             });
-    }, [products, suppliers, searchQuery, selectedCategory, selectedTag, showAll]);
+    }, [products, suppliers, searchQuery, selectedCategory, selectedTag, selectedSupplierFilter, urgencyFilter]);
 
-    // ── Cart helpers ──
-    const isInCart = useCallback((id: string) => orderItems.some(i => i.id === id), [orderItems]);
-
-    const addToCart = (alert: StockAlert) => {
-        if (isInCart(alert.id)) {
-            addNotification('Ese producto ya está en la lista', 'warning');
+    // ── Bulk Add Handler ──
+    const handleBulkAdd = () => {
+        if (selectedProductIds.length === 0) {
+            addNotification('No seleccionaste ningún producto', 'warning');
             return;
         }
-        const suggested = Math.max(1, (alert.minStock * 2) - alert.stock);
-        setOrderItems(prev => [...prev, {
-            id: alert.id,
-            name: alert.name,
-            code: alert.code,
-            quantity: suggested,
-            cost: alert.cost,
-            supplierId: alert.supplierId,
-            supplierName: alert.supplierName,
-            category: alert.category,
-            currentStock: alert.stock,
-            minStock: alert.minStock
-        }]);
+
+        const supplierId = bulkSupplierId || 'unassigned';
+        const supplier = suppliers.find(s => s.id === supplierId);
+        const supplierName = supplier ? supplier.name : 'Sin Proveedor';
+
+        // Load existing items in the draft from VFS
+        const draftId = `restock_draft_${supplierId}`;
+        const existingDraft = drafts.find(d => d.id === draftId);
+        let draftItems: any[] = [];
+        let existingNotes = '';
+        let existingLeadTime = '';
+
+        if (existingDraft && existingDraft.customData) {
+            draftItems = [...(existingDraft.customData.rows || [])];
+            existingNotes = existingDraft.customData.notes || '';
+            existingLeadTime = existingDraft.customData.leadTime || '';
+        }
+
+        // Add each selected product
+        selectedProductIds.forEach(id => {
+            const alert = stockAlerts.find(a => a.id === id);
+            if (!alert) return;
+
+            const existingIdx = draftItems.findIndex(item => item.id === id);
+            if (existingIdx > -1) {
+                draftItems[existingIdx].quantity += Number(bulkQuantity) || 10;
+                draftItems[existingIdx].total = draftItems[existingIdx].quantity * draftItems[existingIdx].cost;
+            } else {
+                draftItems.push({
+                    id: alert.id,
+                    code: alert.code,
+                    name: alert.name,
+                    quantity: Number(bulkQuantity) || 10,
+                    supplierName,
+                    cost: alert.cost,
+                    total: (Number(bulkQuantity) || 10) * alert.cost,
+                    isCustom: false
+                });
+            }
+        });
+
+        saveVFSDraft(supplierId, supplierName, draftItems, existingNotes, existingLeadTime);
+        setSelectedProductIds([]);
+        addNotification(`Productos agregados al borrador de ${supplierName}`, 'success');
     };
 
-    const removeFromCart = (id: string) =>
-        setOrderItems(prev => prev.filter(i => i.id !== id));
-
-    const updateQty = (id: string, qty: number) =>
-        setOrderItems(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(1, qty) } : i));
-
-    const updateItemSupplier = (id: string, supplierId: string) => {
-        const sup = suppliers.find(s => s.id === supplierId);
-        setOrderItems(prev => prev.map(i =>
-            i.id === id ? { ...i, supplierId, supplierName: sup?.name || '' } : i
-        ));
+    // ── Checkbox Helpers ──
+    const handleSelectProduct = (id: string) => {
+        setSelectedProductIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
     };
 
-    const addCustomItem = () => {
-        if (!customName.trim()) {
+    const handleSelectAllVisible = () => {
+        const visibleIds = stockAlerts.map(a => a.id);
+        const allSelected = visibleIds.every(id => selectedProductIds.includes(id));
+        
+        if (allSelected) {
+            setSelectedProductIds(prev => prev.filter(id => !visibleIds.includes(id)));
+        } else {
+            setSelectedProductIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+        }
+    };
+
+    // ── Add Item to Draft Directly (Single Item Quick Action) ──
+    const handleQuickAdd = (alert: StockAlert) => {
+        const supplierId = alert.supplierId || 'unassigned';
+        const supplierName = alert.supplierName || 'Sin Proveedor';
+        const suggested = Math.max(10, (alert.minStock * 2) - alert.stock);
+
+        const draftId = `restock_draft_${supplierId}`;
+        const existingDraft = drafts.find(d => d.id === draftId);
+        let draftItems: any[] = [];
+        let existingNotes = '';
+        let existingLeadTime = '';
+
+        if (existingDraft && existingDraft.customData) {
+            draftItems = [...(existingDraft.customData.rows || [])];
+            existingNotes = existingDraft.customData.notes || '';
+            existingLeadTime = existingDraft.customData.leadTime || '';
+        }
+
+        const existingIdx = draftItems.findIndex(item => item.id === alert.id);
+        if (existingIdx > -1) {
+            draftItems[existingIdx].quantity += suggested;
+            draftItems[existingIdx].total = draftItems[existingIdx].quantity * draftItems[existingIdx].cost;
+        } else {
+            draftItems.push({
+                id: alert.id,
+                code: alert.code,
+                name: alert.name,
+                quantity: suggested,
+                supplierName,
+                cost: alert.cost,
+                total: suggested * alert.cost,
+                isCustom: false
+            });
+        }
+
+        saveVFSDraft(supplierId, supplierName, draftItems, existingNotes, existingLeadTime);
+        addNotification(`Agregado a borrador de ${supplierName}`, 'success');
+    };
+
+    // ── Edit Single Item Quantity/Cost in Draft inline ──
+    const handleUpdateDraftItem = (draftId: string, itemId: string, field: 'quantity' | 'cost', value: number) => {
+        const draft = drafts.find(d => d.id === draftId);
+        if (!draft || !draft.customData) return;
+
+        const supplierId = draftId.replace('restock_draft_', '');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+
+        const updatedRows = (draft.customData.rows || []).map(row => {
+            if (row.id === itemId) {
+                const updatedVal = Math.max(0, value);
+                return {
+                    ...row,
+                    [field]: updatedVal,
+                    total: field === 'quantity' ? updatedVal * row.cost : row.quantity * updatedVal
+                };
+            }
+            return row;
+        });
+
+        saveVFSDraft(supplierId, supplierName, updatedRows, draft.customData.notes, draft.customData.leadTime);
+    };
+
+    const handleRemoveDraftItem = (draftId: string, itemId: string) => {
+        const draft = drafts.find(d => d.id === draftId);
+        if (!draft || !draft.customData) return;
+
+        const supplierId = draftId.replace('restock_draft_', '');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+
+        const updatedRows = (draft.customData.rows || []).filter(row => row.id !== itemId);
+        saveVFSDraft(supplierId, supplierName, updatedRows, draft.customData.notes, draft.customData.leadTime);
+        addNotification('Producto quitado del borrador', 'info');
+    };
+
+    // ── Inline Custom item form per draft card ──
+    const handleAddCustomItem = (draftId: string) => {
+        const name = customNameMap[draftId] || '';
+        const qtyStr = customQtyMap[draftId] || '';
+        const costStr = customCostMap[draftId] || '';
+
+        if (!name.trim()) {
             addNotification('Escribí el nombre del producto', 'warning');
             return;
         }
-        const sup = suppliers.find(s => s.id === customSupplier);
-        setOrderItems(prev => [...prev, {
+
+        const draft = drafts.find(d => d.id === draftId);
+        if (!draft || !draft.customData) return;
+
+        const supplierId = draftId.replace('restock_draft_', '');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+
+        const draftItems = [...(draft.customData.rows || [])];
+        draftItems.push({
             id: `custom_${Date.now()}`,
-            name: customName.trim(),
             code: 'LIBRE',
-            quantity: parseInt(customQty) || 1,
-            cost: parseFloat(customCost) || 0,
-            supplierId: customSupplier || undefined,
-            supplierName: sup?.name,
+            name: name.trim(),
+            quantity: parseInt(qtyStr) || 1,
+            cost: parseFloat(costStr) || 0,
+            supplierName,
+            total: (parseInt(qtyStr) || 1) * (parseFloat(costStr) || 0),
             isCustom: true
-        }]);
-        setCustomName('');
-        setCustomQty('');
-        setCustomCost('');
-        setCustomSupplier('');
+        });
+
+        saveVFSDraft(supplierId, supplierName, draftItems, draft.customData.notes, draft.customData.leadTime);
+
+        // Reset fields
+        setCustomNameMap(prev => ({ ...prev, [draftId]: '' }));
+        setCustomQtyMap(prev => ({ ...prev, [draftId]: '' }));
+        setCustomCostMap(prev => ({ ...prev, [draftId]: '' }));
+        addNotification('Producto libre agregado al borrador', 'success');
     };
 
-    const clearCart = () => {
-        setOrderItems([]);
-        setOrderNote('');
-        addNotification('Lista de pedido limpiada', 'info');
+    const handleUpdateDraftNotes = (draftId: string, notes: string) => {
+        const draft = drafts.find(d => d.id === draftId);
+        if (!draft || !draft.customData) return;
+        const supplierId = draftId.replace('restock_draft_', '');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+        saveVFSDraft(supplierId, supplierName, draft.customData.rows || [], notes, draft.customData.leadTime);
     };
 
-    // ── Totals ──
-    const cartTotal = useMemo(() =>
-        orderItems.reduce((s, i) => s + i.quantity * i.cost, 0), [orderItems]);
+    const handleUpdateDraftLeadTime = (draftId: string, leadTime: string) => {
+        const draft = drafts.find(d => d.id === draftId);
+        if (!draft || !draft.customData) return;
+        const supplierId = draftId.replace('restock_draft_', '');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+        saveVFSDraft(supplierId, supplierName, draft.customData.rows || [], draft.customData.notes, leadTime);
+    };
 
-    // ── WhatsApp message ──
-    const generateWAMessage = () => {
-        const itemsToSend = waSupplierId
-            ? orderItems.filter(i => i.supplierId === waSupplierId || (!i.supplierId && waSupplierId === 'none'))
-            : orderItems;
+    // ── WhatsApp Message Generator for VFS Draft ──
+    const generateWAMessage = (draft: VFSItem) => {
+        const items = draft.customData?.rows || [];
+        const phone = suppliers.find(s => `restock_draft_${s.id}` === draft.id)?.phone || '';
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
 
-        const sup = suppliers.find(s => s.id === waSupplierId);
-        const phone = sup?.phone || '';
-        let msg = `*FLORERÍA MI JARDÍN – PEDIDO DE REPOSICIÓN*\n\n`;
-        if (sup) msg += `Hola ${sup.name}, por favor coordinar entrega de:\n\n`;
-        else msg += `Detalle del pedido:\n\n`;
+        let msg = `*FLORERÍA ASTER – PEDIDO DE REPOSICIÓN*\n\n`;
+        msg += `Hola *${supplierName}*, por favor coordinar entrega de:\n\n`;
 
-        itemsToSend.forEach(i => {
+        items.forEach((i: any) => {
             msg += `• *${i.quantity}x* ${i.name} (${i.code})`;
             if (i.cost > 0) msg += ` – Ref: $${i.cost.toLocaleString('es-AR')} c/u`;
             msg += '\n';
         });
 
-        const total = itemsToSend.reduce((s, i) => s + i.quantity * i.cost, 0);
+        const total = items.reduce((s, i) => s + (i.quantity * i.cost), 0);
         if (total > 0) msg += `\n💰 *Total estimado:* $${total.toLocaleString('es-AR')}`;
-        if (orderNote.trim()) msg += `\n📝 *Nota:* ${orderNote}`;
+        if (draft.customData?.notes) msg += `\n📝 *Nota:* ${draft.customData.notes}`;
         msg += `\n\n¡Muchas gracias!`;
 
         const url = phone
@@ -278,70 +490,10 @@ const RestockDesktop: React.FC = () => {
         window.open(url, '_blank');
     };
 
-    // ── Save to Workspace ──
-    const saveToWorkspace = () => {
-        if (orderItems.length === 0) {
-            addNotification('La lista está vacía', 'warning');
-            return;
-        }
-        const key = `explorer_custom_items_${businessId}`;
-        let stored: any[] = [];
-        try { stored = JSON.parse(localStorage.getItem(key) || '[]'); } catch {}
-        const date = new Date().toLocaleDateString('es-AR').replace(/\//g, '-');
-        const filename = `Pedido_${date}.xlsx`;
-        stored.push({
-            id: `restock_order_${Date.now()}`,
-            name: filename,
-            parentId: 'pedidos_compra_folder',
-            type: 'file',
-            entity: 'custom',
-            description: `Orden de reposición. Nota: ${orderNote || 'Sin notas'}`,
-            color: '#fef3c7',
-            isCustom: true,
-            customData: {
-                columns: [
-                    { key: 'code', label: 'Código', width: 110 },
-                    { key: 'name', label: 'Producto', width: 250 },
-                    { key: 'quantity', label: 'Cantidad', width: 100, align: 'right', badge: true },
-                    { key: 'supplierName', label: 'Proveedor', width: 160 },
-                    { key: 'cost', label: 'Costo Unit.', width: 120, align: 'right', format: 'currency' },
-                    { key: 'total', label: 'Total Est.', width: 130, align: 'right', format: 'currency' }
-                ],
-                rows: orderItems.map(i => ({
-                    id: i.id,
-                    code: i.code,
-                    name: i.name,
-                    quantity: i.quantity,
-                    supplierName: i.supplierName || '—',
-                    cost: i.cost,
-                    total: i.quantity * i.cost
-                }))
-            }
-        });
-        localStorage.setItem(key, JSON.stringify(stored));
-        setSavedFilename(filename);
-        setTimeout(() => setSavedFilename(null), 6000);
-        addNotification('Pedido guardado en el Workspace', 'success');
-    };
-
-    // ── Grouped items by category/folder ──
-    const groupedItemsByFolder = useMemo(() => {
-        const filtered = boletoSupplierId
-            ? orderItems.filter(i => i.supplierId === boletoSupplierId)
-            : orderItems;
-
-        const groups: Record<string, OrderItem[]> = {};
-        filtered.forEach(item => {
-            const cat = item.category || 'Sin Categoría';
-            if (!groups[cat]) groups[cat] = [];
-            groups[cat].push(item);
-        });
-        return groups;
-    }, [orderItems, boletoSupplierId]);
-
     // ── Export to Word (.doc) ──
-    const exportToWord = () => {
-        if (orderItems.length === 0) {
+    const exportToWord = (draft: VFSItem) => {
+        const items = draft.customData?.rows || [];
+        if (items.length === 0) {
             addNotification('No hay ítems para exportar', 'warning');
             return;
         }
@@ -356,10 +508,21 @@ const RestockDesktop: React.FC = () => {
             minute: '2-digit'
         });
 
-        const activeSupplier = suppliers.find(s => s.id === boletoSupplierId);
-        const supplierInfo = activeSupplier
-            ? `PROVEEDOR: ${activeSupplier.name.toUpperCase()}\nContacto: ${activeSupplier.phone || '—'} · ${(activeSupplier as any).email || '—'}`
-            : 'PROVEEDORES: Varios / General';
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+        const matchingSupplier = suppliers.find(s => `restock_draft_${s.id}` === draft.id);
+        const supplierInfo = matchingSupplier
+            ? `PROVEEDOR: ${matchingSupplier.name.toUpperCase()}\nContacto: ${matchingSupplier.phone || '—'} · ${(matchingSupplier as any).email || '—'}`
+            : `PROVEEDOR: ${supplierName.toUpperCase()}`;
+
+        // Group items by category/folder
+        const grouped: Record<string, any[]> = {};
+        items.forEach((item: any) => {
+            // Find category
+            const matchedProd = products.find(p => p.id === item.id);
+            const cat = matchedProd?.category || 'Sin Categoría';
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push(item);
+        });
 
         let docContent = `
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
@@ -409,7 +572,7 @@ const RestockDesktop: React.FC = () => {
     <div class="clear"></div>
 `;
 
-        Object.entries(groupedItemsByFolder).forEach(([category, items]) => {
+        Object.entries(grouped).forEach(([category, catItems]) => {
             docContent += `
     <div class="cat-title">${category.toUpperCase()}</div>
     <table>
@@ -424,7 +587,7 @@ const RestockDesktop: React.FC = () => {
         </thead>
         <tbody>
 `;
-            items.forEach(item => {
+            catItems.forEach(item => {
                 const total = item.quantity * item.cost;
                 docContent += `
             <tr>
@@ -443,9 +606,7 @@ const RestockDesktop: React.FC = () => {
 `;
         });
 
-        const grandTotal = Object.values(groupedItemsByFolder)
-            .flat()
-            .reduce((sum, item) => sum + item.quantity * item.cost, 0);
+        const grandTotal = items.reduce((sum, item) => sum + (item.quantity * item.cost), 0);
 
         if (grandTotal > 0) {
             docContent += `
@@ -455,11 +616,11 @@ const RestockDesktop: React.FC = () => {
 `;
         }
 
-        if (orderNote.trim()) {
+        if (draft.customData?.notes) {
             docContent += `
     <div class="note-box">
         <div class="note-title">📝 Observaciones del Pedido:</div>
-        <div>${orderNote}</div>
+        <div>${draft.customData.notes}</div>
     </div>
 `;
         }
@@ -479,9 +640,7 @@ const RestockDesktop: React.FC = () => {
         const blob = new Blob(['\ufeff' + docContent], { type: 'application/msword;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        const filename = activeSupplier
-            ? `Pedido_${activeSupplier.name.replace(/\s+/g, '_')}_${dateStr.replace(/\s+/g, '_')}.doc`
-            : `Pedido_General_${dateStr.replace(/\s+/g, '_')}.doc`;
+        const filename = `Pedido_${supplierName.replace(/\s+/g, '_')}_${dateStr.replace(/\s+/g, '_')}.doc`;
         link.href = url;
         link.download = filename;
         document.body.appendChild(link);
@@ -491,450 +650,642 @@ const RestockDesktop: React.FC = () => {
         addNotification('Archivo de Word generado', 'success');
     };
 
-    // ── Print / Save PDF ──
     const printBoleto = () => {
         window.print();
     };
 
-    // ── Urgency badge ──
-    const urgencyBadge = (u: StockAlert['urgency'], stock: number) => {
-        if (u === 'critical') return <span className="rd-badge rd-badge--critical">Sin Stock ({stock})</span>;
-        if (u === 'low') return <span className="rd-badge rd-badge--low">Bajo ({stock})</span>;
-        return <span className="rd-badge rd-badge--ok">OK ({stock})</span>;
-    };
+    // ── Active Boleto Preview Items calculation ──
+    const activeBoletoDraft = useMemo(() => {
+        if (!boletoSupplierId) {
+            return drafts[0] || null;
+        }
+        return drafts.find(d => d.id === `restock_draft_${boletoSupplierId}`) || null;
+    }, [drafts, boletoSupplierId]);
+
+    const groupedBoletoItems = useMemo(() => {
+        if (!activeBoletoDraft || !activeBoletoDraft.customData) return {};
+        const items = activeBoletoDraft.customData.rows || [];
+        const groups: Record<string, any[]> = {};
+        
+        items.forEach(item => {
+            const matchedProd = products.find(p => p.id === item.id);
+            const cat = matchedProd?.category || 'Sin Categoría';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+        });
+        return groups;
+    }, [activeBoletoDraft, products]);
 
     return (
         <div className="rd-root">
-            {/* ── Header ── */}
+            {/* ── HUD Top Header Panel ── */}
             <header className="rd-header">
-                <div>
+                <div className="rd-header__left">
                     <h1 className="rd-header__title">
-                        <span className="material-symbols-rounded">inventory_2</span>
-                        Reposición
+                        <span className="material-symbols-rounded">dashboard</span>
+                        Consola HUD de Reposición
                     </h1>
-                    <p className="rd-header__sub">Armá tu lista de pedido y enviala cuando esté lista</p>
+                    <p className="rd-header__sub">Optimización de stock e importaciones virtuales en tiempo real</p>
                 </div>
-                <div className="rd-header__actions">
+                <div className="rd-header__right">
                     <button
                         className="rd-btn rd-btn--ghost"
-                        onClick={() => { loadProducts(); loadSuppliers(); addNotification('Datos actualizados', 'info'); }}
-                        title="Actualizar datos"
+                        onClick={() => { setRefreshKey(prev => prev + 1); addNotification('Workspace VFS sincronizado', 'success'); }}
+                        title="Actualizar datos y sincronizar VFS"
                     >
                         <RefreshCw size={16} />
+                        <span>Sincronizar</span>
                     </button>
-                    <Link to="/workspace" className="rd-btn rd-btn--ghost" title="Ver pedidos guardados">
+                    <Link to="/workspace" className="rd-btn rd-btn--workspace" title="Abrir explorador del Workspace">
                         <FileSpreadsheet size={16} />
                         <span>Workspace</span>
                     </Link>
                 </div>
             </header>
 
-            {/* ── Body: 2 columns ── */}
+            {/* ── HUD Navigation Subtabs ── */}
+            <div className="rd-tabs-header">
+                <button
+                    className={`rd-tab-btn ${activeTab === 'selection' ? 'rd-tab-btn--active' : ''}`}
+                    onClick={() => setActiveTab('selection')}
+                >
+                    <Layers size={16} />
+                    Catálogo y Faltantes ({stockAlerts.length})
+                </button>
+                <button
+                    className={`rd-tab-btn ${activeTab === 'drafts' ? 'rd-tab-btn--active' : ''}`}
+                    onClick={() => setActiveTab('drafts')}
+                >
+                    <ShoppingCart size={16} />
+                    Borradores Activos VFS ({drafts.length})
+                </button>
+                <button
+                    className={`rd-tab-btn ${activeTab === 'boleto' ? 'rd-tab-btn--active' : ''}`}
+                    onClick={() => setActiveTab('boleto')}
+                >
+                    <Printer size={16} />
+                    Lienzo de Boleto Membretado
+                </button>
+            </div>
+
+            {/* ── HUD Primary Body Container ── */}
             <div className="rd-body">
 
-                {/* ════════════════════════════════
-                    LEFT PANEL: Alerts
-                    ════════════════════════════════ */}
-                <section className="rd-alerts-panel">
-                    <div className="rd-alerts-panel__header">
-                        <h2 className="rd-section-title">
-                            <AlertTriangle size={18} />
-                            Alertas de Stock
-                        </h2>
-                        <button
-                            className={`rd-btn rd-btn--sm ${showAll ? 'rd-btn--active' : 'rd-btn--ghost'}`}
-                            onClick={() => setShowAll(v => !v)}
-                        >
-                            <Filter size={13} />
-                            {showAll ? 'Ver solo bajos' : 'Ver todos'}
-                        </button>
-                    </div>
-
-                    {/* Filters */}
-                    <div className="rd-filters">
-                        <div className="rd-search-wrap">
-                            <Search size={14} className="rd-search-icon" />
-                            <input
-                                type="text"
-                                placeholder="Buscar producto..."
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                className="rd-input rd-search"
-                            />
-                            {searchQuery && (
-                                <button className="rd-clear-search" onClick={() => setSearchQuery('')}>
-                                    <X size={13} />
-                                </button>
-                            )}
-                        </div>
-                        <select className="rd-input rd-select" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
-                            <option value="">📁 Todas las categorías</option>
-                            {categoryOptions.map(o => <option key={o.id} value={o.name}>{o.label}</option>)}
-                        </select>
-                        {allTags.length > 0 && (
-                            <select className="rd-input rd-select" value={selectedTag} onChange={e => setSelectedTag(e.target.value)}>
-                                <option value=""><Tag size={12} /> Todas las etiquetas</option>
-                                {allTags.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                        )}
-                    </div>
-
-                    {/* Alert list */}
-                    {loading ? (
-                        <div className="rd-loading"><div className="rd-spinner" /></div>
-                    ) : stockAlerts.length === 0 ? (
-                        <div className="rd-empty">
-                            <PackageOpen size={40} />
-                            <p>{showAll ? 'No hay productos que coincidan' : '¡Todo el stock está en orden!'}</p>
-                            <button className="rd-btn rd-btn--ghost" onClick={() => setShowAll(true)}>
-                                Ver todo el catálogo
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="rd-alert-list">
-                            {stockAlerts.map(alert => {
-                                const inCart = isInCart(alert.id);
-                                return (
-                                    <div key={alert.id} className={`rd-alert-item rd-alert-item--${alert.urgency} ${inCart ? 'rd-alert-item--in-cart' : ''}`}>
-                                        <div className="rd-alert-item__info">
-                                            <span className="rd-alert-item__name">{alert.name}</span>
-                                            <span className="rd-alert-item__meta">
-                                                {alert.code} · {alert.category}
-                                                {alert.supplierName && <> · <Truck size={11} /> {alert.supplierName}</>}
-                                            </span>
-                                        </div>
-                                        <div className="rd-alert-item__right">
-                                            {urgencyBadge(alert.urgency, alert.stock)}
-                                            <button
-                                                className={`rd-add-btn ${inCart ? 'rd-add-btn--added' : ''}`}
-                                                onClick={() => !inCart && addToCart(alert)}
-                                                disabled={inCart}
-                                                title={inCart ? 'Ya está en la lista' : 'Agregar al pedido'}
-                                            >
-                                                {inCart ? <Check size={16} /> : <Plus size={16} />}
+                {/* ════════════════════════════════════════════
+                    SUB-PAGE 1: Catalog and Selection Consola
+                    ════════════════════════════════════════════ */}
+                {activeTab === 'selection' && (
+                    <section className="rd-selection-console">
+                        {/* Filters Bar */}
+                        <div className="rd-hud-card rd-hud-card--filters">
+                            <div className="rd-filters-grid">
+                                <div className="rd-filter-item">
+                                    <label>Buscar Producto</label>
+                                    <div className="rd-search-input-wrapper">
+                                        <Search size={14} className="rd-search-icon" />
+                                        <input
+                                            type="text"
+                                            placeholder="Nombre o código..."
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                            className="rd-input rd-input--with-icon"
+                                        />
+                                        {searchQuery && (
+                                            <button className="rd-clear-btn" onClick={() => setSearchQuery('')}>
+                                                <X size={12} />
                                             </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </section>
-
-                {/* ════════════════════════════════
-                    RIGHT PANEL: Open Order Cart & Live Boleto Preview
-                    ════════════════════════════════ */}
-                <section className="rd-cart-panel">
-                    {/* Tabs navigation */}
-                    <div className="rd-tabs-header">
-                        <button
-                            type="button"
-                            className={`rd-tab-btn ${activeTab === 'cart' ? 'rd-tab-btn--active' : ''}`}
-                            onClick={() => setActiveTab('cart')}
-                            title="Ver y editar la lista de compras"
-                        >
-                            <ShoppingCart size={15} />
-                            Lista Rápida ({orderItems.length})
-                        </button>
-                        <button
-                            type="button"
-                            className={`rd-tab-btn ${activeTab === 'boleto' ? 'rd-tab-btn--active' : ''}`}
-                            onClick={() => setActiveTab('boleto')}
-                            title="Ver vista previa membretada del pedido"
-                        >
-                            <FileSpreadsheet size={15} />
-                            Boleto Membretado
-                        </button>
-                    </div>
-
-                    {activeTab === 'cart' ? (
-                        <>
-                            <div className="rd-cart-panel__header">
-                                <h2 className="rd-section-title">
-                                    <ShoppingCart size={18} />
-                                    Lista del Pedido
-                                    {orderItems.length > 0 && (
-                                        <span className="rd-cart-count">{orderItems.length}</span>
-                                    )}
-                                </h2>
-                                {orderItems.length > 0 && (
-                                    <button className="rd-btn rd-btn--danger-ghost rd-btn--sm" onClick={clearCart} title="Limpiar lista">
-                                        <Trash2 size={13} /> Limpiar
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Cart items */}
-                            <div className="rd-cart-list">
-                                {orderItems.length === 0 ? (
-                                    <div className="rd-cart-empty">
-                                        <ShoppingCart size={36} />
-                                        <p>La lista está vacía.</p>
-                                        <p className="rd-cart-empty__hint">Tocá el <strong>+</strong> en cualquier producto o agregá uno manualmente abajo.</p>
-                                    </div>
-                                ) : (
-                                    orderItems.map(item => (
-                                        <div key={item.id} className="rd-cart-item">
-                                            <div className="rd-cart-item__info">
-                                                <span className="rd-cart-item__name">
-                                                    {item.isCustom && <span className="rd-libre-badge">LIBRE</span>}
-                                                    {item.name}
-                                                </span>
-                                                {item.currentStock !== undefined && (
-                                                    <span className="rd-cart-item__meta">
-                                                        Stock actual: {item.currentStock} · Mín: {item.minStock}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="rd-cart-item__controls">
-                                                <select
-                                                    className="rd-input rd-select rd-select--sm"
-                                                    value={item.supplierId || ''}
-                                                    onChange={e => updateItemSupplier(item.id, e.target.value)}
-                                                    title="Proveedor (opcional)"
-                                                >
-                                                    <option value="">Sin proveedor</option>
-                                                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                </select>
-                                                <input
-                                                    type="number"
-                                                    min={1}
-                                                    value={item.quantity}
-                                                    onChange={e => updateQty(item.id, parseInt(e.target.value) || 1)}
-                                                    className="rd-input rd-qty-input"
-                                                    title="Cantidad"
-                                                />
-                                                <button className="rd-remove-btn" onClick={() => removeFromCart(item.id)} title="Quitar">
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-
-                            {/* Custom item form */}
-                            <div className="rd-custom-form">
-                                <p className="rd-custom-form__label">
-                                    <Plus size={13} /> Agregar ítem manualmente
-                                </p>
-                                <div className="rd-custom-form__row">
-                                    <input
-                                        type="text"
-                                        placeholder="Nombre del producto..."
-                                        value={customName}
-                                        onChange={e => setCustomName(e.target.value)}
-                                        className="rd-input rd-input--grow"
-                                        onKeyDown={e => e.key === 'Enter' && addCustomItem()}
-                                    />
-                                    <input
-                                        type="number"
-                                        placeholder="Cant."
-                                        min={1}
-                                        value={customQty}
-                                        onChange={e => setCustomQty(e.target.value)}
-                                        className="rd-input rd-qty-input"
-                                    />
-                                    <input
-                                        type="number"
-                                        placeholder="$Costo"
-                                        min={0}
-                                        value={customCost}
-                                        onChange={e => setCustomCost(e.target.value)}
-                                        className="rd-input rd-cost-input"
-                                    />
-                                </div>
-                                <div className="rd-custom-form__row">
-                                    <select
-                                        className="rd-input rd-select rd-input--grow"
-                                        value={customSupplier}
-                                        onChange={e => setCustomSupplier(e.target.value)}
-                                    >
-                                        <option value="">Proveedor (opcional)</option>
-                                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
-                                    <button className="rd-btn rd-btn--primary" onClick={addCustomItem}>
-                                        <Plus size={15} /> Agregar
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Note */}
-                            <div className="rd-note-section">
-                                <button className="rd-note-toggle" onClick={() => setShowNote(v => !v)}>
-                                    <StickyNote size={14} />
-                                    {showNote ? 'Ocultar nota' : 'Agregar nota al pedido'}
-                                    {showNote ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                </button>
-                                {showNote && (
-                                    <textarea
-                                        className="rd-note-input"
-                                        placeholder="Ej: Pedir las flores para el jueves antes del mediodía..."
-                                        value={orderNote}
-                                        onChange={e => setOrderNote(e.target.value)}
-                                        rows={3}
-                                    />
-                                )}
-                            </div>
-
-                            {/* Footer actions */}
-                            {orderItems.length > 0 && (
-                                <div className="rd-cart-footer">
-                                    <div className="rd-cart-total">
-                                        Total estimado: <strong>${cartTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
-                                    </div>
-
-                                    {/* WhatsApp */}
-                                    <div className="rd-wa-row">
-                                        <select
-                                            className="rd-input rd-select rd-input--grow"
-                                            value={waSupplierId}
-                                            onChange={e => setWaSupplierId(e.target.value)}
-                                        >
-                                            <option value="">Enviar todo por WhatsApp</option>
-                                            {suppliers.map(s => <option key={s.id} value={s.id}>Solo {s.name}</option>)}
-                                        </select>
-                                        <button className="rd-btn rd-btn--whatsapp" onClick={generateWAMessage}>
-                                            <MessageCircle size={16} />
-                                            Enviar
-                                        </button>
-                                    </div>
-
-                                    <button className="rd-btn rd-btn--workspace rd-btn--full" onClick={saveToWorkspace}>
-                                        <FileSpreadsheet size={16} />
-                                        Guardar Pedido en Workspace
-                                    </button>
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            {/* Boleto tab content */}
-                            <div className="rd-boleto-controls">
-                                <div className="rd-boleto-filter">
-                                    <span className="rd-boleto-filter__label"><Truck size={13} /> Ver Proveedor:</span>
-                                    <select
-                                        className="rd-input rd-select rd-input--grow"
-                                        value={boletoSupplierId}
-                                        onChange={e => setBoletoSupplierId(e.target.value)}
-                                    >
-                                        <option value="">Todos los Proveedores</option>
-                                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Live Letterhead Preview Paper Canvas */}
-                            <div className="rd-paper-wrapper">
-                                <div id="rd-paper-to-print" className="rd-paper-sheet">
-                                    {/* Header / Logo */}
-                                    <div className="rd-paper-header">
-                                        <div className="rd-paper-header__logo">FLORERÍA ASTER</div>
-                                        <div className="rd-paper-header__subtitle">Orden de Compra y Reposición</div>
-                                        <div className="rd-paper-header__line"></div>
-                                    </div>
-
-                                    {/* Metadata Grid */}
-                                    <div className="rd-paper-meta-grid">
-                                        <div className="rd-paper-meta-section">
-                                            <p><strong>EMISOR:</strong> Florería Aster S.R.L.</p>
-                                            <p><strong>Solicitante:</strong> {user?.name || 'Administrador'}</p>
-                                            <p><strong>Email:</strong> {user?.email || '—'}</p>
-                                            <p className="rd-paper-meta-hint">Florería Aster ERP v2.0</p>
-                                        </div>
-                                        <div className="rd-paper-meta-section rd-paper-meta-section--right">
-                                            <p><strong>Fecha:</strong> {new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                                            <p><strong>Hora:</strong> {new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</p>
-                                            <p><strong>Estado:</strong> <span className="rd-paper-status-badge">Abierto / En Proceso</span></p>
-                                        </div>
-                                    </div>
-
-                                    {/* Document Contents */}
-                                    <div className="rd-paper-content-list">
-                                        {Object.keys(groupedItemsByFolder).length === 0 ? (
-                                            <div className="rd-paper-empty-items">
-                                                No hay ítems cargados en esta orden.
-                                            </div>
-                                        ) : (
-                                            Object.entries(groupedItemsByFolder).map(([category, items]) => (
-                                                <div key={category} className="rd-paper-category-group">
-                                                    <h3 className="rd-paper-category-title">{category.toUpperCase()}</h3>
-                                                    <table className="rd-paper-items-table">
-                                                        <thead>
-                                                            <tr>
-                                                                <th style={{ width: '15%' }}>Código</th>
-                                                                <th style={{ width: '45%' }}>Producto</th>
-                                                                <th style={{ width: '15%' }} className="rd-txt-right">Cant.</th>
-                                                                <th style={{ width: '12%' }} className="rd-txt-right">Cost. Un.</th>
-                                                                <th style={{ width: '13%' }} className="rd-txt-right">Subtotal</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {items.map(item => (
-                                                                <tr key={item.id}>
-                                                                    <td>{item.code}</td>
-                                                                    <td>{item.name}</td>
-                                                                    <td className="rd-txt-right"><strong>{item.quantity}</strong></td>
-                                                                    <td className="rd-txt-right">${item.cost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
-                                                                    <td className="rd-txt-right">${(item.quantity * item.cost).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            ))
                                         )}
                                     </div>
-
-                                    {/* Totals */}
-                                    {Object.keys(groupedItemsByFolder).length > 0 && (
-                                        <div className="rd-paper-totals-box">
-                                            Total Estimado: <strong>${Object.values(groupedItemsByFolder).flat().reduce((sum, item) => sum + item.quantity * item.cost, 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
-                                        </div>
-                                    )}
-
-                                    {/* Order Note */}
-                                    {orderNote.trim() && (
-                                        <div className="rd-paper-note-block">
-                                            <h4>📝 Observaciones del Pedido:</h4>
-                                            <p>{orderNote}</p>
-                                        </div>
-                                    )}
-
-                                    {/* Dotted lines for handwritten notes */}
-                                    <div className="rd-paper-handwritten">
-                                        <h4>✍️ Ajustes y Notas a Mano (Espacio de Trabajo):</h4>
-                                        <div className="rd-paper-handwritten-dotted"></div>
-                                        <div className="rd-paper-handwritten-dotted"></div>
-                                        <div className="rd-paper-handwritten-dotted"></div>
-                                    </div>
+                                </div>
+                                <div className="rd-filter-item">
+                                    <label>Categoría</label>
+                                    <select className="rd-input" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
+                                        <option value="">📁 Todas las categorías</option>
+                                        {categoryOptions.map(o => <option key={o.id} value={o.name}>{o.label}</option>)}
+                                    </select>
+                                </div>
+                                <div className="rd-filter-item">
+                                    <label>Etiqueta</label>
+                                    <select className="rd-input" value={selectedTag} onChange={e => setSelectedTag(e.target.value)}>
+                                        <option value="">🏷️ Todas las etiquetas</option>
+                                        {allTags.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </div>
+                                <div className="rd-filter-item">
+                                    <label>Proveedor</label>
+                                    <select className="rd-input" value={selectedSupplierFilter} onChange={e => setSelectedSupplierFilter(e.target.value)}>
+                                        <option value="">🚛 Todos los proveedores</option>
+                                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="rd-filter-item">
+                                    <label>Estado de Stock</label>
+                                    <select className="rd-input" value={urgencyFilter} onChange={e => setUrgencyFilter(e.target.value as any)}>
+                                        <option value="all">Ver todo el catálogo</option>
+                                        <option value="critical">🔴 Sin Stock</option>
+                                        <option value="low">🟡 Stock Bajo</option>
+                                        <option value="ok">🟢 Stock Óptimo</option>
+                                    </select>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Export / Print actions */}
-                            {orderItems.length > 0 && (
-                                <div className="rd-boleto-footer-actions">
-                                    <button type="button" className="rd-btn rd-btn--workspace rd-btn--full" onClick={exportToWord}>
-                                        <Download size={15} /> Descargar Word (.doc)
+                        {/* Density-Optimized Grid Table */}
+                        <div className="rd-hud-card rd-table-card">
+                            <div className="rd-table-scroll">
+                                <table className="rd-catalog-table">
+                                    <thead>
+                                        <tr>
+                                            <th className="rd-col-checkbox" style={{ width: '40px' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    onChange={handleSelectAllVisible}
+                                                    checked={stockAlerts.length > 0 && stockAlerts.every(a => selectedProductIds.includes(a.id))}
+                                                    disabled={stockAlerts.length === 0}
+                                                />
+                                            </th>
+                                            <th>Código</th>
+                                            <th>Nombre del Producto</th>
+                                            <th>Categoría</th>
+                                            <th className="rd-txt-right">Stock</th>
+                                            <th className="rd-txt-right">Mínimo</th>
+                                            <th className="rd-col-status">Nivel Alerta</th>
+                                            <th className="rd-txt-right">Costo Ref.</th>
+                                            <th className="rd-col-actions" style={{ width: '80px' }}></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={9} className="rd-table-loading">
+                                                    <div className="rd-spinner" />
+                                                    <p>Analizando inventario y cargando catálogo...</p>
+                                                </td>
+                                            </tr>
+                                        ) : stockAlerts.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={9} className="rd-table-empty">
+                                                    <PackageOpen size={48} className="rd-empty-icon" />
+                                                    <h4>No se encontraron productos</h4>
+                                                    <p>Modificá los filtros de búsqueda o el nivel de urgencia.</p>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            stockAlerts.map(alert => {
+                                                const isSelected = selectedProductIds.includes(alert.id);
+                                                const inAnyDraft = drafts.some(d => d.customData?.rows?.some((r: any) => r.id === alert.id));
+                                                return (
+                                                    <tr 
+                                                        key={alert.id} 
+                                                        className={`rd-catalog-row rd-row--${alert.urgency} ${isSelected ? 'rd-row--selected' : ''}`}
+                                                        onClick={() => handleSelectProduct(alert.id)}
+                                                        style={{ cursor: 'pointer' }}
+                                                    >
+                                                        <td className="rd-col-checkbox" onClick={e => e.stopPropagation()}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => handleSelectProduct(alert.id)}
+                                                            />
+                                                        </td>
+                                                        <td className="rd-code-cell"><code>{alert.code}</code></td>
+                                                        <td className="rd-name-cell">
+                                                            <span className="rd-product-title">{alert.name}</span>
+                                                            {alert.supplierName && (
+                                                                <span className="rd-product-supplier-badge">
+                                                                    <Truck size={10} /> {alert.supplierName}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td>{alert.category}</td>
+                                                        <td className="rd-txt-right font-bold">{alert.stock}</td>
+                                                        <td className="rd-txt-right text-muted">{alert.minStock}</td>
+                                                        <td className="rd-col-status">
+                                                            {alert.urgency === 'critical' && <span className="rd-alert-pill rd-alert-pill--critical">Sin Stock</span>}
+                                                            {alert.urgency === 'low' && <span className="rd-alert-pill rd-alert-pill--low">Bajo</span>}
+                                                            {alert.urgency === 'ok' && <span className="rd-alert-pill rd-alert-pill--ok">OK</span>}
+                                                        </td>
+                                                        <td className="rd-txt-right font-mono">${alert.cost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                                                        <td className="rd-col-actions" onClick={e => e.stopPropagation()}>
+                                                            <button
+                                                                className={`rd-quick-add-btn ${inAnyDraft ? 'rd-quick-add-btn--in-draft' : ''}`}
+                                                                onClick={() => handleQuickAdd(alert)}
+                                                                title={inAnyDraft ? "Producto ya en un borrador" : "Agregar rápidamente"}
+                                                            >
+                                                                {inAnyDraft ? <Check size={14} /> : <Plus size={14} />}
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* ── Glassmorphic Floating Command Bar ── */}
+                        <div className={`rd-floating-bar ${selectedProductIds.length > 0 ? 'rd-floating-bar--visible' : ''}`}>
+                            <div className="rd-floating-bar__content">
+                                <div className="rd-floating-bar__meta">
+                                    <span className="rd-floating-bar__count">{selectedProductIds.length}</span>
+                                    <div>
+                                        <p className="rd-floating-bar__title">Productos seleccionados</p>
+                                        <p className="rd-floating-bar__sub">Elegí proveedor y cantidad para vincular al lote</p>
+                                    </div>
+                                </div>
+                                <div className="rd-floating-bar__actions">
+                                    <div className="rd-floating-bar__field">
+                                        <Truck size={14} className="rd-field-icon" />
+                                        <select
+                                            value={bulkSupplierId}
+                                            onChange={e => setBulkSupplierId(e.target.value)}
+                                            className="rd-input rd-floating-select"
+                                        >
+                                            <option value="">Vincular a Sin Proveedor</option>
+                                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="rd-floating-bar__field">
+                                        <Layers size={14} className="rd-field-icon" />
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            value={bulkQuantity}
+                                            onChange={e => setBulkQuantity(parseInt(e.target.value) || 1)}
+                                            className="rd-input rd-floating-qty"
+                                            title="Cantidad base"
+                                        />
+                                    </div>
+                                    <button className="rd-btn rd-btn--primary rd-floating-btn" onClick={handleBulkAdd}>
+                                        <Plus size={16} />
+                                        <span>Vincular y Agregar al Pedido</span>
                                     </button>
-                                    <button type="button" className="rd-btn rd-btn--primary rd-btn--full" onClick={printBoleto}>
-                                        <Printer size={15} /> Imprimir / Guardar PDF
+                                    <button className="rd-btn rd-btn--danger-ghost rd-floating-cancel" onClick={() => setSelectedProductIds([])} title="Limpiar selección">
+                                        <X size={16} />
                                     </button>
                                 </div>
-                            )}
-                        </>
-                    )}
-
-                    {/* Saved banner */}
-                    {savedFilename && (
-                        <div className="rd-saved-banner">
-                            <Check size={16} />
-                            Pedido guardado como <strong>{savedFilename}</strong>
-                            {' — '}
-                            <Link to="/workspace" style={{ color: '#92400e', fontWeight: 'bold' }}>Ver en Workspace</Link>
+                            </div>
                         </div>
-                    )}
-                </section>
+                    </section>
+                )}
+
+                {/* ════════════════════════════════════════════
+                    SUB-PAGE 2: VFS Active Draft Carts
+                    ════════════════════════════════════════════ */}
+                {activeTab === 'drafts' && (
+                    <section className="rd-drafts-console">
+                        {drafts.length === 0 ? (
+                            <div className="rd-hud-card rd-empty-state-card">
+                                <ShoppingCart size={64} className="rd-empty-state-icon" />
+                                <h3>No hay borradores de pedido activos</h3>
+                                <p>Sincronización en tiempo real con el explorador de archivos. Agregá productos desde el catálogo para crear planillas virtuales de reposición en `/workspace`.</p>
+                                <button className="rd-btn rd-btn--primary mt-4" onClick={() => setActiveTab('selection')}>
+                                    <Layers size={16} />
+                                    Ir al Catálogo de Faltantes
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="rd-drafts-grid">
+                                {drafts.map(draft => {
+                                    const draftId = draft.id;
+                                    const supplierId = draftId.replace('restock_draft_', '');
+                                    const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+                                    const items = draft.customData?.rows || [];
+                                    const totalEstimated = items.reduce((sum, item) => sum + (item.quantity * item.cost), 0);
+
+                                    return (
+                                        <div key={draftId} className="rd-hud-card rd-draft-card">
+                                            {/* Draft Header */}
+                                            <div className="rd-draft-card__header">
+                                                <div className="rd-draft-card__title-wrap">
+                                                    <span className="material-symbols-rounded rd-draft-icon">receipt_long</span>
+                                                    <div>
+                                                        <h3 className="rd-draft-card__title">{supplierName}</h3>
+                                                        <p className="rd-draft-card__meta">
+                                                            {items.length} productos cargados · Planilla: <code>{draft.name}</code>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="rd-draft-card__actions">
+                                                    <button 
+                                                        className="rd-btn rd-btn--ghost rd-btn--sm"
+                                                        onClick={() => generateWAMessage(draft)}
+                                                        title="Enviar por WhatsApp"
+                                                    >
+                                                        <MessageCircle size={14} style={{ color: '#25d366' }} />
+                                                        <span className="rd-text-whatsapp">WhatsApp</span>
+                                                    </button>
+                                                    <button 
+                                                        className="rd-btn rd-btn--ghost rd-btn--sm"
+                                                        onClick={() => {
+                                                            setBoletoSupplierId(supplierId);
+                                                            setActiveTab('boleto');
+                                                        }}
+                                                        title="Previsualizar en Boleto Membretado"
+                                                    >
+                                                        <Eye size={14} />
+                                                    </button>
+                                                    <button 
+                                                        className="rd-btn rd-btn--danger-ghost rd-btn--sm"
+                                                        onClick={() => deleteVFSDraft(draftId)}
+                                                        title="Eliminar borrador"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Items Table inside draft card */}
+                                            <div className="rd-draft-table-wrap">
+                                                <table className="rd-draft-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Código</th>
+                                                            <th>Producto</th>
+                                                            <th className="rd-txt-right" style={{ width: '90px' }}>Cant.</th>
+                                                            <th className="rd-txt-right" style={{ width: '110px' }}>Costo Unit.</th>
+                                                            <th className="rd-txt-right" style={{ width: '120px' }}>Subtotal</th>
+                                                            <th style={{ width: '40px' }}></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {items.length === 0 ? (
+                                                            <tr>
+                                                                <td colSpan={6} className="rd-draft-table-empty">
+                                                                    Borrador vacío. Agregá productos desde la pestaña de catálogo.
+                                                                </td>
+                                                            </tr>
+                                                        ) : (
+                                                            items.map((item: any) => (
+                                                                <tr key={item.id}>
+                                                                    <td>
+                                                                        {item.isCustom && <span className="rd-libre-badge-vfs">LIBRE</span>}
+                                                                        <code>{item.code}</code>
+                                                                    </td>
+                                                                    <td className="font-bold">{item.name}</td>
+                                                                    <td className="rd-txt-right">
+                                                                        <input
+                                                                            type="number"
+                                                                            min={1}
+                                                                            value={item.quantity}
+                                                                            onChange={e => handleUpdateDraftItem(draftId, item.id, 'quantity', parseInt(e.target.value) || 1)}
+                                                                            className="rd-draft-qty-input"
+                                                                        />
+                                                                    </td>
+                                                                    <td className="rd-txt-right">
+                                                                        <input
+                                                                            type="number"
+                                                                            min={0}
+                                                                            value={item.cost}
+                                                                            onChange={e => handleUpdateDraftItem(draftId, item.id, 'cost', parseFloat(e.target.value) || 0)}
+                                                                            className="rd-draft-cost-input"
+                                                                        />
+                                                                    </td>
+                                                                    <td className="rd-txt-right font-mono font-bold">${item.total?.toLocaleString('es-AR', { minimumFractionDigits: 2 }) || '0'}</td>
+                                                                    <td>
+                                                                        <button className="rd-draft-item-delete" onClick={() => handleRemoveDraftItem(draftId, item.id)}>
+                                                                            <X size={12} />
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            {/* Quick Inline form to add extra product directly in this supplier's draft */}
+                                            <div className="rd-draft-quick-form">
+                                                <p className="rd-quick-form-title">
+                                                    <Plus size={12} /> Agregar ítem manual fuera de catálogo
+                                                </p>
+                                                <div className="rd-quick-form-fields">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Nombre..."
+                                                        value={customNameMap[draftId] || ''}
+                                                        onChange={e => setCustomNameMap({ ...customNameMap, [draftId]: e.target.value })}
+                                                        className="rd-input rd-quick-form-name"
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        placeholder="Cant."
+                                                        min={1}
+                                                        value={customQtyMap[draftId] || ''}
+                                                        onChange={e => setCustomQtyMap({ ...customQtyMap, [draftId]: e.target.value })}
+                                                        className="rd-input rd-quick-form-qty"
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        placeholder="Costo Unit."
+                                                        min={0}
+                                                        value={customCostMap[draftId] || ''}
+                                                        onChange={e => setCustomCostMap({ ...customCostMap, [draftId]: e.target.value })}
+                                                        className="rd-input rd-quick-form-cost"
+                                                    />
+                                                    <button className="rd-btn rd-btn--primary rd-btn--sm" onClick={() => handleAddCustomItem(draftId)}>
+                                                        Agregar
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Draft logistics and notes */}
+                                            <div className="rd-draft-footer">
+                                                <div className="rd-draft-meta-inputs">
+                                                    <div className="rd-meta-input-group">
+                                                        <Calendar size={13} />
+                                                        <label>Lead Time (Días):</label>
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="Ej: 3 días" 
+                                                            value={draft.customData?.leadTime || ''}
+                                                            onChange={e => handleUpdateDraftLeadTime(draftId, e.target.value)}
+                                                            className="rd-input rd-draft-meta-input"
+                                                        />
+                                                    </div>
+                                                    <div className="rd-meta-input-group">
+                                                        <StickyNote size={13} />
+                                                        <label>Notas de Pedido:</label>
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="Ej: Entrega urgente..." 
+                                                            value={draft.customData?.notes || ''}
+                                                            onChange={e => handleUpdateDraftNotes(draftId, e.target.value)}
+                                                            className="rd-input rd-draft-meta-input"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="rd-draft-total-row">
+                                                    <span>Total Estimado:</span>
+                                                    <strong>${totalEstimated.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </section>
+                )}
+
+                {/* ════════════════════════════════════════════
+                    SUB-PAGE 3: Printable Letterhead Boleto
+                    ════════════════════════════════════════════ */}
+                {activeTab === 'boleto' && (
+                    <section className="rd-boleto-console">
+                        {drafts.length === 0 ? (
+                            <div className="rd-hud-card rd-empty-state-card">
+                                <Printer size={64} className="rd-empty-state-icon" />
+                                <h3>No hay órdenes para previsualizar</h3>
+                                <p>Cargá productos en un borrador de proveedor para habilitar la plantilla membretada del pedido de reposición.</p>
+                                <button className="rd-btn rd-btn--primary mt-4" onClick={() => setActiveTab('selection')}>
+                                    Ir al Catálogo
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="rd-boleto-layout">
+                                {/* Side panel for selecting preview target */}
+                                <div className="rd-hud-card rd-boleto-sidebar">
+                                    <h4 className="rd-boleto-sidebar-title">
+                                        <Truck size={14} />
+                                        Seleccionar Orden de Pedido
+                                    </h4>
+                                    <div className="rd-boleto-sidebar-list">
+                                        {drafts.map(d => {
+                                            const sId = d.id.replace('restock_draft_', '');
+                                            const sName = d.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+                                            const isActive = activeBoletoDraft?.id === d.id;
+
+                                            return (
+                                                <button
+                                                    key={d.id}
+                                                    className={`rd-boleto-sidebar-btn ${isActive ? 'rd-boleto-sidebar-btn--active' : ''}`}
+                                                    onClick={() => setBoletoSupplierId(sId)}
+                                                >
+                                                    <span className="material-symbols-rounded">receipt_long</span>
+                                                    <div>
+                                                        <span className="rd-btn-name">{sName}</span>
+                                                        <span className="rd-btn-meta">{(d.customData?.rows || []).length} productos</span>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {activeBoletoDraft && (
+                                        <div className="rd-boleto-sidebar-actions">
+                                            <button className="rd-btn rd-btn--workspace w-full" onClick={() => exportToWord(activeBoletoDraft)}>
+                                                <Download size={15} />
+                                                Descargar Word (.doc)
+                                            </button>
+                                            <button className="rd-btn rd-btn--primary w-full" onClick={printBoleto}>
+                                                <Printer size={15} />
+                                                Imprimir / PDF
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Paper Letterhead Canvas */}
+                                <div className="rd-paper-wrapper">
+                                    {activeBoletoDraft ? (
+                                        <div id="rd-paper-to-print" className="rd-paper-sheet">
+                                            {/* Header / Logo */}
+                                            <div className="rd-paper-header">
+                                                <div className="rd-paper-header__logo">FLORERÍA ASTER</div>
+                                                <div className="rd-paper-header__subtitle">Orden de Compra y Reposición</div>
+                                                <div className="rd-paper-header__line"></div>
+                                            </div>
+
+                                            {/* Metadata Grid */}
+                                            <div className="rd-paper-meta-grid">
+                                                <div className="rd-paper-meta-section">
+                                                    <p><strong>EMISOR:</strong> Florería Aster S.R.L.</p>
+                                                    <p><strong>Solicitante:</strong> {user?.name || 'Administrador'}</p>
+                                                    <p><strong>Email:</strong> {user?.email || '—'}</p>
+                                                    <p className="rd-paper-meta-hint">Florería Aster ERP v2.5 · HUD Engine</p>
+                                                </div>
+                                                <div className="rd-paper-meta-section rd-paper-meta-section--right">
+                                                    <p><strong>Fecha:</strong> {new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                                    <p><strong>Hora:</strong> {new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</p>
+                                                    <p><strong>Estado:</strong> <span className="rd-paper-status-badge">Abierto / En Proceso</span></p>
+                                                </div>
+                                            </div>
+
+                                            {/* Category Grouped Items */}
+                                            <div className="rd-paper-content-list">
+                                                {Object.keys(groupedBoletoItems).length === 0 ? (
+                                                    <div className="rd-paper-empty-items">
+                                                        No hay ítems cargados en esta orden.
+                                                    </div>
+                                                ) : (
+                                                    Object.entries(groupedBoletoItems).map(([category, items]) => (
+                                                        <div key={category} className="rd-paper-category-group">
+                                                            <h3 className="rd-paper-category-title">{category.toUpperCase()}</h3>
+                                                            <table className="rd-paper-items-table">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th style={{ width: '15%' }}>Código</th>
+                                                                        <th style={{ width: '45%' }}>Producto</th>
+                                                                        <th style={{ width: '15%' }} className="rd-txt-right">Cant.</th>
+                                                                        <th style={{ width: '12%' }} className="rd-txt-right">Cost. Un.</th>
+                                                                        <th style={{ width: '13%' }} className="rd-txt-right">Subtotal</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {items.map((item: any) => (
+                                                                        <tr key={item.id}>
+                                                                            <td>{item.code}</td>
+                                                                            <td>
+                                                                                {item.isCustom && <span className="rd-libre-badge-vfs mr-1">LIBRE</span>}
+                                                                                {item.name}
+                                                                            </td>
+                                                                            <td className="rd-txt-right"><strong>{item.quantity}</strong></td>
+                                                                            <td className="rd-txt-right">${item.cost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                                                                            <td className="rd-txt-right">${item.total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+
+                                            {/* Grand Total */}
+                                            {activeBoletoDraft.customData && (
+                                                <div className="rd-paper-totals-box">
+                                                    Total Estimado: <strong>${(activeBoletoDraft.customData.rows || []).reduce((sum: number, item: any) => sum + item.total, 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+                                                </div>
+                                            )}
+
+                                            {/* Notes */}
+                                            {activeBoletoDraft.customData?.notes && (
+                                                <div className="rd-paper-note-block">
+                                                    <h4>📝 Observaciones del Pedido:</h4>
+                                                    <p>{activeBoletoDraft.customData.notes}</p>
+                                                </div>
+                                            )}
+
+                                            {/* Dotted lines for handwritten notes */}
+                                            <div className="rd-paper-handwritten">
+                                                <h4>✍️ Ajustes y Notas a Mano (Espacio de Trabajo):</h4>
+                                                <div className="rd-paper-handwritten-dotted"></div>
+                                                <div className="rd-paper-handwritten-dotted"></div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="rd-paper-sheet flex items-center justify-center">
+                                            <p className="text-muted">Cargando previsualización...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </section>
+                )}
+
             </div>
         </div>
     );
