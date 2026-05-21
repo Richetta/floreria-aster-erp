@@ -2,6 +2,7 @@ import React from 'react';
 import { useWorkspaceExplorer } from './useWorkspaceExplorer';
 import { VFSBrowser } from './components/VFSBrowser';
 import { SpreadsheetViewer } from './components/SpreadsheetViewer';
+import { NoteViewer } from './components/NoteViewer';
 import { Search, ArrowLeft, Sparkles, FolderOpen } from 'lucide-react';
 import './WorkspaceExplorer.css';
 
@@ -26,6 +27,8 @@ export const WorkspaceExplorer: React.FC = () => {
     isLoading,
     createFolder,
     createExcelFile,
+    createNoteFile,
+    saveNoteChanges,
     moveItem,
     renameItem,
     archiveItem,
@@ -130,18 +133,28 @@ export const WorkspaceExplorer: React.FC = () => {
       {/* Dynamic Content Area */}
       <main className="workspace-main-content">
         {activeFile ? (
-          <SpreadsheetViewer
-            file={activeFile}
-            columns={spreadsheetColumns}
-            rows={spreadsheetRows}
-            onClose={closeFile}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            totalCount={totalCount}
-            filteredCount={filteredCount}
-            isLoading={isLoading}
-            onSaveChanges={saveSpreadsheetChanges}
-          />
+          activeFile.name.toLowerCase().endsWith('.txt') ? (
+            <NoteViewer
+              file={activeFile}
+              onClose={closeFile}
+              onSaveChanges={async (content) => {
+                await saveNoteChanges(activeFile.id, content);
+              }}
+            />
+          ) : (
+            <SpreadsheetViewer
+              file={activeFile}
+              columns={spreadsheetColumns}
+              rows={spreadsheetRows}
+              onClose={closeFile}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              totalCount={totalCount}
+              filteredCount={filteredCount}
+              isLoading={isLoading}
+              onSaveChanges={saveSpreadsheetChanges}
+            />
+          )
         ) : (
           <VFSBrowser
             items={currentItems}
@@ -151,6 +164,7 @@ export const WorkspaceExplorer: React.FC = () => {
             onFileClick={openFile}
             onCreateFolder={createFolder}
             onCreateExcelFile={createExcelFile}
+            onCreateNoteFile={createNoteFile}
             onMoveItem={moveItem}
             onRenameItem={renameItem}
             onArchiveItem={archiveItem}

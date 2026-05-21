@@ -23,6 +23,7 @@ export interface VFSItem {
   customData?: {
     columns: Column[];
     rows: any[];
+    content?: string;
   };
 }
 
@@ -211,14 +212,14 @@ export const useWorkspaceExplorer = () => {
     });
   };
 
-  // Helper to create a folder
-  const createFolder = async (name: string) => {
-    const isCategoryContext = currentFolderId === 'categorias_folder' || currentFolderId.startsWith('category_dir_');
+  // Helper to create a folder with database category options
+  const createFolder = async (name: string, options?: { asCategory?: boolean; parentCategoryId?: string | null }) => {
+    const asCategory = options?.asCategory ?? (currentFolderId === 'categorias_folder' || currentFolderId.startsWith('category_dir_'));
     
-    if (isCategoryContext) {
-      const parentId = currentFolderId.startsWith('category_dir_') 
-        ? currentFolderId.replace('category_dir_', '') 
-        : undefined;
+    if (asCategory) {
+      const parentId = options?.parentCategoryId !== undefined
+        ? (options.parentCategoryId || undefined)
+        : (currentFolderId.startsWith('category_dir_') ? currentFolderId.replace('category_dir_', '') : undefined);
       
       await store.addCategory(name.trim() || 'Nueva Categoría', parentId);
       await store.loadCategories(true);
@@ -237,7 +238,50 @@ export const useWorkspaceExplorer = () => {
     persistCustomItems([...customItems, newFolder]);
   };
 
-  // Helper to create an Excel file
+  // Helper to create a plain text document/note
+  const createNoteFile = (name: string) => {
+    let fileName = name.trim();
+    if (!fileName.toLowerCase().endsWith('.txt')) {
+      fileName += '.txt';
+    }
+
+    const newFile: VFSItem = {
+      id: `custom_note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: fileName,
+      parentId: currentFolderId,
+      type: 'file',
+      entity: 'custom',
+      description: 'Nota de texto / Documento personal',
+      isCustom: true,
+      customData: {
+        columns: [],
+        rows: [],
+        content: 'Escribe tu nota aquí...'
+      }
+    };
+
+    persistCustomItems([...customItems, newFile]);
+  };
+
+  // Helper to save text note modifications back to state
+  const saveNoteChanges = (fileId: string, content: string) => {
+    const updated = customItems.map(item => {
+      if (item.id === fileId) {
+        return {
+          ...item,
+          customData: {
+            columns: item.customData?.columns || [],
+            rows: item.customData?.rows || [],
+            content: content
+          }
+        };
+      }
+      return item;
+    });
+    persistCustomItems(updated);
+  };
+
+  // Helper to create an Excel file pre-filtered by category context
   const createExcelFile = (name: string, templateType: 'empty' | 'products' | 'customers' | 'orders' = 'empty') => {
     let fileName = name.trim();
     if (!fileName.toLowerCase().endsWith('.xlsx')) {
@@ -265,7 +309,18 @@ export const useWorkspaceExplorer = () => {
         { key: 'cost', label: 'Costo ($)', width: 110, align: 'right', format: 'currency' },
         { key: 'price', label: 'Precio Venta ($)', width: 120, align: 'right', format: 'currency' }
       ];
-      rows = store.products.map(p => ({
+
+      // Pre-filter template products based on folder category
+      const isCategoryFolder = currentFolderId.startsWith('category_dir_');
+      const folderCategoryId = isCategoryFolder ? currentFolderId.replace('category_dir_', '') : null;
+      
+      let productsList = store.products;
+      if (folderCategoryId) {
+        const categoryIds = getDescendantCategoryIds(folderCategoryId, store.categoriesData);
+        productsList = store.products.filter(p => p.category_id && categoryIds.includes(p.category_id));
+      }
+
+      rows = productsList.map(p => ({
         id: p.id,
         code: p.code || 'S/C',
         name: p.name,
@@ -900,6 +955,8 @@ export const useWorkspaceExplorer = () => {
     isLoading: store.isLoading,
     createFolder,
     createExcelFile,
+    createNoteFile,
+    saveNoteChanges,
     moveItem,
     renameItem,
     archiveItem,

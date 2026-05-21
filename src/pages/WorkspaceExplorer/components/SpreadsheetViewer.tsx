@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Download, Search, AlertCircle, Loader, AlertTriangle, ShieldAlert, Sparkles, Check, Plus } from 'lucide-react';
+import { X, Download, Search, AlertCircle, Loader, AlertTriangle, ShieldAlert, Sparkles, Check, Plus, Eye, Edit3 } from 'lucide-react';
 import type { VFSItem, Column } from '../useWorkspaceExplorer';
 import * as XLSX from 'xlsx';
 
@@ -31,15 +31,19 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
   columns,
   rows,
   onClose,
-  searchQuery,
-  setSearchQuery,
   totalCount,
-  filteredCount,
   isLoading,
   onSaveChanges,
 }) => {
   // Local rows copy to hold edits in real time
   const [localRows, setLocalRows] = useState<any[]>([]);
+
+  // Local Search & Sort States
+  const [localSearchQuery, setLocalSearchQuery] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('default');
+
+  // Edit Mode Switch
+  const [isEditMode, setIsEditMode] = useState<boolean>(true);
 
   // Track edits in state
   const [editingCell, setEditingCell] = useState<{ rowId: string | number; colKey: string } | null>(null);
@@ -56,7 +60,16 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
     setLocalRows(rows);
     setPendingChanges([]);
     setEditingCell(null);
-  }, [rows, file.id]);
+    setLocalSearchQuery('');
+    setSortBy('default');
+  }, [file.id]);
+
+  // Sync with parent rows only if there are no pending changes (prevents cell data loss on parent updates)
+  useEffect(() => {
+    if (pendingChanges.length === 0) {
+      setLocalRows(rows);
+    }
+  }, [rows]);
 
   // Format cell helper
   const formatCellValue = (value: any, column: Column) => {
@@ -140,6 +153,8 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
 
   // Add new row helper
   const handleAddRow = () => {
+    if (!isEditMode) return;
+
     const newId = `new_${Date.now()}`;
     const emptyRow: any = { id: newId };
     
@@ -157,6 +172,46 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
         emptyRow.category_name = file.name.replace('.xlsx', '');
       }
     }
+
+    // Smart barcode auto-increment logic
+    const codeCol = columns.find(c => c.key === 'code' || c.key === 'barcode');
+    if (codeCol) {
+      // Find the last non-empty code value in localRows
+      let lastCode = '';
+      for (let i = localRows.length - 1; i >= 0; i--) {
+        const val = localRows[i][codeCol.key];
+        if (val && String(val).trim()) {
+          lastCode = String(val).trim();
+          break;
+        }
+      }
+
+      const incrementCodeValue = (code: string): string => {
+        // Match prefix and trailing numbers, e.g., "PROD-0045" -> prefix "PROD-", number "0045"
+        const match = code.match(/^(.*?)(\d+)$/);
+        if (match) {
+          const prefix = match[1];
+          const numStr = match[2];
+          const numVal = parseInt(numStr, 10) + 1;
+          const paddedNum = String(numVal).padStart(numStr.length, '0');
+          return `${prefix}${paddedNum}`;
+        }
+        
+        // If it's pure digits
+        const numVal = parseInt(code, 10);
+        if (!isNaN(numVal)) {
+          return String(numVal + 1);
+        }
+        
+        return `${code}-1`;
+      };
+
+      if (lastCode) {
+        emptyRow[codeCol.key] = incrementCodeValue(lastCode);
+      } else {
+        emptyRow[codeCol.key] = 'PROD-0001';
+      }
+    }
     
     setLocalRows(prev => [...prev, emptyRow]);
     
@@ -165,7 +220,7 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
       ...prev,
       {
         id: newId,
-        rowName: 'Nueva Fila Creada',
+        rowName: emptyRow.name || 'Nuevo Elemento',
         key: 'name',
         label: 'Nombre',
         oldValue: '',
@@ -184,6 +239,8 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
 
   // Inline Cell Editing Trigger
   const handleCellDoubleClick = (row: any, idx: number, col: Column, value: any) => {
+    if (!isEditMode) return;
+
     // Only allow editing editable keys (no virtual headers / relations not editable)
     if (col.key === 'parent_name' || col.key === 'orderNumber' || col.key === 'deliveryMethod') {
       return; // static visual fields
@@ -205,7 +262,7 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
     let parsedValue: any = editValue.trim();
 
     // Try parsing numbers if columns require it
-    if (colKey === 'stock_quantity' || colKey === 'cost' || colKey === 'price' || colKey === 'debtBalance') {
+    if (colKey === 'stock_quantity' || colKey === 'cost' || colKey === 'price' || colKey === 'debtBalance' || colKey === 'debt_balance') {
       const num = Number(parsedValue);
       if (!isNaN(num)) {
         parsedValue = num;
@@ -268,6 +325,67 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
     return pendingChanges.some(c => c.id === String(rowId) && c.key === colKey);
   };
 
+  // Computed displayed rows applying search & sort locally on the source of truth copy
+  const displayedRows = useMemo(() => {
+    let result = [...localRows];
+
+    // 1. Search Query Local Filtering
+    if (localSearchQuery) {
+      const lowerQuery = localSearchQuery.toLowerCase();
+      result = result.filter((row) => {
+        return Object.values(row).some((val) => {
+          if (val === null || val === undefined) return false;
+          return String(val).toLowerCase().includes(lowerQuery);
+        });
+      });
+    }
+
+    // 2. Sorting Local Logic
+    if (sortBy !== 'default') {
+      const [field, direction] = sortBy.split('_');
+      const isAsc = direction === 'asc';
+
+      let key = '';
+      if (field === 'name') {
+        key = columns.find(c => c.key === 'name' || c.key === 'customerName' || c.key === 'supplierName')?.key || 'name';
+      } else if (field === 'price') {
+        key = columns.find(c => c.key === 'price' || c.key === 'cost')?.key || 'price';
+      } else if (field === 'stock') {
+        key = columns.find(c => c.key === 'stock_quantity' || c.key === 'stock' || c.key === 'debt_balance' || c.key === 'debtBalance')?.key || 'stock_quantity';
+      } else if (field === 'code') {
+        key = columns.find(c => c.key === 'code' || c.key === 'barcode' || c.key === 'id' || c.key === 'orderNumber')?.key || 'code';
+      }
+
+      if (key) {
+        result.sort((a, b) => {
+          const valA = a[key];
+          const valB = b[key];
+
+          if (valA === undefined || valA === null || valA === '') return 1;
+          if (valB === undefined || valB === null || valB === '') return -1;
+
+          // Numeric sort
+          if (typeof valA === 'number' && typeof valB === 'number') {
+            return isAsc ? valA - valB : valB - valA;
+          }
+
+          const numA = Number(valA);
+          const numB = Number(valB);
+          if (!isNaN(numA) && !isNaN(numB)) {
+            return isAsc ? numA - numB : numB - numA;
+          }
+
+          // String sort
+          return isAsc 
+            ? String(valA).localeCompare(String(valB), 'es', { numeric: true })
+            : String(valB).localeCompare(String(valA), 'es', { numeric: true });
+        });
+      }
+    }
+
+    return result;
+  }, [localRows, localSearchQuery, sortBy, columns]);
+
   return (
     <div className="spreadsheet-viewer fade-in">
       {/* Header Panel */}
@@ -288,20 +406,20 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
         </div>
 
         <div className="sheet-actions">
-          {/* Internal search */}
+          {/* Internal search (local) */}
           <div className="sheet-search-wrapper">
             <Search className="search-icon" size={16} />
             <input
               type="text"
               placeholder="Buscar en esta hoja..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={localSearchQuery}
+              onChange={(e) => setLocalSearchQuery(e.target.value)}
               className="sheet-search-input"
             />
-            {searchQuery && (
+            {localSearchQuery && (
               <button 
                 className="clear-search-btn"
-                onClick={() => setSearchQuery('')}
+                onClick={() => setLocalSearchQuery('')}
                 title="Limpiar búsqueda"
               >
                 &times;
@@ -309,11 +427,53 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
             )}
           </div>
 
+          {/* Local Sorting Dropdown */}
+          <div className="sheet-sort-wrapper">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="sheet-sort-select"
+              title="Ordenar registros localmente"
+            >
+              <option value="default">📋 Ordenar por...</option>
+              <option value="name_asc">Nombre (A-Z)</option>
+              <option value="name_desc">Nombre (Z-A)</option>
+              {columns.some(c => c.key === 'code' || c.key === 'barcode') && (
+                <>
+                  <option value="code_asc">Código (Ascendente)</option>
+                  <option value="code_desc">Código (Descendente)</option>
+                </>
+              )}
+              {columns.some(c => c.key === 'price' || c.key === 'cost') && (
+                <>
+                  <option value="price_asc">Precio / Costo (Menor a Mayor)</option>
+                  <option value="price_desc">Precio / Costo (Mayor a Menor)</option>
+                </>
+              )}
+              {columns.some(c => c.key === 'stock_quantity' || c.key === 'stock' || c.key === 'debt_balance' || c.key === 'debtBalance') && (
+                <>
+                  <option value="stock_asc">Stock / Balance (Menor a Mayor)</option>
+                  <option value="stock_desc">Stock / Balance (Mayor a Menor)</option>
+                </>
+              )}
+            </select>
+          </div>
+
           <button
             onClick={handleAddRow}
-            className="sheet-btn btn-add-row"
-            title="Agregar una nueva fila al final de la planilla"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', color: '#10b981', border: '1px solid #10b981', fontWeight: 'bold' }}
+            disabled={!isEditMode}
+            className={`sheet-btn btn-add-row ${!isEditMode ? 'btn-disabled' : ''}`}
+            title={isEditMode ? "Agregar una nueva fila al final de la planilla" : "Activa el modo edición para agregar filas"}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              background: isEditMode ? '#ecfdf5' : '#f3f4f6', 
+              color: isEditMode ? '#10b981' : '#9ca3af', 
+              border: isEditMode ? '1px solid #10b981' : '1px solid #d1d5db', 
+              fontWeight: 'bold',
+              cursor: isEditMode ? 'pointer' : 'not-allowed'
+            }}
           >
             <Plus size={16} />
             <span className="btn-text">Agregar Fila</span>
@@ -346,12 +506,12 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
             <Loader className="spinner" size={32} />
             <p>Cargando registros del negocio...</p>
           </div>
-        ) : localRows.length === 0 ? (
+        ) : displayedRows.length === 0 ? (
           <div className="sheet-empty-overlay">
             <AlertCircle size={40} className="text-gray-400" />
             <h4>Sin datos disponibles</h4>
             <p>
-              {searchQuery
+              {localSearchQuery
                 ? 'Ningún registro coincide con tu búsqueda actual en esta planilla.'
                 : 'No se encontraron registros activos para esta categoría en el negocio.'}
             </p>
@@ -373,14 +533,14 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
               </tr>
             </thead>
             <tbody>
-              {localRows.map((row, idx) => {
+              {displayedRows.map((row, idx) => {
                 const rowId = row.id || idx;
                 return (
                   <tr key={rowId}>
                     <td className="row-index-cell">
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                         {idx + 1}
-                        {String(rowId).startsWith('new_') && (
+                        {isEditMode && String(rowId).startsWith('new_') && (
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleDeleteNewRow(rowId); }}
                             style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: '0 2px', fontWeight: 'bold' }}
@@ -399,7 +559,7 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
                       const isEdited = isCellModified(rowId, col.key);
 
                       // Render input box if cell is in edit mode
-                      if (editingCell && editingCell.rowId === rowId && editingCell.colKey === col.key) {
+                      if (isEditMode && editingCell && editingCell.rowId === rowId && editingCell.colKey === col.key) {
                         return (
                           <td key={col.key} className="cell-editing">
                             <input
@@ -421,9 +581,10 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
                       return (
                         <td
                           key={col.key}
-                          className={`align-${col.align || 'left'} cell-interactive ${isEdited ? 'cell-edited-highlight' : ''}`}
-                          onDoubleClick={() => handleCellDoubleClick(row, idx, col, cellVal)}
-                          title="Haz doble clic para editar el valor de la celda"
+                          className={`align-${col.align || 'left'} ${isEditMode ? 'cell-interactive' : 'cell-readonly'} ${isEdited ? 'cell-edited-highlight' : ''}`}
+                          onDoubleClick={() => isEditMode && handleCellDoubleClick(row, idx, col, cellVal)}
+                          title={isEditMode ? "Haz doble clic para editar el valor de la celda" : "Modo Lectura (Activa el Modo Edición en el pie de página para cambiar)"}
+                          style={{ cursor: isEditMode ? 'pointer' : 'default' }}
                         >
                           {isBadge ? (
                             <span className={`sheet-badge ${badgeClass}`}>
@@ -470,20 +631,39 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
         </div>
       )}
 
-      {/* Footer / Status bar */}
+      {/* Footer / Status bar with Edit Mode switch toggle */}
       <div className="sheet-footer">
         <div className="footer-stat">
           <span>Total filas: <strong>{totalCount}</strong></span>
-          {searchQuery && (
+          {localSearchQuery && (
             <span className="separator">|</span>
           )}
-          {searchQuery && (
-            <span>Coinciden con búsqueda: <strong>{filteredCount}</strong></span>
+          {localSearchQuery && (
+            <span>Coinciden con búsqueda: <strong>{displayedRows.length}</strong></span>
           )}
         </div>
-        <div className="footer-status-tag active-edit-mode">
-          <span className="dot animate-pulse"></span>
-          Modo Edición Habilitado (Doble Clic para Editar)
+
+        {/* Beautiful Edit/Read toggle switch */}
+        <div className="footer-edit-toggle-wrapper">
+          <div className="toggle-badge-icon">
+            {isEditMode ? (
+              <Edit3 size={12} className="text-emerald-500" />
+            ) : (
+              <Eye size={12} className="text-slate-400" />
+            )}
+          </div>
+          <span className="toggle-label">{isEditMode ? 'Modo Edición' : 'Modo Lectura'}</span>
+          <button
+            onClick={() => {
+              if (editingCell) setEditingCell(null);
+              setIsEditMode(!isEditMode);
+            }}
+            className={`toggle-switch-btn ${isEditMode ? 'active' : ''}`}
+            title="Alternar entre Modo Edición y Modo Lectura"
+            type="button"
+          >
+            <span className="toggle-slider"></span>
+          </button>
         </div>
       </div>
 
@@ -548,8 +728,8 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
                           if (categoryDetail) detailsList.push(categoryDetail);
 
                           group.changes
-                            .filter(c => c.newValue !== '' && c.newValue !== null && c.key !== 'name' && c.key !== 'category_name')
-                            .forEach(c => detailsList.push(`${c.label}: ${c.newValue}`));
+                              .filter(c => c.newValue !== '' && c.newValue !== null && c.key !== 'name' && c.key !== 'category_name')
+                              .forEach(c => detailsList.push(`${c.label}: ${c.newValue}`));
 
                           const details = detailsList.join(' • ');
 
