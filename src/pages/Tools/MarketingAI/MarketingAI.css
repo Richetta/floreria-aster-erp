@@ -1153,3 +1153,490 @@
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-5px); }
 }
+
+/* --- ESTILOS EXTRA DE LA EVOLUCIÓN PREMIUM V2.5 --- */
+
+/* 1. Botón de favorito corazón en burbuja */
+.fav-btn-bubble {
+  background: white;
+  border: 1px solid var(--floriai-border);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-muted);
+}
+.fav-btn-bubble:hover {
+  transform: scale(1.12);
+  border-color: #f43f5e;
+  background: #fff1f2;
+}
+.fav-btn-bubble.active {
+  background: #ffe4e6;
+  border-color: #f43f5e;
+  color: #f43f5e;
+  animation: heartPop 0.35s ease-out;
+}
+@keyframes heartPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* 2. Dado de Inspiración Infinita */
+.dice-inspiration-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, var(--color-surface) 0%, #fafaf9 100%);
+  border-radius: var(--radius-xl);
+}
+.rainbow-glow-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ec4899);
+  background-size: 200% auto;
+  animation: rainbowBorder 4s linear infinite;
+}
+@keyframes rainbowBorder {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.dice-roll-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  color: white;
+  min-height: 48px;
+  padding: 0.75rem 1.75rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.2);
+}
+.dice-roll-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(109, 40, 217, 0.35);
+  filter: brightness(1.1);
+}
+.dice-roll-btn:disabled {
+  background: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.dice-roll-btn.rolling svg {
+  animation: diceSpin 0.6s linear infinite;
+}
+@keyframes diceSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.15); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.rolled-idea-display-card {
+  border: 1px solid #c084fc !important;
+  background: #faf5ff !important;
+  box-shadow: 0 4px 20px rgba(192, 132, 252, 0.1);
+  animation: slideUp 0.4s ease-out;
+}
+.btn-copy-all {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-copy-all:hover {
+  background: #f3e8ff;
+  border-color: #c084fc;
+}
+
+/* 3. Panel de Favoritos Shelf */
+.favorites-shelf-container {
+  border-color: #fca5a5 !important;
+  background: #fff5f5 !important;
+}
+.favorites-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+@media (min-width: 640px) {
+  .favorites-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .favorites-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.fav-card {
+  background: white;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+.fav-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: #fca5a5;
+}
+
+/* 4. Community Manager - Chat Simulator */
+.presets-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.preset-comment-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition);
+}
+.preset-comment-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+.preset-comment-btn.active {
+  background: var(--floriai-primary);
+  border-color: var(--floriai-primary);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-mockup-wrapper {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  min-height: 250px;
+}
+.chat-bubble {
+  position: relative;
+  line-height: 1.4;
+  animation: slideUp 0.3s ease-out;
+}
+.customer-bubble {
+  border-radius: 18px 18px 18px 4px;
+}
+.ai-reply-bubble {
+  border-radius: 18px 18px 4px 18px;
+  background: #f0fdf4 !important;
+  border: 1px solid #86efac !important;
+  margin-left: auto;
+  max-width: 85%;
+}
+.tone-btn-micro {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.tone-btn-micro:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+.tone-btn-micro.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+.reply-content-box {
+  background: white;
+  line-height: 1.5;
+}
+
+/* 5. Calendario Inteligente */
+.calendar-panel-grid {
+  border-color: #cbd5e1;
+}
+.calendar-day-headers {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #64748b;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 0.5rem;
+}
+.calendar-grid-cells {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.calendar-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-md);
+  border: 1px solid #e2e8f0;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  padding: 0.25rem;
+}
+.calendar-cell:hover:not(.empty) {
+  border-color: var(--color-primary);
+  background: #f0fdf4;
+  transform: scale(1.03);
+}
+.calendar-cell.empty {
+  background: #f8fafc;
+  border: none;
+  cursor: default;
+}
+.calendar-cell.selected {
+  border-color: var(--color-primary);
+  background: #f0fdf4;
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+.calendar-cell.has-event {
+  font-weight: 700;
+}
+.calendar-cell.event-comercial {
+  background: #fffbeb;
+  border-color: #fde047;
+}
+.calendar-cell.event-eco {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+.calendar-cell.event-tip {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+.calendar-cell .day-num {
+  font-size: 1rem;
+  color: #1e293b;
+}
+.calendar-cell.has-event .day-num {
+  color: var(--color-primary);
+}
+.calendar-cell .event-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 6px;
+}
+.calendar-cell.event-comercial .event-dot { background: #d97706; }
+.calendar-cell.event-eco .event-dot { background: #15803d; }
+.calendar-cell.event-tip .event-dot { background: #be123c; }
+
+.selected-date-detail-card {
+  box-shadow: var(--shadow-sm);
+  background: white;
+  border: 1px solid var(--color-border);
+  animation: slideUp 0.35s ease-out;
+}
+
+/* 6. Inspiración Cruzada */
+.cross-inspiration-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+@media (min-width: 768px) {
+  .cross-inspiration-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.cross-niche-card {
+  background: white;
+  transition: all 0.3s ease;
+  border: 1px solid var(--color-border);
+}
+.cross-niche-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.niche-badge {
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border-radius: var(--radius-full);
+}
+.niche-badge.cafe {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde047;
+}
+.niche-badge.cosmetics {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+.niche-badge.interior {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #ffedd5;
+}
+.niche-badge.fashion {
+  background: #faf5ff;
+  color: #6b21a8;
+  border: 1px solid #e9d5ff;
+}
+.btn-explore-niche {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-explore-niche:hover {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+.translation-box {
+  background: #f8fafc;
+  color: #334155;
+  border-left: 4px solid var(--color-primary);
+}
+
+/* 7. Achievements & Gamificación */
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+@media (min-width: 640px) {
+  .achievements-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.achievement-badge-card {
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  transition: all 0.3s ease;
+  background: white;
+}
+.achievement-badge-card.unlocked {
+  border: 2px solid #eab308;
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+  box-shadow: 0 4px 12px rgba(234, 179, 8, 0.1);
+}
+.achievement-badge-card.locked {
+  border: 2px dashed #cbd5e1;
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+.badge-icon-wrap {
+  position: relative;
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lock-icon {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  font-size: 1rem;
+  background: white;
+  border-radius: 50%;
+  padding: 2px;
+  border: 1px solid #94a3b8;
+}
+.achievement-badge-card h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-align: center;
+}
+.badge-status-unlocked {
+  margin-top: 0.5rem;
+  font-weight: 700;
+  color: #15803d;
+}
+.badge-status-locked {
+  margin-top: 0.5rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+/* 8. Toasts e Hitos Flotantes */
+.floriai-toast-notification {
+  animation: slideInToast 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.floriai-toast-notification.achievement {
+  border-color: #eab308;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+}
+.floriai-toast-notification.fav-toast {
+  border-color: #fecdd3;
+  background: linear-gradient(135deg, #0f172a 0%, #27161a 100%);
+}
+.floriai-toast-notification.cross-toast {
+  border-color: #a7f3d0;
+  background: linear-gradient(135deg, #0f172a 0%, #11221b 100%);
+}
+
+@keyframes slideInToast {
+  0% { transform: translateY(100px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* 9. Movimiento Botánico Orgánico (Swaying animations) */
+.flower-stem {
+  animation: swayWind 6s ease-in-out infinite alternate;
+  transform-origin: bottom center;
+}
+.flower-head {
+  animation: swayHead 5s ease-in-out infinite alternate !important;
+  transform-origin: bottom center;
+}
+
+@keyframes swayWind {
+  0% { transform: rotate(-1.5deg); }
+  100% { transform: rotate(1.5deg); }
+}
+
+@keyframes swayHead {
+  0% { transform: rotate(-4deg) translateX(-2px); }
+  100% { transform: rotate(4deg) translateX(2px); }
+}

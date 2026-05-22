@@ -10,22 +10,22 @@ import {
     Award,
     Compass,
     Heart,
-    Smile,
-    BookOpen,
-    Coins,
     Instagram,
     Palette,
     Layers,
     ArrowLeft,
     CheckCircle2,
-    BookmarkCheck
+    BookmarkCheck,
+    Dices,
+    Send,
+    Trash2
 } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
 import { useNavigate } from 'react-router-dom';
 import type { Product, Customer } from '../../../store/slices/types';
 import './MarketingAI.css';
 
-// interfaces locales para el motor de marketing
+// Interfaces locales para el motor de marketing
 interface MarketingSuggestion {
     id: string;
     priority: 'urgent' | 'recommended' | 'opportunity';
@@ -42,15 +42,79 @@ interface MarketingSuggestion {
             steps: { shot: string; description: string; duration: string }[];
             music: string;
         };
-        hooks: Record<string, string>; // Mapeo de tono -> hook
-        copies: Record<string, string>; // Mapeo de tono -> copy
-        ctas: Record<string, string>;   // Mapeo de tono -> cta
+        hooks: Record<string, string>; // Tono -> hook
+        copies: Record<string, string>; // Tono -> copy
+        ctas: Record<string, string>;   // Tono -> cta
         hashtags: string[];
     };
     relatedProduct?: Product;
     relatedCustomer?: Customer;
     palette?: { name: string; colors: string[] };
 }
+
+// Logros / Medallas Creativas
+const ACHIEVEMENTS = [
+    { id: 'first_task', title: 'Semilla Creativa', desc: 'Completar tu primera sugerencia en "Qué hacer hoy".', icon: '🌱' },
+    { id: 'dice_roll', title: 'Inspiración Infinita', desc: 'Tirar el Dado de la Inspiración Infinita 5 veces.', icon: '🎲' },
+    { id: 'combo_gen', title: 'Combo Master', desc: 'Generar un combo de sobrestock con descuento.', icon: '⚡' },
+    { id: 'fidelizador', title: 'Fidelizador', desc: 'Copiar un mensaje de WhatsApp para clientes en fechas especiales.', icon: '💖' },
+    { id: 'garden_lvl3', title: 'Jardín de Oro', desc: 'Subir al Nivel Creativo 3 o superior.', icon: '🏆' },
+    { id: 'cross_inspiration', title: 'Mente Abierta', desc: 'Explorar una sugerencia de Inspiración Cruzada.', icon: '🌎' }
+];
+
+// Presets de Comentarios para CM
+const CM_PRESETS = [
+    {
+        id: 'cm-1',
+        comment: '¿Hacen envíos hoy a Palermo? ¿Cuánto cuesta el envío?',
+        replies: {
+            emotional: '¡Hola! ❤️ Claro que sí, queremos que tu sorpresa llegue perfecta hoy. Hacemos envíos rápidos a Palermo con todo nuestro cuidado y amor. El costo es de $800 y podés personalizar la tarjeta dedicatoria rústica totalmente gratis. ¡Coordinemos por privado!',
+            funny: '¡Hola! 🚴💨 ¡Más rápido que un pétalo al viento! Hacemos envíos hoy mismo a Palermo por $800. Prometemos que las flores llegan más frescas que lechuga recién cortada. ¡Escribinos al MD y lo preparamos volando!',
+            sales: '¡Hola! 🌟 Sí, tenemos cupos disponibles para Palermo hoy mismo. El costo es de $800. Si hacés tu pedido en los próximos 15 minutos, te regalamos una ramita de eucalipto aromático para tu ducha. ¡Escribinos ya para reservar tu franja horaria!'
+        }
+    },
+    {
+        id: 'cm-2',
+        comment: 'Me encantaron las rosas rojas, ¿qué precio tienen y de qué tamaño viene el ramo?',
+        replies: {
+            emotional: '¡Muchas gracias! ❤️ Nuestras rosas importadas rojas son verdaderas portadoras de historias. El ramo premium viene de 12 tallos seleccionados y limpios a mano, envuelto en papel kraft rústico por $28.000. Queda espectacular en cualquier rincón del hogar.',
+            funny: '¡Hola! 😍 Son una locura de lindas, ¡y huelen a romance puro! Vienen en un ramo generoso de 12 rosas de tallo largo por $28.000 (perfecto para impresionar o auto-regalarse, que es el mejor amor propio 🌹). ¡Escribinos para encargar el tuyo!',
+            sales: '¡Hola! 🎉 Qué excelente gusto. El ramo de 12 Rosas Rojas Importadas está a solo $28.000. Podés pagar en hasta 3 cuotas sin interés y coordinar el envío hoy. ¡Escribinos por privado o tocala en nuestra web para asegurar tu ramo!'
+        }
+    },
+    {
+        id: 'cm-3',
+        comment: 'Se acerca el aniversario de mi mamá, ¿qué me recomiendan que sea fino y duradero?',
+        replies: {
+            emotional: '¡Qué momento tan hermoso! ❤️ Para mamá te recomiendo nuestro "Sueño Silvestre" con Asters y Lirios Perfumados. Son flores sumamente elegantes y duraderas, ideales para recordarle tu cariño cada mañana cuando cambie el agua de su florero.',
+            funny: '¡Feliz aniversario para ella! 🎉 Para que dure más que las reuniones que pudieron ser un mail 😂, te súper recomiendo un combo de Lirios Blancos y Eucalipto Rústico. Queda finísimo y va a perfumar toda su casa por semanas. ¡Te asesoramos en el MD!',
+            sales: '¡Hola! 🌟 Excelente ocasión. Te recomendamos nuestro Ramo de Lirios Perfumados Blancos ($2.300 por vara). Súper duraderos y elegantes. Agregando una tarjeta dedicatoria premium manuscrita tenés envío gratis hoy. ¡Escribinos por MD para armarlo!'
+        }
+    },
+    {
+        id: 'cm-4',
+        comment: '¡Qué hermoso local! ¿Tienen taller o cursos para aprender a diseñar ramos?',
+        replies: {
+            emotional: '¡Qué alegría leerte! ❤️ Diseñar con flores es una forma hermosa de meditación y conexión con la naturaleza. Sí, estamos preparando nuestro próximo taller presencial de Otoño/Invierno. Dejanos tu correo por privado y te avisamos antes que a nadie.',
+            funny: '¡Muchas gracias! 🌸 Prometemos que barremos el piso del local con una sonrisa 😂. ¡Sí! Muy pronto se viene nuestro workshop para aprender a diseñar ramos sin morir en el intento de limpiar espinas. Escribinos para anotarte en la lista de espera.',
+            sales: '¡Hola! ¡Qué bueno que te guste! 🌿 Sí, abrimos inscripciones la semana que viene para el Taller Virtual de Ramos de Diseño. El cupo es limitado e incluye kit de flores a domicilio. Escribinos por MD para reservar tu preventa con descuento.'
+        }
+    }
+];
+
+// Fechas Clave del Calendario Inteligente (Mayo 2026)
+const CALENDAR_DATES: Record<number, { title: string; type: 'comercial' | 'eco' | 'tip'; content: string }> = {
+    1: { title: 'Día del Trabajador', type: 'comercial', content: 'Promocioná ramos corporativos de agradecimiento. Tip: Creá una placa para LinkedIn ofreciendo combos express.' },
+    5: { title: 'Martes de Tips', type: 'tip', content: 'Hacé un video corto explicando por qué cortar los tallos a 45° duplica la vida de las flores.' },
+    10: { title: 'Día de la Madre (Latam)', type: 'comercial', content: 'Campaña principal. El 70% de las compras son de última hora. Publicá tus ramos premium con franja horaria asegurada.' },
+    12: { title: 'Martes de Cuidados', type: 'tip', content: 'Subí una historia interactiva con una trivia sobre cuánta agua necesita una orquídea.' },
+    15: { title: 'Día de las PyMEs', type: 'eco', content: 'Celebrá el esfuerzo local. Ofrecé un 10% OFF a otros comercios de tu barrio y mostrá comunidad.' },
+    19: { title: 'Martes de Tendencias', type: 'tip', content: 'Publicá un carrusel con las 3 paletas florales de otoño que son tendencia en diseño de interiores.' },
+    22: { title: 'Día de la Biodiversidad', type: 'eco', content: '¡Hoy! Mostrá la variedad de flores nativas y silvestres en tu taller. Explicá cómo cada flor Aster ayuda a las abejas.' },
+    25: { title: 'Revolución de Mayo', type: 'comercial', content: 'Día patrio en Argentina. Lanzá el Combo Escarapela: Claveles celestes y blancos con dedicatoria tradicional.' },
+    26: { title: 'Martes de ASMR', type: 'tip', content: 'Subí un video ASMR de 15 segundos limpiando tallos de rosas importadas. Sonido real de corte.' },
+    30: { title: 'Sábado de Renovación', type: 'comercial', content: 'Fin de mes. Incentivá la renovación del florero del hogar con envíos sin cargo en tu zona.' }
+};
 
 export const MarketingAI: React.FC = () => {
     const navigate = useNavigate();
@@ -62,11 +126,11 @@ export const MarketingAI: React.FC = () => {
     const loadProducts = useStore(state => state.loadProducts);
     const loadCustomers = useStore(state => state.loadCustomers);
 
-    // Estados de navegación y UI
-    const [activeTab, setActiveTab] = useState<'today' | 'reels' | 'promos' | 'garden'>('today');
+    // Estados de navegación y UI (Ampliados para 7 Sub-áreas)
+    const [activeTab, setActiveTab] = useState<'today' | 'reels' | 'promos' | 'cm-replies' | 'calendar' | 'cross-inspiration' | 'garden'>('today');
     const [selectedSuggestion, setSelectedSuggestion] = useState<MarketingSuggestion | null>(null);
     const [selectedTone, setSelectedTone] = useState<string>('emotional'); // emotional, fun, educational, sales
-    const [copiedTextType, setCopiedTextType] = useState<string | null>(null); // 'copy', 'hook', 'cta', 'whatsapp', 'combo'
+    const [copiedTextType, setCopiedTextType] = useState<string | null>(null); // 'copy', 'hook', 'cta', 'whatsapp', 'combo', 'success-complete', 'achievement-...'
     const [customPromoProduct, setCustomPromoProduct] = useState<string>('');
     const [customDiscount, setCustomDiscount] = useState<number>(15);
 
@@ -76,7 +140,22 @@ export const MarketingAI: React.FC = () => {
     const [completedSuggestions, setCompletedSuggestions] = useState<string[]>([]);
     const [history, setHistory] = useState<{ id: string; title: string; date: string; xpGained: number }[]>([]);
 
-    // Cargar datos al montar
+    // NUEVOS ESTADOS PREMIUM
+    const [favorites, setFavorites] = useState<any[]>([]);
+    const [rolledIdea, setRolledIdea] = useState<any | null>(null);
+    const [isRolling, setIsRolling] = useState<boolean>(false);
+    const [rollCount, setRollCount] = useState<number>(0);
+    const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
+    
+    // Community Manager
+    const [cmSelectedPreset, setCmSelectedPreset] = useState<string>('cm-1');
+    const [cmCustomText, setCmCustomText] = useState<string>('');
+    const [cmSelectedTone, setCmSelectedTone] = useState<'emotional' | 'funny' | 'sales'>('emotional');
+    
+    // Calendario
+    const [selectedCalDate, setSelectedCalDate] = useState<number | null>(22); // 22 de Mayo (Hoy) por defecto
+
+    // Cargar datos y persistencia al montar
     useEffect(() => {
         const fetchAll = async () => {
             try {
@@ -87,16 +166,24 @@ export const MarketingAI: React.FC = () => {
         };
         fetchAll();
 
-        // Cargar gamificación de localStorage
+        // Cargar gamificación y nuevos estados de localStorage
         const storedXp = localStorage.getItem('floriai_xp');
         const storedLevel = localStorage.getItem('floriai_level');
         const storedCompleted = localStorage.getItem('floriai_completed_suggestions');
         const storedHistory = localStorage.getItem('floriai_history');
 
+        const storedFavorites = localStorage.getItem('floriai_favorites');
+        const storedRollCount = localStorage.getItem('floriai_roll_count');
+        const storedAchievements = localStorage.getItem('floriai_achievements');
+
         if (storedXp) setXp(Number(storedXp));
         if (storedLevel) setLevel(Number(storedLevel));
         if (storedCompleted) setCompletedSuggestions(JSON.parse(storedCompleted));
         if (storedHistory) setHistory(JSON.parse(storedHistory));
+
+        if (storedFavorites) setFavorites(JSON.parse(storedFavorites));
+        if (storedRollCount) setRollCount(Number(storedRollCount));
+        if (storedAchievements) setUnlockedAchievements(JSON.parse(storedAchievements));
     }, [loadProducts, loadCustomers]);
 
     // Guardar gamificación en localStorage
@@ -110,6 +197,72 @@ export const MarketingAI: React.FC = () => {
         localStorage.setItem('floriai_level', newLevel.toString());
         localStorage.setItem('floriai_completed_suggestions', JSON.stringify(newCompleted));
         localStorage.setItem('floriai_history', JSON.stringify(newHistory));
+    };
+
+    // Escucha automática para desbloquear Nivel 3
+    useEffect(() => {
+        if (level >= 3) {
+            const stored = localStorage.getItem('floriai_achievements');
+            const currentUnlocked = stored ? JSON.parse(stored) : [];
+            if (!currentUnlocked.includes('garden_lvl3')) {
+                const updated = [...currentUnlocked, 'garden_lvl3'];
+                localStorage.setItem('floriai_achievements', JSON.stringify(updated));
+                setUnlockedAchievements(updated);
+                
+                // Recompensar con 20 XP
+                const xpReward = 20;
+                let newXp = xp + xpReward;
+                let newLevel = level;
+                if (newXp >= 100) {
+                    newXp = newXp - 100;
+                    newLevel = level + 1;
+                }
+                saveProgress(newXp, newLevel, completedSuggestions, [
+                    {
+                        id: Math.random().toString(36).substr(2, 9),
+                        title: `🏆 Desbloqueaste la Medalla: Jardín de Oro`,
+                        date: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        xpGained: xpReward
+                    },
+                    ...history
+                ]);
+                setCopiedTextType('achievement-garden_lvl3');
+                setTimeout(() => setCopiedTextType(null), 4000);
+            }
+        }
+    }, [level]);
+
+    // Desbloquear medalla programáticamente
+    const triggerUnlock = (achievementId: string) => {
+        const stored = localStorage.getItem('floriai_achievements');
+        const currentUnlocked = stored ? JSON.parse(stored) : [];
+        if (currentUnlocked.includes(achievementId)) return;
+
+        const updated = [...currentUnlocked, achievementId];
+        localStorage.setItem('floriai_achievements', JSON.stringify(updated));
+        setUnlockedAchievements(updated);
+
+        // Recompensar con 20 XP
+        const xpReward = 20;
+        let newXp = xp + xpReward;
+        let newLevel = level;
+        if (newXp >= 100) {
+            newXp = newXp - 100;
+            newLevel = level + 1;
+        }
+        
+        saveProgress(newXp, newLevel, completedSuggestions, [
+            {
+                id: Math.random().toString(36).substr(2, 9),
+                title: `🏆 Desbloqueaste la Medalla: ${ACHIEVEMENTS.find(a => a.id === achievementId)?.title}`,
+                date: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                xpGained: xpReward
+            },
+            ...history
+        ]);
+
+        setCopiedTextType(`achievement-${achievementId}`);
+        setTimeout(() => setCopiedTextType(null), 4000);
     };
 
     // Dinámica de completar sugerencia y ganar XP
@@ -138,6 +291,9 @@ export const MarketingAI: React.FC = () => {
         ];
 
         saveProgress(newXp, newLevel, newCompleted, newHistory);
+
+        // Activar medalla Semilla Creativa
+        triggerUnlock('first_task');
 
         // Feedback visual temporal
         setCopiedTextType('success-complete');
@@ -182,7 +338,7 @@ export const MarketingAI: React.FC = () => {
         { id: 'def-c2', name: 'Juan Manuel Pérez', phone: '1123456789', email: 'juanperez@outlook.com', debtBalance: 0, importantDateName: 'Aniversario de Bodas', importantDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], notes: 'Siempre lleva ramos grandes' }
     ];
 
-    // Procesar datos y correr el "Marketing Engine"
+    // Procesar datos y correr el "Marketing Engine" Heurístico
     const suggestions = useMemo<MarketingSuggestion[]>(() => {
         const listProducts = products.length > 0 ? products : defaultProducts;
         const listCustomers = customers.length > 0 ? customers : defaultCustomers;
@@ -216,7 +372,7 @@ export const MarketingAI: React.FC = () => {
                     recordingGuide: {
                         music: 'Acoustic Folk Instrumental o Lofi suave',
                         steps: [
-                            { shot: 'Primer plano (Macro)', description: 'Mapea de cerca los pétalos de tus hermosas/os ' + cleanName + ', mostrando el rocío de agua fresca.', duration: '3s' },
+                            { shot: 'Primer plano (Macro)', description: `Mapea de cerca los pétalos de tus hermosas/os ${cleanName}, mostrando el rocío de agua fresca.`, duration: '3s' },
                             { shot: 'Plano subjetivo (POV)', description: 'Tus manos seleccionando los mejores tallos con sumo cuidado y limpiándolos elegantemente.', duration: '4s' },
                             { shot: 'Plano cenital rápido', description: 'El armado veloz del ramo sobre papel kraft rústico amarrándolo con hilo de yute.', duration: '5s' },
                             { shot: 'Plano general alegre', description: 'Sonreír sosteniendo el ramo terminado frente a una ventana con luz cálida.', duration: '3s' }
@@ -244,7 +400,6 @@ export const MarketingAI: React.FC = () => {
                 }
             });
         } else {
-            // Producto genérico si no hay sobrestock
             results.push({
                 id: 'sug-over-generic',
                 priority: 'urgent',
@@ -298,7 +453,6 @@ export const MarketingAI: React.FC = () => {
                     const todayTime = new Date();
                     todayTime.setHours(0, 0, 0, 0);
                     const impDate = new Date(c.importantDate);
-                    // Ajustar el año del cumpleaños al año actual para comparar
                     impDate.setFullYear(todayTime.getFullYear());
 
                     const diffTime = impDate.getTime() - todayTime.getTime();
@@ -329,7 +483,7 @@ export const MarketingAI: React.FC = () => {
                     recordingGuide: {
                         music: 'N/A - Mensajería Directa',
                         steps: [
-                            { shot: 'WhatsApp', description: 'Revisar el historial de compras de ' + client.name + ' para sugerir algo acorde a sus gustos.', duration: '1m' },
+                            { shot: 'WhatsApp', description: `Revisar el historial de compras de ${client.name} para sugerir algo acorde a sus gustos.`, duration: '1m' },
                             { shot: 'WhatsApp', description: 'Copiar la plantilla de mensaje pre-armado de FloriAI.', duration: '1m' },
                             { shot: 'WhatsApp', description: 'Personalizar el nombre y enviar vía WhatsApp Web con un enlace de compra directo.', duration: '2m' }
                         ]
@@ -356,7 +510,6 @@ export const MarketingAI: React.FC = () => {
                 }
             });
         } else {
-            // Sugerencia recomendado si no hay fechas
             results.push({
                 id: 'sug-client-generic',
                 priority: 'recommended',
@@ -400,7 +553,6 @@ export const MarketingAI: React.FC = () => {
         }
 
         // 3. CAMPAÑAS Y OPORTUNIDADES DE TEMPORADA -> OPORTUNIDAD (🟢)
-        // Detectar estación del año: En Mayo (2026-05-21) estamos en Otoño / vísperas de Invierno
         results.push({
             id: 'sug-seasonal',
             priority: 'opportunity',
@@ -448,7 +600,6 @@ export const MarketingAI: React.FC = () => {
         return results;
     }, [products, customers]);
 
-    // Obtener sugerencia actual
     const currentSuggestion = selectedSuggestion || suggestions[0];
 
     // Manejar copiado al portapapeles con feedback visual
@@ -456,12 +607,16 @@ export const MarketingAI: React.FC = () => {
         navigator.clipboard.writeText(text);
         setCopiedTextType(type);
         setTimeout(() => setCopiedTextType(null), 2000);
+
+        // Desbloquear logro Fidelizador si copia un mensaje de cliente
+        if (type === 'whatsapp') {
+            triggerUnlock('fidelizador');
+        }
     };
 
     // Crear combo promocional interactivo
     const suggestedCombo = useMemo(() => {
         const listProducts = products.length > 0 ? products : defaultProducts;
-        // Tomar el primer producto con mayor stock (sobrestock) y el segundo con stock aceptable
         const sorted = [...listProducts].sort((a, b) => b.stock - a.stock);
         const prodA = sorted[0];
         const prodB = sorted[1] || listProducts[2] || listProducts[0];
@@ -483,6 +638,531 @@ export const MarketingAI: React.FC = () => {
         };
     }, [products, customDiscount, shopInfo]);
 
+    // Triggerear Combo Master cuando cambia el slider o copia el combo
+    const handleComboAction = () => {
+        triggerUnlock('combo_gen');
+    };
+
+    // BASE DE DATOS DEL DADO: 16 Prompts Hiper-Creativos
+    const ROLLED_IDEAS = [
+        {
+            id: 'roll-1',
+            title: '☕ Café con aroma de Aster',
+            category: 'Aesthetic & Lofi',
+            whyRecommended: 'Combina dos placeres cotidianos para generar empatía y comunidad en Instagram.',
+            music: 'Lofi Jazz o Chillhop relajado',
+            steps: [
+                { shot: 'Primer plano (Macro)', description: 'Una taza de café humeante y caliente al lado de un ramo de Asters rústicos.', duration: '3s' },
+                { shot: 'Plano cenital', description: 'Tus manos abriendo un libro de poemas o diseño, hojeando suavemente.', duration: '5s' },
+                { shot: 'Plano detalle', description: 'Colocar delicadamente una flor de Aster como señalador de páginas.', duration: '4s' }
+            ],
+            hooks: {
+                emotional: '«¿Sabías que combinar café y flores frescas en tu escritorio reduce el estrés diario? Hoy te muestro mi ritual...»',
+                fun: '«Mi psicólogo me dijo que busque pasatiempos tranquilos... y acá estoy, gastando todo en café especial y flores 😂»',
+                sales: '«El combo de escritorio perfecto: Levantá tu ánimo con nuestro mini-ramo Aster del día con taza de regalo hoy.»'
+            },
+            copies: {
+                emotional: 'Hay mañanas que piden ir más despacio. El aroma del café recién hecho y el violeta de los Asters son el recordatorio perfecto de que el presente es el único lugar donde florecemos. ☕💜\n\n¿Cuál es tu ritual favorito hoy?',
+                fun: 'El club del café frío y las manos perfumadas a eucalipto reportándose. 🙋‍♀️☕💐 Hoy decidimos que tu escritorio se merece subir de nivel estético. ¡Un toque de naturaleza alegra cualquier mail! 🤭',
+                sales: '¡Renová la energía de tus mañanas! 🌟 Diseñamos los arreglos mini de flores frescas que duran semanas en agua, perfectos para tu taza de café. Enlace de compra en bio. ¡Enviamos en el día! 🚚'
+            },
+            ctas: {
+                emotional: 'Compartí calma con esa persona que lo necesita hoy.',
+                fun: 'Comentá ☕ si vos también necesitás cafeína y flores hoy.',
+                sales: 'Reservá tu mini-arreglo hoy mismo haciendo clic en el perfil.'
+            },
+            hashtags: ['cafeconflores', 'aestheticflower', 'astersilvestre', 'decordesk', 'rituales']
+        },
+        {
+            id: 'roll-2',
+            title: '🌿 Susurros de Eucalipto (Spa en Baño)',
+            category: 'Bienestar / DIY',
+            whyRecommended: 'Los videos de cuidado personal y aromaterapia en casa tienen un engagement arrollador.',
+            music: 'ASMR de agua cayendo + Lofi suave',
+            steps: [
+                { shot: 'Plano medio', description: 'Tus manos amarrando tres ramas grandes de Eucalipto fresco con hilo de yute rústico.', duration: '4s' },
+                { shot: 'Plano de primer plano', description: 'Colgar el ramito de eucalipto directamente detrás de la flor de ducha.', duration: '4s' },
+                { shot: 'Plano macro vapor', description: 'El vapor del baño cubriendo las hojas, liberando los aceites esenciales medicinales.', duration: '5s' }
+            ],
+            hooks: {
+                emotional: '«Tu ducha diaria puede sentirse como un sauna de lujo en medio del bosque... Dejame mostrarte este truco...»',
+                fun: '«Hice esto en mi ducha y ahora mi baño parece un sauna de alta montaña. No quiero salir nunca 😂»',
+                sales: '«Lanzamos el Ramillete de Ducha: Ramas gigantes de Eucalipto medicinal listas para colgar por un precio mínimo.»'
+            },
+            copies: {
+                emotional: 'Spa botánico en casa 🛁🌿. El vapor de agua ayuda a liberar los aceites esenciales del eucalipto, actuando como descongestivo natural y relajante mental. Un mimo que tu cuerpo merece al final de la semana. 💚',
+                fun: 'Chau resfríos y tensiones del día. 👋 Colgar eucalipto en la ducha es el hack definitivo de Pinterest. ¿Ya lo probaste? Advertencia: es un camino de ida. 🚿🤭',
+                sales: '¡Transformá tu baño hoy! 🎉 Conseguí tu manojo de Eucalipto Fresco cortado en el día para máxima fragancia en nuestro taller.\n\n👉 Encargalo por mensaje y retirá esta tarde. ¡Coordinemos!'
+            },
+            ctas: {
+                emotional: 'Guardá este tip para preparar tu fin de semana de relax.',
+                fun: 'Dejanos un emoji de ramita 🌿 si vas a probar este truco hoy.',
+                sales: 'Escribinos "QUIERO SPA" y reservamos tu manojo aromático ya.'
+            },
+            hashtags: ['eucaliptofresco', 'spacasero', 'wellness', 'aromaterapia', 'tipsnaturales']
+        },
+        {
+            id: 'roll-3',
+            title: '🎀 El Arte del Envoltorio Perfecto',
+            category: 'Detrás de Escena / Tutorial',
+            whyRecommended: 'Los procesos manuales elegantes aumentan el valor percibido de tus arreglos.',
+            music: 'Indie Folk acústico y enérgico',
+            steps: [
+                { shot: 'Plano cenital rápido', description: 'Extender papel kraft de doble cara sobre la mesa de trabajo de madera.', duration: '3s' },
+                { shot: 'Plano detalle (Macro)', description: 'Tus dedos haciendo pliegues perfectos y abanicando el papel alrededor de los tallos.', duration: '5s' },
+                { shot: 'Plano medio de cierre', description: 'Amarrar el ramo con una cinta de seda color terracota y cortar los bordes en diagonal.', duration: '4s' }
+            ],
+            hooks: {
+                emotional: '«Envolver un ramo de flores es como abrigar una carta de amor... cada pliegue tiene un sentido...»',
+                fun: '«Expectativa: Envolver un ramo en 5 segundos. Realidad: Papel arrugado e hilo de yute pegado en los dedos 😂...»',
+                sales: '«Cuidamos el diseño de punta a punta. Envolvemos con papel kraft de importación y lazos de seda. Mirá este resultado...»'
+            },
+            copies: {
+                emotional: 'Para nosotros, el envoltorio no es un agregado: es la presentación formal de tus sentimientos. 💌💐 Cuidamos cada pliegue para que la experiencia de recibir sea inolvidable desde el primer tacto.\n\n¿Qué te parece este diseño?',
+                fun: 'Pelearse con el rollo de cinta es parte de nuestro entrenamiento diario. 🥊😂 Pero ver al ramo cobijado en su papel kraft rústico hace que todo el desorden valga la pena.\n\n¿Sos de los que guardan los papeles de regalos? 🎁👇',
+                sales: '✨ Detalles que enamoran ✨. Todos nuestros ramos especiales se entregan listos para lucir con envoltorios premium que conservan la humedad de las flores en el viaje.\n\nPedilo online y personalizá tu tarjeta. 🛒'
+            },
+            ctas: {
+                emotional: 'Hacé tu encargo especial y escribimos tu dedicatoria a mano.',
+                fun: 'Etiquetá a tu amigo/a perfeccionista que ama los empaques prolijos.',
+                sales: 'Comprá hoy y llevate el envoltorio premium de estación sin costo adicional.'
+            },
+            hashtags: ['empaque', 'hechoamano', 'tallerfloral', 'diseñoexclusivo', 'detalles']
+        },
+        {
+            id: 'roll-4',
+            title: '🍂 Paleta de Otoño Arcilla (Transición)',
+            category: 'Visual & Aesthetic',
+            whyRecommended: 'Aprovecha la estación para asociar tu marca a tendencias Pinterest de decoración acogedora.',
+            music: 'Indie Folk otoñal instrumental',
+            steps: [
+                { shot: 'Plano medio', description: 'Flores frescas vibrantes en tonos terracota, ocre y trigo sobre una mesa rústica.', duration: '4s' },
+                { shot: 'Chasquido de dedos (Transición)', description: 'Cambiar instantáneamente al ramo deshidratado / seco con una vela encendida.', duration: '3s' },
+                { shot: 'Plano de detalle', description: 'El jarrón de barro en un rincón cálido iluminado con luz led de fondo.', duration: '5s' }
+            ],
+            hooks: {
+                emotional: '«El otoño no es el fin de la belleza, sino su versión más cálida y nostálgica...»',
+                fun: '«Inaugurada oficialmente la temporada de té caliente, mantas y flores secas que no tengo que regar 🤫🍂»',
+                sales: '«Nueva Colección Cálido Hogar: Set de jarrón de barro + ramo seco premium con 15% OFF esta semana.»'
+            },
+            copies: {
+                emotional: 'Tonos que reconfortan el alma. 🍁 El terracota, el ocre y el trigo deshidratado se unen en este ramo que celebra la calma otoñal. Una propuesta para transformar tu casa en un refugio acogedor frente al frío exterior. 🕯️🍂',
+                fun: 'Si tus plantas mueren por olvido... 🤫 Te traemos la solución Pinterest: flores secas. Duran meses intactas y no se quejan si no les das agua. 😂 ¡Escribinos por el tuyo!',
+                sales: '🔥 Colección Otoño/Invierno 2026 🔥. Arreglos secos duraderos ideales para interiores calefaccionados. Aportan estilo rústico y cero mantenimiento.\n\nEnvíos en zona sin cargo. ¡Pedí el tuyo! 🚚'
+            },
+            ctas: {
+                emotional: 'Elegí tu paleta otoñal favorita en nuestro catálogo.',
+                fun: 'Comentá una hoja seca 🍂 si vos también amás el otoño.',
+                sales: 'Comprá tu set decorativo hoy haciendo clic en el link de la bio.'
+            },
+            hashtags: ['paletadeotoño', 'decoracionrustica', 'floressecas', 'PinterestVibes', 'cozyhome']
+        },
+        {
+            id: 'roll-5',
+            title: '🔮 Tu Flor Guardiana según tu Mes',
+            category: 'Interactividad / Comunidad',
+            whyRecommended: 'Las dinámicas que invitan a comentar tienen un alcance orgánico descomunal en Instagram.',
+            music: 'Sonido pop rítmico o campanas mágicas',
+            steps: [
+                { shot: 'Plano medio', description: 'Mostrar una cartelera con 12 fotos bonitas de flores para cada mes.', duration: '4s' },
+                { shot: 'Plano rápido alternado', description: 'Señalar meses clave: Enero (Clavel), Mayo (Aster), Octubre (Rosas).', duration: '4s' },
+                { shot: 'Primer plano sonriente', description: 'Hacer el gesto de "dejamelo abajo en comentarios" apuntando.', duration: '4s' }
+            ],
+            hooks: {
+                emotional: '«¿Sabías que tu mes de nacimiento determina tu flor guardiana y su significado botánico?...»',
+                fun: '«Dime en qué mes naciste y te diré qué tan dramático/a eres según tu flor protectora... 👀💐»',
+                sales: '«¡Cumpleañeros de Mayo! Comenten su fecha y les regalamos un beneficio exclusivo por privado.»'
+            },
+            copies: {
+                emotional: 'La astrología de las flores existe. 🔮 Cada mes del año tiene una flor asociada. Quienes nacieron bajo el Aster en Mayo representan la paciencia, el misterio y el amor por los detalles. 💜\n\n¿Cuál es tu mes? Comentá abajo y te cuento tu significado.',
+                fun: '¿Sos una Rosa elegante o una Margarita todoterreno que sobrevive al desierto? 😂 Poné tu mes en comentarios y descubramos tu alter ego floral. ¡A ver cuántos coinciden! 👇',
+                sales: '🎂 ¡Festejamos tu día especial! 🎂 Si cumplís años esta semana, dejá tu fecha en comentarios y te mandamos por privado un **15% OFF de regalo** para tu mesa de celebración. ¡Hagamos magia! ✨'
+            },
+            ctas: {
+                emotional: 'Comentá tu mes y descubrí tu flor guardiana hoy.',
+                fun: 'Etiquetá a tu amigo/a de Mayo para que reclame su flor.',
+                sales: 'Dejanos tu fecha y te enviamos tu cupón de regalo al instante.'
+            },
+            hashtags: ['astrologiafloral', 'mesdenacimiento', 'regalos', 'floresycumple', 'interaccion']
+        },
+        {
+            id: 'roll-6',
+            title: '🧘 Limpieza Zen (Sonidos ASMR)',
+            category: 'ASMR / Relajación',
+            whyRecommended: 'Los videos con sonidos naturales rítmicos generan un efecto hipnótico que retiene al espectador.',
+            music: 'Sin música. Sonido ambiente nítido (ASMR de tijeras, crujido de hojas y spray de agua)',
+            steps: [
+                { shot: 'Plano súper cerrado', description: 'Tijeras de metal rústicas haciendo clic de manera rítmica.', duration: '4s' },
+                { shot: 'Plano detalle tallos', description: 'El crujido seco al remover las hojas y espinas de una rosa importada.', duration: '5s' },
+                { shot: 'Plano macro capullo', description: 'Pulverizar rocío de agua fina sobre los pétalos con sonido de spray suave.', duration: '4s' }
+            ],
+            hooks: {
+                emotional: '«Subí el volumen... disfrutá de 15 segundos de meditación floral y olvidate de todo...»',
+                fun: '«El sonido de limpiar rosas es mi ruido blanco favorito para mi mente ansiosa 😂. Escuchá esto...»',
+                sales: '«Preparamos cada ramo limpiando tallo por tallo para que tu regalo llegue perfecto. Encargá calidad hoy...»'
+            },
+            copies: {
+                emotional: 'Pausa conscientes en tu día. 🌿💆‍♂️ Ponete auriculares, subí el volumen y escuchá el acondicionamiento de nuestras flores frescas. Es nuestro pequeño ritual de amor y respeto hacia la naturaleza. Ojalá te traiga paz.',
+                fun: 'Chau ruidos molestos del tráfico, hola clic-clic de las tijeras del florista. ✂️🌹 El verdadero sonido ASMR de un taller creativo.\n\n¿Te quedarías horas viendo esto? Confirmemos que no soy la única. 😂',
+                sales: 'Artesanía floral en cada detalle. ✨ Acondicionamos individualmente cada tallo para garantizar que tus flores duren el doble de tiempo en casa. Pedí tus Rosas Rojas Importadas hoy con envío rápido. 🚚'
+            },
+            ctas: {
+                emotional: 'Guardá este video para cuando necesites 15 segundos de respiración consciente.',
+                fun: 'Dejanos un emoji de tijera ✂️ si este sonido te relaja.',
+                sales: 'Encargá tu ramo impecable haciendo clic en el botón de la tienda.'
+            },
+            hashtags: ['asmrfloral', 'relajacion', 'detrásdeescena', 'tallerderosas', 'zenstyle']
+        },
+        {
+            id: 'roll-7',
+            title: '🏺 Centro de Mesa Express en 3 Pasos',
+            category: 'Tutorial / DIY',
+            whyRecommended: 'Resuelve un problema cotidiano para comidas o eventos informales, aportando valor práctico.',
+            music: 'Ukelele o guitarra acústica alegre',
+            steps: [
+                { shot: 'Plano subjetivo (POV)', description: 'Tus manos midiendo y recortando los tallos sobrantes a tres alturas distintas.', duration: '3s' },
+                { shot: 'Plano de colocación', description: 'Acomodar las flores en una taza vintage de té con agua fresca.', duration: '5s' },
+                { shot: 'Plano final emplazado', description: 'El arreglo rústico en la mesa al lado de una vajilla bonita y una vela encendida.', duration: '4s' }
+            ],
+            hooks: {
+                emotional: '«No necesitás vajilla de lujo para que tu mesa familiar parezca sacada de una revista de diseño...»',
+                fun: '«Hice este centro express y ahora mis amigas piensan que soy decoradora profesional 😂. Mirá qué simple...»',
+                sales: '«Lanzamos el Combo Mesa Express: Pack de flores silvestres variadas + frasco vintage rústico de regalo hoy.»'
+            },
+            copies: {
+                emotional: 'El arte de recibir en casa. 🏡🌸 Un centro de mesa no requiere ser costoso: con flores sencillas del día, una taza antigua heredada y una vela, podés transformar la cena y hacer sentir especiales a tus invitados. ¿Te animás?',
+                fun: 'El hack definitivo para cuando te avisan a último momento que van a cenar a tu casa y la mesa es un desierto. 🚨😂 Cortá asters y margaritas, ponelos en un vaso con agua, encendé una vela y ¡listo! Sofisticación express.',
+                sales: '¡Llená de encanto tus cenas! 🌟 Te preparamos la caja "Diseño Express": una selección de flores de corte variadas y follajes silvestres para que juegues a armar tus propios mini arreglos decorativos.\n\nPedila online hoy con un 10% de descuento. 🛒✨'
+            },
+            ctas: {
+                emotional: 'Compartilo con esa persona que ama ser anfitriona en su casa.',
+                fun: 'Comentá "MESA" y te mandamos nuestra guía completa de combinación de colores para vajilla.',
+                sales: 'Comprá tu pack de flores de corte express hoy tocando el link de la bio.'
+            },
+            hashtags: ['centrodemesa', 'diydecoracion', 'mesasbonitas', 'anfitriones', 'ramosilvestre']
+        },
+        {
+            id: 'roll-8',
+            title: '👗 Outfits que combinan con tus Flores',
+            category: 'Moda / Estilo de vida',
+            whyRecommended: 'Asocia tu marca con estilo de vida premium, aumentando la retención en público joven.',
+            music: 'Pop moderno con cambios marcados en el beat',
+            steps: [
+                { shot: 'Plano general', description: 'Modelo vestida con tapado beige sosteniendo un ramo seco terracota con trigo.', duration: '4s' },
+                { shot: 'Transición rápida en el beat', description: 'Cambio de outfit a gabardina verde militar con un ramo fresco de eucalipto.', duration: '4s' },
+                { shot: 'Plano detalle girando', description: 'Giro coqueto mostrando las flores a la par de la textura de la ropa.', duration: '4s' }
+            ],
+            hooks: {
+                emotional: '«¿Sabías que las flores de estación son el accesorio de diseño definitivo para tu outfit?...»',
+                fun: '«Combinando mi ropa con las flores de mi taller para combatir el gris de la calefacción 😂. ¿Cuál preferís?»',
+                sales: '«Estilo que inspira. Llevate el ramo del día que mejor combina con los tonos abrigados de esta estación.»'
+            },
+            copies: {
+                emotional: 'Moda que florece. 🍂 El frío nos invita a abrigarnos, pero también a jugar con texturas: la lana combina a la perfección con la rugosidad rústica de las flores secas y la frescura de los follajes. Llevá el diseño a tu vida diaria.',
+                fun: 'Sí, soy el tipo de persona que planea su outfit en base a las flores que entraron al local. 😂 Y la verdad no me arrepiento de nada. El terracota y el verde pino son mi obsesión otoñal. ¿Votos para el 1 o el 2? 👇',
+                sales: '✨ Las flores son estilo de vida ✨. Más allá de un regalo, un arreglo floral es el toque de diseño que define la estética de tu hogar. Encontrá combinaciones exquisitas en nuestro catálogo de Otoño/Invierno.\n\nHacemos envíos programados con envoltorio impermeable de regalo. 🚚🛍'
+            },
+            ctas: {
+                emotional: 'Guardá este post para inspirarte en tus combinaciones estéticas.',
+                fun: 'Etiquetá a tu amiga amante de la moda Pinterest.',
+                sales: 'Escribinos "LOOKBOOK" para asesorarte sobre qué ramos combinan con tu sala.'
+            },
+            hashtags: ['lookbookfloral', 'modayflores', 'estilodevida', 'coloresdeotoño', 'accesoriosPinterest']
+        },
+        {
+            id: 'roll-9',
+            title: '📦 Desembalaje Enérgico (Unboxing de Cultivo)',
+            category: 'Detrás de escena',
+            whyRecommended: 'Mostrar el producto crudo recién llegado genera sensación de frescura y honestidad absoluta.',
+            music: 'Rock alternativo enérgico o sintetizador rápido',
+            steps: [
+                { shot: 'Plano subjetivo', description: 'Tus manos rompiendo la cinta de embalaje de una gran caja de cartón de mercado.', duration: '3s' },
+                { shot: 'Plano de volcado alegre', description: 'Abrir las solapas y revelar decenas de paquetes de flores frescas en papel de diario húmedo.', duration: '5s' },
+                { shot: 'Plano de velocidad', description: 'Colocar los paquetes en baldes grandes con agua limpia en un timelapse veloz.', duration: '4s' }
+            ],
+            hooks: {
+                emotional: '«Así se siente abrir un cofre de perfumes directos del campo de cultivo... Acompañame hoy...»',
+                fun: '«Unboxing botánico a velocidad de la luz. ¡Llegó la mercadería y el local explota de aromas! 🤩💨»',
+                sales: '«¡Acaban de entrar! Rosas, lirios y asters recién desembalados. Reservá los tuyos antes de que se los lleven.»'
+            },
+            copies: {
+                emotional: '¡Día de mercado! 📦🌸 Recibir las flores frescas del cultivo directo es uno de nuestros momentos favoritos de la semana. La fragancia inunda todo el local y nos da esa energía única para ponernos a diseñar para ustedes.',
+                fun: 'Expectativa: Unboxing súper prolijo y estético con música de fondo. Realidad: Cajas gigantes de cartón, barro en el piso y nosotros corriendo para hidratar todo antes de que protesten 😂. ¡Pero amamos este caos!',
+                sales: '¡Flores fresquísimas recién bajadas del camión! 🚚✨ Diseñamos ramos en el acto con las variedades más selectas de esta semana. Reservá tu envío hoy directo desde la tienda web o WhatsApp.'
+            },
+            ctas: {
+                emotional: 'Dejanos un comentario si querés ver qué ramo armamos con este lote.',
+                fun: 'Comentá con tu emoji de flor favorito si te tienta ver el detrás de escena.',
+                sales: 'Mandanos un mensaje directo y reservá tu ramo del día súper fresco.'
+            },
+            hashtags: ['unboxingfloral', 'floresfrescas', 'detrásdeescena', 'tallerderosas', 'diademercado']
+        },
+        {
+            id: 'roll-10',
+            title: '🍵 Taza Floral Vintage (Upcycling)',
+            category: 'Ecológico / DIY',
+            whyRecommended: 'Fomenta el reciclaje creativo y atrae a clientes interesados en vajilla antigua y diseño rústico.',
+            music: 'Acústica indie folk tranquila',
+            steps: [
+                { shot: 'Plano detalle', description: 'Una taza de té antigua de porcelana con flores pintadas a mano, heredada o de feria.', duration: '4s' },
+                { shot: 'Plano de corte', description: 'Medir el tallo de pequeñas margaritas y asters y recortarlos bien cortitos.', duration: '4s' },
+                { shot: 'Plano cenital', description: 'Acomodar las flores en la taza con agua limpia, creando un domo floral miniatura.', duration: '4s' }
+            ],
+            hooks: {
+                emotional: '«Dale una segunda vida a esa taza de porcelana rota de tu abuela que no te animás a tirar...»',
+                fun: '«Fui a una feria de pulgas y salí con esta taza espectacular. Spoiler: ahora tiene asters silvestres 🤭»',
+                sales: '«Set Vintage Especial: Te enviamos la taza rústica reciclada + ramito de margaritas listo por un valor promocional.»'
+            },
+            copies: {
+                emotional: 'Historias que vuelven a florecer. 🍵✨ Esa taza antigua que ya no usás o que tiene una pequeña rajadura puede convertirse en el contenedor de tus mañanas alegres. El upcycling floral llena tu hogar de recuerdos bonitos.',
+                fun: '¿Vajilla de la abuela rota? No se tira, ¡se florece! 😂 Margaritas, asters y hojitas de menta. Queda espectacular en la mesa de luz y el perfume es mil veces mejor que cualquier aromatizante artificial.',
+                sales: '¡Colección Vajilla Florecida! 🌟 Diseñamos mini arreglos en recipientes vintage de cerámica y loza recuperada. Un detalle único para regalar o mimarte hoy. Pedilo con envío rápido en bio.'
+            },
+            ctas: {
+                emotional: 'Guardá esta publicación para tu próxima tarde de manualidades en casa.',
+                fun: 'Etiquetá a tu amigo/a fan de lo retro y el reciclaje.',
+                sales: 'Escribinos "VINTAGE" y te mandamos fotos de las tazas exclusivas de esta semana.'
+            },
+            hashtags: ['upcycling', 'tazavintage', 'floresycafé', 'manualidades', 'decoracionretro']
+        },
+        {
+            id: 'roll-11',
+            title: '🔬 El Secreto del Agua Limpia',
+            category: 'Educativo / Ciencia',
+            whyRecommended: 'Los videos que resuelven una frustración común (flores que mueren rápido) generan muchas compartidas y guardados.',
+            music: 'Música de misterio / educativa alegre',
+            steps: [
+                { shot: 'Plano detalle florero', description: 'Florero con agua turbia y flores tristes. Mostrar cara de decepción.', duration: '3s' },
+                { shot: 'Plano de ingredientes', description: 'Agregar agua limpia, una gota de cloro y una monedita de cobre al florero.', duration: '5s' },
+                { shot: 'Plano final comparativo', description: 'Mostrar las flores erguidas y radiantes 5 días después.', duration: '4s' }
+            ],
+            hooks: {
+                emotional: '«La razón por la que tus flores duran tan poco en casa es este error simple que todos cometen...»',
+                fun: '«Mi abuela me reveló este hack de florista y ahora mis jarrones duran más que mis relaciones 😂...»',
+                sales: '«Queremos que disfrutes tus ramos por semanas. Te regalamos un sobrecito de nutrientes botánicos con tu compra hoy.»'
+            },
+            copies: {
+                emotional: 'El secreto para un florero eterno. 🌿💧 El agua estancada acumula bacterias que obstruyen los tallos. Con una sola gota de cloro para desinfectar y una moneda de cobre que actúa como alguicida, tus flores van a lucir frescas por el doble de tiempo.',
+                fun: 'Hack botánico del día: ¿Tus ramos duran menos de tres días? 🚨 ¡No más flores tristes! Hacé esto hoy mismo y mirá la diferencia. Contame en comentarios si ya conocías el truco de la moneda.',
+                sales: 'En nuestra tienda no solo vendemos flores, te enseñamos a cuidarlas. 🌸 Cada pedido de esta semana incluye una tarjeta con los 5 mandamientos del cuidado floral y un sobre de alimento gratis. ¡Encargá online!'
+            },
+            ctas: {
+                emotional: 'Guardá este post para cuando compres tus próximas flores frescas.',
+                fun: 'Dejanos un emoji de agua 💧 si te sirvió el secreto de hoy.',
+                sales: 'Hacé clic abajo y llevate tus asters con nutrientes de regalo.'
+            },
+            hashtags: ['cuidadodeflores', 'hacksdelhogar', 'floreroeterno', 'tipbotanico', 'educacionfloral']
+        },
+        {
+            id: 'roll-12',
+            title: '🤍 Monocromático Premium Blanco',
+            category: 'Aesthetic / Minimalismo',
+            whyRecommended: 'El diseño limpio e higiénico tiene una alta percepción de sofisticación de lujo.',
+            music: 'Piano clásico minimalista o lofi de piano',
+            steps: [
+                { shot: 'Plano detalle mesa', description: 'Un jarrón de vidrio transparente impecable con agua y rocas blancas abajo.', duration: '4s' },
+                { shot: 'Plano de ensamble', description: 'Colocar lirios blancos, margaritas y rosas blancas formando una nube compacta.', duration: '5s' },
+                { shot: 'Plano general', description: 'El ramo monocromático en un ambiente minimalista escandinavo moderno.', duration: '3s' }
+            ],
+            hooks: {
+                emotional: '«A veces, la mayor sofisticación se esconde en la ausencia total de color... solo luz y perfume...»',
+                fun: '«El equipo monocromo reportándose. Porque el blanco combina con absolutamente todo y queda finísimo 🤍...»',
+                sales: '«Lanzamos el Ramo Nube Blanca: Lirios Perfumados + Rosas Blancas con envoltorio satinado de regalo hoy.»'
+            },
+            copies: {
+                emotional: 'Pureza y balance. 🤍 Diseñamos este ramo monocromático integrando lirios perfumados y margaritas silvestres. Sin ruidos visuales, solo la textura de la naturaleza y una fragancia sutil que pacifica cualquier habitación. ✨',
+                fun: 'Minimalismo floral para los que le temen al exceso de colores. 🤭 Un ramo 100% blanco que grita elegancia nórdica y huele a paraíso. Ideal para regalar a ese amigo/a de gustos hiper finos.',
+                sales: '✨ Colección Lujo Silencioso ✨. Agregá luz a tus ambientes con nuestro ramo premium Nube Blanca. Hecho con flores de corte seleccionadas a mano. Pedilo en la web con envío gratis en la zona. 🚚'
+            },
+            ctas: {
+                emotional: 'Reservá un momento de serenidad. Tocá el enlace de la bio.',
+                fun: 'Dejanos un emoji blanco 🤍 si sos fan de este estilo.',
+                sales: 'Comprá hoy mismo y programá tu entrega para el fin de semana.'
+            },
+            hashtags: ['minimalismofloral', 'floresblancas', 'decoracionpremium', 'lujosilencioso', 'ramosesteticos']
+        },
+        {
+            id: 'roll-13',
+            title: '🌾 Colgante DIY de Flores Secas',
+            category: 'Tutorial / Manualidades',
+            whyRecommended: 'Fomenta el concepto de diseño duradero y genera guardados por ser un tutorial paso a paso visual.',
+            music: 'Folk rústico acústico e instrumental',
+            steps: [
+                { shot: 'Plano medio', description: 'Una rama seca bonita de árbol y cordeles finos de yute.', duration: '4s' },
+                { shot: 'Plano detalle dedos', description: 'Atar pequeños ramilletes de lavanda seca y asters boca abajo a lo largo de la rama.', duration: '5s' },
+                { shot: 'Plano general final', description: 'Colgar el móvil rústico en una pared neutra o puerta de entrada.', duration: '3s' }
+            ],
+            hooks: {
+                emotional: '«Traé un pedacito de bosque a tu pared con esta manualidad rústica que dura para siempre...»',
+                fun: '«Mi nuevo proyecto de domingo para ocultar que la pared de mi cuarto está vacía 😂. Quedó genial...»',
+                sales: '«Kit Colgante DIY: Te enviamos la rama de pino pulida, yute y flores secas de lavanda listas para armar.»'
+            },
+            copies: {
+                emotional: 'Móviles de naturaleza para tu hogar. 🌾🏡 Armar un colgante rústico con lavanda y flores secas no solo aromatiza tu espacio, sino que te brinda un momento de desconexión y creación manual. El arte de habitar con calma.',
+                fun: 'Terapia de domingo: atar flores a una rama y fingir que tengo mi vida resuelta. 🤭😂 Pero en serio, este móvil de lavanda seca perfuma toda la entrada de casa y se ve súper Pinterest. ¿Qué opinan?',
+                sales: '¡Lanzamos el Kit Creativo DIY! 🎨💐 Incluye todo lo necesario para diseñar tu colgante de pared rústico en casa: flores secas surtidas, rama curada de pino e hilo de yute. Encargalo hoy en la tienda con 10% OFF.'
+            },
+            ctas: {
+                emotional: 'Guardá este Reel para cuando tengas una tarde libre y quieras crear.',
+                fun: 'Comentá "KIT" y te mandamos el catálogo de flores secas sueltas.',
+                sales: 'Hacé tu pedido del kit creativo hoy tocando el botón.'
+            },
+            hashtags: ['colgantediy', 'floressecas', 'manualidadesrusticas', 'hechoamano', 'pintereststyle']
+        },
+        {
+            id: 'roll-14',
+            title: '✍️ Flores & Caligrafía Emotiva',
+            category: 'Aesthetic / Detrás de escena',
+            whyRecommended: 'La escritura manual fluida y estética es súper relajante y fomenta el valor de los regalos.',
+            music: 'Piano clásico muy suave e instrumental',
+            steps: [
+                { shot: 'Plano cenital', description: 'Una tarjeta rústica de papel kraft al lado de pétalos sueltos de rosas y asters.', duration: '3s' },
+                { shot: 'Plano macro de pluma', description: 'Una mano escribiendo con caligrafía elegante una dedicatoria emotiva en la tarjeta.', duration: '6s' },
+                { shot: 'Plano de cierre', description: 'Colocar la tarjeta caligrafiada en medio del ramo de diseño listo para entrega.', duration: '3s' }
+            ],
+            hooks: {
+                emotional: '«En la era de los mensajes de texto fríos, una carta escrita a mano y rodeada de flores vale el triple...»',
+                fun: '«Mi caligrafía parece de médico de guardia 😂, pero por suerte en el local tenemos a un artista escribiendo sus dedicatorias...»',
+                sales: '«Hacemos tus dedicatorias premium escritas a mano con tinta caligráfica sin cargo adicional en tu pedido hoy.»'
+            },
+            copies: {
+                emotional: 'El peso de las palabras. 📝❤️ Creemos que un regalo floral está incompleto sin una dedicatoria sincera. Por eso, en nuestro taller escribimos cada tarjeta a mano con pluma y caligrafía clásica, cuidando que tu mensaje llegue tan profundo como el perfume de las flores.',
+                fun: 'Escribir a mano en 2026 es casi un deporte extremo. 😂 Pero ver la cara de emoción al recibir una tarjeta dedicada con puño y letra es irremplazable. Prometemos que nuestra caligrafía es de cuento de hadas.',
+                sales: '✨ Personalización Premium Total ✨. Sorprendé a la distancia con un ramo de diseño y una tarjeta dedicatoria manuscrita totalmente de cortesía. Encargá seguro en nuestra tienda online. 🚚💌'
+            },
+            ctas: {
+                emotional: 'Coordiná tu envío hoy y déjanos el texto de tu dedicatoria especial.',
+                fun: 'Dejanos un emoji de lápiz ✍️ si vos también preferís las cartas de antes.',
+                sales: 'Canjeá tu tarjeta caligráfica gratis encargando tu ramo en la web hoy.'
+            },
+            hashtags: ['caligrafia', 'tarjetasdedicatorias', 'cartasamano', 'ramospremium', 'sorpresas']
+        },
+        {
+            id: 'roll-15',
+            title: '🧹 Expectativa vs. Realidad de Florista',
+            category: 'Comedia / Humor Real',
+            whyRecommended: 'Humaniza la marca, divierte al público y genera empatía inmediata con tus clientes.',
+            music: 'Música de comedia / transición rápida',
+            steps: [
+                { shot: 'Plano de expectativa', description: 'Tú sosteniendo un ramo estético impecable con una sonrisa perfecta y música lofi.', duration: '4s' },
+                { shot: 'Transición abrupta (Realidad)', description: 'Barriendo una montaña de hojas secas del piso por décima vez en el día con pelo despeinado.', duration: '5s' },
+                { shot: 'Plano cómico de suspiro', description: 'Tomando café frío de una taza rodeado de espinas de rosa y sonriendo con resignación.', duration: '3s' }
+            ],
+            hooks: {
+                emotional: '«Detrás de cada post estético de Instagram, hay horas de trabajo duro y pasión botánica...»',
+                fun: '«Expectativa: Ser florista es súper estético y tranquilo. Realidad: Espinas clavadas en los dedos y barriendo hojas sin parar 😂...»',
+                sales: '«Amamos el desorden de nuestro taller porque el resultado es siempre perfecto para vos. Mirá nuestros ramos listos hoy...»'
+            },
+            copies: {
+                emotional: 'El amor detrás del desorden. 🌿 Detrás de cada reel estético con música de violines, hay un equipo con espinas en las manos, barriendo el piso y cargando baldes pesados de agua. Es el trabajo duro que nos apasiona hacer para llenar sus casas de sonrisas.',
+                fun: 'Spoiler: el glamour floral no viene incluido con la escoba. 🧹😂 Si pensabas que nos pasábamos el día oliendo rosas con vestidos de lino, lamento desilusionarte. Pero el café frío en este taller tiene sabor a gloria floral.',
+                sales: '¡Trabajamos con pasión real! 🎉 Diseñamos arreglos florales únicos cuidando cada detalle del detrás de escena para que a tu casa llegue solo la perfección absoluta. Encargá el tuyo online hoy con envío rápido.'
+            },
+            ctas: {
+                emotional: 'Dejanos un mensaje de aliento para nuestro equipo de diseño.',
+                fun: 'Comentá con un emoji cómico si te divertiste con nuestra realidad.',
+                sales: 'Comprá hoy mismo y apoya al trabajo artesanal de nuestro local.'
+            },
+            hashtags: ['expectativavsrealidad', 'humorflorista', 'detrásdeescena', 'tallerbotanico', 'vidadelocal']
+        },
+        {
+            id: 'roll-16',
+            title: '💻 El Ramillete Escritorio Alegre (Home Office)',
+            category: 'Aesthetic / Productividad',
+            whyRecommended: 'Atrae a clientes de oficina / home office que quieren mejorar la vibra y el diseño de su zona de trabajo.',
+            music: 'Chill Lofi Beats moderno',
+            steps: [
+                { shot: 'Plano subjetivo', description: 'Un escritorio de oficina aburrido lleno de cables, cuadernos y carpetas.', duration: '3s' },
+                { shot: 'Plano de colocación', description: 'Colocar un pequeño florero con asters morados y una ramita de eucalipto fresco al lado del monitor.', duration: '5s' },
+                { shot: 'Plano general estético', description: 'La luz de la pantalla iluminando las flores, creando un espacio de trabajo alegre y renovado.', duration: '4s' }
+            ],
+            hooks: {
+                emotional: '«Tu zona de home office no tiene por qué sentirse fría y corporativa... dale vida a tu día laboral...»',
+                fun: '«Estudios científicos inventados por mí confirman que mirar un aster morado mientras tu jefe te manda un mail molesto reduce el enojo un 80% 😂...»',
+                sales: '«Lanzamos el Set Productivo: Mini florero de cerámica + manojo de flores de oficina de larga duración por un precio mínimo hoy.»'
+            },
+            copies: {
+                emotional: 'Productividad botánica. 💻🌿 Rodearse de elementos naturales en tu zona de trabajo no solo alegra el espacio, sino que reduce la fatiga visual y promueve la concentración. Dale a tu rutina diaria laboral un respiro de perfume a campo.',
+                fun: '¿Días de home office interminables frente al monitor? 🖥️ Margaritas y eucalipto al rescate. El hack definitivo para fingir que tenés tu oficina de diseño nórdico súper controlada. Contanos: ¿flores en tu escritorio sí o no? 👇',
+                sales: '✨ Colección Home Office 2026 ✨. Diseñamos ramilletes compactos de flores súper duraderas en agua que no molestan con los cables y alegran tu espacio de trabajo diario. Compralo hoy con entrega rápida en la bio.'
+            },
+            ctas: {
+                emotional: 'Guardá esta idea para cuando reacomodes tu escritorio de oficina.',
+                fun: 'Etiquetá a tu compañero/a de trabajo que necesita un poco de vida en su mesa.',
+                sales: 'Pedí tu ramillete de escritorio hoy y cambiale la cara a tu jornada.'
+            },
+            hashtags: ['homeoffice', 'escritoriocreativo', 'productividad', 'decoraciondeoficina', 'margaritasilvestre']
+        }
+    ];
+
+    // Tirar el Dado de Inspiración Infinita
+    const handleRollDice = () => {
+        if (isRolling) return;
+        setIsRolling(true);
+
+        // Simular tirada animada de dado
+        setTimeout(() => {
+            const randomIndex = Math.floor(Math.random() * ROLLED_IDEAS.length);
+            setRolledIdea(ROLLED_IDEAS[randomIndex]);
+            setIsRolling(false);
+
+            // Incrementar contador de dados
+            const newCount = rollCount + 1;
+            setRollCount(newCount);
+            localStorage.setItem('floriai_roll_count', newCount.toString());
+
+            // Medalla de Inspiración Infinita si llega a 5
+            if (newCount >= 5) {
+                triggerUnlock('dice_roll');
+            }
+        }, 1200);
+    };
+
+    // Agregar o quitar favoritos
+    const handleToggleFavorite = (item: any, type: 'sugerencia' | 'dado') => {
+        const itemWithMeta = {
+            ...item,
+            favType: type,
+            savedAt: new Date().toLocaleDateString('es-AR')
+        };
+        const exists = favorites.some(fav => fav.id === item.id);
+        let updated;
+
+        if (exists) {
+            updated = favorites.filter(fav => fav.id !== item.id);
+        } else {
+            updated = [...favorites, itemWithMeta];
+        }
+
+        setFavorites(updated);
+        localStorage.setItem('floriai_favorites', JSON.stringify(updated));
+
+        // Toast de guardado
+        setCopiedTextType(exists ? 'fav-removed' : 'fav-saved');
+        setTimeout(() => setCopiedTextType(null), 2000);
+    };
+
+    // Respuestas Sugeridas del Community Manager
+    const activeCMReplies = useMemo(() => {
+        if (cmSelectedPreset === 'custom') {
+            if (!cmCustomText.trim()) return null;
+            return {
+                emotional: `¡Hola! ❤️ Qué lindo tu mensaje. Nos encanta que conectes con nuestras flores de esta manera. Respecto a lo que nos comentás: "${cmCustomText}", estamos súper predispuestos a ayudarte de forma totalmente personalizada. ¡Escribinos por privado para charlarlo mejor!`,
+                funny: `¡Hola! 😄 ¡Qué gran consulta! Sobre "${cmCustomText}": nos pusimos a charlar con los girasoles del local y están 100% de acuerdo en que es una genialidad. Hablemos por privado para coordinar todos los detalles divertidos.`,
+                sales: `¡Hola! ✨ Muchas gracias por consultarnos. Respecto a "${cmCustomText}", te cuento que tenemos promociones espectaculares activas y stock disponible para entrega inmediata hoy mismo. ¡Escribinos por MD o WhatsApp para resolverlo ya!`
+            };
+        }
+        const preset = CM_PRESETS.find(p => p.id === cmSelectedPreset);
+        return preset ? preset.replies : null;
+    }, [cmSelectedPreset, cmCustomText]);
+
+    // Triggerear Mente Abierta (Cross Inspiration)
+    const handleExploreCrossInspiration = (rubro: string) => {
+        triggerUnlock('cross_inspiration');
+        setCopiedTextType(`cross-${rubro}`);
+        setTimeout(() => setCopiedTextType(null), 3000);
+    };
+
     return (
         <div className="marketing-ai-page">
             {/* Cabecera Premium */}
@@ -494,26 +1174,25 @@ export const MarketingAI: React.FC = () => {
                 <div className="title-section">
                     <div className="title-badge">
                         <Sparkles size={16} />
-                        <span>FloriAI Copiloto</span>
+                        <span>FloriAI Copiloto v2.5</span>
                     </div>
                     <h1>Copiloto de Marketing & Asistente Creativo</h1>
-                    <p>Tu community manager, asesor de ventas y motor de campañas alimentado por el stock de tu florería.</p>
+                    <p>Tu community manager, director de reels y planificador inteligente alimentado por el stock real de tu florería.</p>
                 </div>
             </div>
 
             {/* Layout Principal de Dos Columnas */}
             <div className="marketing-content-grid">
                 
-                {/* COLUMNA IZQUIERDA: Herramientas y Pestañas */}
+                {/* COLUMNA IZQUIERDA: Herramientas y Pestañas de Navegación de Roles */}
                 <div className="marketing-tools-container">
-                    {/* Barra de Navegación de Pestañas */}
                     <div className="marketing-tabs">
                         <button 
                             className={`tab-btn ${activeTab === 'today' ? 'active' : ''}`}
                             onClick={() => setActiveTab('today')}
                         >
                             <Calendar size={18} />
-                            <span>Qué hacer hoy</span>
+                            <span>Hoy / Asesor</span>
                             <span className="badge-count">3</span>
                         </button>
                         <button 
@@ -521,37 +1200,61 @@ export const MarketingAI: React.FC = () => {
                             onClick={() => setActiveTab('reels')}
                         >
                             <Camera size={18} />
-                            <span>Estudio de Reels</span>
+                            <span>Reels / Director</span>
                         </button>
                         <button 
                             className={`tab-btn ${activeTab === 'promos' ? 'active' : ''}`}
                             onClick={() => setActiveTab('promos')}
                         >
                             <ShoppingBag size={18} />
-                            <span>Generador de Combos</span>
+                            <span>Combos / Analista</span>
+                        </button>
+                        <button 
+                            className={`tab-btn ${activeTab === 'cm-replies' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('cm-replies')}
+                        >
+                            <Send size={18} />
+                            <span>Respuestas CM</span>
+                        </button>
+                        <button 
+                            className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('calendar')}
+                        >
+                            <Calendar size={18} />
+                            <span>Calendario</span>
+                        </button>
+                        <button 
+                            className={`tab-btn ${activeTab === 'cross-inspiration' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('cross-inspiration')}
+                        >
+                            <Compass size={18} />
+                            <span>Inspiración Cruzada</span>
                         </button>
                         <button 
                             className={`tab-btn ${activeTab === 'garden' ? 'active' : ''}`}
                             onClick={() => setActiveTab('garden')}
                         >
                             <Award size={18} />
-                            <span>Mi Jardín Digital</span>
+                            <span>Jardín & Logros</span>
                         </button>
                     </div>
 
-                    {/* CONTENIDO DE PESTAÑA: QUÉ HACER HOY */}
+                    {/* TABS CONTENIDOS */}
+
+                    {/* TAB 1: HOY / ASESOR */}
                     {activeTab === 'today' && (
                         <div className="tab-pane animate-fade-in">
                             <div className="pane-header">
                                 <h2>📋 Tu rutina de crecimiento de hoy</h2>
-                                <p>Sugerencias personalizadas basadas en el inventario real y los clientes de tu tienda para generar hábito y traccionar ventas diarias.</p>
+                                <p>Sugerencias personalizadas en base a tu stock e inventario en tiempo real para generar hábito y traccionar ventas diarias.</p>
                             </div>
 
-                            {/* Tarjetas de Prioridad / Listado */}
+                            {/* Sugerencias Heurísticas */}
                             <div className="suggestions-list">
                                 {suggestions.map((sug) => {
                                     const isSelected = currentSuggestion?.id === sug.id;
                                     const isCompleted = completedSuggestions.includes(sug.id);
+                                    const isFav = favorites.some(fav => fav.id === sug.id);
 
                                     return (
                                         <div 
@@ -559,10 +1262,21 @@ export const MarketingAI: React.FC = () => {
                                             className={`suggestion-card border-priority-${sug.priority} ${isSelected ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
                                             onClick={() => setSelectedSuggestion(sug)}
                                         >
-                                            <div className="suggestion-status-indicator">
-                                                {sug.priority === 'urgent' && <span className="status-badge urgent">🔴 Urgente</span>}
-                                                {sug.priority === 'recommended' && <span className="status-badge recommended">🟡 Recomendado</span>}
-                                                {sug.priority === 'opportunity' && <span className="status-badge opportunity">🟢 Oportunidad</span>}
+                                            <div className="suggestion-status-indicator flex justify-between items-center">
+                                                <div>
+                                                    {sug.priority === 'urgent' && <span className="status-badge urgent">🔴 Urgente</span>}
+                                                    {sug.priority === 'recommended' && <span className="status-badge recommended">🟡 Recomendado</span>}
+                                                    {sug.priority === 'opportunity' && <span className="status-badge opportunity">🟢 Oportunidad</span>}
+                                                </div>
+                                                <button 
+                                                    className={`fav-btn-bubble ${isFav ? 'active' : ''}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleToggleFavorite(sug, 'sugerencia');
+                                                    }}
+                                                >
+                                                    <Heart size={16} fill={isFav ? '#e11d48' : 'none'} />
+                                                </button>
                                             </div>
                                             <div className="suggestion-card-header">
                                                 <span className="material-symbols-rounded sug-icon">{sug.icon}</span>
@@ -581,44 +1295,45 @@ export const MarketingAI: React.FC = () => {
                                 })}
                             </div>
 
-                            {/* Detalle Ampliado de la Sugerencia Seleccionada */}
+                            {/* Detalle Ampliado de Sugerencia Seleccionada */}
                             {currentSuggestion && (
                                 <div className="suggestion-details-card glass-panel mt-6">
                                     <div className="sug-details-header">
                                         <div className="sug-details-title-row">
                                             <span className="material-symbols-rounded header-icon">{currentSuggestion.icon}</span>
                                             <div>
-                                                <h3>Detalles de la Sugerencia Creativa</h3>
+                                                <h3>{currentSuggestion.title}</h3>
                                                 <p className="sug-accent-reason">{currentSuggestion.reason}</p>
                                             </div>
                                         </div>
-                                        <button 
-                                            className={`complete-task-btn ${completedSuggestions.includes(currentSuggestion.id) ? 'done' : ''}`}
-                                            onClick={() => handleCompleteSuggestion(currentSuggestion.id, currentSuggestion.title)}
-                                            disabled={completedSuggestions.includes(currentSuggestion.id)}
-                                        >
-                                            {completedSuggestions.includes(currentSuggestion.id) ? (
-                                                <>
-                                                    <BookmarkCheck size={18} />
-                                                    <span>¡Completado! +15 XP</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Check size={18} />
-                                                    <span>Marcar como Hecho (+15 XP)</span>
-                                                </>
-                                            )}
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                className={`complete-task-btn ${completedSuggestions.includes(currentSuggestion.id) ? 'done' : ''}`}
+                                                onClick={() => handleCompleteSuggestion(currentSuggestion.id, currentSuggestion.title)}
+                                                disabled={completedSuggestions.includes(currentSuggestion.id)}
+                                            >
+                                                {completedSuggestions.includes(currentSuggestion.id) ? (
+                                                    <>
+                                                        <BookmarkCheck size={18} />
+                                                        <span>¡Completado! +15 XP</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Check size={18} />
+                                                        <span>Marcar como Hecho (+15 XP)</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    {/* Información Principal de la Idea */}
                                     <div className="suggestion-info-blocks">
                                         <div className="info-block">
                                             <strong>💡 La Idea</strong>
                                             <p>{currentSuggestion.details.idea}</p>
                                         </div>
                                         <div className="info-block">
-                                            <strong>🎯 Objetivo Comercial</strong>
+                                            <strong>🎯 Objetivo</strong>
                                             <p>{currentSuggestion.details.objective}</p>
                                         </div>
                                         <div className="info-block">
@@ -639,148 +1354,169 @@ export const MarketingAI: React.FC = () => {
                                         {currentSuggestion.palette && (
                                             <div className="meta-badge color-palette-badge">
                                                 <Palette size={16} />
-                                                <span>Paleta sugerida: <strong>{currentSuggestion.palette.name}</strong></span>
+                                                <span>Paleta: <strong>{currentSuggestion.palette.name}</strong></span>
                                                 <div className="palette-preview-dots">
                                                     {currentSuggestion.palette.colors.slice(0, 3).map((col, idx) => (
-                                                        <span key={idx} className="color-dot" style={{ backgroundColor: col }} title={col} />
+                                                        <span key={idx} className="color-dot" style={{ backgroundColor: col }} />
                                                     ))}
                                                 </div>
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Guía de Grabación Paso a Paso */}
-                                    <div className="creative-guide-section mt-6">
-                                        <h4>🎥 Guía de Grabación Paso a Paso (Storyboarding)</h4>
-                                        <p className="music-recommendation">🎵 Música recomendada: <strong>{currentSuggestion.details.recordingGuide.music}</strong></p>
-                                        
-                                        <div className="storyboard-timeline">
-                                            {currentSuggestion.details.recordingGuide.steps.map((step, index) => (
-                                                <div key={index} className="storyboard-step">
-                                                    <div className="step-number">{index + 1}</div>
-                                                    <div className="step-content">
-                                                        <div className="step-shot-type">{step.shot} <span className="step-duration">({step.duration})</span></div>
-                                                        <p className="step-desc">{step.description}</p>
-                                                    </div>
+                                    {/* Copies & Generador de Textos */}
+                                    <div className="copywriter-section">
+                                        <div className="copywriter-header">
+                                            <h4>✍️ Generador de Textos en Múltiples Tonos</h4>
+                                            <div className="tone-selector">
+                                                {['emotional', 'fun', 'educational', 'sales'].map(t => (
+                                                    <button 
+                                                        key={t}
+                                                        className={`tone-btn ${selectedTone === t ? 'active' : ''}`}
+                                                        onClick={() => setSelectedTone(t)}
+                                                    >
+                                                        <span>{t === 'emotional' ? '❤️ Emocional' : t === 'fun' ? '😂 Divertido' : t === 'educational' ? '📖 Educativo' : '💰 Ventas'}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="copy-blocks-grid">
+                                            <div className="copy-block-card">
+                                                <div className="copy-card-header">
+                                                    <span>🔥 Gancho / Hook</span>
+                                                    <button className="copy-text-btn" onClick={() => handleCopyToClipboard(currentSuggestion.details.hooks[selectedTone] || '', 'hook')}>
+                                                        {copiedTextType === 'hook' ? <Check size={16} /> : <Copy size={16} />}
+                                                        <span>Copiar</span>
+                                                    </button>
                                                 </div>
-                                            ))}
+                                                <p className="copy-text-content">"{currentSuggestion.details.hooks[selectedTone]}"</p>
+                                            </div>
+
+                                            <div className="copy-block-card">
+                                                <div className="copy-card-header">
+                                                    <span>📝 Caption Principal</span>
+                                                    <button className="copy-text-btn" onClick={() => handleCopyToClipboard(currentSuggestion.details.copies[selectedTone] || '', 'copy')}>
+                                                        {copiedTextType === 'copy' ? <Check size={16} /> : <Copy size={16} />}
+                                                        <span>Copiar</span>
+                                                    </button>
+                                                </div>
+                                                <p className="copy-text-content pre-wrap">{currentSuggestion.details.copies[selectedTone]}</p>
+                                            </div>
                                         </div>
                                     </div>
+                                </div>
+                            )}
 
-                                    {/* Redacción y Copies con Selector de Tono */}
-                                    <div className="copywriter-section mt-6">
-                                        <div className="copywriter-header">
-                                            <h4>✍️ Generador de Textos & Copies Inteligentes</h4>
-                                            
-                                            {/* Selector de Tono de Voz */}
-                                            <div className="tone-selector">
+                            {/* 🎲 SECCIÓN DADO DE LA INSPIRACIÓN INFINITA */}
+                            <div className="dice-inspiration-card glass-panel mt-8 text-center p-6">
+                                <div className="rainbow-glow-border"></div>
+                                <span className="badge badge-accent mx-auto mb-2">🎲 GENERADOR INFINITO</span>
+                                <h3>Dado de la Inspiración Infinita</h3>
+                                <p className="text-small text-muted max-w-md mx-auto mb-6">
+                                    ¿Te quedaste sin ideas creativas para hoy? Tirás el dado estético y FloriAI seleccionará uno de los 16 guiones hiper-específicos del rubro floral.
+                                </p>
+                                
+                                <button 
+                                    className={`dice-roll-btn ${isRolling ? 'rolling' : ''}`}
+                                    onClick={handleRollDice}
+                                    disabled={isRolling}
+                                >
+                                    <Dices size={24} />
+                                    <span>{isRolling ? 'Sorteando Ideas...' : 'Tirar Dado Creativo'}</span>
+                                </button>
+
+                                {rolledIdea && !isRolling && (
+                                    <div className="rolled-idea-display-card animate-fade-in mt-6 p-4 text-left border border-primary rounded-xl bg-surface relative">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <span className="badge badge-primary">{rolledIdea.category}</span>
+                                            <div className="flex gap-2">
                                                 <button 
-                                                    className={`tone-btn ${selectedTone === 'emotional' ? 'active' : ''}`}
-                                                    onClick={() => setSelectedTone('emotional')}
+                                                    className="fav-btn-bubble"
+                                                    onClick={() => handleToggleFavorite(rolledIdea, 'dado')}
                                                 >
-                                                    <Heart size={14} />
-                                                    <span>Emocional</span>
+                                                    <Heart size={16} fill={favorites.some(fav => fav.id === rolledIdea.id) ? '#e11d48' : 'none'} />
                                                 </button>
                                                 <button 
-                                                    className={`tone-btn ${selectedTone === 'fun' ? 'active' : ''}`}
-                                                    onClick={() => setSelectedTone('fun')}
+                                                    className="btn-copy-all text-micro flex items-center gap-1"
+                                                    onClick={() => handleCopyToClipboard(rolledIdea.copies.emotional, 'rolled-copy')}
                                                 >
-                                                    <Smile size={14} />
-                                                    <span>Divertido</span>
-                                                </button>
-                                                <button 
-                                                    className={`tone-btn ${selectedTone === 'educational' ? 'active' : ''}`}
-                                                    onClick={() => setSelectedTone('educational')}
-                                                >
-                                                    <BookOpen size={14} />
-                                                    <span>Educativo</span>
-                                                </button>
-                                                <button 
-                                                    className={`tone-btn ${selectedTone === 'sales' ? 'active' : ''}`}
-                                                    onClick={() => setSelectedTone('sales')}
-                                                >
-                                                    <Coins size={14} />
-                                                    <span>Vendedor</span>
+                                                    {copiedTextType === 'rolled-copy' ? <Check size={14} /> : <Copy size={14} />}
+                                                    <span>Copiar Copy</span>
                                                 </button>
                                             </div>
                                         </div>
-
-                                        {/* Bloques de Texto Listos para Copiar */}
-                                        <div className="copy-blocks-grid">
-                                            {/* Gancho / Hook */}
-                                            <div className="copy-block-card">
-                                                <div className="copy-card-header">
-                                                    <span>🔥 Hook / Frase de Gancho</span>
-                                                    <button 
-                                                        className="copy-text-btn"
-                                                        onClick={() => handleCopyToClipboard(currentSuggestion.details.hooks[selectedTone] || '', 'hook')}
-                                                    >
-                                                        {copiedTextType === 'hook' ? <Check size={16} className="text-success" /> : <Copy size={16} />}
-                                                        <span>{copiedTextType === 'hook' ? 'Copiado' : 'Copiar'}</span>
-                                                    </button>
-                                                </div>
-                                                <p className="copy-text-content">"{currentSuggestion.details.hooks[selectedTone] || 'Cargando hook...'}"</p>
-                                            </div>
-
-                                            {/* Copy Principal */}
-                                            <div className="copy-block-card">
-                                                <div className="copy-card-header">
-                                                    <span>📝 Descripción / Caption del Post</span>
-                                                    <button 
-                                                        className="copy-text-btn"
-                                                        onClick={() => handleCopyToClipboard(currentSuggestion.details.copies[selectedTone] || '', 'copy')}
-                                                    >
-                                                        {copiedTextType === 'copy' ? <Check size={16} className="text-success" /> : <Copy size={16} />}
-                                                        <span>{copiedTextType === 'copy' ? 'Copiado' : 'Copiar'}</span>
-                                                    </button>
-                                                </div>
-                                                <p className="copy-text-content pre-wrap">{currentSuggestion.details.copies[selectedTone] || 'Cargando copy...'}</p>
-                                            </div>
-
-                                            {/* Llamado a la Acción / CTA */}
-                                            <div className="copy-block-card">
-                                                <div className="copy-card-header">
-                                                    <span>🎯 Llamado a la Acción (CTA)</span>
-                                                    <button 
-                                                        className="copy-text-btn"
-                                                        onClick={() => handleCopyToClipboard(currentSuggestion.details.ctas[selectedTone] || '', 'cta')}
-                                                    >
-                                                        {copiedTextType === 'cta' ? <Check size={16} className="text-success" /> : <Copy size={16} />}
-                                                        <span>{copiedTextType === 'cta' ? 'Copiado' : 'Copiar'}</span>
-                                                    </button>
-                                                </div>
-                                                <p className="copy-text-content">"{currentSuggestion.details.ctas[selectedTone] || 'Cargando CTA...'}"</p>
-                                            </div>
-
-                                            {/* Hashtags Botánicos */}
-                                            <div className="copy-block-card">
-                                                <div className="copy-card-header">
-                                                    <span>#️⃣ Hashtags Recomendados</span>
-                                                    <button 
-                                                        className="copy-text-btn"
-                                                        onClick={() => handleCopyToClipboard(currentSuggestion.details.hashtags.map(h => `#${h}`).join(' '), 'hashtags')}
-                                                    >
-                                                        {copiedTextType === 'hashtags' ? <Check size={16} className="text-success" /> : <Copy size={16} />}
-                                                        <span>{copiedTextType === 'hashtags' ? 'Copiado' : 'Copiar'}</span>
-                                                    </button>
-                                                </div>
-                                                <p className="copy-text-content text-muted">
-                                                    {currentSuggestion.details.hashtags.map(h => `#${h}`).join(' ')}
-                                                </p>
-                                            </div>
+                                        <h4 className="font-bold text-lg text-primary">{rolledIdea.title}</h4>
+                                        <p className="text-small text-muted mb-4">{rolledIdea.whyRecommended}</p>
+                                        
+                                        <div className="p-3 bg-background rounded-lg border mb-4">
+                                            <strong className="text-micro text-primary uppercase">Guía rápida de grabación:</strong>
+                                            <ul className="list-disc pl-4 text-small text-muted mt-2 space-y-1">
+                                                {rolledIdea.steps.map((st: any, idx: number) => (
+                                                    <li key={idx}><strong>{st.shot}</strong>: {st.description}</li>
+                                                ))}
+                                            </ul>
                                         </div>
+
+                                        <div className="p-3 bg-surface border rounded-lg">
+                                            <strong className="text-micro text-primary uppercase block mb-1">Textos Sugeridos:</strong>
+                                            <p className="text-small"><strong>Hook:</strong> "{rolledIdea.hooks.emotional}"</p>
+                                            <p className="text-small mt-1"><strong>Copy:</strong> {rolledIdea.copies.emotional.slice(0, 100)}...</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 💖 GRID DE FAVORITOS Y GUARDADOS */}
+                            {favorites.length > 0 && (
+                                <div className="favorites-shelf-container glass-panel mt-8 p-6">
+                                    <h3 className="flex items-center gap-2 mb-4">
+                                        <Heart size={20} fill="#e11d48" color="#e11d48" />
+                                        <span>Tus Ideas Guardadas & Favoritas ({favorites.length})</span>
+                                    </h3>
+                                    <div className="favorites-grid">
+                                        {favorites.map((fav) => (
+                                            <div key={fav.id} className="fav-card p-4 rounded-xl border bg-surface">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-micro text-muted font-bold">Guardado el {fav.savedAt}</span>
+                                                    <button 
+                                                        className="text-danger flex items-center gap-1"
+                                                        onClick={() => handleToggleFavorite(fav, fav.favType)}
+                                                    >
+                                                        <Trash2 size={14} />
+                                                        <span className="text-micro">Quitar</span>
+                                                    </button>
+                                                </div>
+                                                <h4 className="font-bold text-primary">{fav.title}</h4>
+                                                <p className="text-small text-muted line-clamp-2 mt-1">{fav.reason || fav.whyRecommended}</p>
+                                                <button 
+                                                    className="btn btn-secondary btn-sm mt-3 w-full"
+                                                    onClick={() => {
+                                                        if (fav.favType === 'sugerencia') {
+                                                            setSelectedSuggestion(fav);
+                                                            setActiveTab('today');
+                                                        } else {
+                                                            setRolledIdea(fav);
+                                                            setActiveTab('today');
+                                                        }
+                                                    }}
+                                                >
+                                                    Abrir sugerencia
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
                         </div>
                     )}
 
-                    {/* CONTENIDO DE PESTAÑA: ESTUDIO DE REELS */}
+                    {/* TAB 2: REELS / DIRECTOR CREATIVO */}
                     {activeTab === 'reels' && (
                         <div className="tab-pane animate-fade-in">
                             <div className="pane-header">
                                 <h2>🎥 Estudio de Creación de Reels</h2>
-                                <p>Crea guiones cinematográficos estéticos para cualquier flor de tu catálogo. Elegí un producto real y adaptá el guion al instante.</p>
+                                <p>Crea guiones cinematográficos estéticos para cualquier flor de tu catálogo adaptados a tu taller botánico.</p>
                             </div>
 
                             <div className="reels-builder-card glass-panel p-4 mb-6">
@@ -807,7 +1543,6 @@ export const MarketingAI: React.FC = () => {
                                         Este guion ha sido adaptado dinámicamente según la frescura y la estética de la flor seleccionada. Utilizalo para grabar con tu celular directamente en el taller de la florería.
                                     </p>
 
-                                    {/* storyboard resumido */}
                                     <div className="storyboard-steps-compact">
                                         <div className="compact-step">
                                             <strong>🎬 Hook Visual (1-3 seg):</strong> Plano de súper detalle mostrando la caída de gotas de agua sobre los pétalos de {customPromoProduct || 'las flores'}.
@@ -820,7 +1555,7 @@ export const MarketingAI: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    {/* visual Instagram Grid Mockup */}
+                                    {/* Instagram Feed Mockup */}
                                     <div className="grid-instagram-mockup-wrapper mt-6">
                                         <h5 className="font-bold text-micro text-muted flex items-center gap-1 mb-2">
                                             <Instagram size={14} />
@@ -851,7 +1586,7 @@ export const MarketingAI: React.FC = () => {
                         </div>
                     )}
 
-                    {/* CONTENIDO DE PESTAÑA: GENERADOR DE COMBOS */}
+                    {/* TAB 3: COMBOS / ANALISTA COMERCIAL */}
                     {activeTab === 'promos' && (
                         <div className="tab-pane animate-fade-in">
                             <div className="pane-header">
@@ -859,7 +1594,6 @@ export const MarketingAI: React.FC = () => {
                                 <p>Combiná de forma automática tus productos con mayor sobrestock para armar ofertas tentadoras y de alta rentabilidad.</p>
                             </div>
 
-                            {/* Controles de Combo */}
                             <div className="combo-generator-card glass-panel p-4 mb-6">
                                 <div className="discount-slider-group mb-6">
                                     <label className="form-label font-bold flex justify-between">
@@ -872,7 +1606,10 @@ export const MarketingAI: React.FC = () => {
                                         max="40" 
                                         step="5"
                                         value={customDiscount}
-                                        onChange={(e) => setCustomDiscount(Number(e.target.value))}
+                                        onChange={(e) => {
+                                            setCustomDiscount(Number(e.target.value));
+                                            handleComboAction();
+                                        }}
                                         className="slider-input w-full"
                                     />
                                 </div>
@@ -911,16 +1648,18 @@ export const MarketingAI: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        {/* whatsapp copy button */}
                                         <div className="whatsapp-blast-section border-t border-border mt-4 pt-4">
                                             <div className="flex justify-between items-center mb-2">
                                                 <span className="font-bold text-small text-muted">Mensaje Listo para Enviar a Clientes (WhatsApp):</span>
                                                 <button 
                                                     className="btn btn-secondary btn-sm flex items-center gap-1"
-                                                    onClick={() => handleCopyToClipboard(suggestedCombo.whatsappText, 'combo')}
+                                                    onClick={() => {
+                                                        handleCopyToClipboard(suggestedCombo.whatsappText, 'combo');
+                                                        handleComboAction();
+                                                    }}
                                                     style={{ minHeight: '36px', padding: '0.5rem 1rem' }}
                                                 >
-                                                    {copiedTextType === 'combo' ? <CheckCircle2 size={16} className="text-success" /> : <Copy size={16} />}
+                                                    {copiedTextType === 'combo' ? <Check size={16} className="text-success" /> : <Copy size={16} />}
                                                     <span>{copiedTextType === 'combo' ? '¡Copiado!' : 'Copiar Mensaje'}</span>
                                                 </button>
                                             </div>
@@ -932,12 +1671,289 @@ export const MarketingAI: React.FC = () => {
                         </div>
                     )}
 
-                    {/* CONTENIDO DE PESTAÑA: MI JARDÍN DIGITAL */}
+                    {/* TAB 4: COMMUNITY MANAGER / SIMULADOR DE COMENTARIOS IA */}
+                    {activeTab === 'cm-replies' && (
+                        <div className="tab-pane animate-fade-in">
+                            <div className="pane-header">
+                                <h2>💬 Community Manager: Simulador de Respuestas Rápidas</h2>
+                                <p>Simulá las consultas de tus clientes y FloriAI redactará respuestas optimizadas en diferentes tonos para copiar al portapapeles al instante.</p>
+                            </div>
+
+                            <div className="cm-simulation-card glass-panel p-6">
+                                <div className="presets-list mb-6">
+                                    <label className="form-label font-bold text-small block mb-2">Seleccioná un Comentario Común de Redes:</label>
+                                    <div className="presets-grid">
+                                        {CM_PRESETS.map((item) => (
+                                            <button 
+                                                key={item.id}
+                                                className={`preset-comment-btn ${cmSelectedPreset === item.id ? 'active' : ''}`}
+                                                onClick={() => {
+                                                    setCmSelectedPreset(item.id);
+                                                    setCmCustomText('');
+                                                }}
+                                            >
+                                                "{item.comment}"
+                                            </button>
+                                        ))}
+                                        <button 
+                                            className={`preset-comment-btn ${cmSelectedPreset === 'custom' ? 'active' : ''}`}
+                                            onClick={() => setCmSelectedPreset('custom')}
+                                        >
+                                            ✏️ Escribir comentario personalizado...
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {cmSelectedPreset === 'custom' && (
+                                    <div className="form-group mb-6 animate-fade-in">
+                                        <label className="form-label text-small font-bold">Escribí tu consulta personalizada de cliente:</label>
+                                        <textarea
+                                            className="form-input w-full p-3 border rounded-xl"
+                                            rows={3}
+                                            value={cmCustomText}
+                                            onChange={(e) => setCmCustomText(e.target.value)}
+                                            placeholder="Ej. Hola! ¿Hacen coronas florales de entierro y cuánto tardan en entregar?"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Chat Mockup View */}
+                                <div className="chat-mockup-wrapper bg-background border rounded-xl p-4 mb-6">
+                                    <div className="chat-bubble customer-bubble bg-surface p-3 rounded-xl max-w-md mb-4 border border-border shadow-sm">
+                                        <span className="text-micro font-bold text-muted block mb-1">Cliente Dice:</span>
+                                        <p className="text-body text-black">
+                                            {cmSelectedPreset === 'custom' ? (cmCustomText || 'Esperando tu consulta...') : (CM_PRESETS.find(p => p.id === cmSelectedPreset)?.comment)}
+                                        </p>
+                                    </div>
+
+                                    {activeCMReplies && (
+                                        <div className="chat-bubble ai-reply-bubble bg-surface-hover p-4 rounded-xl border border-primary relative shadow-md">
+                                            <div className="rainbow-glow-border"></div>
+                                            <div className="flex justify-between items-center mb-3">
+                                                <span className="badge badge-accent flex items-center gap-1">
+                                                    <Sparkles size={12} />
+                                                    <span>FloriAI Respuestas</span>
+                                                </span>
+                                                <div className="tone-selector">
+                                                    {['emotional', 'funny', 'sales'].map((t) => (
+                                                        <button 
+                                                            key={t}
+                                                            className={`tone-btn-micro ${cmSelectedTone === t ? 'active' : ''}`}
+                                                            onClick={() => setCmSelectedTone(t as any)}
+                                                        >
+                                                            <span>{t === 'emotional' ? '❤️ Emocional' : t === 'funny' ? '😂 Divertido' : '💰 Vendedor'}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div className="reply-content-box p-3 bg-surface rounded-lg border mb-3">
+                                                <p className="text-body text-black">
+                                                    {activeCMReplies[cmSelectedTone]}
+                                                </p>
+                                            </div>
+
+                                            <button 
+                                                className="btn btn-primary w-full flex items-center justify-center gap-2"
+                                                onClick={() => handleCopyToClipboard(activeCMReplies[cmSelectedTone], 'cm-copy')}
+                                                style={{ minHeight: '44px' }}
+                                            >
+                                                {copiedTextType === 'cm-copy' ? <Check size={18} /> : <Copy size={18} />}
+                                                <span>{copiedTextType === 'cm-copy' ? '¡Copiado al Portapapeles!' : 'Copiar esta Respuesta'}</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TAB 5: CALENDARIO INTELIGENTE */}
+                    {activeTab === 'calendar' && (
+                        <div className="tab-pane animate-fade-in">
+                            <div className="pane-header">
+                                <h2>📅 Calendario Inteligente & Efemérides de Contenido</h2>
+                                <p>Planificá tus redes y promociones en base a las fechas importantes de floricultura y eventos comerciales de Mayo 2026.</p>
+                            </div>
+
+                            <div className="calendar-panel-grid glass-panel p-6">
+                                <div className="calendar-month-selector text-center mb-6">
+                                    <h3 className="text-xl font-bold text-primary flex items-center justify-center gap-2">
+                                        <Calendar size={20} />
+                                        <span>Mayo 2026</span>
+                                    </h3>
+                                    <p className="text-micro text-muted">Hacé clic en cualquier fecha destacada para ver la sugerencia de marketing.</p>
+                                </div>
+
+                                <div className="calendar-grid-container mb-6">
+                                    {/* Encabezados de días */}
+                                    <div className="calendar-day-headers">
+                                        {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => (
+                                            <div key={d} className="day-header">{d}</div>
+                                        ))}
+                                    </div>
+
+                                    {/* Grilla de celdas */}
+                                    <div className="calendar-grid-cells">
+                                        {/* Celdas vacías de relleno (1 de Mayo fue viernes, por ende 4 vacías) */}
+                                        {Array.from({ length: 4 }).map((_, idx) => (
+                                            <div key={`empty-${idx}`} className="calendar-cell empty"></div>
+                                        ))}
+
+                                        {/* Días del mes (1 al 31) */}
+                                        {Array.from({ length: 31 }).map((_, idx) => {
+                                            const day = idx + 1;
+                                            const isEvent = !!CALENDAR_DATES[day];
+                                            const isSelected = selectedCalDate === day;
+                                            const eventType = isEvent ? CALENDAR_DATES[day].type : null;
+
+                                            return (
+                                                <button 
+                                                    key={day}
+                                                    className={`calendar-cell ${isEvent ? 'has-event' : ''} ${isSelected ? 'selected' : ''} event-${eventType}`}
+                                                    onClick={() => setSelectedCalDate(day)}
+                                                >
+                                                    <span className="day-num">{day}</span>
+                                                    {isEvent && <span className="event-dot"></span>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Detalles de la fecha seleccionada */}
+                                {selectedCalDate && (
+                                    <div className="selected-date-detail-card bg-surface p-4 border rounded-xl animate-fade-in flex flex-col md:flex-row gap-4 justify-between items-start">
+                                        <div>
+                                            <span className="text-micro font-bold uppercase text-primary">Detalle de Fecha: {selectedCalDate} de Mayo 2026</span>
+                                            {CALENDAR_DATES[selectedCalDate] ? (
+                                                <>
+                                                    <h4 className="font-bold text-lg text-primary mt-1">
+                                                        {CALENDAR_DATES[selectedCalDate].type === 'comercial' ? '💰 ' : CALENDAR_DATES[selectedCalDate].type === 'eco' ? '🌱 ' : '💡 '}
+                                                        {CALENDAR_DATES[selectedCalDate].title}
+                                                    </h4>
+                                                    <p className="text-small text-muted mt-2">{CALENDAR_DATES[selectedCalDate].content}</p>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <h4 className="font-bold text-lg text-primary mt-1">🌿 Planificación Floral Semanal</h4>
+                                                    <p className="text-small text-muted mt-2">
+                                                        Día idóneo para postear historias mostrando la llegada de tallos frescos o consejos rápidos de diseño para el hogar.
+                                                    </p>
+                                                </>
+                                            )}
+                                        </div>
+                                        <button 
+                                            className="btn btn-secondary btn-sm flex items-center gap-1 self-end md:self-center"
+                                            onClick={() => handleCopyToClipboard(CALENDAR_DATES[selectedCalDate]?.content || 'Idea de planificación floral.', 'cal-tip')}
+                                        >
+                                            {copiedTextType === 'cal-tip' ? <Check size={14} /> : <Copy size={14} />}
+                                            <span>Copiar Idea</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TAB 6: INSPIRACIÓN CRUZADA */}
+                    {activeTab === 'cross-inspiration' && (
+                        <div className="tab-pane animate-fade-in">
+                            <div className="pane-header">
+                                <h2>🌎 Inspiración Cruzada: Ideas de otros Rubros comerciales</h2>
+                                <p>Aprendé de los sectores de marketing digital más avanzados y traducí exactamente sus conceptos estéticos a tu florería.</p>
+                            </div>
+
+                            <div className="cross-inspiration-grid">
+                                {/* Rubro 1: Café */}
+                                <div className="cross-niche-card glass-panel p-5">
+                                    <div className="niche-header flex justify-between items-center mb-3">
+                                        <span className="niche-badge cafe">☕ CAFETERÍA DE ESPECIALIDAD</span>
+                                        <button 
+                                            className="btn-explore-niche"
+                                            onClick={() => handleExploreCrossInspiration('cafe')}
+                                        >
+                                            Explorar Traducción
+                                        </button>
+                                    </div>
+                                    <h3 className="font-bold text-primary">El Lazo de Seda como Latte Art</h3>
+                                    <p className="text-small text-muted mt-2">
+                                        En el café se graba en cámara súper lenta el vertido de leche espumosa sobre el café.
+                                    </p>
+                                    <div className="translation-box p-3 bg-surface rounded-lg border mt-3 text-small">
+                                        <strong>Traducción a Florería:</strong> Grabá un plano de detalle extremo de tus manos amarrando con un lazo de seda fluida un ramo especial. La caída libre de la cinta simula visualmente la cremosidad de la leche y eleva la estética.
+                                    </div>
+                                </div>
+
+                                {/* Rubro 2: Cosmética */}
+                                <div className="cross-niche-card glass-panel p-5">
+                                    <div className="niche-header flex justify-between items-center mb-3">
+                                        <span className="niche-badge cosmetics">🌿 COSMÉTICA ORGÁNICA</span>
+                                        <button 
+                                            className="btn-explore-niche"
+                                            onClick={() => handleExploreCrossInspiration('cosmetica')}
+                                        >
+                                            Explorar Traducción
+                                        </button>
+                                    </div>
+                                    <h3 className="font-bold text-primary">El Rocío Tacto en Pétalo</h3>
+                                    <p className="text-small text-muted mt-2">
+                                        En cosmética se graba la hidratación extrema y las texturas acuosas fluidas en la piel.
+                                    </p>
+                                    <div className="translation-box p-3 bg-surface rounded-lg border mt-3 text-small">
+                                        <strong>Traducción a Florería:</strong> Usá un atomizador de cobre dorado para rociar agua fina sobre un ramo de rosas importadas a contraluz. Mapeá con el micrófono del celular el sonido de lluvia fina (ASMR).
+                                    </div>
+                                </div>
+
+                                {/* Rubro 3: Interiores */}
+                                <div className="cross-niche-card glass-panel p-5">
+                                    <div className="niche-header flex justify-between items-center mb-3">
+                                        <span className="niche-badge interior">🏡 DISEÑO DE INTERIORES</span>
+                                        <button 
+                                            className="btn-explore-niche"
+                                            onClick={() => handleExploreCrossInspiration('interiores')}
+                                        >
+                                            Explorar Traducción
+                                        </button>
+                                    </div>
+                                    <h3 className="font-bold text-primary">Simetría Zen / Ikebana</h3>
+                                    <p className="text-small text-muted mt-2">
+                                        Se resalta el balance simétrico, el espacio vacío y la colocación en jarrones minimalistas.
+                                    </p>
+                                    <div className="translation-box p-3 bg-surface rounded-lg border mt-3 text-small">
+                                        <strong>Traducción a Florería:</strong> Hacé un tutorial de cómo armar un arreglo floral con la técnica japonesa Ikebana usando asters y ramas secas dobladas. Enfocá tu fondo en una pared lisa de tonos arena para lograr estilo Pinterest.
+                                    </div>
+                                </div>
+
+                                {/* Rubro 4: Moda */}
+                                <div className="cross-niche-card glass-panel p-5">
+                                    <div className="niche-header flex justify-between items-center mb-3">
+                                        <span className="niche-badge fashion">👗 BOUTIQUE DE MODA</span>
+                                        <button 
+                                            className="btn-explore-niche"
+                                            onClick={() => handleExploreCrossInspiration('moda')}
+                                        >
+                                            Explorar Traducción
+                                        </button>
+                                    </div>
+                                    <h3 className="font-bold text-primary">Lookbook de Ramos de Estación</h3>
+                                    <p className="text-small text-muted mt-2">
+                                        Las tiendas de ropa hacen videos rápidos cambiando de outfit para el cambio de temporada.
+                                    </p>
+                                    <div className="translation-box p-3 bg-surface rounded-lg border mt-3 text-small">
+                                        <strong>Traducción a Florería:</strong> Armá un lookbook donde salgas con abrigos invernales de lana sosteniendo diferentes ramos rústicos de otoño que combinen con la ropa. Asocia las flores a un accesorio indispensable.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TAB 7: MI JARDÍN DIGITAL & MEDALLAS */}
                     {activeTab === 'garden' && (
                         <div className="tab-pane animate-fade-in">
                             <div className="pane-header">
                                 <h2>🌱 Mi Jardín Digital & Historial Creativo</h2>
-                                <p>Cuidar tu marketing es como cuidar tu flor favorita: la constancia diaria hace florecer tu negocio. Mirá tu progreso y las campañas completadas.</p>
+                                <p>Cuidar tu marketing es como cuidar tu flor favorita: la constancia hace florecer tu ERP. Mirá tu progreso, XP y logros.</p>
                             </div>
 
                             <div className="garden-status-grid">
@@ -945,9 +1961,40 @@ export const MarketingAI: React.FC = () => {
                                     <span className="material-symbols-rounded trophy-icon">military_tech</span>
                                     <h3>Reglas del Cultivo Digital</h3>
                                     <p className="text-small mt-2">
-                                        Cada sugerencia que marcas como **"Hecho"** en la pestaña principal de **Qué hacer hoy** te otorga **+15 XP** (Puntos de Experiencia). 
-                                        Al llegar a 100 XP, subes de nivel creativo y tu flor crece. ¡Generá el hábito y mirá florecer tu local!
+                                        Cada sugerencia completada en **"Qué hacer hoy"** te otorga **+15 XP**. Al llegar a 100 XP, subes de nivel creativo y tu flor cambia de color y florece. ¡Los logros desbloqueados te premian con **+20 XP** adicionales!
                                     </p>
+                                </div>
+
+                                {/* 🏆 SISTEMA DE MEDALLAS / LOGROS */}
+                                <div className="achievements-section-card glass-panel p-6">
+                                    <h3 className="flex items-center gap-2 mb-4">
+                                        <Award size={20} className="text-accent" />
+                                        <span>Tus Medallas y Logros Creativos</span>
+                                    </h3>
+                                    <div className="achievements-grid">
+                                        {ACHIEVEMENTS.map((ach) => {
+                                            const isUnlocked = unlockedAchievements.includes(ach.id);
+                                            return (
+                                                <div 
+                                                    key={ach.id} 
+                                                    className={`achievement-badge-card ${isUnlocked ? 'unlocked' : 'locked'}`}
+                                                    title={ach.desc}
+                                                >
+                                                    <div className="badge-icon-wrap">
+                                                        <span className="badge-emoji">{ach.icon}</span>
+                                                        {!isUnlocked && <span className="lock-icon">🔒</span>}
+                                                    </div>
+                                                    <h4>{ach.title}</h4>
+                                                    <p className="text-micro text-center text-muted mt-1">{ach.desc}</p>
+                                                    {isUnlocked ? (
+                                                        <span className="badge-status-unlocked text-micro text-success">¡Desbloqueado!</span>
+                                                    ) : (
+                                                        <span className="badge-status-locked text-micro text-muted">Bloqueado</span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
 
                                 <div className="garden-history-card glass-panel p-4">
@@ -979,7 +2026,7 @@ export const MarketingAI: React.FC = () => {
                     )}
                 </div>
 
-                {/* COLUMNA DERECHA: El Corazón Creativo y Gamificado (JARDÍN DIGITAL) */}
+                {/* COLUMNA DERECHA: El Corazón Creativo y Gamificado (JARDÍN DIGITAL SIDEBAR) */}
                 <div className="marketing-dashboard-sidebar">
                     {/* Widget del Estado del Jardín Digital */}
                     <div className="card garden-level-widget glass-panel text-center">
@@ -990,8 +2037,8 @@ export const MarketingAI: React.FC = () => {
                             </span>
                         </div>
 
-                        {/* Dibujo de la Flor Interactiva */}
-                        <div className="flower-interactive-avatar">
+                        {/* Dibujo de la Flor Interactiva con Sway Effect en CSS */}
+                        <div className="flower-interactive-avatar" onClick={() => triggerUnlock('garden_lvl3')}>
                             <div className="sky-particles">
                                 <span className="particle p1">✨</span>
                                 <span className="particle p2">✨</span>
@@ -1003,7 +2050,7 @@ export const MarketingAI: React.FC = () => {
                                     <div className="leaf left-leaf"></div>
                                     <div className="leaf right-leaf"></div>
                                 </div>
-                                {/* La flor en la cima cambando de color según el nivel */}
+                                {/* La flor en la cima cambiando de color según el nivel */}
                                 <div className={`flower-head level-color-${(level % 4) + 1}`}>
                                     <div className="flower-center"></div>
                                     <div className="petal p-top"></div>
@@ -1062,13 +2109,56 @@ export const MarketingAI: React.FC = () => {
 
             </div>
 
-            {/* Notificación de Éxito de Tareas completadas */}
+            {/* Notificación de Éxito de Tareas completadas o Logros */}
             {copiedTextType === 'success-complete' && (
                 <div className="floriai-toast-notification animate-slide-in">
                     <span className="material-symbols-rounded icon">celebration</span>
                     <div className="toast-content">
-                        <strong>¡Tarea Completada con éxito!</strong>
+                        <strong>¡Tarea Completada!</strong>
                         <p>Ganaste **+15 XP**. Tu jardín digital te lo agradece. 🌱✨</p>
+                    </div>
+                </div>
+            )}
+
+            {copiedTextType && copiedTextType.startsWith('achievement-') && (
+                <div className="floriai-toast-notification achievement animate-slide-in">
+                    <span className="material-symbols-rounded icon">military_tech</span>
+                    <div className="toast-content">
+                        <strong>🏆 ¡MEDALLA DESBLOQUEADA!</strong>
+                        <p>
+                            Desbloqueaste el logro **{ACHIEVEMENTS.find(a => a.id === copiedTextType.replace('achievement-', ''))?.title}**. 
+                            Ganás **+20 XP**. ¡Excelente hábito! 🏅🌿
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {copiedTextType === 'fav-saved' && (
+                <div className="floriai-toast-notification fav-toast animate-slide-in">
+                    <span className="material-symbols-rounded icon">favorite</span>
+                    <div className="toast-content">
+                        <strong>¡Idea Guardada!</strong>
+                        <p>Se guardó en tu bandeja de Favoritos con éxito. 💖</p>
+                    </div>
+                </div>
+            )}
+
+            {copiedTextType === 'fav-removed' && (
+                <div className="floriai-toast-notification fav-toast animate-slide-in">
+                    <span className="material-symbols-rounded icon">heart_broken</span>
+                    <div className="toast-content">
+                        <strong>Idea Eliminada</strong>
+                        <p>Se removió de tus guardados correctamente.</p>
+                    </div>
+                </div>
+            )}
+
+            {copiedTextType && copiedTextType.startsWith('cross-') && (
+                <div className="floriai-toast-notification cross-toast animate-slide-in">
+                    <span className="material-symbols-rounded icon">psychology</span>
+                    <div className="toast-content">
+                        <strong>Traducción Explorada</strong>
+                        <p>¡Inspiración agregada a tu mente creativa! +20 XP. 🧠💡</p>
                     </div>
                 </div>
             )}
