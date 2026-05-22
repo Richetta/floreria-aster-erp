@@ -32,7 +32,7 @@
 }
 
 .welcome-text {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.35rem;
     font-weight: 800;
     color: #2F3A34;
@@ -155,7 +155,7 @@
 }
 
 .metric-hero-value {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 2.5rem;
     font-weight: 800;
     letter-spacing: -0.02em;
@@ -211,7 +211,7 @@
 }
 
 .metric-card .mc-value {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.35rem;
     font-weight: 800;
     color: #2F3A34;
@@ -317,7 +317,7 @@
 }
 
 .dash-section-head h3 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 800;
     margin: 0;
@@ -504,7 +504,7 @@
 }
 
 .debt-modal-header h3 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.2rem;
     font-weight: 800;
     color: #2F3A34;
@@ -544,7 +544,7 @@
 }
 
 .debt-label-sm { font-size: 0.85rem; font-weight: 600; color: #2F3A34; }
-.debt-value-sm { font-family: 'Outfit', sans-serif; font-size: 1.35rem; font-weight: 800; color: #2F3A34; }
+.debt-value-sm { font-family: var(--font-sans); font-size: 1.35rem; font-weight: 800; color: #2F3A34; }
 
 .debt-modal-body label {
     font-size: 0.85rem;

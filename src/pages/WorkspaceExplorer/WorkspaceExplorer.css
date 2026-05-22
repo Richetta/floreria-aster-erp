@@ -1686,7 +1686,7 @@
   border: none !important;
   outline: none !important;
   background: transparent !important;
-  font-family: 'Outfit', 'Inter', var(--explorer-font);
+  font-family: var(--font-sans);
   font-size: 1rem;
   color: #334155;
   line-height: 2rem; /* Exact height matching rule grid */

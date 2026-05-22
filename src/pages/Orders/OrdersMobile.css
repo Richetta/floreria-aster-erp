@@ -29,7 +29,7 @@
 }
 
 .orders-header-top h2 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.5rem;
     font-weight: 800;
     color: #2F3A34;
@@ -117,7 +117,7 @@
 }
 
 .calendar-header h3 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 800;
     text-transform: capitalize;
@@ -191,7 +191,7 @@
 }
 
 .selected-date-title {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 800;
     color: #5E9B7E;
@@ -300,7 +300,7 @@
 }
 
 .order-item-name {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.95rem;
     font-weight: 800;
     color: #2F3A34;
@@ -332,7 +332,7 @@
 }
 
 .order-item-price {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 800;
     color: #2F3A34;
@@ -485,13 +485,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-weight: 900;
     font-size: 1.25rem;
 }
 
 .sheet-order-info h3 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.25rem;
     font-weight: 800;
     margin: 0;
@@ -588,7 +588,7 @@
 }
 
 .sheet-order-items h4 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1rem;
     font-weight: 800;
     margin: 0 0 0.875rem 0;
@@ -618,7 +618,7 @@
 }
 
 .sheet-item-price {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.9rem;
     font-weight: 700;
     color: #425149;
@@ -651,7 +651,7 @@
 .summary-row.total-row {
     padding-top: 0.75rem;
     border-top: 1px dashed rgba(47, 58, 52, 0.2);
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.25rem;
     font-weight: 900;
     color: #2F3A34;
@@ -663,7 +663,7 @@
 }
 
 .sheet-status-actions h4 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1rem;
     font-weight: 800;
     margin: 0 0 1rem 0;

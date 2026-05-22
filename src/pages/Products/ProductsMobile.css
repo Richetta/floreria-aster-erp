@@ -31,7 +31,7 @@
 }
 
 .products-header-top h2 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.5rem;
     font-weight: 800;
     color: #2F3A34;
@@ -212,7 +212,7 @@
 }
 
 .inv-item-name {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1rem;
     font-weight: 800;
     color: #2F3A34;
@@ -244,7 +244,7 @@
 }
 
 .inv-item-price {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 800;
     color: #2F3A34;
@@ -362,7 +362,7 @@
 }
 
 .filters-sheet-header h3 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.25rem;
     font-weight: 800;
     margin: 0;
@@ -433,7 +433,7 @@
     color: white;
     border: none;
     border-radius: 20px;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-weight: 800;
     font-size: 1.1rem;
     box-shadow: 0 8px 24px rgba(94, 155, 126, 0.3);

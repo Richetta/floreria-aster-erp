@@ -12,7 +12,7 @@
     color: white !important;
     border: none !important;
     border-radius: 20px;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-weight: 800;
     font-size: 1rem;
     display: flex;
@@ -45,7 +45,7 @@
     border: 2px solid rgba(216, 195, 165, 0.3);
     border-radius: 18px;
     background: #F6F5F1;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.5rem;
     font-weight: 900;
     color: #2F3A34;
@@ -100,7 +100,7 @@
     color: white !important;
     border: none !important;
     border-radius: 18px;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-weight: 800;
     font-size: 0.9rem;
     box-shadow: 0 8px 20px rgba(94, 155, 126, 0.25);

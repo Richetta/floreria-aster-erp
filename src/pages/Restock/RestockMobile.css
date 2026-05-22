@@ -28,7 +28,7 @@
     min-height: 100dvh;
     background: #0f172a; /* Sleek slate dark background */
     color: #f8fafc;
-    font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+    font-family: var(--font-sans);
     padding-bottom: 80px; /* Space for sticky buttons or floating bars */
     overflow-x: hidden;
 }

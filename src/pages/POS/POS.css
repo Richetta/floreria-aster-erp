@@ -2654,7 +2654,7 @@ select.form-input-lg {
     width: 65px;
     border: none;
     background: transparent;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.25rem;
     font-weight: 800;
     text-align: right;
@@ -2796,7 +2796,7 @@ select.form-input-lg {
 }
 
 .presets-config-modal h4 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.5rem;
     font-weight: 900;
     margin-bottom: 0.75rem;
@@ -2845,7 +2845,7 @@ select.form-input-lg {
     flex: 1;
     border: none;
     background: transparent;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.4rem;
     font-weight: 900;
     text-align: right;

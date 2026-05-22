@@ -29,7 +29,7 @@
     padding: 1.25rem 1.25rem 0.5rem;
 }
 .pos-mobile-header h2 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.35rem;
     font-weight: 900;
     margin: 0;
@@ -177,7 +177,7 @@
 }
 
 .pos-category-selector-btn .value {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.9rem;
     font-weight: 700;
     color: #2F3A34;
@@ -275,7 +275,7 @@
 }
 
 .pos-category-drawer .header-title h3 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.15rem;
     font-weight: 800;
     color: #2F3A34;
@@ -316,7 +316,7 @@
     padding: 0.875rem 1.25rem;
     background: #5E9B7E;
     color: white;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-weight: 800;
     font-size: 0.9rem;
 }
@@ -396,7 +396,7 @@
 }
 .oqf-advance .oqf-input {
     text-align: right;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 800;
 }
@@ -436,7 +436,7 @@
 .product-icon-circle .material-symbols-rounded { font-size: 22px; }
 .pos-item-content { flex: 1; min-width: 0; }
 .pos-item-name {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.95rem;
     font-weight: 700;
     color: #2F3A34;
@@ -485,7 +485,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1rem;
     font-weight: 900;
 }
@@ -520,7 +520,7 @@
 }
 .sticky-cart-info { display: flex; flex-direction: column; }
 .sticky-qty { font-size: 0.7rem; font-weight: 600; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.03em; }
-.sticky-total { font-family: 'Outfit', sans-serif; font-size: 1.4rem; font-weight: 900; }
+.sticky-total { font-family: var(--font-sans); font-size: 1.4rem; font-weight: 900; }
 .sticky-cart-btn {
     display: flex;
     align-items: center;
@@ -530,7 +530,7 @@
     border: none;
     padding: 0.875rem 1.25rem;
     border-radius: 20px;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.95rem;
     font-weight: 800;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -565,7 +565,7 @@
     gap: 0.25rem;
 }
 .pos-cart-title-group h2 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.2rem;
     font-weight: 800;
     color: #2F3A34;
@@ -638,7 +638,7 @@
     flex-shrink: 0;
 }
 .cart-item-details { flex: 1; min-width: 0; }
-.cart-item-name { font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 700; color: #2F3A34; }
+.cart-item-name { font-family: var(--font-sans); font-size: 0.95rem; font-weight: 700; color: #2F3A34; }
 .cart-item-price-calc { font-size: 0.8rem; font-weight: 600; color: #425149; opacity: 0.7; }
 .cart-item-controls {
     display: flex;
@@ -664,7 +664,7 @@
 .cart-qty-btn.add { color: #5E9B7E; }
 .cart-qty-btn:active { transform: scale(0.88); }
 .cart-item-qty {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.95rem;
     font-weight: 900;
     color: #2F3A34;
@@ -672,7 +672,7 @@
     text-align: center;
 }
 .cart-item-total {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1rem;
     font-weight: 800;
     color: #2F3A34;
@@ -720,7 +720,7 @@
     opacity: 0.8;
 }
 .cart-total-row.highlight {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.75rem;
     font-weight: 900;
     color: #2F3A34;
@@ -737,7 +737,7 @@
     border: none;
     padding: 1.25rem;
     border-radius: 24px;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 800;
     box-shadow: 0 12px 30px rgba(94, 155, 126, 0.35);
@@ -768,14 +768,14 @@
     opacity: 0.6;
 }
 .payment-step-amount {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 3rem;
     font-weight: 900;
     color: #2F3A34;
     line-height: 1;
 }
 .payment-methods-section h4 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1rem;
     font-weight: 800;
     color: #2F3A34;
@@ -878,7 +878,7 @@
 }
 
 .adj-value-display {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.4rem;
     font-weight: 900;
     color: #1E293B;
@@ -950,7 +950,7 @@
 }
 
 .drawer-header-compact h3 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.3rem;
     font-weight: 900;
     color: #1E293B;
@@ -988,7 +988,7 @@
     background: #F8FAFC;
     border: 2px solid transparent;
     border-radius: 24px;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 3rem;
     font-weight: 900;
     text-align: center;
@@ -1010,7 +1010,7 @@
 }
 
 .input-suffix {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.75rem;
     font-weight: 900;
     margin-left: 0.75rem;
@@ -1053,7 +1053,7 @@
     background: #2F3A34;
     color: white;
     border: none;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 900;
     box-shadow: 0 4px 12px rgba(47, 58, 52, 0.2);
@@ -1083,7 +1083,7 @@
 }
 
 .mobile-config-content h3 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.5rem;
     font-weight: 900;
     color: #1E293B;
@@ -1117,7 +1117,7 @@
     background: #F8FAFC;
     border: 2px solid transparent;
     border-radius: 18px;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.5rem;
     font-weight: 900;
     color: #1E293B;

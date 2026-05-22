@@ -2340,7 +2340,7 @@
     border: 2px dashed #FBCFE8 !important;
     padding: 1.5rem !important;
     border-radius: 16px !important;
-    font-family: 'Outfit', sans-serif !important;
+    font-family: var(--font-sans) !important;
     line-height: 1.7 !important;
     color: #831843 !important;
     font-style: italic !important;

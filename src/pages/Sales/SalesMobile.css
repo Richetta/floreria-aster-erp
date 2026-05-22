@@ -21,7 +21,7 @@
 }
 
 .mobile-sales-header h2 {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.5rem;
     font-weight: 800;
     margin-bottom: 1rem;
@@ -124,7 +124,7 @@
 }
 
 .m-sale-id {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.85rem;
     font-weight: 800;
     color: #5E9B7E;
@@ -171,7 +171,7 @@
 }
 
 .m-sale-customer {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 800;
     color: #2F3A34;
@@ -185,7 +185,7 @@
 }
 
 .m-sale-total {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.5rem;
     font-weight: 900;
     color: #2F3A34;
@@ -235,7 +235,7 @@
     background: linear-gradient(135deg, #5E9B7E 0%, #6FAE8D 100%);
     color: white;
     border: none;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.95rem;
     font-weight: 800;
     display: flex;
