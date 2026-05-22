@@ -8,6 +8,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
+import type { Category } from '../../store/slices/types';
 import { ElPapelito } from './components/ElPapelito';
 import './RestockMobile.css';
 
@@ -353,21 +354,39 @@ export const RestockMobile: React.FC = () => {
         }
     };
 
-    // ── Category options flat list with indents ──
-    const categoryOptions = useMemo(() => {
-        const build = (parentId: string | null = null, depth = 0): { id: string; name: string; label: string }[] => {
-            const list: { id: string; name: string; label: string }[] = [];
-            const filtered = categoriesData.filter(c =>
-                parentId === null ? !c.parent_id : c.parent_id === parentId
-            );
-            filtered.forEach(c => {
-                list.push({ id: c.id, name: c.name, label: `${'  '.repeat(depth)}${depth > 0 ? '↳ ' : '📁 '}${c.name}` });
-                list.push(...build(c.id, depth + 1));
+    // ── Flattened Categories Tree ──
+    const flatCats = useMemo(() => {
+        const result: Category[] = [];
+        const recurse = (cats: Category[]) => {
+            if (!cats) return;
+            cats.forEach(cat => {
+                result.push(cat);
+                if (cat.children && cat.children.length > 0) recurse(cat.children);
             });
-            return list;
         };
-        return build(null, 0);
+        recurse(categoriesData);
+        return result.length === 0 && categoriesData.length > 0 ? categoriesData : result;
     }, [categoriesData]);
+
+    // ── Category options flat list with full path recursive ──
+    const categoryOptions = useMemo(() => {
+        const catMap = new Map<string, Category>();
+        flatCats.forEach(c => catMap.set(c.id, c));
+        const getCategoryPath = (catId: string): string[] => {
+            const path: string[] = [];
+            let current = catMap.get(catId);
+            while (current) {
+                path.unshift(current.name);
+                current = current.parent_id ? catMap.get(current.parent_id) : undefined;
+            }
+            return path;
+        };
+        return flatCats.map(c => ({
+            id: c.id,
+            name: c.name,
+            label: `📁 ${getCategoryPath(c.id).join(' ➔ ')}`
+        })).sort((a, b) => a.label.localeCompare(b.label));
+    }, [flatCats]);
 
     const allTags = useMemo(() => {
         const set = new Set<string>();
@@ -385,12 +404,12 @@ export const RestockMobile: React.FC = () => {
                 
                 // Recursive category matcher helper
                 const getCategoryWithDescendants = (catName: string): string[] => {
-                    const matchingCat = categoriesData.find(c => c.name === catName);
+                    const matchingCat = flatCats.find(c => c.name === catName);
                     if (!matchingCat) return [catName];
                     
                     const names = [matchingCat.name];
                     const collectChildren = (parentId: string) => {
-                        const children = categoriesData.filter(c => c.parent_id === parentId);
+                        const children = flatCats.filter(c => c.parent_id === parentId);
                         children.forEach(ch => {
                             names.push(ch.name);
                             collectChildren(ch.id);
@@ -439,7 +458,7 @@ export const RestockMobile: React.FC = () => {
                 const order = { critical: 0, low: 1, ok: 2 };
                 return order[a.urgency] - order[b.urgency];
             });
-    }, [products, suppliers, searchQuery, selectedCategory, selectedTag, selectedSupplierFilter, urgencyFilter, categoriesData]);
+    }, [products, suppliers, searchQuery, selectedCategory, selectedTag, selectedSupplierFilter, urgencyFilter, flatCats]);
 
     // ── Bulk Add Handler ──
     const handleBulkAdd = () => {

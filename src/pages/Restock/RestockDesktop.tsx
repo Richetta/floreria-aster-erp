@@ -7,6 +7,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
+import type { Category } from '../../store/slices/types';
 import './RestockDesktop.css';
 
 interface StockAlert {
@@ -83,8 +84,7 @@ const RestockDesktop: React.FC = () => {
     // ── Individual Quantities in Catalog ──
     const [catalogQuantities, setCatalogQuantities] = useState<Record<string, number>>({});
 
-    // ── Recursive Expanded Categories ──
-    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
 
     // ── Printable Toggles ──
     const [printOptions, setPrintOptions] = useState({
@@ -221,21 +221,39 @@ const RestockDesktop: React.FC = () => {
         addNotification('Borrador eliminado del Workspace virtual', 'info');
     }, [businessId, addNotification]);
 
-    // ── Category options flat list with indents ──
-    const categoryOptions = useMemo(() => {
-        const build = (parentId: string | null = null, depth = 0): { id: string; name: string; label: string }[] => {
-            const list: { id: string; name: string; label: string }[] = [];
-            const filtered = categoriesData.filter(c =>
-                parentId === null ? !c.parent_id : c.parent_id === parentId
-            );
-            filtered.forEach(c => {
-                list.push({ id: c.id, name: c.name, label: `${'  '.repeat(depth)}${depth > 0 ? '↳ ' : '📁 '}${c.name}` });
-                list.push(...build(c.id, depth + 1));
+    // ── Flattened Categories Tree ──
+    const flatCats = useMemo(() => {
+        const result: Category[] = [];
+        const recurse = (cats: Category[]) => {
+            if (!cats) return;
+            cats.forEach(cat => {
+                result.push(cat);
+                if (cat.children && cat.children.length > 0) recurse(cat.children);
             });
-            return list;
         };
-        return build(null, 0);
+        recurse(categoriesData);
+        return result.length === 0 && categoriesData.length > 0 ? categoriesData : result;
     }, [categoriesData]);
+
+    // ── Category options flat list with full path recursive ──
+    const categoryOptions = useMemo(() => {
+        const catMap = new Map<string, Category>();
+        flatCats.forEach(c => catMap.set(c.id, c));
+        const getCategoryPath = (catId: string): string[] => {
+            const path: string[] = [];
+            let current = catMap.get(catId);
+            while (current) {
+                path.unshift(current.name);
+                current = current.parent_id ? catMap.get(current.parent_id) : undefined;
+            }
+            return path;
+        };
+        return flatCats.map(c => ({
+            id: c.id,
+            name: c.name,
+            label: `📁 ${getCategoryPath(c.id).join(' ➔ ')}`
+        })).sort((a, b) => a.label.localeCompare(b.label));
+    }, [flatCats]);
 
     const allTags = useMemo(() => {
         const set = new Set<string>();
@@ -244,7 +262,7 @@ const RestockDesktop: React.FC = () => {
     }, [products]);
 
     // ── Recursive Descendant Category Resolver ──
-    const getDescendantNames = useCallback((catId: string, allCats: any[]): string[] => {
+    const getDescendantNames = useCallback((catId: string, allCats: Category[]): string[] => {
         const currentCat = allCats.find(c => c.id === catId);
         const children = allCats.filter(c => c.parent_id === catId);
         const names = currentCat ? [currentCat.name] : [];
@@ -259,7 +277,7 @@ const RestockDesktop: React.FC = () => {
                     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()));
                 const matchCat = !selectedCategoryId || (() => {
-                    const allowedNames = getDescendantNames(selectedCategoryId, categoriesData);
+                    const allowedNames = getDescendantNames(selectedCategoryId, flatCats);
                     return allowedNames.includes(p.category);
                 })();
                 const matchTag = !selectedTag || (p.tags && p.tags.includes(selectedTag));
@@ -299,7 +317,7 @@ const RestockDesktop: React.FC = () => {
                 const order = { critical: 0, low: 1, ok: 2 };
                 return order[a.urgency] - order[b.urgency];
             });
-    }, [products, suppliers, searchQuery, selectedCategoryId, selectedTag, selectedSupplierFilter, urgencyFilter, categoriesData, getDescendantNames]);
+    }, [products, suppliers, searchQuery, selectedCategoryId, selectedTag, selectedSupplierFilter, urgencyFilter, flatCats, getDescendantNames]);
 
     // ── Bulk Add Handler ──
     const handleBulkAdd = () => {
@@ -831,81 +849,7 @@ const RestockDesktop: React.FC = () => {
         }
     };
 
-    // ── Toggle Category Expand in Sidebar Tree ──
-    const toggleCategoryExpand = (catId: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setExpandedCategories(prev => ({
-            ...prev,
-            [catId]: !prev[catId]
-        }));
-    };
 
-    // ── Recursive Category Sidebar Tree Render ──
-    const renderCategoryTree = (parentId: string | null = null, depth = 0): React.ReactNode => {
-        const levelCats = categoriesData.filter(c => c.parent_id === parentId);
-        if (levelCats.length === 0) return null;
-        
-        return (
-            <ul className="rd-category-tree-list" style={{ paddingLeft: depth > 0 ? '12px' : '0', listStyle: 'none', margin: 0 }}>
-                {levelCats.map(cat => {
-                    const hasChildren = categoriesData.some(c => c.parent_id === cat.id);
-                    const isExpanded = !!expandedCategories[cat.id];
-                    const isActive = selectedCategoryId === cat.id;
-                    
-                    return (
-                        <li key={cat.id} className="rd-category-tree-item" style={{ margin: '4px 0' }}>
-                            <div 
-                                className={`rd-category-tree-node ${isActive ? 'rd-category-tree-node--active' : ''}`}
-                                onClick={() => setSelectedCategoryId(cat.id)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '6px 8px',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    background: isActive ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                                    color: isActive ? '#065f46' : '#475569',
-                                    fontWeight: isActive ? '600' : 'normal'
-                                }}
-                            >
-                                {hasChildren ? (
-                                    <button 
-                                        type="button" 
-                                        className="rd-tree-expand-btn"
-                                        onClick={(e) => toggleCategoryExpand(cat.id, e)}
-                                        style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            padding: '2px',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: '#94a3b8',
-                                            transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                                            transition: 'transform 0.2s ease',
-                                            fontSize: '8px'
-                                        }}
-                                    >
-                                        ▶
-                                    </button>
-                                ) : (
-                                    <span style={{ width: '12px' }} />
-                                )}
-                                <span className="rd-node-icon" style={{ fontSize: '14px' }}>
-                                    {hasChildren ? '📁' : '📄'}
-                                </span>
-                                <span className="rd-node-label" style={{ fontSize: '13px' }}>{cat.name}</span>
-                            </div>
-                            {hasChildren && isExpanded && renderCategoryTree(cat.id, depth + 1)}
-                        </li>
-                    );
-                })}
-            </ul>
-        );
-    };
 
     // ── Active Boleto Preview Items calculation ──
     const activeBoletoDraft = useMemo(() => {
@@ -990,33 +934,7 @@ const RestockDesktop: React.FC = () => {
                 {activeTab === 'selection' && (
                     <section className="rd-selection-console">
                         <div className="rd-selection-layout" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                            {/* Collapsible Category Sidebar */}
-                            <aside className="rd-sidebar-tree-panel rd-hud-card" style={{ width: '280px', flexShrink: 0, padding: '16px' }}>
-                                <h3 style={{ fontSize: '15px', fontWeight: 'bold', margin: '0 0 12px 0', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    📁 Categorías
-                                </h3>
-                                <div 
-                                    className={`rd-category-tree-node ${!selectedCategoryId ? 'rd-category-tree-node--active' : ''}`}
-                                    onClick={() => setSelectedCategoryId('')}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        padding: '8px',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                        background: !selectedCategoryId ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                                        color: !selectedCategoryId ? '#065f46' : '#475569',
-                                        fontWeight: !selectedCategoryId ? '600' : 'normal',
-                                        marginBottom: '8px'
-                                    }}
-                                >
-                                    🌎 Ver Todas
-                                </div>
-                                <div className="rd-tree-scroll" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-                                    {renderCategoryTree(null)}
-                                </div>
-                            </aside>
+
 
                             {/* Main Product Selection Panel */}
                             <div className="rd-main-selection-panel" style={{ flexGrow: 1, minWidth: 0 }}>
