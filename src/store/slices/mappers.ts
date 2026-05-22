@@ -75,6 +75,6 @@ export const mapFrontendToApiProduct = (product: Partial<Product>, categoriesDat
         is_active: true,
         category_id: categoryId,
         brand_id: product.brand_id,
-        supplier_id: product.supplierId,
+        supplier_id: (product.supplierId || null) as any,
     };
 };

@@ -3,6 +3,7 @@ import { useWorkspaceExplorer } from './useWorkspaceExplorer';
 import { VFSBrowser } from './components/VFSBrowser';
 import { SpreadsheetViewer } from './components/SpreadsheetViewer';
 import { NoteViewer } from './components/NoteViewer';
+import { DocxViewer } from './components/DocxViewer';
 import { Search, ArrowLeft, Sparkles, FolderOpen } from 'lucide-react';
 import './WorkspaceExplorer.css';
 
@@ -29,6 +30,7 @@ export const WorkspaceExplorer: React.FC = () => {
     createExcelFile,
     createNoteFile,
     saveNoteChanges,
+    saveDocxChanges,
     moveItem,
     renameItem,
     archiveItem,
@@ -133,7 +135,15 @@ export const WorkspaceExplorer: React.FC = () => {
       {/* Dynamic Content Area */}
       <main className="workspace-main-content">
         {activeFile ? (
-          activeFile.name.toLowerCase().endsWith('.txt') ? (
+          activeFile.name.toLowerCase().endsWith('.docx') ? (
+            <DocxViewer
+              file={activeFile}
+              onClose={closeFile}
+              onSaveChanges={async (updatedData) => {
+                await saveDocxChanges(activeFile.id, updatedData);
+              }}
+            />
+          ) : activeFile.name.toLowerCase().endsWith('.txt') ? (
             <NoteViewer
               file={activeFile}
               onClose={closeFile}

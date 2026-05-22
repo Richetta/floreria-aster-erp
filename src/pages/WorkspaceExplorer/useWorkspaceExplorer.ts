@@ -282,6 +282,23 @@ export const useWorkspaceExplorer = () => {
     persistCustomItems(updated);
   };
 
+  // Helper to save docx metadata and status changes
+  const saveDocxChanges = (fileId: string, updatedData: any) => {
+    const updated = customItems.map(item => {
+      if (item.id === fileId) {
+        return {
+          ...item,
+          customData: {
+            ...item.customData,
+            ...updatedData
+          }
+        };
+      }
+      return item;
+    });
+    persistCustomItems(updated);
+  };
+
   // Helper to create an Excel file pre-filtered by category context
   const createExcelFile = (name: string, templateType: 'empty' | 'products' | 'customers' | 'orders' = 'empty') => {
     let fileName = name.trim();
@@ -963,6 +980,7 @@ export const useWorkspaceExplorer = () => {
     createExcelFile,
     createNoteFile,
     saveNoteChanges,
+    saveDocxChanges,
     moveItem,
     renameItem,
     archiveItem,

@@ -1,0 +1,368 @@
+/* Premium DocxViewer Dashboard Styles */
+
+.docx-viewer-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: radial-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.95) 100%);
+  color: #1e293b;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* Glassmorphic Header Panel */
+.docx-viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  z-index: 10;
+}
+
+.docx-viewer-title-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.docx-viewer-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid rgba(167, 243, 208, 0.5);
+  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
+}
+
+.docx-viewer-filename-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.docx-viewer-filename {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.docx-viewer-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #f1f5f9;
+  border-radius: 99px;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.docx-viewer-description {
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Visor Actions Panel */
+.docx-viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Status Picker */
+.docx-status-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.docx-status-select {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.docx-status-select--draft {
+  background-color: #f1f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.docx-status-select--emitted {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+
+.docx-status-select--received {
+  background-color: #d1fae5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+/* Button variants */
+.docx-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-save {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.btn-save:hover {
+  background: #1e293b;
+}
+
+.btn-saved-active {
+  background: #10b981 !important;
+  color: #ffffff;
+}
+
+.btn-whatsapp {
+  background: #25d366;
+  color: white;
+}
+
+.btn-whatsapp:hover {
+  background: #20ba5a;
+  transform: translateY(-1px);
+}
+
+.btn-print {
+  background: #ffffff;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.btn-print:hover {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.btn-close-docx {
+  background: transparent;
+  color: #64748b;
+  padding: 6px;
+  border-radius: 50%;
+}
+
+.btn-close-docx:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Layout */
+.docx-viewer-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100% - 77px);
+}
+
+/* Sidebar Customizer */
+.docx-sidebar-panel {
+  width: 280px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.4);
+  border-right: 1px solid rgba(226, 232, 240, 0.8);
+  overflow-y: auto;
+}
+
+.docx-sidebar-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+.docx-sidebar-card h4 {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.docx-toggles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.docx-toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 550;
+  color: #475569;
+  cursor: pointer;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.docx-toggle-item:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.docx-toggle-item.active {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
+.docx-toggle-item input[type="checkbox"] {
+  accent-color: #10b981;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+/* Inventory Integration card */
+.docx-sidebar-card--inventory {
+  border: 1px solid #a7f3d0;
+  background: #f6fdfa;
+}
+
+.docx-committed-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Paper Sheet Styling (Simulating A4) */
+.docx-paper-wrapper {
+  flex: 1;
+  padding: 32px;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  background: #cbd5e1;
+}
+
+.docx-sheet-a4 {
+  background: #ffffff;
+  width: 794px; /* A4 standard pixels ratio */
+  min-height: 1123px;
+  padding: 60px 80px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.docx-paper-provider-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 10px 16px;
+  background: #ecfdf5;
+  border-left: 4px solid #10b981;
+  font-size: 13px;
+  color: #065f46;
+  border-radius: 0 6px 6px 0;
+}
+
+.docx-canvas-notes-textarea {
+  width: 100%;
+  min-height: 80px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  background: #fafafa;
+  resize: vertical;
+  color: #334155;
+  outline: none;
+}
+
+.docx-canvas-notes-textarea:focus {
+  border-color: #10b981;
+  background: #ffffff;
+}
+
+.print-only {
+  display: none;
+}
+
+/* Custom print rules */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+
+  #rd-paper-to-print, #rd-paper-to-print * {
+    visibility: visible;
+  }
+
+  #rd-paper-to-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .no-print-area {
+    display: none !important;
+  }
+}

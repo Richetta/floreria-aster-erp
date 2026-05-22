@@ -48,6 +48,8 @@ const RestockDesktop: React.FC = () => {
     const loadSuppliers = useStore(s => s.loadSuppliers);
     const loadCategories = useStore(s => s.loadCategories);
     const addNotification = useStore(s => s.addNotification);
+    const updateProduct = useStore(s => s.updateProduct);
+    const shopInfo = useStore(s => s.shopInfo);
     const { user } = useAuth();
     const businessId = user?.business_id || 'default';
 
@@ -58,7 +60,7 @@ const RestockDesktop: React.FC = () => {
 
     // ── Catalog Filters ──
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedTag, setSelectedTag] = useState('');
     const [selectedSupplierFilter, setSelectedSupplierFilter] = useState('');
     const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'critical' | 'low' | 'ok'>('all');
@@ -77,6 +79,28 @@ const RestockDesktop: React.FC = () => {
     const [customNameMap, setCustomNameMap] = useState<Record<string, string>>({});
     const [customQtyMap, setCustomQtyMap] = useState<Record<string, string>>({});
     const [customCostMap, setCustomCostMap] = useState<Record<string, string>>({});
+
+    // ── Individual Quantities in Catalog ──
+    const [catalogQuantities, setCatalogQuantities] = useState<Record<string, number>>({});
+
+    // ── Recursive Expanded Categories ──
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
+    // ── Printable Toggles ──
+    const [printOptions, setPrintOptions] = useState({
+        showCode: true,
+        showPrice: true,
+        showSubtotal: true,
+        showTotal: true,
+        showEmisor: true,
+        showProveedor: true,
+        showNotes: true,
+        showHandwritten: true
+    });
+
+    const getDefaultQty = useCallback((alert: any) => {
+        return Math.max(10, (alert.minStock * 2) - alert.stock);
+    }, []);
 
     // ── Deep-link check from Suppliers agenda ──
     useEffect(() => {
@@ -219,6 +243,14 @@ const RestockDesktop: React.FC = () => {
         return Array.from(set).sort();
     }, [products]);
 
+    // ── Recursive Descendant Category Resolver ──
+    const getDescendantNames = useCallback((catId: string, allCats: any[]): string[] => {
+        const currentCat = allCats.find(c => c.id === catId);
+        const children = allCats.filter(c => c.parent_id === catId);
+        const names = currentCat ? [currentCat.name] : [];
+        return [...names, ...children.flatMap(child => getDescendantNames(child.id, allCats))];
+    }, []);
+
     // ── Generate Stock Alerts ──
     const stockAlerts = useMemo((): StockAlert[] => {
         return products
@@ -226,7 +258,10 @@ const RestockDesktop: React.FC = () => {
                 const matchSearch = !searchQuery ||
                     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     (p.code && p.code.toLowerCase().includes(searchQuery.toLowerCase()));
-                const matchCat = !selectedCategory || p.category === selectedCategory;
+                const matchCat = !selectedCategoryId || (() => {
+                    const allowedNames = getDescendantNames(selectedCategoryId, categoriesData);
+                    return allowedNames.includes(p.category);
+                })();
                 const matchTag = !selectedTag || (p.tags && p.tags.includes(selectedTag));
                 const matchSupplier = !selectedSupplierFilter || p.supplierId === selectedSupplierFilter;
 
@@ -264,7 +299,7 @@ const RestockDesktop: React.FC = () => {
                 const order = { critical: 0, low: 1, ok: 2 };
                 return order[a.urgency] - order[b.urgency];
             });
-    }, [products, suppliers, searchQuery, selectedCategory, selectedTag, selectedSupplierFilter, urgencyFilter]);
+    }, [products, suppliers, searchQuery, selectedCategoryId, selectedTag, selectedSupplierFilter, urgencyFilter, categoriesData, getDescendantNames]);
 
     // ── Bulk Add Handler ──
     const handleBulkAdd = () => {
@@ -295,19 +330,21 @@ const RestockDesktop: React.FC = () => {
             const alert = stockAlerts.find(a => a.id === id);
             if (!alert) return;
 
+            const qty = catalogQuantities[id] ?? getDefaultQty(alert);
+
             const existingIdx = draftItems.findIndex(item => item.id === id);
             if (existingIdx > -1) {
-                draftItems[existingIdx].quantity += Number(bulkQuantity) || 10;
+                draftItems[existingIdx].quantity += Number(qty);
                 draftItems[existingIdx].total = draftItems[existingIdx].quantity * draftItems[existingIdx].cost;
             } else {
                 draftItems.push({
                     id: alert.id,
                     code: alert.code,
                     name: alert.name,
-                    quantity: Number(bulkQuantity) || 10,
+                    quantity: Number(qty),
                     supplierName,
                     cost: alert.cost,
-                    total: (Number(bulkQuantity) || 10) * alert.cost,
+                    total: Number(qty) * alert.cost,
                     isCustom: false
                 });
             }
@@ -340,7 +377,7 @@ const RestockDesktop: React.FC = () => {
     const handleQuickAdd = (alert: StockAlert) => {
         const supplierId = alert.supplierId || 'unassigned';
         const supplierName = alert.supplierName || 'Sin Proveedor';
-        const suggested = Math.max(10, (alert.minStock * 2) - alert.stock);
+        const suggested = catalogQuantities[alert.id] ?? getDefaultQty(alert);
 
         const draftId = `restock_draft_${supplierId}`;
         const existingDraft = drafts.find(d => d.id === draftId);
@@ -551,13 +588,15 @@ const RestockDesktop: React.FC = () => {
 </head>
 <body>
 
-    <h1>FLORERÍA ASTER</h1>
+    <h1>${(shopInfo?.name || 'Florería Aster').toUpperCase()}</h1>
     <div class="subtitle">Orden de Compra y Reposición</div>
 
     <table class="meta-box">
         <tr>
             <td style="border:none; width:50%; vertical-align:top;">
-                <strong>EMISOR:</strong> Florería Aster S.R.L.<br>
+                <strong>EMISOR:</strong> ${shopInfo?.name || 'Florería Aster S.R.L.'}<br>
+                ${shopInfo?.phone ? `<strong>Teléfono:</strong> ${shopInfo.phone}<br>` : ''}
+                ${shopInfo?.address ? `<strong>Dirección:</strong> ${shopInfo.address}<br>` : ''}
                 <strong>Solicitante:</strong> ${user?.name || 'Administrador'}<br>
                 <strong>Email:</strong> ${user?.email || '—'}<br>
                 <strong>Fecha:</strong> ${dateStr} a las ${hourStr}
@@ -654,6 +693,220 @@ const RestockDesktop: React.FC = () => {
         window.print();
     };
 
+    // ── Save Order as .docx to dated folder in VFS Workspace ──
+    const saveAsDocxToWorkspace = (draft: VFSItem) => {
+        const key = `explorer_custom_items_${businessId}`;
+        let stored: VFSItem[] = [];
+        try {
+            stored = JSON.parse(localStorage.getItem(key) || '[]') as VFSItem[];
+        } catch {}
+
+        const now = new Date();
+        const yearMonth = now.toISOString().slice(0, 7); // e.g. "2026-05"
+        const dateStr = now.toLocaleDateString('es-AR').replace(/\//g, '-');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+
+        // 1. Find or create the dated folder
+        let datedFolder = stored.find(item => item.parentId === 'pedidos_compra_folder' && item.name === yearMonth);
+        let datedFolderId = '';
+        
+        if (!datedFolder) {
+            datedFolderId = `dated_folder_${yearMonth}_${Date.now()}`;
+            datedFolder = {
+                id: datedFolderId,
+                name: yearMonth,
+                parentId: 'pedidos_compra_folder',
+                type: 'folder',
+                description: `Órdenes de pedido correspondientes a ${yearMonth}`,
+                color: '#f0fdf4', // Premium light green
+                isCustom: true
+            };
+            stored.push(datedFolder);
+        } else {
+            datedFolderId = datedFolder.id;
+        }
+
+        // 2. Create docx file in that dated folder
+        const filename = `Pedido_${dateStr}_${supplierName.replace(/\s+/g, '_')}.docx`;
+        const docxId = `docx_order_${draft.id.replace('restock_draft_', '')}_${Date.now()}`;
+
+        const newDocxFile: VFSItem = {
+            id: docxId,
+            name: filename,
+            parentId: datedFolderId,
+            type: 'file',
+            entity: 'custom',
+            description: `Orden de reposición oficial emitida para ${supplierName} (${dateStr})`,
+            color: '#e0e7ff', // Premium light purple/indigo
+            isCustom: true,
+            customData: {
+                rows: draft.customData?.rows || [],
+                notes: draft.customData?.notes || '',
+                leadTime: draft.customData?.leadTime || '',
+                shopInfo: shopInfo,
+                printOptions: printOptions,
+                status: 'emitted', // Starts as emitted
+                supplierName: supplierName,
+                date: now.toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' }),
+                hour: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+            } as any
+        };
+
+        stored.push(newDocxFile);
+        localStorage.setItem(key, JSON.stringify(stored));
+        setRefreshKey(prev => prev + 1);
+        addNotification(`Pedido guardado en Workspace: Órdenes de Pedido ➔ ${yearMonth} ➔ ${filename}`, 'success');
+    };
+
+    // ── Update Draft Lifecycle Status in VFS ──
+    const updateDraftStatus = (draftId: string, newStatus: 'draft' | 'emitted' | 'received') => {
+        const key = `explorer_custom_items_${businessId}`;
+        let stored: VFSItem[] = [];
+        try {
+            stored = JSON.parse(localStorage.getItem(key) || '[]') as VFSItem[];
+        } catch {}
+        
+        const updated = stored.map(item => {
+            if (item.id === draftId) {
+                return {
+                    ...item,
+                    customData: {
+                        ...item.customData,
+                        status: newStatus
+                    }
+                };
+            }
+            return item;
+        });
+        localStorage.setItem(key, JSON.stringify(updated));
+        setRefreshKey(prev => prev + 1);
+        addNotification(`Estado del pedido cambiado a ${
+            newStatus === 'draft' ? 'Borrador' : newStatus === 'emitted' ? 'Emitido' : 'Recibido'
+        }`, 'success');
+    };
+
+    // ── Commit Order stock quantities into real inventory ──
+    const handleCommitStockToInventory = async (draft: VFSItem) => {
+        const items = draft.customData?.rows || [];
+        if (items.length === 0) return;
+        try {
+            setLoading(true);
+            for (const item of items) {
+                const matchingProd = products.find(p => p.id === item.id);
+                if (matchingProd) {
+                    const currentStock = matchingProd.stock ?? 0;
+                    await updateProduct(item.id, {
+                        stock: currentStock + item.quantity
+                    });
+                }
+            }
+            
+            const key = `explorer_custom_items_${businessId}`;
+            let stored: VFSItem[] = [];
+            try {
+                stored = JSON.parse(localStorage.getItem(key) || '[]') as VFSItem[];
+            } catch {}
+            
+            const updated = stored.map(item => {
+                if (item.id === draft.id) {
+                    return {
+                        ...item,
+                        customData: {
+                            ...item.customData,
+                            status: 'received',
+                            stockCommitted: true
+                        }
+                    };
+                }
+                return item;
+            });
+            localStorage.setItem(key, JSON.stringify(updated));
+            
+            addNotification('Existencias cargadas con éxito en el inventario', 'success');
+            setRefreshKey(prev => prev + 1);
+        } catch (err) {
+            addNotification('Error al cargar existencias en el inventario', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ── Toggle Category Expand in Sidebar Tree ──
+    const toggleCategoryExpand = (catId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedCategories(prev => ({
+            ...prev,
+            [catId]: !prev[catId]
+        }));
+    };
+
+    // ── Recursive Category Sidebar Tree Render ──
+    const renderCategoryTree = (parentId: string | null = null, depth = 0): React.ReactNode => {
+        const levelCats = categoriesData.filter(c => c.parent_id === parentId);
+        if (levelCats.length === 0) return null;
+        
+        return (
+            <ul className="rd-category-tree-list" style={{ paddingLeft: depth > 0 ? '12px' : '0', listStyle: 'none', margin: 0 }}>
+                {levelCats.map(cat => {
+                    const hasChildren = categoriesData.some(c => c.parent_id === cat.id);
+                    const isExpanded = !!expandedCategories[cat.id];
+                    const isActive = selectedCategoryId === cat.id;
+                    
+                    return (
+                        <li key={cat.id} className="rd-category-tree-item" style={{ margin: '4px 0' }}>
+                            <div 
+                                className={`rd-category-tree-node ${isActive ? 'rd-category-tree-node--active' : ''}`}
+                                onClick={() => setSelectedCategoryId(cat.id)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '6px 8px',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    background: isActive ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                                    color: isActive ? '#065f46' : '#475569',
+                                    fontWeight: isActive ? '600' : 'normal'
+                                }}
+                            >
+                                {hasChildren ? (
+                                    <button 
+                                        type="button" 
+                                        className="rd-tree-expand-btn"
+                                        onClick={(e) => toggleCategoryExpand(cat.id, e)}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            padding: '2px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#94a3b8',
+                                            transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                                            transition: 'transform 0.2s ease',
+                                            fontSize: '8px'
+                                        }}
+                                    >
+                                        ▶
+                                    </button>
+                                ) : (
+                                    <span style={{ width: '12px' }} />
+                                )}
+                                <span className="rd-node-icon" style={{ fontSize: '14px' }}>
+                                    {hasChildren ? '📁' : '📄'}
+                                </span>
+                                <span className="rd-node-label" style={{ fontSize: '13px' }}>{cat.name}</span>
+                            </div>
+                            {hasChildren && isExpanded && renderCategoryTree(cat.id, depth + 1)}
+                        </li>
+                    );
+                })}
+            </ul>
+        );
+    };
+
     // ── Active Boleto Preview Items calculation ──
     const activeBoletoDraft = useMemo(() => {
         if (!boletoSupplierId) {
@@ -736,153 +989,233 @@ const RestockDesktop: React.FC = () => {
                     ════════════════════════════════════════════ */}
                 {activeTab === 'selection' && (
                     <section className="rd-selection-console">
-                        {/* Filters Bar */}
-                        <div className="rd-hud-card rd-hud-card--filters">
-                            <div className="rd-filters-grid">
-                                <div className="rd-filter-item">
-                                    <label>Buscar Producto</label>
-                                    <div className="rd-search-input-wrapper">
-                                        <Search size={14} className="rd-search-icon" />
-                                        <input
-                                            type="text"
-                                            placeholder="Nombre o código..."
-                                            value={searchQuery}
-                                            onChange={e => setSearchQuery(e.target.value)}
-                                            className="rd-input rd-input--with-icon"
-                                        />
-                                        {searchQuery && (
-                                            <button className="rd-clear-btn" onClick={() => setSearchQuery('')}>
-                                                <X size={12} />
-                                            </button>
-                                        )}
+                        <div className="rd-selection-layout" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                            {/* Collapsible Category Sidebar */}
+                            <aside className="rd-sidebar-tree-panel rd-hud-card" style={{ width: '280px', flexShrink: 0, padding: '16px' }}>
+                                <h3 style={{ fontSize: '15px', fontWeight: 'bold', margin: '0 0 12px 0', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    📁 Categorías
+                                </h3>
+                                <div 
+                                    className={`rd-category-tree-node ${!selectedCategoryId ? 'rd-category-tree-node--active' : ''}`}
+                                    onClick={() => setSelectedCategoryId('')}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        padding: '8px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        background: !selectedCategoryId ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                                        color: !selectedCategoryId ? '#065f46' : '#475569',
+                                        fontWeight: !selectedCategoryId ? '600' : 'normal',
+                                        marginBottom: '8px'
+                                    }}
+                                >
+                                    🌎 Ver Todas
+                                </div>
+                                <div className="rd-tree-scroll" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                                    {renderCategoryTree(null)}
+                                </div>
+                            </aside>
+
+                            {/* Main Product Selection Panel */}
+                            <div className="rd-main-selection-panel" style={{ flexGrow: 1, minWidth: 0 }}>
+                                {/* Filters Bar */}
+                                <div className="rd-hud-card rd-hud-card--filters" style={{ marginBottom: '20px' }}>
+                                    <div className="rd-filters-grid">
+                                        <div className="rd-filter-item">
+                                            <label>Buscar Producto</label>
+                                            <div className="rd-search-input-wrapper">
+                                                <Search size={14} className="rd-search-icon" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Nombre o código..."
+                                                    value={searchQuery}
+                                                    onChange={e => setSearchQuery(e.target.value)}
+                                                    className="rd-input rd-input--with-icon"
+                                                />
+                                                {searchQuery && (
+                                                    <button className="rd-clear-btn" onClick={() => setSearchQuery('')}>
+                                                        <X size={12} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="rd-filter-item">
+                                            <label>Categoría Seleccionada</label>
+                                            <select 
+                                                className="rd-input" 
+                                                value={selectedCategoryId} 
+                                                onChange={e => setSelectedCategoryId(e.target.value)}
+                                            >
+                                                <option value="">📁 Todas las categorías</option>
+                                                {categoryOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="rd-filter-item">
+                                            <label>Etiqueta</label>
+                                            <select className="rd-input" value={selectedTag} onChange={e => setSelectedTag(e.target.value)}>
+                                                <option value="">🏷️ Todas las etiquetas</option>
+                                                {allTags.map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="rd-filter-item">
+                                            <label>Proveedor</label>
+                                            <select className="rd-input" value={selectedSupplierFilter} onChange={e => setSelectedSupplierFilter(e.target.value)}>
+                                                <option value="">🚛 Todos los proveedores</option>
+                                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="rd-filter-item">
+                                            <label>Estado de Stock</label>
+                                            <select className="rd-input" value={urgencyFilter} onChange={e => setUrgencyFilter(e.target.value as any)}>
+                                                <option value="all">Ver todo el catálogo</option>
+                                                <option value="critical">🔴 Sin Stock</option>
+                                                <option value="low">🟡 Stock Bajo</option>
+                                                <option value="ok">🟢 Stock Óptimo</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="rd-filter-item">
-                                    <label>Categoría</label>
-                                    <select className="rd-input" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
-                                        <option value="">📁 Todas las categorías</option>
-                                        {categoryOptions.map(o => <option key={o.id} value={o.name}>{o.label}</option>)}
-                                    </select>
-                                </div>
-                                <div className="rd-filter-item">
-                                    <label>Etiqueta</label>
-                                    <select className="rd-input" value={selectedTag} onChange={e => setSelectedTag(e.target.value)}>
-                                        <option value="">🏷️ Todas las etiquetas</option>
-                                        {allTags.map(t => <option key={t} value={t}>{t}</option>)}
-                                    </select>
-                                </div>
-                                <div className="rd-filter-item">
-                                    <label>Proveedor</label>
-                                    <select className="rd-input" value={selectedSupplierFilter} onChange={e => setSelectedSupplierFilter(e.target.value)}>
-                                        <option value="">🚛 Todos los proveedores</option>
-                                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
-                                </div>
-                                <div className="rd-filter-item">
-                                    <label>Estado de Stock</label>
-                                    <select className="rd-input" value={urgencyFilter} onChange={e => setUrgencyFilter(e.target.value as any)}>
-                                        <option value="all">Ver todo el catálogo</option>
-                                        <option value="critical">🔴 Sin Stock</option>
-                                        <option value="low">🟡 Stock Bajo</option>
-                                        <option value="ok">🟢 Stock Óptimo</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Density-Optimized Grid Table */}
-                        <div className="rd-hud-card rd-table-card">
-                            <div className="rd-table-scroll">
-                                <table className="rd-catalog-table">
-                                    <thead>
-                                        <tr>
-                                            <th className="rd-col-checkbox" style={{ width: '40px' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    onChange={handleSelectAllVisible}
-                                                    checked={stockAlerts.length > 0 && stockAlerts.every(a => selectedProductIds.includes(a.id))}
-                                                    disabled={stockAlerts.length === 0}
-                                                />
-                                            </th>
-                                            <th>Código</th>
-                                            <th>Nombre del Producto</th>
-                                            <th>Categoría</th>
-                                            <th className="rd-txt-right">Stock</th>
-                                            <th className="rd-txt-right">Mínimo</th>
-                                            <th className="rd-col-status">Nivel Alerta</th>
-                                            <th className="rd-txt-right">Costo Ref.</th>
-                                            <th className="rd-col-actions" style={{ width: '80px' }}></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {loading ? (
-                                            <tr>
-                                                <td colSpan={9} className="rd-table-loading">
-                                                    <div className="rd-spinner" />
-                                                    <p>Analizando inventario y cargando catálogo...</p>
-                                                </td>
-                                            </tr>
-                                        ) : stockAlerts.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={9} className="rd-table-empty">
-                                                    <PackageOpen size={48} className="rd-empty-icon" />
-                                                    <h4>No se encontraron productos</h4>
-                                                    <p>Modificá los filtros de búsqueda o el nivel de urgencia.</p>
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            stockAlerts.map(alert => {
-                                                const isSelected = selectedProductIds.includes(alert.id);
-                                                const inAnyDraft = drafts.some(d => d.customData?.rows?.some((r: any) => r.id === alert.id));
-                                                return (
-                                                    <tr 
-                                                        key={alert.id} 
-                                                        className={`rd-catalog-row rd-row--${alert.urgency} ${isSelected ? 'rd-row--selected' : ''}`}
-                                                        onClick={() => handleSelectProduct(alert.id)}
-                                                        style={{ cursor: 'pointer' }}
-                                                    >
-                                                        <td className="rd-col-checkbox" onClick={e => e.stopPropagation()}>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isSelected}
-                                                                onChange={() => handleSelectProduct(alert.id)}
-                                                            />
-                                                        </td>
-                                                        <td className="rd-code-cell"><code>{alert.code}</code></td>
-                                                        <td className="rd-name-cell">
-                                                            <span className="rd-product-title">{alert.name}</span>
-                                                            {alert.supplierName && (
-                                                                <span className="rd-product-supplier-badge">
-                                                                    <Truck size={10} /> {alert.supplierName}
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                        <td>{alert.category}</td>
-                                                        <td className="rd-txt-right font-bold">{alert.stock}</td>
-                                                        <td className="rd-txt-right text-muted">{alert.minStock}</td>
-                                                        <td className="rd-col-status">
-                                                            {alert.urgency === 'critical' && <span className="rd-alert-pill rd-alert-pill--critical">Sin Stock</span>}
-                                                            {alert.urgency === 'low' && <span className="rd-alert-pill rd-alert-pill--low">Bajo</span>}
-                                                            {alert.urgency === 'ok' && <span className="rd-alert-pill rd-alert-pill--ok">OK</span>}
-                                                        </td>
-                                                        <td className="rd-txt-right font-mono">${alert.cost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
-                                                        <td className="rd-col-actions" onClick={e => e.stopPropagation()}>
-                                                            <button
-                                                                className={`rd-quick-add-btn ${inAnyDraft ? 'rd-quick-add-btn--in-draft' : ''}`}
-                                                                onClick={() => handleQuickAdd(alert)}
-                                                                title={inAnyDraft ? "Producto ya en un borrador" : "Agregar rápidamente"}
-                                                            >
-                                                                {inAnyDraft ? <Check size={14} /> : <Plus size={14} />}
-                                                            </button>
+                                {/* Density-Optimized Grid Table */}
+                                <div className="rd-hud-card rd-table-card">
+                                    <div className="rd-table-scroll">
+                                        <table className="rd-catalog-table">
+                                            <thead>
+                                                <tr>
+                                                    <th className="rd-col-checkbox" style={{ width: '40px' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            onChange={handleSelectAllVisible}
+                                                            checked={stockAlerts.length > 0 && stockAlerts.every(a => selectedProductIds.includes(a.id))}
+                                                            disabled={stockAlerts.length === 0}
+                                                        />
+                                                    </th>
+                                                    <th>Código</th>
+                                                    <th>Nombre del Producto</th>
+                                                    <th>Categoría</th>
+                                                    <th className="rd-txt-right">Stock</th>
+                                                    <th className="rd-txt-right">Mínimo</th>
+                                                    <th className="rd-col-status">Nivel Alerta</th>
+                                                    <th className="rd-txt-right">Costo Ref.</th>
+                                                    <th className="rd-txt-right" style={{ width: '90px' }}>Cant. Pedir</th>
+                                                    <th className="rd-col-actions" style={{ width: '80px' }}></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {loading ? (
+                                                    <tr>
+                                                        <td colSpan={10} className="rd-table-loading">
+                                                            <div className="rd-spinner" />
+                                                            <p>Analizando inventario y cargando catálogo...</p>
                                                         </td>
                                                     </tr>
-                                                );
-                                            })
-                                        )}
+                                                ) : stockAlerts.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={10} className="rd-table-empty">
+                                                            <PackageOpen size={48} className="rd-empty-icon" />
+                                                            <h4>No se encontraron productos</h4>
+                                                            <p>Modificá los filtros de búsqueda o el nivel de urgencia.</p>
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    stockAlerts.map(alert => {
+                                                        const isSelected = selectedProductIds.includes(alert.id);
+                                                        const inAnyDraft = drafts.some(d => d.customData?.rows?.some((r: any) => r.id === alert.id));
+                                                        const currentQty = catalogQuantities[alert.id] ?? getDefaultQty(alert);
+                                                        return (
+                                                            <tr 
+                                                                key={alert.id} 
+                                                                className={`rd-catalog-row rd-row--${alert.urgency} ${isSelected ? 'rd-row--selected' : ''}`}
+                                                                onClick={() => handleSelectProduct(alert.id)}
+                                                                style={{ cursor: 'pointer' }}
+                                                            >
+                                                                <td className="rd-col-checkbox" onClick={e => e.stopPropagation()}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isSelected}
+                                                                        onChange={() => handleSelectProduct(alert.id)}
+                                                                    />
+                                                                </td>
+                                                                <td className="rd-code-cell"><code>{alert.code}</code></td>
+                                                                <td className="rd-name-cell">
+                                                                    <span className="rd-product-title">{alert.name}</span>
+                                                                    {alert.supplierName ? (
+                                                                        <span className="rd-product-supplier-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.1)', color: '#065f46', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', marginLeft: '6px' }} onClick={e => e.stopPropagation()}>
+                                                                            <Truck size={10} /> {alert.supplierName}
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={async (e) => {
+                                                                                    e.stopPropagation();
+                                                                                    if (window.confirm(`¿Querés desvincular al proveedor de ${alert.name}?`)) {
+                                                                                        try {
+                                                                                            setLoading(true);
+                                                                                            await updateProduct(alert.id, { supplierId: null as any });
+                                                                                            addNotification('Proveedor desvinculado con éxito', 'success');
+                                                                                            setRefreshKey(prev => prev + 1);
+                                                                                        } catch (err) {
+                                                                                            addNotification('Error al desvincular proveedor', 'error');
+                                                                                        } finally {
+                                                                                            setLoading(false);
+                                                                                        }
+                                                                                    }
+                                                                                }}
+                                                                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px', display: 'inline-flex', alignItems: 'center', marginLeft: '4px' }}
+                                                                                title="Desvincular Proveedor"
+                                                                            >
+                                                                                <X size={10} />
+                                                                            </button>
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="rd-product-supplier-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', color: '#64748b', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', marginLeft: '6px' }}>
+                                                                            Sin Proveedor
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td>{alert.category}</td>
+                                                                <td className="rd-txt-right font-bold">{alert.stock}</td>
+                                                                <td className="rd-txt-right text-muted">{alert.minStock}</td>
+                                                                <td className="rd-col-status">
+                                                                    {alert.urgency === 'critical' && <span className="rd-alert-pill rd-alert-pill--critical">Sin Stock</span>}
+                                                                    {alert.urgency === 'low' && <span className="rd-alert-pill rd-alert-pill--low">Bajo</span>}
+                                                                    {alert.urgency === 'ok' && <span className="rd-alert-pill rd-alert-pill--ok">OK</span>}
+                                                                </td>
+                                                                <td className="rd-txt-right font-mono">${alert.cost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                                                                <td className="rd-txt-right" onClick={e => e.stopPropagation()}>
+                                                                    <input
+                                                                        type="number"
+                                                                        min={1}
+                                                                        value={currentQty}
+                                                                        onChange={e => {
+                                                                            const val = parseInt(e.target.value) || 1;
+                                                                            setCatalogQuantities(prev => ({ ...prev, [alert.id]: val }));
+                                                                        }}
+                                                                        className="rd-input"
+                                                                        style={{ width: '70px', padding: '4px 8px', fontSize: '12px', textAlign: 'right' }}
+                                                                        title="Cantidad a pedir"
+                                                                    />
+                                                                </td>
+                                                                <td className="rd-col-actions" onClick={e => e.stopPropagation()}>
+                                                                    <button
+                                                                        type="button"
+                                                                        className={`rd-quick-add-btn ${inAnyDraft ? 'rd-quick-add-btn--in-draft' : ''}`}
+                                                                        onClick={() => handleQuickAdd(alert)}
+                                                                        title={inAnyDraft ? "Producto ya en un borrador" : "Agregar rápidamente"}
+                                                                    >
+                                                                        {inAnyDraft ? <Check size={14} /> : <Plus size={14} />}
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })
+                                                )}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
+                    </div>
+                </div>
 
                         {/* ── Glassmorphic Floating Command Bar ── */}
                         <div className={`rd-floating-bar ${selectedProductIds.length > 0 ? 'rd-floating-bar--visible' : ''}`}>
@@ -1120,6 +1453,41 @@ const RestockDesktop: React.FC = () => {
                                                     <span>Total Estimado:</span>
                                                     <strong>${totalEstimated.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
                                                 </div>
+
+                                                {/* Workflow Status Selector & Stock Commit inside the draft card */}
+                                                <div className="rd-draft-workflow-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+                                                    <div className="rd-status-picker" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+                                                        <span className="font-bold text-slate-600">Estado:</span>
+                                                        <select
+                                                            value={(draft.customData as any)?.status || 'draft'}
+                                                            onChange={e => updateDraftStatus(draftId, e.target.value as any)}
+                                                            className={`rd-status-select rd-status-select--${(draft.customData as any)?.status || 'draft'}`}
+                                                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '11px', fontWeight: 'bold' }}
+                                                        >
+                                                            <option value="draft">📁 Borrador / En Creación</option>
+                                                            <option value="emitted">🔵 Emitido / Enviado</option>
+                                                            <option value="received">🟢 Obtenido / Recibido</option>
+                                                        </select>
+                                                    </div>
+
+                                                    {(draft.customData as any)?.status === 'received' && (
+                                                        <div className="rd-commit-section">
+                                                            {(draft.customData as any)?.stockCommitted ? (
+                                                                <span className="rd-commit-badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#047857', fontWeight: 'bold', fontSize: '11px' }}>
+                                                                    <Check size={12} /> Stock Cargado
+                                                                </span>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => handleCommitStockToInventory(draft)}
+                                                                    className="rd-btn rd-btn--success rd-btn--sm"
+                                                                    style={{ padding: '6px 12px', fontSize: '11px', gap: '4px', display: 'flex', alignItems: 'center' }}
+                                                                >
+                                                                    <Layers size={11} /> Cargar Stock
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -1174,16 +1542,102 @@ const RestockDesktop: React.FC = () => {
                                     </div>
 
                                     {activeBoletoDraft && (
-                                        <div className="rd-boleto-sidebar-actions">
-                                            <button className="rd-btn rd-btn--workspace w-full" onClick={() => exportToWord(activeBoletoDraft)}>
-                                                <Download size={15} />
-                                                Descargar Word (.doc)
-                                            </button>
-                                            <button className="rd-btn rd-btn--primary w-full" onClick={printBoleto}>
-                                                <Printer size={15} />
-                                                Imprimir / PDF
-                                            </button>
-                                        </div>
+                                        <>
+                                            <div className="rd-toggles-card mt-2 mb-4" style={{ padding: '12px 0', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                                                <h5 className="rd-toggles-title" style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', marginBottom: '8px', textTransform: 'uppercase' }}>
+                                                    ⚙️ Personalización A4
+                                                </h5>
+                                                <div className="rd-toggles-list" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <label className={`rd-toggle-item ${printOptions.showEmisor ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#475569', cursor: 'pointer' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={printOptions.showEmisor}
+                                                            onChange={() => setPrintOptions(p => ({ ...p, showEmisor: !p.showEmisor }))}
+                                                            style={{ accentColor: '#10b981' }}
+                                                        />
+                                                        <span>Datos del Emisor</span>
+                                                    </label>
+                                                    <label className={`rd-toggle-item ${printOptions.showProveedor ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#475569', cursor: 'pointer' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={printOptions.showProveedor}
+                                                            onChange={() => setPrintOptions(p => ({ ...p, showProveedor: !p.showProveedor }))}
+                                                            style={{ accentColor: '#10b981' }}
+                                                        />
+                                                        <span>Datos del Proveedor</span>
+                                                    </label>
+                                                    <label className={`rd-toggle-item ${printOptions.showCode ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#475569', cursor: 'pointer' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={printOptions.showCode}
+                                                            onChange={() => setPrintOptions(p => ({ ...p, showCode: !p.showCode }))}
+                                                            style={{ accentColor: '#10b981' }}
+                                                        />
+                                                        <span>Código de Producto</span>
+                                                    </label>
+                                                    <label className={`rd-toggle-item ${printOptions.showPrice ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#475569', cursor: 'pointer' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={printOptions.showPrice}
+                                                            onChange={() => setPrintOptions(p => ({ ...p, showPrice: !p.showPrice }))}
+                                                            style={{ accentColor: '#10b981' }}
+                                                        />
+                                                        <span>Costo Unitario</span>
+                                                    </label>
+                                                    <label className={`rd-toggle-item ${printOptions.showSubtotal ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#475569', cursor: 'pointer' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={printOptions.showSubtotal}
+                                                            onChange={() => setPrintOptions(p => ({ ...p, showSubtotal: !p.showSubtotal }))}
+                                                            style={{ accentColor: '#10b981' }}
+                                                        />
+                                                        <span>Subtotales por Fila</span>
+                                                    </label>
+                                                    <label className={`rd-toggle-item ${printOptions.showTotal ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#475569', cursor: 'pointer' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={printOptions.showTotal}
+                                                            onChange={() => setPrintOptions(p => ({ ...p, showTotal: !p.showTotal }))}
+                                                            style={{ accentColor: '#10b981' }}
+                                                        />
+                                                        <span>Total Estimado</span>
+                                                    </label>
+                                                    <label className={`rd-toggle-item ${printOptions.showNotes ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#475569', cursor: 'pointer' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={printOptions.showNotes}
+                                                            onChange={() => setPrintOptions(p => ({ ...p, showNotes: !p.showNotes }))}
+                                                            style={{ accentColor: '#10b981' }}
+                                                        />
+                                                        <span>Observaciones / Notas</span>
+                                                    </label>
+                                                    <label className={`rd-toggle-item ${printOptions.showHandwritten ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#475569', cursor: 'pointer' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={printOptions.showHandwritten}
+                                                            onChange={() => setPrintOptions(p => ({ ...p, showHandwritten: !p.showHandwritten }))}
+                                                            style={{ accentColor: '#10b981' }}
+                                                        />
+                                                        <span>Ajustes a Mano</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div className="rd-boleto-sidebar-actions">
+                                                <button className="rd-btn rd-btn--success w-full" onClick={() => saveAsDocxToWorkspace(activeBoletoDraft)}>
+                                                    <Check size={15} />
+                                                    Emitir y Guardar en Workspace
+                                                </button>
+                                                <button className="rd-btn rd-btn--workspace w-full" onClick={() => exportToWord(activeBoletoDraft)}>
+                                                    <Download size={15} />
+                                                    Descargar Word (.doc)
+                                                </button>
+                                                <button className="rd-btn rd-btn--primary w-full" onClick={printBoleto}>
+                                                    <Printer size={15} />
+                                                    Imprimir / PDF
+                                                </button>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
 
@@ -1193,28 +1647,50 @@ const RestockDesktop: React.FC = () => {
                                         <div id="rd-paper-to-print" className="rd-paper-sheet">
                                             {/* Header / Logo */}
                                             <div className="rd-paper-header">
-                                                <div className="rd-paper-header__logo">FLORERÍA ASTER</div>
+                                                <div className="rd-paper-header__logo">
+                                                    {printOptions.showEmisor && shopInfo?.name ? shopInfo.name.toUpperCase() : 'FLORERÍA ASTER'}
+                                                </div>
                                                 <div className="rd-paper-header__subtitle">Orden de Compra y Reposición</div>
                                                 <div className="rd-paper-header__line"></div>
                                             </div>
 
                                             {/* Metadata Grid */}
                                             <div className="rd-paper-meta-grid">
-                                                <div className="rd-paper-meta-section">
-                                                    <p><strong>EMISOR:</strong> Florería Aster S.R.L.</p>
-                                                    <p><strong>Solicitante:</strong> {user?.name || 'Administrador'}</p>
-                                                    <p><strong>Email:</strong> {user?.email || '—'}</p>
-                                                    <p className="rd-paper-meta-hint">Florería Aster ERP v2.5 · HUD Engine</p>
-                                                </div>
+                                                {printOptions.showEmisor ? (
+                                                    <div className="rd-paper-meta-section">
+                                                        <p><strong>EMISOR:</strong> {shopInfo?.name || 'Florería Aster S.R.L.'}</p>
+                                                        {shopInfo?.phone && <p><strong>Teléfono:</strong> {shopInfo.phone}</p>}
+                                                        {shopInfo?.address && <p><strong>Dirección:</strong> {shopInfo.address}</p>}
+                                                        {shopInfo?.instagram && <p><strong>Instagram:</strong> @{shopInfo.instagram.replace(/^@/, '')}</p>}
+                                                        <p className="rd-paper-meta-hint" style={{ marginTop: '4px', fontSize: '10px', color: '#94a3b8' }}>Solicitado por: {user?.name || 'Administrador'}</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="rd-paper-meta-section">
+                                                        <p className="text-slate-400 italic" style={{ fontSize: '12px' }}>Datos de emisor ocultados</p>
+                                                    </div>
+                                                )}
                                                 <div className="rd-paper-meta-section rd-paper-meta-section--right">
                                                     <p><strong>Fecha:</strong> {new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                                                     <p><strong>Hora:</strong> {new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</p>
-                                                    <p><strong>Estado:</strong> <span className="rd-paper-status-badge">Abierto / En Proceso</span></p>
+                                                    <p>
+                                                        <strong>Estado:</strong>{' '}
+                                                        <span className={`rd-paper-status-badge rd-paper-status-badge--${(activeBoletoDraft.customData as any)?.status || 'draft'}`} style={{ textTransform: 'capitalize' }}>
+                                                            {(activeBoletoDraft.customData as any)?.status === 'draft' ? 'Borrador' : (activeBoletoDraft.customData as any)?.status === 'emitted' ? 'Emitido' : (activeBoletoDraft.customData as any)?.status === 'received' ? 'Recibido' : 'Abierto'}
+                                                        </span>
+                                                    </p>
                                                 </div>
                                             </div>
 
+                                            {/* Provider Section */}
+                                            {printOptions.showProveedor && (
+                                                <div className="rd-paper-provider-block" style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#ecfdf5', borderLeft: '4px solid #10b981', color: '#065f46', borderRadius: '0 6px 6px 0', fontSize: '13px' }}>
+                                                    <Truck size={14} className="text-emerald-700" />
+                                                    <span><strong>PROVEEDOR:</strong> {activeBoletoDraft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ').toUpperCase()}</span>
+                                                </div>
+                                            )}
+
                                             {/* Category Grouped Items */}
-                                            <div className="rd-paper-content-list">
+                                            <div className="rd-paper-content-list" style={{ marginTop: '1.5rem' }}>
                                                 {Object.keys(groupedBoletoItems).length === 0 ? (
                                                     <div className="rd-paper-empty-items">
                                                         No hay ítems cargados en esta orden.
@@ -1226,24 +1702,24 @@ const RestockDesktop: React.FC = () => {
                                                             <table className="rd-paper-items-table">
                                                                 <thead>
                                                                     <tr>
-                                                                        <th style={{ width: '15%' }}>Código</th>
-                                                                        <th style={{ width: '45%' }}>Producto</th>
+                                                                        {printOptions.showCode && <th style={{ width: '15%' }}>Código</th>}
+                                                                        <th style={{ width: printOptions.showCode ? '45%' : '60%' }}>Producto</th>
                                                                         <th style={{ width: '15%' }} className="rd-txt-right">Cant.</th>
-                                                                        <th style={{ width: '12%' }} className="rd-txt-right">Cost. Un.</th>
-                                                                        <th style={{ width: '13%' }} className="rd-txt-right">Subtotal</th>
+                                                                        {printOptions.showPrice && <th style={{ width: '12%' }} className="rd-txt-right">Cost. Un.</th>}
+                                                                        {printOptions.showSubtotal && <th style={{ width: '13%' }} className="rd-txt-right">Subtotal</th>}
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
                                                                     {items.map((item: any) => (
                                                                         <tr key={item.id}>
-                                                                            <td>{item.code}</td>
+                                                                            {printOptions.showCode && <td>{item.code}</td>}
                                                                             <td>
                                                                                 {item.isCustom && <span className="rd-libre-badge-vfs mr-1">LIBRE</span>}
                                                                                 {item.name}
                                                                             </td>
                                                                             <td className="rd-txt-right"><strong>{item.quantity}</strong></td>
-                                                                            <td className="rd-txt-right">${item.cost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
-                                                                            <td className="rd-txt-right">${item.total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                                                                            {printOptions.showPrice && <td className="rd-txt-right">${item.cost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>}
+                                                                            {printOptions.showSubtotal && <td className="rd-txt-right">${item.total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>}
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
@@ -1254,14 +1730,14 @@ const RestockDesktop: React.FC = () => {
                                             </div>
 
                                             {/* Grand Total */}
-                                            {activeBoletoDraft.customData && (
+                                            {printOptions.showTotal && activeBoletoDraft.customData && (
                                                 <div className="rd-paper-totals-box">
                                                     Total Estimado: <strong>${(activeBoletoDraft.customData.rows || []).reduce((sum: number, item: any) => sum + item.total, 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
                                                 </div>
                                             )}
 
                                             {/* Notes */}
-                                            {activeBoletoDraft.customData?.notes && (
+                                            {printOptions.showNotes && activeBoletoDraft.customData?.notes && (
                                                 <div className="rd-paper-note-block">
                                                     <h4>📝 Observaciones del Pedido:</h4>
                                                     <p>{activeBoletoDraft.customData.notes}</p>
@@ -1269,11 +1745,13 @@ const RestockDesktop: React.FC = () => {
                                             )}
 
                                             {/* Dotted lines for handwritten notes */}
-                                            <div className="rd-paper-handwritten">
-                                                <h4>✍️ Ajustes y Notas a Mano (Espacio de Trabajo):</h4>
-                                                <div className="rd-paper-handwritten-dotted"></div>
-                                                <div className="rd-paper-handwritten-dotted"></div>
-                                            </div>
+                                            {printOptions.showHandwritten && (
+                                                <div className="rd-paper-handwritten">
+                                                    <h4>✍️ Ajustes y Notas a Mano (Espacio de Trabajo):</h4>
+                                                    <div className="rd-paper-handwritten-dotted"></div>
+                                                    <div className="rd-paper-handwritten-dotted"></div>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="rd-paper-sheet flex items-center justify-center">

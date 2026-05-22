@@ -34,12 +34,7 @@ interface VFSItem {
     description?: string;
     color?: string;
     isCustom?: boolean;
-    customData?: {
-        columns: any[];
-        rows: any[];
-        notes?: string;
-        leadTime?: string;
-    };
+    customData?: any;
 }
 
 export const RestockMobile: React.FC = () => {
@@ -50,6 +45,8 @@ export const RestockMobile: React.FC = () => {
     const loadSuppliers = useStore(s => s.loadSuppliers);
     const loadCategories = useStore(s => s.loadCategories);
     const addNotification = useStore(s => s.addNotification);
+    const updateProduct = useStore(s => s.updateProduct);
+    const shopInfo = useStore(s => s.shopInfo);
     const { user } = useAuth();
     const businessId = user?.business_id || 'default';
 
@@ -57,6 +54,18 @@ export const RestockMobile: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'selection' | 'drafts' | 'boleto'>('selection');
     const [loading, setLoading] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
+
+    const [catalogQuantities, setCatalogQuantities] = useState<Record<string, number>>({});
+    const [printOptions, setPrintOptions] = useState({
+        showCode: true,
+        showPrice: true,
+        showSubtotal: true,
+        showTotal: true,
+        showEmisor: true,
+        showProveedor: true,
+        showNotes: true,
+        showHandwritten: true
+    });
 
     // ── Catalog Filters ──
     const [searchQuery, setSearchQuery] = useState('');
@@ -206,6 +215,144 @@ export const RestockMobile: React.FC = () => {
         addNotification('Borrador eliminado del Workspace virtual', 'info');
     }, [businessId, addNotification]);
 
+    // ── Save Order as .docx to dated folder in VFS Workspace ──
+    const saveAsDocxToWorkspace = (draft: VFSItem) => {
+        const key = `explorer_custom_items_${businessId}`;
+        let stored: VFSItem[] = [];
+        try {
+            stored = JSON.parse(localStorage.getItem(key) || '[]') as VFSItem[];
+        } catch {}
+
+        const now = new Date();
+        const yearMonth = now.toISOString().slice(0, 7); // e.g. "2026-05"
+        const dateStr = now.toLocaleDateString('es-AR').replace(/\//g, '-');
+        const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
+
+        // 1. Find or create the dated folder
+        let datedFolder = stored.find(item => item.parentId === 'pedidos_compra_folder' && item.name === yearMonth);
+        let datedFolderId = '';
+        
+        if (!datedFolder) {
+            datedFolderId = `dated_folder_${yearMonth}_${Date.now()}`;
+            datedFolder = {
+                id: datedFolderId,
+                name: yearMonth,
+                parentId: 'pedidos_compra_folder',
+                type: 'folder',
+                description: `Órdenes de pedido correspondientes a ${yearMonth}`,
+                color: '#f0fdf4', // Premium light green
+                isCustom: true
+            };
+            stored.push(datedFolder);
+        } else {
+            datedFolderId = datedFolder.id;
+        }
+
+        // 2. Create docx file in that dated folder
+        const filename = `Pedido_${dateStr}_${supplierName.replace(/\s+/g, '_')}.docx`;
+        const docxId = `docx_order_${draft.id.replace('restock_draft_', '')}_${Date.now()}`;
+
+        const newDocxFile: VFSItem = {
+            id: docxId,
+            name: filename,
+            parentId: datedFolderId,
+            type: 'file',
+            entity: 'custom',
+            description: `Orden de reposición oficial emitida para ${supplierName} (${dateStr})`,
+            color: '#e0e7ff', // Premium light purple/indigo
+            isCustom: true,
+            customData: {
+                rows: draft.customData?.rows || [],
+                notes: draft.customData?.notes || '',
+                leadTime: draft.customData?.leadTime || '',
+                shopInfo: shopInfo,
+                printOptions: printOptions,
+                status: 'emitted', // Starts as emitted
+                supplierName: supplierName,
+                date: now.toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' }),
+                hour: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+            } as any
+        };
+
+        stored.push(newDocxFile);
+        localStorage.setItem(key, JSON.stringify(stored));
+        setRefreshKey(prev => prev + 1);
+        addNotification(`Pedido guardado en Workspace: Órdenes de Pedido ➔ ${yearMonth} ➔ ${filename}`, 'success');
+    };
+
+    // ── Update Draft Lifecycle Status in VFS ──
+    const updateDraftStatus = (draftId: string, newStatus: 'draft' | 'emitted' | 'received') => {
+        const key = `explorer_custom_items_${businessId}`;
+        let stored: VFSItem[] = [];
+        try {
+            stored = JSON.parse(localStorage.getItem(key) || '[]') as VFSItem[];
+        } catch {}
+        
+        const updated = stored.map(item => {
+            if (item.id === draftId) {
+                return {
+                    ...item,
+                    customData: {
+                        ...item.customData,
+                        status: newStatus
+                    }
+                };
+            }
+            return item;
+        });
+        localStorage.setItem(key, JSON.stringify(updated));
+        setRefreshKey(prev => prev + 1);
+        addNotification(`Estado del pedido cambiado a ${
+            newStatus === 'draft' ? 'Borrador' : newStatus === 'emitted' ? 'Emitido' : 'Recibido'
+        }`, 'success');
+    };
+
+    // ── Commit Order stock quantities into real inventory ──
+    const handleCommitStockToInventory = async (draft: VFSItem) => {
+        const items = draft.customData?.rows || [];
+        if (items.length === 0) return;
+        try {
+            setLoading(true);
+            for (const item of items) {
+                const matchingProd = products.find(p => p.id === item.id);
+                if (matchingProd) {
+                    const currentStock = matchingProd.stock ?? 0;
+                    await updateProduct(item.id, {
+                        stock: currentStock + item.quantity
+                    });
+                }
+            }
+            
+            const key = `explorer_custom_items_${businessId}`;
+            let stored: VFSItem[] = [];
+            try {
+                stored = JSON.parse(localStorage.getItem(key) || '[]') as VFSItem[];
+            } catch {}
+            
+            const updated = stored.map(item => {
+                if (item.id === draft.id) {
+                    return {
+                        ...item,
+                        customData: {
+                            ...item.customData,
+                            status: 'received',
+                            stockCommitted: true
+                        }
+                    };
+                }
+                return item;
+            });
+            localStorage.setItem(key, JSON.stringify(updated));
+            
+            addNotification('Existencias cargadas con éxito en el inventario', 'success');
+            setRefreshKey(prev => prev + 1);
+        } catch (err) {
+            addNotification('Error al cargar existencias en el inventario', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // ── Category options flat list with indents ──
     const categoryOptions = useMemo(() => {
         const build = (parentId: string | null = null, depth = 0): { id: string; name: string; label: string }[] => {
@@ -323,19 +470,22 @@ export const RestockMobile: React.FC = () => {
             const alert = stockAlerts.find(a => a.id === id);
             if (!alert) return;
 
+            // Read individual quantity input if set, otherwise use bulkQuantity
+            const qty = (catalogQuantities[alert.id] ?? Number(bulkQuantity)) || Math.max(10, (alert.minStock * 2) - alert.stock);
+
             const existingIdx = draftItems.findIndex(item => item.id === id);
             if (existingIdx > -1) {
-                draftItems[existingIdx].quantity += Number(bulkQuantity) || 10;
+                draftItems[existingIdx].quantity += qty;
                 draftItems[existingIdx].total = draftItems[existingIdx].quantity * draftItems[existingIdx].cost;
             } else {
                 draftItems.push({
                     id: alert.id,
                     code: alert.code,
                     name: alert.name,
-                    quantity: Number(bulkQuantity) || 10,
+                    quantity: qty,
                     supplierName,
                     cost: alert.cost,
-                    total: (Number(bulkQuantity) || 10) * alert.cost,
+                    total: qty * alert.cost,
                     isCustom: false
                 });
             }
@@ -372,7 +522,7 @@ export const RestockMobile: React.FC = () => {
     const handleQuickAdd = (alert: StockAlert) => {
         const supplierId = alert.supplierId || 'unassigned';
         const supplierName = alert.supplierName || 'Sin Proveedor';
-        const suggested = Math.max(10, (alert.minStock * 2) - alert.stock);
+        const suggested = catalogQuantities[alert.id] ?? Math.max(10, (alert.minStock * 2) - alert.stock);
 
         const draftId = `restock_draft_${supplierId}`;
         const existingDraft = drafts.find(d => d.id === draftId);
@@ -415,7 +565,7 @@ export const RestockMobile: React.FC = () => {
         const supplierId = draftId.replace('restock_draft_', '');
         const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
 
-        const updatedRows = (draft.customData.rows || []).map(row => {
+        const updatedRows = (draft.customData.rows || []).map((row: any) => {
             if (row.id === itemId) {
                 const updatedVal = Math.max(0, value);
                 return {
@@ -437,7 +587,7 @@ export const RestockMobile: React.FC = () => {
         const supplierId = draftId.replace('restock_draft_', '');
         const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
 
-        const updatedRows = (draft.customData.rows || []).filter(row => row.id !== itemId);
+        const updatedRows = (draft.customData.rows || []).filter((row: any) => row.id !== itemId);
         saveVFSDraft(supplierId, supplierName, updatedRows, draft.customData.notes, draft.customData.leadTime);
         addNotification('Producto quitado del borrador', 'info');
     };
@@ -511,7 +661,7 @@ export const RestockMobile: React.FC = () => {
             msg += '\n';
         });
 
-        const total = items.reduce((s, i) => s + (i.quantity * i.cost), 0);
+        const total = items.reduce((s: number, i: any) => s + (i.quantity * i.cost), 0);
         if (total > 0) msg += `\n💰 *Total estimado:* $${total.toLocaleString('es-AR')}`;
         if (draft.customData?.notes) msg += `\n📝 *Nota:* ${draft.customData.notes}`;
         msg += `\n\n¡Muchas gracias!`;
@@ -619,7 +769,7 @@ export const RestockMobile: React.FC = () => {
             docContent += `</tbody></table>`;
         });
 
-        const total = items.reduce((s, i) => s + (i.quantity * i.cost), 0);
+        const total = items.reduce((s: number, i: any) => s + (i.quantity * i.cost), 0);
         docContent += `<div class="total-box">TOTAL ESTIMADO DE LA COMPRA: $${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>`;
 
         if (draft.customData?.notes) {
@@ -668,7 +818,7 @@ export const RestockMobile: React.FC = () => {
         const items = activeBoletoDraft.customData.rows || [];
         const groups: Record<string, any[]> = {};
         
-        items.forEach(item => {
+        items.forEach((item: any) => {
             const matchedProd = products.find(p => p.id === item.id);
             const cat = matchedProd?.category || 'Sin Categoría';
             if (!groups[cat]) groups[cat] = [];
@@ -853,9 +1003,29 @@ export const RestockMobile: React.FC = () => {
                                                     {alert.urgency === 'ok' && <span className="rm-badge rm-badge--ok">OK</span>}
                                                 </div>
                                                 <h4 className="rm-card-name">{alert.name}</h4>
-                                                <div className="rm-card-meta">
+                                                <div className="rm-card-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                                                     <span>📁 {alert.category}</span>
-                                                    {alert.supplierName && <span>🚛 {alert.supplierName}</span>}
+                                                    {alert.supplierName ? (
+                                                        <span className="rm-card-supplier-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                            🚛 {alert.supplierName}
+                                                            <button 
+                                                                className="rm-unlink-supplier-btn"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (window.confirm(`¿Querés desvincular ${alert.name} del proveedor ${alert.supplierName}?`)) {
+                                                                        await updateProduct(alert.id, { supplierId: null as any });
+                                                                        addNotification('Producto desvinculado con éxito', 'info');
+                                                                    }
+                                                                }}
+                                                                title="Desvincular proveedor"
+                                                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239, 68, 68, 0.2)', border: 'none', color: '#f87171', borderRadius: '4px', padding: '1px', cursor: 'pointer' }}
+                                                            >
+                                                                <X size={10} />
+                                                            </button>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs text-slate-500 italic">Sin Proveedor</span>
+                                                    )}
                                                 </div>
                                                 <div className="rm-card-stock-grid">
                                                     <div>
@@ -872,7 +1042,21 @@ export const RestockMobile: React.FC = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="rm-card-action" onClick={e => e.stopPropagation()}>
+                                            <div className="rm-card-action" style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={e => e.stopPropagation()}>
+                                                <div className="rm-card-qty-control" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                    <span className="rm-card-qty-lbl" style={{ fontSize: '0.58rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Cant.</span>
+                                                    <input 
+                                                        type="number" 
+                                                        min={1} 
+                                                        value={catalogQuantities[alert.id] ?? Math.max(10, (alert.minStock * 2) - alert.stock)}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                                            const val = parseInt(e.target.value) || 1;
+                                                            setCatalogQuantities(prev => ({ ...prev, [alert.id]: val }));
+                                                        }}
+                                                        className="rm-card-qty-input"
+                                                        style={{ width: '48px', padding: '4px 6px', background: '#0f172a', border: '1px solid #334155', color: '#f8fafc', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', textAlign: 'center' }}
+                                                    />
+                                                </div>
                                                 <button
                                                     className={`rm-quick-add ${inAnyDraft ? 'rm-quick-add--in-draft' : ''}`}
                                                     onClick={() => handleQuickAdd(alert)}
@@ -956,7 +1140,7 @@ export const RestockMobile: React.FC = () => {
                                     const supplierId = draftId.replace('restock_draft_', '');
                                     const supplierName = draft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ');
                                     const items = draft.customData?.rows || [];
-                                    const totalEstimated = items.reduce((sum, item) => sum + (item.quantity * item.cost), 0);
+                                    const totalEstimated = items.reduce((sum: number, item: any) => sum + (item.quantity * item.cost), 0);
                                     const isExpanded = !!expandedDrafts[draftId];
 
                                     return (
@@ -1117,6 +1301,41 @@ export const RestockMobile: React.FC = () => {
                                                             />
                                                         </div>
                                                     </div>
+
+                                                    {/* Workflow Status Selector & Stock Commit inside the draft card */}
+                                                    <div className="rm-draft-workflow-panel mt-3 pt-3 border-t border-slate-700 flex justify-between items-center" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(51,65,85,0.6)' }}>
+                                                        <div className="rm-status-picker flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <span className="text-xs font-bold text-slate-400" style={{ fontSize: '11px', fontWeight: 'bold', color: '#94a3b8' }}>Estado:</span>
+                                                            <select
+                                                                value={draft.customData?.status || 'draft'}
+                                                                onChange={e => updateDraftStatus(draftId, e.target.value as any)}
+                                                                className={`rm-status-select rm-status-select--${draft.customData?.status || 'draft'}`}
+                                                                style={{ padding: '4px 8px', borderRadius: '6px', background: '#0f172a', border: '1px solid #334155', color: '#f8fafc', fontSize: '11px', fontWeight: 'bold' }}
+                                                            >
+                                                                <option value="draft">📁 Borrador / En Creación</option>
+                                                                <option value="emitted">🔵 Emitido / Enviado</option>
+                                                                <option value="received">🟢 Obtenido / Recibido</option>
+                                                            </select>
+                                                        </div>
+
+                                                        {draft.customData?.status === 'received' && (
+                                                            <div className="rm-commit-section">
+                                                                {draft.customData?.stockCommitted ? (
+                                                                    <span className="rm-commit-badge-success flex items-center gap-1 text-emerald font-bold text-xs" style={{ color: '#10b981', fontWeight: 'bold', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                        <Check size={14} /> Stock Cargado
+                                                                    </span>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => handleCommitStockToInventory(draft)}
+                                                                        className="rm-btn rm-btn--primary py-1.5 px-3 text-xs"
+                                                                        style={{ padding: '6px 12px', fontSize: '11px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                    >
+                                                                        <Layers size={12} /> Cargar Stock
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -1143,8 +1362,9 @@ export const RestockMobile: React.FC = () => {
                         ) : (
                             <div className="rm-boleto-container">
                                 {/* Selector of active draft to preview */}
+                                div.rm-hud-card.p-3.mb-3 (Selector below):
                                 <div className="rm-hud-card p-3 mb-3">
-                                    <label className="block text-xs font-bold text-slate-500 mb-1">Previsualizar Proveedor:</label>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1" style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#94a3b8', marginBottom: '4px' }}>Previsualizar Proveedor:</label>
                                     <select 
                                         value={boletoSupplierId}
                                         onChange={e => setBoletoSupplierId(e.target.value)}
@@ -1156,9 +1376,113 @@ export const RestockMobile: React.FC = () => {
                                             return <option key={d.id} value={sId}>{sName}</option>;
                                         })}
                                     </select>
+
+                                    {/* Personalización A4 Checkboxes */}
+                                    {activeBoletoDraft && (
+                                        <div className="rm-toggles-card mt-3 pt-3" style={{ borderTop: '1px solid rgba(51, 65, 85, 0.6)', marginTop: '12px', paddingTop: '12px' }}>
+                                            <h5 className="rm-toggles-title" style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase' }}>
+                                                ⚙️ Personalización A4
+                                            </h5>
+                                            <div className="rm-toggles-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                <label className={`rm-toggle-item ${printOptions.showEmisor ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#cbd5e1', cursor: 'pointer', background: '#0f172a', padding: '6px 8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={printOptions.showEmisor}
+                                                        onChange={() => setPrintOptions(p => ({ ...p, showEmisor: !p.showEmisor }))}
+                                                        style={{ accentColor: '#10b981' }}
+                                                    />
+                                                    <span>Emisor</span>
+                                                </label>
+                                                <label className={`rm-toggle-item ${printOptions.showProveedor ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#cbd5e1', cursor: 'pointer', background: '#0f172a', padding: '6px 8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={printOptions.showProveedor}
+                                                        onChange={() => setPrintOptions(p => ({ ...p, showProveedor: !p.showProveedor }))}
+                                                        style={{ accentColor: '#10b981' }}
+                                                    />
+                                                    <span>Proveedor</span>
+                                                </label>
+                                                <label className={`rm-toggle-item ${printOptions.showCode ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#cbd5e1', cursor: 'pointer', background: '#0f172a', padding: '6px 8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={printOptions.showCode}
+                                                        onChange={() => setPrintOptions(p => ({ ...p, showCode: !p.showCode }))}
+                                                        style={{ accentColor: '#10b981' }}
+                                                    />
+                                                    <span>Códigos</span>
+                                                </label>
+                                                <label className={`rm-toggle-item ${printOptions.showPrice ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#cbd5e1', cursor: 'pointer', background: '#0f172a', padding: '6px 8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={printOptions.showPrice}
+                                                        onChange={() => setPrintOptions(p => ({ ...p, showPrice: !p.showPrice }))}
+                                                        style={{ accentColor: '#10b981' }}
+                                                    />
+                                                    <span>Costo U.</span>
+                                                </label>
+                                                <label className={`rm-toggle-item ${printOptions.showSubtotal ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#cbd5e1', cursor: 'pointer', background: '#0f172a', padding: '6px 8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={printOptions.showSubtotal}
+                                                        onChange={() => setPrintOptions(p => ({ ...p, showSubtotal: !p.showSubtotal }))}
+                                                        style={{ accentColor: '#10b981' }}
+                                                    />
+                                                    <span>Subtotales</span>
+                                                </label>
+                                                <label className={`rm-toggle-item ${printOptions.showTotal ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#cbd5e1', cursor: 'pointer', background: '#0f172a', padding: '6px 8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={printOptions.showTotal}
+                                                        onChange={() => setPrintOptions(p => ({ ...p, showTotal: !p.showTotal }))}
+                                                        style={{ accentColor: '#10b981' }}
+                                                    />
+                                                    <span>Total</span>
+                                                </label>
+                                                <label className={`rm-toggle-item ${printOptions.showNotes ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#cbd5e1', cursor: 'pointer', background: '#0f172a', padding: '6px 8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={printOptions.showNotes}
+                                                        onChange={() => setPrintOptions(p => ({ ...p, showNotes: !p.showNotes }))}
+                                                        style={{ accentColor: '#10b981' }}
+                                                    />
+                                                    <span>Notas</span>
+                                                </label>
+                                                <label className={`rm-toggle-item ${printOptions.showHandwritten ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#cbd5e1', cursor: 'pointer', background: '#0f172a', padding: '6px 8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={printOptions.showHandwritten}
+                                                        onChange={() => setPrintOptions(p => ({ ...p, showHandwritten: !p.showHandwritten }))}
+                                                        style={{ accentColor: '#10b981' }}
+                                                    />
+                                                    <span>A Mano</span>
+                                                </label>
+                                            </div>
+
+                                            <div className="rm-boleto-action-buttons mt-3" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                                                <button 
+                                                    className="rm-btn rm-btn--primary w-full py-2.5 flex items-center justify-center gap-2" 
+                                                    onClick={() => saveAsDocxToWorkspace(activeBoletoDraft)}
+                                                    style={{ padding: '10px', fontSize: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 'bold' }}
+                                                >
+                                                    <Check size={14} />
+                                                    <span>Guardar en Workspace (.docx)</span>
+                                                </button>
+                                                <button 
+                                                    className="rm-btn rm-btn--ghost w-full py-2.5 flex items-center justify-center gap-2" 
+                                                    onClick={() => exportToWord(activeBoletoDraft)}
+                                                    style={{ padding: '10px', fontSize: '12px', background: 'rgba(51, 65, 85, 0.4)', border: '1px solid #334155', color: '#cbd5e1', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 'bold' }}
+                                                >
+                                                    <Download size={14} />
+                                                    <span>Descargar Word (.doc)</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <button 
                                         className="rm-btn rm-btn--primary w-full py-3 mt-3 flex items-center justify-center gap-2"
                                         onClick={() => window.print()}
+                                        style={{ padding: '12px', fontSize: '13px', background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 'bold', marginTop: '12px' }}
                                     >
                                         <Printer size={16} />
                                         <span>Imprimir / Exportar PDF</span>
@@ -1170,12 +1494,14 @@ export const RestockMobile: React.FC = () => {
                                     {activeBoletoDraft ? (
                                         <div className="rm-paper-sheet">
                                             {/* Watermark Logo */}
-                                            <div className="rm-paper-watermark">ASTER</div>
+                                            <div className="rm-paper-watermark">
+                                                {printOptions.showEmisor && shopInfo?.name ? shopInfo.name.toUpperCase().substring(0, 10) : 'ASTER'}
+                                            </div>
                                             
                                             {/* Header */}
                                             <div className="rm-paper-header">
                                                 <div className="rm-paper-brand">
-                                                    <h3>FLORERÍA ASTER</h3>
+                                                    <h3>{printOptions.showEmisor && shopInfo?.name ? shopInfo.name.toUpperCase() : 'FLORERÍA ASTER'}</h3>
                                                     <span className="rm-paper-tagline">DISEÑO Y GESTIÓN FLORAL PREMIUM</span>
                                                 </div>
                                                 <div className="rm-paper-doc-type">
@@ -1188,15 +1514,28 @@ export const RestockMobile: React.FC = () => {
                                             <div className="rm-paper-info-grid">
                                                 <div>
                                                     <span className="rm-paper-info-title">EMISOR</span>
-                                                    <p><strong>Florería Aster S.R.L.</strong></p>
-                                                    <p>Solicitante: {user?.name || 'Administrador'}</p>
-                                                    <p>Email: {user?.email || 'aster@business.com'}</p>
+                                                    {printOptions.showEmisor ? (
+                                                        <>
+                                                            <p><strong>{shopInfo?.name || 'Florería Aster S.R.L.'}</strong></p>
+                                                            {shopInfo?.phone && <p>Tel: {shopInfo.phone}</p>}
+                                                            {shopInfo?.address && <p>Dir: {shopInfo.address}</p>}
+                                                            <p className="text-[9px] text-slate-400 mt-1">Solicitado por: {user?.name || 'Administrador'}</p>
+                                                        </>
+                                                    ) : (
+                                                        <p className="italic text-slate-400">Datos de emisor ocultos</p>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <span className="rm-paper-info-title">PROVEEDOR RECEPTOR</span>
-                                                    <p><strong>{activeBoletoDraft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ').toUpperCase()}</strong></p>
-                                                    <p>Plazo de Entrega: {activeBoletoDraft.customData?.leadTime || 'Coordinar'}</p>
-                                                    <p>Fecha: {new Date().toLocaleDateString('es-AR')}</p>
+                                                    {printOptions.showProveedor ? (
+                                                        <>
+                                                            <p><strong>{activeBoletoDraft.name.replace('Borrador_Pedido_', '').replace('.xlsx', '').replace(/_/g, ' ').toUpperCase()}</strong></p>
+                                                            <p>Plazo de Entrega: {activeBoletoDraft.customData?.leadTime || 'Coordinar'}</p>
+                                                            <p>Fecha: {new Date().toLocaleDateString('es-AR')}</p>
+                                                        </>
+                                                    ) : (
+                                                        <p className="italic text-slate-400">Datos de proveedor ocultos</p>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -1209,24 +1548,24 @@ export const RestockMobile: React.FC = () => {
                                                             <table className="rm-paper-table">
                                                                 <thead>
                                                                     <tr>
-                                                                        <th>Código</th>
+                                                                        {printOptions.showCode && <th>Código</th>}
                                                                         <th>Detalle del Ítem</th>
                                                                         <th className="text-right">Cant</th>
-                                                                        <th className="text-right">Costo U.</th>
-                                                                        <th className="text-right">Total</th>
+                                                                        {printOptions.showPrice && <th className="text-right">Costo U.</th>}
+                                                                        {printOptions.showSubtotal && <th className="text-right">Total</th>}
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
                                                                     {catItems.map((i: any) => (
                                                                         <tr key={i.id}>
-                                                                            <td><code>{i.code}</code></td>
+                                                                            {printOptions.showCode && <td><code>{i.code}</code></td>}
                                                                             <td>
                                                                                 <strong>{i.name}</strong>
                                                                                 {i.isCustom && <span className="text-[10px] ml-1 text-slate-400 font-normal">(Manual)</span>}
                                                                             </td>
                                                                             <td className="text-right font-bold">{i.quantity}</td>
-                                                                            <td className="text-right font-mono">${i.cost.toLocaleString('es-AR', { minimumFractionDigits: 1 })}</td>
-                                                                            <td className="text-right font-mono font-bold">${i.total.toLocaleString('es-AR', { minimumFractionDigits: 1 })}</td>
+                                                                            {printOptions.showPrice && <td className="text-right font-mono">${i.cost.toLocaleString('es-AR', { minimumFractionDigits: 1 })}</td>}
+                                                                            {printOptions.showSubtotal && <td className="text-right font-mono font-bold">${i.total.toLocaleString('es-AR', { minimumFractionDigits: 1 })}</td>}
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
@@ -1237,17 +1576,19 @@ export const RestockMobile: React.FC = () => {
                                             </div>
 
                                             {/* Summary Box */}
-                                            <div className="rm-paper-summary-box">
-                                                <div className="rm-summary-row">
-                                                    <span>Total Estimado de Importación:</span>
-                                                    <strong className="text-emerald font-mono">
-                                                        ${(activeBoletoDraft.customData?.rows || []).reduce((sum: number, r: any) => sum + r.total, 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                                    </strong>
+                                            {printOptions.showTotal && (
+                                                <div className="rm-paper-summary-box">
+                                                    <div className="rm-summary-row">
+                                                        <span>Total Estimado de Importación:</span>
+                                                        <strong className="text-emerald font-mono">
+                                                            ${(activeBoletoDraft.customData?.rows || []).reduce((sum: number, r: any) => sum + r.total, 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                                        </strong>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
 
                                             {/* Observaciones */}
-                                            {activeBoletoDraft.customData?.notes && (
+                                            {printOptions.showNotes && activeBoletoDraft.customData?.notes && (
                                                 <div className="rm-paper-observations">
                                                     <strong>📝 Observaciones Especiales:</strong>
                                                     <p>{activeBoletoDraft.customData.notes}</p>
@@ -1255,11 +1596,13 @@ export const RestockMobile: React.FC = () => {
                                             )}
 
                                             {/* Handwritten grid */}
-                                            <div className="rm-paper-handwritten">
-                                                <strong>✍️ Ajustes y Recepción (Anotaciones Físicas):</strong>
-                                                <div className="rm-paper-handwritten-line"></div>
-                                                <div className="rm-paper-handwritten-line"></div>
-                                            </div>
+                                            {printOptions.showHandwritten && (
+                                                <div className="rm-paper-handwritten">
+                                                    <strong>✍️ Ajustes y Recepción (Anotaciones Físicas):</strong>
+                                                    <div className="rm-paper-handwritten-line"></div>
+                                                    <div className="rm-paper-handwritten-line"></div>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <p className="text-center text-xs text-muted py-6">Cargando borrador...</p>
