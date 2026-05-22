@@ -173,41 +173,39 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
       }
     }
 
-    // Smart barcode auto-increment logic
+    // Smart barcode auto-increment logic (absolute max)
     const codeCol = columns.find(c => c.key === 'code' || c.key === 'barcode');
     if (codeCol) {
-      // Find the last non-empty code value in localRows
-      let lastCode = '';
-      for (let i = localRows.length - 1; i >= 0; i--) {
-        const val = localRows[i][codeCol.key];
-        if (val && String(val).trim()) {
-          lastCode = String(val).trim();
-          break;
-        }
-      }
+      let maxPrefix = 'PROD-';
+      let maxNum = 0;
+      let maxLen = 4;
+      let foundCode = false;
 
-      const incrementCodeValue = (code: string): string => {
-        // Match prefix and trailing numbers, e.g., "PROD-0045" -> prefix "PROD-", number "0045"
-        const match = code.match(/^(.*?)(\d+)$/);
-        if (match) {
-          const prefix = match[1];
-          const numStr = match[2];
-          const numVal = parseInt(numStr, 10) + 1;
-          const paddedNum = String(numVal).padStart(numStr.length, '0');
-          return `${prefix}${paddedNum}`;
+      localRows.forEach(r => {
+        const val = r[codeCol.key];
+        if (val && typeof val === 'string') {
+          foundCode = true;
+          const match = val.trim().match(/^(.*?)(\d+)$/);
+          if (match) {
+            maxPrefix = match[1];
+            const num = parseInt(match[2], 10);
+            if (num > maxNum) {
+              maxNum = num;
+              maxLen = match[2].length;
+            }
+          } else {
+            const numVal = parseInt(val, 10);
+            if (!isNaN(numVal) && numVal > maxNum) {
+              maxNum = numVal;
+              maxPrefix = '';
+              maxLen = val.trim().length;
+            }
+          }
         }
-        
-        // If it's pure digits
-        const numVal = parseInt(code, 10);
-        if (!isNaN(numVal)) {
-          return String(numVal + 1);
-        }
-        
-        return `${code}-1`;
-      };
+      });
 
-      if (lastCode) {
-        emptyRow[codeCol.key] = incrementCodeValue(lastCode);
+      if (foundCode) {
+        emptyRow[codeCol.key] = `${maxPrefix}${String(maxNum + 1).padStart(maxLen, '0')}`;
       } else {
         emptyRow[codeCol.key] = 'PROD-0001';
       }
@@ -334,6 +332,7 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
     if (localSearchQuery) {
       const lowerQuery = localSearchQuery.toLowerCase();
       result = result.filter((row) => {
+        if (String(row.id).startsWith('new_')) return true; // Exempt new rows from search filtering
         return Object.values(row).some((val) => {
           if (val === null || val === undefined) return false;
           return String(val).toLowerCase().includes(lowerQuery);
@@ -359,6 +358,13 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
 
       if (key) {
         result.sort((a, b) => {
+          // Exempt new rows from sorting, always push them to the bottom
+          const aIsNew = String(a.id).startsWith('new_');
+          const bIsNew = String(b.id).startsWith('new_');
+          if (aIsNew && !bIsNew) return 1;
+          if (!aIsNew && bIsNew) return -1;
+          if (aIsNew && bIsNew) return 0;
+
           const valA = a[key];
           const valB = b[key];
 
