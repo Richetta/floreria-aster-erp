@@ -18,10 +18,10 @@
     --color-charcoal: #1C2421;        /* Carbón Orgánico */
     --color-muted: #53605A;           /* Musgo Apagado */
     --color-border-warm: #E2DDD5;     /* Borde Lino */
-    --color-glass-bg: rgba(255, 255, 255, 0.75);
+    --color-glass-bg: #FFFFFF;
     
     /* Sombras Naturales */
-    --shadow-soft: 0 8px 30px rgba(44, 77, 62, 0.05);
+    --shadow-soft: none;
     --shadow-hover: 0 20px 40px rgba(44, 77, 62, 0.12);
     --shadow-inner: inset 0 2px 4px rgba(44, 77, 62, 0.03);
     --radius-premium: 20px;
@@ -46,11 +46,11 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(135deg, #2C4D3E 0%, #172D24 100%);
+    background-color: #2C4D3E;
     padding: 2.5rem 3rem;
     border-radius: var(--radius-premium);
     color: #ffffff;
-    box-shadow: 0 15px 35px -5px rgba(23, 45, 36, 0.25);
+    box-shadow: none;
     margin-bottom: 2rem !important;
     position: relative;
     overflow: hidden;
@@ -109,7 +109,7 @@ body {
     border: none !important;
     border-radius: 30px !important;
     box-shadow: 0 8px 20px rgba(233, 196, 106, 0.3) !important;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
     cursor: pointer;
     z-index: 5;
     height: auto !important;
@@ -130,16 +130,15 @@ body {
 }
 
 .kpi-card {
-    background: var(--color-glass-bg);
-    backdrop-filter: blur(12px);
+    background-color: var(--color-glass-bg);
     border: 1px solid rgba(255, 255, 255, 0.6) !important;
     border-radius: var(--radius-premium) !important;
     padding: 1.75rem 1.5rem !important;
     display: flex;
     align-items: center;
     gap: 1.25rem;
-    box-shadow: var(--shadow-soft) !important;
-    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    box-shadow: none !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
     overflow: hidden;
 }
@@ -214,8 +213,7 @@ body {
     display: flex;
     gap: 1.5rem;
     padding: 1rem 1.75rem;
-    background: var(--color-glass-bg);
-    backdrop-filter: blur(8px);
+    background-color: var(--color-glass-bg);
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: var(--shadow-inner);
@@ -249,7 +247,7 @@ body {
     border: 1px solid var(--color-border-warm);
     border-radius: var(--radius-premium);
     padding: 2rem;
-    box-shadow: var(--shadow-soft);
+    box-shadow: none;
     transition: box-shadow 0.3s;
 }
 
@@ -281,7 +279,7 @@ body {
     border-radius: 16px !important;
     padding: 1.25rem 1.5rem !important;
     transition: all 0.25s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
-    box-shadow: var(--shadow-inner) !important;
+    box-shadow: none !important;
 }
 
 .order-item:hover {
@@ -409,7 +407,7 @@ body {
     padding: 1rem 1.25rem !important;
     border-radius: 16px !important;
     transition: all 0.25s ease !important;
-    box-shadow: var(--shadow-soft) !important;
+    box-shadow: none !important;
 }
 
 .debtor-row:hover {
@@ -439,7 +437,7 @@ body {
     border-radius: 30px !important;
     padding: 0.5rem 1.25rem !important;
     box-shadow: 0 4px 10px rgba(37, 211, 102, 0.2) !important;
-    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
     font-size: 0.85rem;
     display: inline-flex;
     align-items: center;

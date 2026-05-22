@@ -58,8 +58,8 @@
   --card-padding-lg: var(--space-6);
   --card-radius: var(--radius-lg);
   --card-border: var(--border);
-  --card-shadow: var(--shadow-sm);
-  --card-shadow-hover: var(--shadow-md);
+  --card-shadow: none;
+  --card-shadow-hover: var(--shadow-sm);
 
   /* ============================================
      GRID - Layouts
@@ -89,9 +89,9 @@
   /* ============================================
      TRANSICIONES
      ============================================ */
-  --transition-fast: 0.15s ease;
-  --transition-base: 0.2s ease;
-  --transition-slow: 0.3s ease;
+  --transition-fast: 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-base: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
   /* ============================================
      BREAKPOINTS (para referencia)
