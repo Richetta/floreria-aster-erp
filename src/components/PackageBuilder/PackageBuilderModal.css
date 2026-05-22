@@ -3,7 +3,7 @@
    ========================================================================== */
 
 :root {
-    --font-serif: var(--font-display);
+    --font-serif: var(--font-sans);
     --font-sans: var(--font-sans);
     
     /* Natural Botanical Palette */
