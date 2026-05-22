@@ -99,7 +99,7 @@
 
 @media (min-width: 1024px) {
   .marketing-content-grid {
-    grid-template-columns: 1fr 350px;
+    grid-template-columns: minmax(0, 1fr) 350px;
   }
 }
 

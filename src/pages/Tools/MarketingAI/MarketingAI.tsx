@@ -52,15 +52,7 @@ interface MarketingSuggestion {
     palette?: { name: string; colors: string[] };
 }
 
-// Logros / Medallas Creativas
-const ACHIEVEMENTS = [
-    { id: 'first_task', title: 'Semilla Creativa', desc: 'Completar tu primera sugerencia en "Qué hacer hoy".', icon: '🌱' },
-    { id: 'dice_roll', title: 'Inspiración Infinita', desc: 'Tirar el Dado de la Inspiración Infinita 5 veces.', icon: '🎲' },
-    { id: 'combo_gen', title: 'Combo Master', desc: 'Generar un combo de sobrestock con descuento.', icon: '⚡' },
-    { id: 'fidelizador', title: 'Fidelizador', desc: 'Copiar un mensaje de WhatsApp para clientes en fechas especiales.', icon: '💖' },
-    { id: 'garden_lvl3', title: 'Jardín de Oro', desc: 'Subir al Nivel Creativo 3 o superior.', icon: '🏆' },
-    { id: 'cross_inspiration', title: 'Mente Abierta', desc: 'Explorar una sugerencia de Inspiración Cruzada.', icon: '🌎' }
-];
+// Gamification removed
 
 // Presets de Comentarios para CM
 const CM_PRESETS = [
@@ -126,26 +118,18 @@ export const MarketingAI: React.FC = () => {
     const loadProducts = useStore(state => state.loadProducts);
     const loadCustomers = useStore(state => state.loadCustomers);
 
-    // Estados de navegación y UI (Ampliados para 7 Sub-áreas)
-    const [activeTab, setActiveTab] = useState<'today' | 'reels' | 'promos' | 'cm-replies' | 'calendar' | 'cross-inspiration' | 'garden'>('today');
+    // Estados de navegación y UI
+    const [activeTab, setActiveTab] = useState<'today' | 'reels' | 'promos' | 'cm-replies' | 'calendar' | 'cross-inspiration'>('today');
     const [selectedSuggestion, setSelectedSuggestion] = useState<MarketingSuggestion | null>(null);
-    const [selectedTone, setSelectedTone] = useState<string>('emotional'); // emotional, fun, educational, sales
-    const [copiedTextType, setCopiedTextType] = useState<string | null>(null); // 'copy', 'hook', 'cta', 'whatsapp', 'combo', 'success-complete', 'achievement-...'
+    const [selectedTone, setSelectedTone] = useState<string>('emotional');
+    const [copiedTextType, setCopiedTextType] = useState<string | null>(null);
     const [customPromoProduct, setCustomPromoProduct] = useState<string>('');
     const [customDiscount, setCustomDiscount] = useState<number>(15);
 
-    // Estados de Gamificación (Business Memory en localStorage)
-    const [xp, setXp] = useState<number>(0);
-    const [level, setLevel] = useState<number>(1);
+    // Estado básico de completados
     const [completedSuggestions, setCompletedSuggestions] = useState<string[]>([]);
-    const [history, setHistory] = useState<{ id: string; title: string; date: string; xpGained: number }[]>([]);
-
-    // NUEVOS ESTADOS PREMIUM
+    const [history, setHistory] = useState<{ id: string; title: string; date: string }[]>([]);
     const [favorites, setFavorites] = useState<any[]>([]);
-    const [rolledIdea, setRolledIdea] = useState<any | null>(null);
-    const [isRolling, setIsRolling] = useState<boolean>(false);
-    const [rollCount, setRollCount] = useState<number>(0);
-    const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
     
     // Community Manager
     const [cmSelectedPreset, setCmSelectedPreset] = useState<string>('cm-1');
@@ -166,131 +150,43 @@ export const MarketingAI: React.FC = () => {
         };
         fetchAll();
 
-        // Cargar gamificación y nuevos estados de localStorage
-        const storedXp = localStorage.getItem('floriai_xp');
-        const storedLevel = localStorage.getItem('floriai_level');
+        // Cargar nuevos estados de localStorage
         const storedCompleted = localStorage.getItem('floriai_completed_suggestions');
         const storedHistory = localStorage.getItem('floriai_history');
-
         const storedFavorites = localStorage.getItem('floriai_favorites');
-        const storedRollCount = localStorage.getItem('floriai_roll_count');
-        const storedAchievements = localStorage.getItem('floriai_achievements');
 
-        if (storedXp) setXp(Number(storedXp));
-        if (storedLevel) setLevel(Number(storedLevel));
         if (storedCompleted) setCompletedSuggestions(JSON.parse(storedCompleted));
         if (storedHistory) setHistory(JSON.parse(storedHistory));
-
         if (storedFavorites) setFavorites(JSON.parse(storedFavorites));
-        if (storedRollCount) setRollCount(Number(storedRollCount));
-        if (storedAchievements) setUnlockedAchievements(JSON.parse(storedAchievements));
     }, [loadProducts, loadCustomers]);
 
-    // Guardar gamificación en localStorage
-    const saveProgress = (newXp: number, newLevel: number, newCompleted: string[], newHistory: any[]) => {
-        setXp(newXp);
-        setLevel(newLevel);
+    // Guardar progreso en localStorage
+    const saveProgress = (newCompleted: string[], newHistory: any[]) => {
         setCompletedSuggestions(newCompleted);
         setHistory(newHistory);
 
-        localStorage.setItem('floriai_xp', newXp.toString());
-        localStorage.setItem('floriai_level', newLevel.toString());
         localStorage.setItem('floriai_completed_suggestions', JSON.stringify(newCompleted));
         localStorage.setItem('floriai_history', JSON.stringify(newHistory));
     };
 
-    // Escucha automática para desbloquear Nivel 3
-    useEffect(() => {
-        if (level >= 3) {
-            const stored = localStorage.getItem('floriai_achievements');
-            const currentUnlocked = stored ? JSON.parse(stored) : [];
-            if (!currentUnlocked.includes('garden_lvl3')) {
-                const updated = [...currentUnlocked, 'garden_lvl3'];
-                localStorage.setItem('floriai_achievements', JSON.stringify(updated));
-                setUnlockedAchievements(updated);
-                
-                // Recompensar con 20 XP
-                const xpReward = 20;
-                let newXp = xp + xpReward;
-                let newLevel = level;
-                if (newXp >= 100) {
-                    newXp = newXp - 100;
-                    newLevel = level + 1;
-                }
-                saveProgress(newXp, newLevel, completedSuggestions, [
-                    {
-                        id: Math.random().toString(36).substr(2, 9),
-                        title: `🏆 Desbloqueaste la Medalla: Jardín de Oro`,
-                        date: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                        xpGained: xpReward
-                    },
-                    ...history
-                ]);
-                setCopiedTextType('achievement-garden_lvl3');
-                setTimeout(() => setCopiedTextType(null), 4000);
-            }
-        }
-    }, [level]);
+    // Funciones de Gamificación desactivadas
+    const triggerUnlock = (achievementId: string) => { return; };
 
-    // Desbloquear medalla programáticamente
-    const triggerUnlock = (achievementId: string) => {
-        const stored = localStorage.getItem('floriai_achievements');
-        const currentUnlocked = stored ? JSON.parse(stored) : [];
-        if (currentUnlocked.includes(achievementId)) return;
-
-        const updated = [...currentUnlocked, achievementId];
-        localStorage.setItem('floriai_achievements', JSON.stringify(updated));
-        setUnlockedAchievements(updated);
-
-        // Recompensar con 20 XP
-        const xpReward = 20;
-        let newXp = xp + xpReward;
-        let newLevel = level;
-        if (newXp >= 100) {
-            newXp = newXp - 100;
-            newLevel = level + 1;
-        }
-        
-        saveProgress(newXp, newLevel, completedSuggestions, [
-            {
-                id: Math.random().toString(36).substr(2, 9),
-                title: `🏆 Desbloqueaste la Medalla: ${ACHIEVEMENTS.find(a => a.id === achievementId)?.title}`,
-                date: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                xpGained: xpReward
-            },
-            ...history
-        ]);
-
-        setCopiedTextType(`achievement-${achievementId}`);
-        setTimeout(() => setCopiedTextType(null), 4000);
-    };
-
-    // Dinámica de completar sugerencia y ganar XP
+    // Dinámica de completar sugerencia (Sin XP)
     const handleCompleteSuggestion = (suggestionId: string, title: string) => {
         if (completedSuggestions.includes(suggestionId)) return;
-
-        const xpReward = 15;
-        let newXp = xp + xpReward;
-        let newLevel = level;
-
-        // Subir de nivel cada 100 XP
-        if (newXp >= 100) {
-            newXp = newXp - 100;
-            newLevel = level + 1;
-        }
 
         const newCompleted = [...completedSuggestions, suggestionId];
         const newHistory = [
             {
                 id: Math.random().toString(36).substr(2, 9),
                 title,
-                date: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                xpGained: xpReward
+                date: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
             },
             ...history
         ];
 
-        saveProgress(newXp, newLevel, newCompleted, newHistory);
+        saveProgress(newCompleted, newHistory);
 
         // Activar medalla Semilla Creativa
         triggerUnlock('first_task');
@@ -643,481 +539,6 @@ export const MarketingAI: React.FC = () => {
         triggerUnlock('combo_gen');
     };
 
-    // BASE DE DATOS DEL DADO: 16 Prompts Hiper-Creativos
-    const ROLLED_IDEAS = [
-        {
-            id: 'roll-1',
-            title: '☕ Café con aroma de Aster',
-            category: 'Aesthetic & Lofi',
-            whyRecommended: 'Combina dos placeres cotidianos para generar empatía y comunidad en Instagram.',
-            music: 'Lofi Jazz o Chillhop relajado',
-            steps: [
-                { shot: 'Primer plano (Macro)', description: 'Una taza de café humeante y caliente al lado de un ramo de Asters rústicos.', duration: '3s' },
-                { shot: 'Plano cenital', description: 'Tus manos abriendo un libro de poemas o diseño, hojeando suavemente.', duration: '5s' },
-                { shot: 'Plano detalle', description: 'Colocar delicadamente una flor de Aster como señalador de páginas.', duration: '4s' }
-            ],
-            hooks: {
-                emotional: '«¿Sabías que combinar café y flores frescas en tu escritorio reduce el estrés diario? Hoy te muestro mi ritual...»',
-                fun: '«Mi psicólogo me dijo que busque pasatiempos tranquilos... y acá estoy, gastando todo en café especial y flores 😂»',
-                sales: '«El combo de escritorio perfecto: Levantá tu ánimo con nuestro mini-ramo Aster del día con taza de regalo hoy.»'
-            },
-            copies: {
-                emotional: 'Hay mañanas que piden ir más despacio. El aroma del café recién hecho y el violeta de los Asters son el recordatorio perfecto de que el presente es el único lugar donde florecemos. ☕💜\n\n¿Cuál es tu ritual favorito hoy?',
-                fun: 'El club del café frío y las manos perfumadas a eucalipto reportándose. 🙋‍♀️☕💐 Hoy decidimos que tu escritorio se merece subir de nivel estético. ¡Un toque de naturaleza alegra cualquier mail! 🤭',
-                sales: '¡Renová la energía de tus mañanas! 🌟 Diseñamos los arreglos mini de flores frescas que duran semanas en agua, perfectos para tu taza de café. Enlace de compra en bio. ¡Enviamos en el día! 🚚'
-            },
-            ctas: {
-                emotional: 'Compartí calma con esa persona que lo necesita hoy.',
-                fun: 'Comentá ☕ si vos también necesitás cafeína y flores hoy.',
-                sales: 'Reservá tu mini-arreglo hoy mismo haciendo clic en el perfil.'
-            },
-            hashtags: ['cafeconflores', 'aestheticflower', 'astersilvestre', 'decordesk', 'rituales']
-        },
-        {
-            id: 'roll-2',
-            title: '🌿 Susurros de Eucalipto (Spa en Baño)',
-            category: 'Bienestar / DIY',
-            whyRecommended: 'Los videos de cuidado personal y aromaterapia en casa tienen un engagement arrollador.',
-            music: 'ASMR de agua cayendo + Lofi suave',
-            steps: [
-                { shot: 'Plano medio', description: 'Tus manos amarrando tres ramas grandes de Eucalipto fresco con hilo de yute rústico.', duration: '4s' },
-                { shot: 'Plano de primer plano', description: 'Colgar el ramito de eucalipto directamente detrás de la flor de ducha.', duration: '4s' },
-                { shot: 'Plano macro vapor', description: 'El vapor del baño cubriendo las hojas, liberando los aceites esenciales medicinales.', duration: '5s' }
-            ],
-            hooks: {
-                emotional: '«Tu ducha diaria puede sentirse como un sauna de lujo en medio del bosque... Dejame mostrarte este truco...»',
-                fun: '«Hice esto en mi ducha y ahora mi baño parece un sauna de alta montaña. No quiero salir nunca 😂»',
-                sales: '«Lanzamos el Ramillete de Ducha: Ramas gigantes de Eucalipto medicinal listas para colgar por un precio mínimo.»'
-            },
-            copies: {
-                emotional: 'Spa botánico en casa 🛁🌿. El vapor de agua ayuda a liberar los aceites esenciales del eucalipto, actuando como descongestivo natural y relajante mental. Un mimo que tu cuerpo merece al final de la semana. 💚',
-                fun: 'Chau resfríos y tensiones del día. 👋 Colgar eucalipto en la ducha es el hack definitivo de Pinterest. ¿Ya lo probaste? Advertencia: es un camino de ida. 🚿🤭',
-                sales: '¡Transformá tu baño hoy! 🎉 Conseguí tu manojo de Eucalipto Fresco cortado en el día para máxima fragancia en nuestro taller.\n\n👉 Encargalo por mensaje y retirá esta tarde. ¡Coordinemos!'
-            },
-            ctas: {
-                emotional: 'Guardá este tip para preparar tu fin de semana de relax.',
-                fun: 'Dejanos un emoji de ramita 🌿 si vas a probar este truco hoy.',
-                sales: 'Escribinos "QUIERO SPA" y reservamos tu manojo aromático ya.'
-            },
-            hashtags: ['eucaliptofresco', 'spacasero', 'wellness', 'aromaterapia', 'tipsnaturales']
-        },
-        {
-            id: 'roll-3',
-            title: '🎀 El Arte del Envoltorio Perfecto',
-            category: 'Detrás de Escena / Tutorial',
-            whyRecommended: 'Los procesos manuales elegantes aumentan el valor percibido de tus arreglos.',
-            music: 'Indie Folk acústico y enérgico',
-            steps: [
-                { shot: 'Plano cenital rápido', description: 'Extender papel kraft de doble cara sobre la mesa de trabajo de madera.', duration: '3s' },
-                { shot: 'Plano detalle (Macro)', description: 'Tus dedos haciendo pliegues perfectos y abanicando el papel alrededor de los tallos.', duration: '5s' },
-                { shot: 'Plano medio de cierre', description: 'Amarrar el ramo con una cinta de seda color terracota y cortar los bordes en diagonal.', duration: '4s' }
-            ],
-            hooks: {
-                emotional: '«Envolver un ramo de flores es como abrigar una carta de amor... cada pliegue tiene un sentido...»',
-                fun: '«Expectativa: Envolver un ramo en 5 segundos. Realidad: Papel arrugado e hilo de yute pegado en los dedos 😂...»',
-                sales: '«Cuidamos el diseño de punta a punta. Envolvemos con papel kraft de importación y lazos de seda. Mirá este resultado...»'
-            },
-            copies: {
-                emotional: 'Para nosotros, el envoltorio no es un agregado: es la presentación formal de tus sentimientos. 💌💐 Cuidamos cada pliegue para que la experiencia de recibir sea inolvidable desde el primer tacto.\n\n¿Qué te parece este diseño?',
-                fun: 'Pelearse con el rollo de cinta es parte de nuestro entrenamiento diario. 🥊😂 Pero ver al ramo cobijado en su papel kraft rústico hace que todo el desorden valga la pena.\n\n¿Sos de los que guardan los papeles de regalos? 🎁👇',
-                sales: '✨ Detalles que enamoran ✨. Todos nuestros ramos especiales se entregan listos para lucir con envoltorios premium que conservan la humedad de las flores en el viaje.\n\nPedilo online y personalizá tu tarjeta. 🛒'
-            },
-            ctas: {
-                emotional: 'Hacé tu encargo especial y escribimos tu dedicatoria a mano.',
-                fun: 'Etiquetá a tu amigo/a perfeccionista que ama los empaques prolijos.',
-                sales: 'Comprá hoy y llevate el envoltorio premium de estación sin costo adicional.'
-            },
-            hashtags: ['empaque', 'hechoamano', 'tallerfloral', 'diseñoexclusivo', 'detalles']
-        },
-        {
-            id: 'roll-4',
-            title: '🍂 Paleta de Otoño Arcilla (Transición)',
-            category: 'Visual & Aesthetic',
-            whyRecommended: 'Aprovecha la estación para asociar tu marca a tendencias Pinterest de decoración acogedora.',
-            music: 'Indie Folk otoñal instrumental',
-            steps: [
-                { shot: 'Plano medio', description: 'Flores frescas vibrantes en tonos terracota, ocre y trigo sobre una mesa rústica.', duration: '4s' },
-                { shot: 'Chasquido de dedos (Transición)', description: 'Cambiar instantáneamente al ramo deshidratado / seco con una vela encendida.', duration: '3s' },
-                { shot: 'Plano de detalle', description: 'El jarrón de barro en un rincón cálido iluminado con luz led de fondo.', duration: '5s' }
-            ],
-            hooks: {
-                emotional: '«El otoño no es el fin de la belleza, sino su versión más cálida y nostálgica...»',
-                fun: '«Inaugurada oficialmente la temporada de té caliente, mantas y flores secas que no tengo que regar 🤫🍂»',
-                sales: '«Nueva Colección Cálido Hogar: Set de jarrón de barro + ramo seco premium con 15% OFF esta semana.»'
-            },
-            copies: {
-                emotional: 'Tonos que reconfortan el alma. 🍁 El terracota, el ocre y el trigo deshidratado se unen en este ramo que celebra la calma otoñal. Una propuesta para transformar tu casa en un refugio acogedor frente al frío exterior. 🕯️🍂',
-                fun: 'Si tus plantas mueren por olvido... 🤫 Te traemos la solución Pinterest: flores secas. Duran meses intactas y no se quejan si no les das agua. 😂 ¡Escribinos por el tuyo!',
-                sales: '🔥 Colección Otoño/Invierno 2026 🔥. Arreglos secos duraderos ideales para interiores calefaccionados. Aportan estilo rústico y cero mantenimiento.\n\nEnvíos en zona sin cargo. ¡Pedí el tuyo! 🚚'
-            },
-            ctas: {
-                emotional: 'Elegí tu paleta otoñal favorita en nuestro catálogo.',
-                fun: 'Comentá una hoja seca 🍂 si vos también amás el otoño.',
-                sales: 'Comprá tu set decorativo hoy haciendo clic en el link de la bio.'
-            },
-            hashtags: ['paletadeotoño', 'decoracionrustica', 'floressecas', 'PinterestVibes', 'cozyhome']
-        },
-        {
-            id: 'roll-5',
-            title: '🔮 Tu Flor Guardiana según tu Mes',
-            category: 'Interactividad / Comunidad',
-            whyRecommended: 'Las dinámicas que invitan a comentar tienen un alcance orgánico descomunal en Instagram.',
-            music: 'Sonido pop rítmico o campanas mágicas',
-            steps: [
-                { shot: 'Plano medio', description: 'Mostrar una cartelera con 12 fotos bonitas de flores para cada mes.', duration: '4s' },
-                { shot: 'Plano rápido alternado', description: 'Señalar meses clave: Enero (Clavel), Mayo (Aster), Octubre (Rosas).', duration: '4s' },
-                { shot: 'Primer plano sonriente', description: 'Hacer el gesto de "dejamelo abajo en comentarios" apuntando.', duration: '4s' }
-            ],
-            hooks: {
-                emotional: '«¿Sabías que tu mes de nacimiento determina tu flor guardiana y su significado botánico?...»',
-                fun: '«Dime en qué mes naciste y te diré qué tan dramático/a eres según tu flor protectora... 👀💐»',
-                sales: '«¡Cumpleañeros de Mayo! Comenten su fecha y les regalamos un beneficio exclusivo por privado.»'
-            },
-            copies: {
-                emotional: 'La astrología de las flores existe. 🔮 Cada mes del año tiene una flor asociada. Quienes nacieron bajo el Aster en Mayo representan la paciencia, el misterio y el amor por los detalles. 💜\n\n¿Cuál es tu mes? Comentá abajo y te cuento tu significado.',
-                fun: '¿Sos una Rosa elegante o una Margarita todoterreno que sobrevive al desierto? 😂 Poné tu mes en comentarios y descubramos tu alter ego floral. ¡A ver cuántos coinciden! 👇',
-                sales: '🎂 ¡Festejamos tu día especial! 🎂 Si cumplís años esta semana, dejá tu fecha en comentarios y te mandamos por privado un **15% OFF de regalo** para tu mesa de celebración. ¡Hagamos magia! ✨'
-            },
-            ctas: {
-                emotional: 'Comentá tu mes y descubrí tu flor guardiana hoy.',
-                fun: 'Etiquetá a tu amigo/a de Mayo para que reclame su flor.',
-                sales: 'Dejanos tu fecha y te enviamos tu cupón de regalo al instante.'
-            },
-            hashtags: ['astrologiafloral', 'mesdenacimiento', 'regalos', 'floresycumple', 'interaccion']
-        },
-        {
-            id: 'roll-6',
-            title: '🧘 Limpieza Zen (Sonidos ASMR)',
-            category: 'ASMR / Relajación',
-            whyRecommended: 'Los videos con sonidos naturales rítmicos generan un efecto hipnótico que retiene al espectador.',
-            music: 'Sin música. Sonido ambiente nítido (ASMR de tijeras, crujido de hojas y spray de agua)',
-            steps: [
-                { shot: 'Plano súper cerrado', description: 'Tijeras de metal rústicas haciendo clic de manera rítmica.', duration: '4s' },
-                { shot: 'Plano detalle tallos', description: 'El crujido seco al remover las hojas y espinas de una rosa importada.', duration: '5s' },
-                { shot: 'Plano macro capullo', description: 'Pulverizar rocío de agua fina sobre los pétalos con sonido de spray suave.', duration: '4s' }
-            ],
-            hooks: {
-                emotional: '«Subí el volumen... disfrutá de 15 segundos de meditación floral y olvidate de todo...»',
-                fun: '«El sonido de limpiar rosas es mi ruido blanco favorito para mi mente ansiosa 😂. Escuchá esto...»',
-                sales: '«Preparamos cada ramo limpiando tallo por tallo para que tu regalo llegue perfecto. Encargá calidad hoy...»'
-            },
-            copies: {
-                emotional: 'Pausa conscientes en tu día. 🌿💆‍♂️ Ponete auriculares, subí el volumen y escuchá el acondicionamiento de nuestras flores frescas. Es nuestro pequeño ritual de amor y respeto hacia la naturaleza. Ojalá te traiga paz.',
-                fun: 'Chau ruidos molestos del tráfico, hola clic-clic de las tijeras del florista. ✂️🌹 El verdadero sonido ASMR de un taller creativo.\n\n¿Te quedarías horas viendo esto? Confirmemos que no soy la única. 😂',
-                sales: 'Artesanía floral en cada detalle. ✨ Acondicionamos individualmente cada tallo para garantizar que tus flores duren el doble de tiempo en casa. Pedí tus Rosas Rojas Importadas hoy con envío rápido. 🚚'
-            },
-            ctas: {
-                emotional: 'Guardá este video para cuando necesites 15 segundos de respiración consciente.',
-                fun: 'Dejanos un emoji de tijera ✂️ si este sonido te relaja.',
-                sales: 'Encargá tu ramo impecable haciendo clic en el botón de la tienda.'
-            },
-            hashtags: ['asmrfloral', 'relajacion', 'detrásdeescena', 'tallerderosas', 'zenstyle']
-        },
-        {
-            id: 'roll-7',
-            title: '🏺 Centro de Mesa Express en 3 Pasos',
-            category: 'Tutorial / DIY',
-            whyRecommended: 'Resuelve un problema cotidiano para comidas o eventos informales, aportando valor práctico.',
-            music: 'Ukelele o guitarra acústica alegre',
-            steps: [
-                { shot: 'Plano subjetivo (POV)', description: 'Tus manos midiendo y recortando los tallos sobrantes a tres alturas distintas.', duration: '3s' },
-                { shot: 'Plano de colocación', description: 'Acomodar las flores en una taza vintage de té con agua fresca.', duration: '5s' },
-                { shot: 'Plano final emplazado', description: 'El arreglo rústico en la mesa al lado de una vajilla bonita y una vela encendida.', duration: '4s' }
-            ],
-            hooks: {
-                emotional: '«No necesitás vajilla de lujo para que tu mesa familiar parezca sacada de una revista de diseño...»',
-                fun: '«Hice este centro express y ahora mis amigas piensan que soy decoradora profesional 😂. Mirá qué simple...»',
-                sales: '«Lanzamos el Combo Mesa Express: Pack de flores silvestres variadas + frasco vintage rústico de regalo hoy.»'
-            },
-            copies: {
-                emotional: 'El arte de recibir en casa. 🏡🌸 Un centro de mesa no requiere ser costoso: con flores sencillas del día, una taza antigua heredada y una vela, podés transformar la cena y hacer sentir especiales a tus invitados. ¿Te animás?',
-                fun: 'El hack definitivo para cuando te avisan a último momento que van a cenar a tu casa y la mesa es un desierto. 🚨😂 Cortá asters y margaritas, ponelos en un vaso con agua, encendé una vela y ¡listo! Sofisticación express.',
-                sales: '¡Llená de encanto tus cenas! 🌟 Te preparamos la caja "Diseño Express": una selección de flores de corte variadas y follajes silvestres para que juegues a armar tus propios mini arreglos decorativos.\n\nPedila online hoy con un 10% de descuento. 🛒✨'
-            },
-            ctas: {
-                emotional: 'Compartilo con esa persona que ama ser anfitriona en su casa.',
-                fun: 'Comentá "MESA" y te mandamos nuestra guía completa de combinación de colores para vajilla.',
-                sales: 'Comprá tu pack de flores de corte express hoy tocando el link de la bio.'
-            },
-            hashtags: ['centrodemesa', 'diydecoracion', 'mesasbonitas', 'anfitriones', 'ramosilvestre']
-        },
-        {
-            id: 'roll-8',
-            title: '👗 Outfits que combinan con tus Flores',
-            category: 'Moda / Estilo de vida',
-            whyRecommended: 'Asocia tu marca con estilo de vida premium, aumentando la retención en público joven.',
-            music: 'Pop moderno con cambios marcados en el beat',
-            steps: [
-                { shot: 'Plano general', description: 'Modelo vestida con tapado beige sosteniendo un ramo seco terracota con trigo.', duration: '4s' },
-                { shot: 'Transición rápida en el beat', description: 'Cambio de outfit a gabardina verde militar con un ramo fresco de eucalipto.', duration: '4s' },
-                { shot: 'Plano detalle girando', description: 'Giro coqueto mostrando las flores a la par de la textura de la ropa.', duration: '4s' }
-            ],
-            hooks: {
-                emotional: '«¿Sabías que las flores de estación son el accesorio de diseño definitivo para tu outfit?...»',
-                fun: '«Combinando mi ropa con las flores de mi taller para combatir el gris de la calefacción 😂. ¿Cuál preferís?»',
-                sales: '«Estilo que inspira. Llevate el ramo del día que mejor combina con los tonos abrigados de esta estación.»'
-            },
-            copies: {
-                emotional: 'Moda que florece. 🍂 El frío nos invita a abrigarnos, pero también a jugar con texturas: la lana combina a la perfección con la rugosidad rústica de las flores secas y la frescura de los follajes. Llevá el diseño a tu vida diaria.',
-                fun: 'Sí, soy el tipo de persona que planea su outfit en base a las flores que entraron al local. 😂 Y la verdad no me arrepiento de nada. El terracota y el verde pino son mi obsesión otoñal. ¿Votos para el 1 o el 2? 👇',
-                sales: '✨ Las flores son estilo de vida ✨. Más allá de un regalo, un arreglo floral es el toque de diseño que define la estética de tu hogar. Encontrá combinaciones exquisitas en nuestro catálogo de Otoño/Invierno.\n\nHacemos envíos programados con envoltorio impermeable de regalo. 🚚🛍'
-            },
-            ctas: {
-                emotional: 'Guardá este post para inspirarte en tus combinaciones estéticas.',
-                fun: 'Etiquetá a tu amiga amante de la moda Pinterest.',
-                sales: 'Escribinos "LOOKBOOK" para asesorarte sobre qué ramos combinan con tu sala.'
-            },
-            hashtags: ['lookbookfloral', 'modayflores', 'estilodevida', 'coloresdeotoño', 'accesoriosPinterest']
-        },
-        {
-            id: 'roll-9',
-            title: '📦 Desembalaje Enérgico (Unboxing de Cultivo)',
-            category: 'Detrás de escena',
-            whyRecommended: 'Mostrar el producto crudo recién llegado genera sensación de frescura y honestidad absoluta.',
-            music: 'Rock alternativo enérgico o sintetizador rápido',
-            steps: [
-                { shot: 'Plano subjetivo', description: 'Tus manos rompiendo la cinta de embalaje de una gran caja de cartón de mercado.', duration: '3s' },
-                { shot: 'Plano de volcado alegre', description: 'Abrir las solapas y revelar decenas de paquetes de flores frescas en papel de diario húmedo.', duration: '5s' },
-                { shot: 'Plano de velocidad', description: 'Colocar los paquetes en baldes grandes con agua limpia en un timelapse veloz.', duration: '4s' }
-            ],
-            hooks: {
-                emotional: '«Así se siente abrir un cofre de perfumes directos del campo de cultivo... Acompañame hoy...»',
-                fun: '«Unboxing botánico a velocidad de la luz. ¡Llegó la mercadería y el local explota de aromas! 🤩💨»',
-                sales: '«¡Acaban de entrar! Rosas, lirios y asters recién desembalados. Reservá los tuyos antes de que se los lleven.»'
-            },
-            copies: {
-                emotional: '¡Día de mercado! 📦🌸 Recibir las flores frescas del cultivo directo es uno de nuestros momentos favoritos de la semana. La fragancia inunda todo el local y nos da esa energía única para ponernos a diseñar para ustedes.',
-                fun: 'Expectativa: Unboxing súper prolijo y estético con música de fondo. Realidad: Cajas gigantes de cartón, barro en el piso y nosotros corriendo para hidratar todo antes de que protesten 😂. ¡Pero amamos este caos!',
-                sales: '¡Flores fresquísimas recién bajadas del camión! 🚚✨ Diseñamos ramos en el acto con las variedades más selectas de esta semana. Reservá tu envío hoy directo desde la tienda web o WhatsApp.'
-            },
-            ctas: {
-                emotional: 'Dejanos un comentario si querés ver qué ramo armamos con este lote.',
-                fun: 'Comentá con tu emoji de flor favorito si te tienta ver el detrás de escena.',
-                sales: 'Mandanos un mensaje directo y reservá tu ramo del día súper fresco.'
-            },
-            hashtags: ['unboxingfloral', 'floresfrescas', 'detrásdeescena', 'tallerderosas', 'diademercado']
-        },
-        {
-            id: 'roll-10',
-            title: '🍵 Taza Floral Vintage (Upcycling)',
-            category: 'Ecológico / DIY',
-            whyRecommended: 'Fomenta el reciclaje creativo y atrae a clientes interesados en vajilla antigua y diseño rústico.',
-            music: 'Acústica indie folk tranquila',
-            steps: [
-                { shot: 'Plano detalle', description: 'Una taza de té antigua de porcelana con flores pintadas a mano, heredada o de feria.', duration: '4s' },
-                { shot: 'Plano de corte', description: 'Medir el tallo de pequeñas margaritas y asters y recortarlos bien cortitos.', duration: '4s' },
-                { shot: 'Plano cenital', description: 'Acomodar las flores en la taza con agua limpia, creando un domo floral miniatura.', duration: '4s' }
-            ],
-            hooks: {
-                emotional: '«Dale una segunda vida a esa taza de porcelana rota de tu abuela que no te animás a tirar...»',
-                fun: '«Fui a una feria de pulgas y salí con esta taza espectacular. Spoiler: ahora tiene asters silvestres 🤭»',
-                sales: '«Set Vintage Especial: Te enviamos la taza rústica reciclada + ramito de margaritas listo por un valor promocional.»'
-            },
-            copies: {
-                emotional: 'Historias que vuelven a florecer. 🍵✨ Esa taza antigua que ya no usás o que tiene una pequeña rajadura puede convertirse en el contenedor de tus mañanas alegres. El upcycling floral llena tu hogar de recuerdos bonitos.',
-                fun: '¿Vajilla de la abuela rota? No se tira, ¡se florece! 😂 Margaritas, asters y hojitas de menta. Queda espectacular en la mesa de luz y el perfume es mil veces mejor que cualquier aromatizante artificial.',
-                sales: '¡Colección Vajilla Florecida! 🌟 Diseñamos mini arreglos en recipientes vintage de cerámica y loza recuperada. Un detalle único para regalar o mimarte hoy. Pedilo con envío rápido en bio.'
-            },
-            ctas: {
-                emotional: 'Guardá esta publicación para tu próxima tarde de manualidades en casa.',
-                fun: 'Etiquetá a tu amigo/a fan de lo retro y el reciclaje.',
-                sales: 'Escribinos "VINTAGE" y te mandamos fotos de las tazas exclusivas de esta semana.'
-            },
-            hashtags: ['upcycling', 'tazavintage', 'floresycafé', 'manualidades', 'decoracionretro']
-        },
-        {
-            id: 'roll-11',
-            title: '🔬 El Secreto del Agua Limpia',
-            category: 'Educativo / Ciencia',
-            whyRecommended: 'Los videos que resuelven una frustración común (flores que mueren rápido) generan muchas compartidas y guardados.',
-            music: 'Música de misterio / educativa alegre',
-            steps: [
-                { shot: 'Plano detalle florero', description: 'Florero con agua turbia y flores tristes. Mostrar cara de decepción.', duration: '3s' },
-                { shot: 'Plano de ingredientes', description: 'Agregar agua limpia, una gota de cloro y una monedita de cobre al florero.', duration: '5s' },
-                { shot: 'Plano final comparativo', description: 'Mostrar las flores erguidas y radiantes 5 días después.', duration: '4s' }
-            ],
-            hooks: {
-                emotional: '«La razón por la que tus flores duran tan poco en casa es este error simple que todos cometen...»',
-                fun: '«Mi abuela me reveló este hack de florista y ahora mis jarrones duran más que mis relaciones 😂...»',
-                sales: '«Queremos que disfrutes tus ramos por semanas. Te regalamos un sobrecito de nutrientes botánicos con tu compra hoy.»'
-            },
-            copies: {
-                emotional: 'El secreto para un florero eterno. 🌿💧 El agua estancada acumula bacterias que obstruyen los tallos. Con una sola gota de cloro para desinfectar y una moneda de cobre que actúa como alguicida, tus flores van a lucir frescas por el doble de tiempo.',
-                fun: 'Hack botánico del día: ¿Tus ramos duran menos de tres días? 🚨 ¡No más flores tristes! Hacé esto hoy mismo y mirá la diferencia. Contame en comentarios si ya conocías el truco de la moneda.',
-                sales: 'En nuestra tienda no solo vendemos flores, te enseñamos a cuidarlas. 🌸 Cada pedido de esta semana incluye una tarjeta con los 5 mandamientos del cuidado floral y un sobre de alimento gratis. ¡Encargá online!'
-            },
-            ctas: {
-                emotional: 'Guardá este post para cuando compres tus próximas flores frescas.',
-                fun: 'Dejanos un emoji de agua 💧 si te sirvió el secreto de hoy.',
-                sales: 'Hacé clic abajo y llevate tus asters con nutrientes de regalo.'
-            },
-            hashtags: ['cuidadodeflores', 'hacksdelhogar', 'floreroeterno', 'tipbotanico', 'educacionfloral']
-        },
-        {
-            id: 'roll-12',
-            title: '🤍 Monocromático Premium Blanco',
-            category: 'Aesthetic / Minimalismo',
-            whyRecommended: 'El diseño limpio e higiénico tiene una alta percepción de sofisticación de lujo.',
-            music: 'Piano clásico minimalista o lofi de piano',
-            steps: [
-                { shot: 'Plano detalle mesa', description: 'Un jarrón de vidrio transparente impecable con agua y rocas blancas abajo.', duration: '4s' },
-                { shot: 'Plano de ensamble', description: 'Colocar lirios blancos, margaritas y rosas blancas formando una nube compacta.', duration: '5s' },
-                { shot: 'Plano general', description: 'El ramo monocromático en un ambiente minimalista escandinavo moderno.', duration: '3s' }
-            ],
-            hooks: {
-                emotional: '«A veces, la mayor sofisticación se esconde en la ausencia total de color... solo luz y perfume...»',
-                fun: '«El equipo monocromo reportándose. Porque el blanco combina con absolutamente todo y queda finísimo 🤍...»',
-                sales: '«Lanzamos el Ramo Nube Blanca: Lirios Perfumados + Rosas Blancas con envoltorio satinado de regalo hoy.»'
-            },
-            copies: {
-                emotional: 'Pureza y balance. 🤍 Diseñamos este ramo monocromático integrando lirios perfumados y margaritas silvestres. Sin ruidos visuales, solo la textura de la naturaleza y una fragancia sutil que pacifica cualquier habitación. ✨',
-                fun: 'Minimalismo floral para los que le temen al exceso de colores. 🤭 Un ramo 100% blanco que grita elegancia nórdica y huele a paraíso. Ideal para regalar a ese amigo/a de gustos hiper finos.',
-                sales: '✨ Colección Lujo Silencioso ✨. Agregá luz a tus ambientes con nuestro ramo premium Nube Blanca. Hecho con flores de corte seleccionadas a mano. Pedilo en la web con envío gratis en la zona. 🚚'
-            },
-            ctas: {
-                emotional: 'Reservá un momento de serenidad. Tocá el enlace de la bio.',
-                fun: 'Dejanos un emoji blanco 🤍 si sos fan de este estilo.',
-                sales: 'Comprá hoy mismo y programá tu entrega para el fin de semana.'
-            },
-            hashtags: ['minimalismofloral', 'floresblancas', 'decoracionpremium', 'lujosilencioso', 'ramosesteticos']
-        },
-        {
-            id: 'roll-13',
-            title: '🌾 Colgante DIY de Flores Secas',
-            category: 'Tutorial / Manualidades',
-            whyRecommended: 'Fomenta el concepto de diseño duradero y genera guardados por ser un tutorial paso a paso visual.',
-            music: 'Folk rústico acústico e instrumental',
-            steps: [
-                { shot: 'Plano medio', description: 'Una rama seca bonita de árbol y cordeles finos de yute.', duration: '4s' },
-                { shot: 'Plano detalle dedos', description: 'Atar pequeños ramilletes de lavanda seca y asters boca abajo a lo largo de la rama.', duration: '5s' },
-                { shot: 'Plano general final', description: 'Colgar el móvil rústico en una pared neutra o puerta de entrada.', duration: '3s' }
-            ],
-            hooks: {
-                emotional: '«Traé un pedacito de bosque a tu pared con esta manualidad rústica que dura para siempre...»',
-                fun: '«Mi nuevo proyecto de domingo para ocultar que la pared de mi cuarto está vacía 😂. Quedó genial...»',
-                sales: '«Kit Colgante DIY: Te enviamos la rama de pino pulida, yute y flores secas de lavanda listas para armar.»'
-            },
-            copies: {
-                emotional: 'Móviles de naturaleza para tu hogar. 🌾🏡 Armar un colgante rústico con lavanda y flores secas no solo aromatiza tu espacio, sino que te brinda un momento de desconexión y creación manual. El arte de habitar con calma.',
-                fun: 'Terapia de domingo: atar flores a una rama y fingir que tengo mi vida resuelta. 🤭😂 Pero en serio, este móvil de lavanda seca perfuma toda la entrada de casa y se ve súper Pinterest. ¿Qué opinan?',
-                sales: '¡Lanzamos el Kit Creativo DIY! 🎨💐 Incluye todo lo necesario para diseñar tu colgante de pared rústico en casa: flores secas surtidas, rama curada de pino e hilo de yute. Encargalo hoy en la tienda con 10% OFF.'
-            },
-            ctas: {
-                emotional: 'Guardá este Reel para cuando tengas una tarde libre y quieras crear.',
-                fun: 'Comentá "KIT" y te mandamos el catálogo de flores secas sueltas.',
-                sales: 'Hacé tu pedido del kit creativo hoy tocando el botón.'
-            },
-            hashtags: ['colgantediy', 'floressecas', 'manualidadesrusticas', 'hechoamano', 'pintereststyle']
-        },
-        {
-            id: 'roll-14',
-            title: '✍️ Flores & Caligrafía Emotiva',
-            category: 'Aesthetic / Detrás de escena',
-            whyRecommended: 'La escritura manual fluida y estética es súper relajante y fomenta el valor de los regalos.',
-            music: 'Piano clásico muy suave e instrumental',
-            steps: [
-                { shot: 'Plano cenital', description: 'Una tarjeta rústica de papel kraft al lado de pétalos sueltos de rosas y asters.', duration: '3s' },
-                { shot: 'Plano macro de pluma', description: 'Una mano escribiendo con caligrafía elegante una dedicatoria emotiva en la tarjeta.', duration: '6s' },
-                { shot: 'Plano de cierre', description: 'Colocar la tarjeta caligrafiada en medio del ramo de diseño listo para entrega.', duration: '3s' }
-            ],
-            hooks: {
-                emotional: '«En la era de los mensajes de texto fríos, una carta escrita a mano y rodeada de flores vale el triple...»',
-                fun: '«Mi caligrafía parece de médico de guardia 😂, pero por suerte en el local tenemos a un artista escribiendo sus dedicatorias...»',
-                sales: '«Hacemos tus dedicatorias premium escritas a mano con tinta caligráfica sin cargo adicional en tu pedido hoy.»'
-            },
-            copies: {
-                emotional: 'El peso de las palabras. 📝❤️ Creemos que un regalo floral está incompleto sin una dedicatoria sincera. Por eso, en nuestro taller escribimos cada tarjeta a mano con pluma y caligrafía clásica, cuidando que tu mensaje llegue tan profundo como el perfume de las flores.',
-                fun: 'Escribir a mano en 2026 es casi un deporte extremo. 😂 Pero ver la cara de emoción al recibir una tarjeta dedicada con puño y letra es irremplazable. Prometemos que nuestra caligrafía es de cuento de hadas.',
-                sales: '✨ Personalización Premium Total ✨. Sorprendé a la distancia con un ramo de diseño y una tarjeta dedicatoria manuscrita totalmente de cortesía. Encargá seguro en nuestra tienda online. 🚚💌'
-            },
-            ctas: {
-                emotional: 'Coordiná tu envío hoy y déjanos el texto de tu dedicatoria especial.',
-                fun: 'Dejanos un emoji de lápiz ✍️ si vos también preferís las cartas de antes.',
-                sales: 'Canjeá tu tarjeta caligráfica gratis encargando tu ramo en la web hoy.'
-            },
-            hashtags: ['caligrafia', 'tarjetasdedicatorias', 'cartasamano', 'ramospremium', 'sorpresas']
-        },
-        {
-            id: 'roll-15',
-            title: '🧹 Expectativa vs. Realidad de Florista',
-            category: 'Comedia / Humor Real',
-            whyRecommended: 'Humaniza la marca, divierte al público y genera empatía inmediata con tus clientes.',
-            music: 'Música de comedia / transición rápida',
-            steps: [
-                { shot: 'Plano de expectativa', description: 'Tú sosteniendo un ramo estético impecable con una sonrisa perfecta y música lofi.', duration: '4s' },
-                { shot: 'Transición abrupta (Realidad)', description: 'Barriendo una montaña de hojas secas del piso por décima vez en el día con pelo despeinado.', duration: '5s' },
-                { shot: 'Plano cómico de suspiro', description: 'Tomando café frío de una taza rodeado de espinas de rosa y sonriendo con resignación.', duration: '3s' }
-            ],
-            hooks: {
-                emotional: '«Detrás de cada post estético de Instagram, hay horas de trabajo duro y pasión botánica...»',
-                fun: '«Expectativa: Ser florista es súper estético y tranquilo. Realidad: Espinas clavadas en los dedos y barriendo hojas sin parar 😂...»',
-                sales: '«Amamos el desorden de nuestro taller porque el resultado es siempre perfecto para vos. Mirá nuestros ramos listos hoy...»'
-            },
-            copies: {
-                emotional: 'El amor detrás del desorden. 🌿 Detrás de cada reel estético con música de violines, hay un equipo con espinas en las manos, barriendo el piso y cargando baldes pesados de agua. Es el trabajo duro que nos apasiona hacer para llenar sus casas de sonrisas.',
-                fun: 'Spoiler: el glamour floral no viene incluido con la escoba. 🧹😂 Si pensabas que nos pasábamos el día oliendo rosas con vestidos de lino, lamento desilusionarte. Pero el café frío en este taller tiene sabor a gloria floral.',
-                sales: '¡Trabajamos con pasión real! 🎉 Diseñamos arreglos florales únicos cuidando cada detalle del detrás de escena para que a tu casa llegue solo la perfección absoluta. Encargá el tuyo online hoy con envío rápido.'
-            },
-            ctas: {
-                emotional: 'Dejanos un mensaje de aliento para nuestro equipo de diseño.',
-                fun: 'Comentá con un emoji cómico si te divertiste con nuestra realidad.',
-                sales: 'Comprá hoy mismo y apoya al trabajo artesanal de nuestro local.'
-            },
-            hashtags: ['expectativavsrealidad', 'humorflorista', 'detrásdeescena', 'tallerbotanico', 'vidadelocal']
-        },
-        {
-            id: 'roll-16',
-            title: '💻 El Ramillete Escritorio Alegre (Home Office)',
-            category: 'Aesthetic / Productividad',
-            whyRecommended: 'Atrae a clientes de oficina / home office que quieren mejorar la vibra y el diseño de su zona de trabajo.',
-            music: 'Chill Lofi Beats moderno',
-            steps: [
-                { shot: 'Plano subjetivo', description: 'Un escritorio de oficina aburrido lleno de cables, cuadernos y carpetas.', duration: '3s' },
-                { shot: 'Plano de colocación', description: 'Colocar un pequeño florero con asters morados y una ramita de eucalipto fresco al lado del monitor.', duration: '5s' },
-                { shot: 'Plano general estético', description: 'La luz de la pantalla iluminando las flores, creando un espacio de trabajo alegre y renovado.', duration: '4s' }
-            ],
-            hooks: {
-                emotional: '«Tu zona de home office no tiene por qué sentirse fría y corporativa... dale vida a tu día laboral...»',
-                fun: '«Estudios científicos inventados por mí confirman que mirar un aster morado mientras tu jefe te manda un mail molesto reduce el enojo un 80% 😂...»',
-                sales: '«Lanzamos el Set Productivo: Mini florero de cerámica + manojo de flores de oficina de larga duración por un precio mínimo hoy.»'
-            },
-            copies: {
-                emotional: 'Productividad botánica. 💻🌿 Rodearse de elementos naturales en tu zona de trabajo no solo alegra el espacio, sino que reduce la fatiga visual y promueve la concentración. Dale a tu rutina diaria laboral un respiro de perfume a campo.',
-                fun: '¿Días de home office interminables frente al monitor? 🖥️ Margaritas y eucalipto al rescate. El hack definitivo para fingir que tenés tu oficina de diseño nórdico súper controlada. Contanos: ¿flores en tu escritorio sí o no? 👇',
-                sales: '✨ Colección Home Office 2026 ✨. Diseñamos ramilletes compactos de flores súper duraderas en agua que no molestan con los cables y alegran tu espacio de trabajo diario. Compralo hoy con entrega rápida en la bio.'
-            },
-            ctas: {
-                emotional: 'Guardá esta idea para cuando reacomodes tu escritorio de oficina.',
-                fun: 'Etiquetá a tu compañero/a de trabajo que necesita un poco de vida en su mesa.',
-                sales: 'Pedí tu ramillete de escritorio hoy y cambiale la cara a tu jornada.'
-            },
-            hashtags: ['homeoffice', 'escritoriocreativo', 'productividad', 'decoraciondeoficina', 'margaritasilvestre']
-        }
-    ];
-
-    // Tirar el Dado de Inspiración Infinita
-    const handleRollDice = () => {
-        if (isRolling) return;
-        setIsRolling(true);
-
-        // Simular tirada animada de dado
-        setTimeout(() => {
-            const randomIndex = Math.floor(Math.random() * ROLLED_IDEAS.length);
-            setRolledIdea(ROLLED_IDEAS[randomIndex]);
-            setIsRolling(false);
-
-            // Incrementar contador de dados
-            const newCount = rollCount + 1;
-            setRollCount(newCount);
-            localStorage.setItem('floriai_roll_count', newCount.toString());
-
-            // Medalla de Inspiración Infinita si llega a 5
-            if (newCount >= 5) {
-                triggerUnlock('dice_roll');
-            }
-        }, 1200);
-    };
-
     // Agregar o quitar favoritos
     const handleToggleFavorite = (item: any, type: 'sugerencia' | 'dado') => {
         const itemWithMeta = {
@@ -1230,13 +651,6 @@ export const MarketingAI: React.FC = () => {
                             <Compass size={18} />
                             <span>Inspiración Cruzada</span>
                         </button>
-                        <button 
-                            className={`tab-btn ${activeTab === 'garden' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('garden')}
-                        >
-                            <Award size={18} />
-                            <span>Jardín & Logros</span>
-                        </button>
                     </div>
 
                     {/* TABS CONTENIDOS */}
@@ -1315,12 +729,12 @@ export const MarketingAI: React.FC = () => {
                                                 {completedSuggestions.includes(currentSuggestion.id) ? (
                                                     <>
                                                         <BookmarkCheck size={18} />
-                                                        <span>¡Completado! +15 XP</span>
+                                                        <span>¡Completado!</span>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <Check size={18} />
-                                                        <span>Marcar como Hecho (+15 XP)</span>
+                                                        <span>Marcar como Hecho</span>
                                                     </>
                                                 )}
                                             </button>
@@ -1408,64 +822,7 @@ export const MarketingAI: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* 🎲 SECCIÓN DADO DE LA INSPIRACIÓN INFINITA */}
-                            <div className="dice-inspiration-card glass-panel mt-8 text-center p-6">
-                                <div className="rainbow-glow-border"></div>
-                                <span className="badge badge-accent mx-auto mb-2">🎲 GENERADOR INFINITO</span>
-                                <h3>Dado de la Inspiración Infinita</h3>
-                                <p className="text-small text-muted max-w-md mx-auto mb-6">
-                                    ¿Te quedaste sin ideas creativas para hoy? Tirás el dado estético y FloriAI seleccionará uno de los 16 guiones hiper-específicos del rubro floral.
-                                </p>
-                                
-                                <button 
-                                    className={`dice-roll-btn ${isRolling ? 'rolling' : ''}`}
-                                    onClick={handleRollDice}
-                                    disabled={isRolling}
-                                >
-                                    <Dices size={24} />
-                                    <span>{isRolling ? 'Sorteando Ideas...' : 'Tirar Dado Creativo'}</span>
-                                </button>
-
-                                {rolledIdea && !isRolling && (
-                                    <div className="rolled-idea-display-card animate-fade-in mt-6 p-4 text-left border border-primary rounded-xl bg-surface relative">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <span className="badge badge-primary">{rolledIdea.category}</span>
-                                            <div className="flex gap-2">
-                                                <button 
-                                                    className="fav-btn-bubble"
-                                                    onClick={() => handleToggleFavorite(rolledIdea, 'dado')}
-                                                >
-                                                    <Heart size={16} fill={favorites.some(fav => fav.id === rolledIdea.id) ? '#e11d48' : 'none'} />
-                                                </button>
-                                                <button 
-                                                    className="btn-copy-all text-micro flex items-center gap-1"
-                                                    onClick={() => handleCopyToClipboard(rolledIdea.copies.emotional, 'rolled-copy')}
-                                                >
-                                                    {copiedTextType === 'rolled-copy' ? <Check size={14} /> : <Copy size={14} />}
-                                                    <span>Copiar Copy</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <h4 className="font-bold text-lg text-primary">{rolledIdea.title}</h4>
-                                        <p className="text-small text-muted mb-4">{rolledIdea.whyRecommended}</p>
-                                        
-                                        <div className="p-3 bg-background rounded-lg border mb-4">
-                                            <strong className="text-micro text-primary uppercase">Guía rápida de grabación:</strong>
-                                            <ul className="list-disc pl-4 text-small text-muted mt-2 space-y-1">
-                                                {rolledIdea.steps.map((st: any, idx: number) => (
-                                                    <li key={idx}><strong>{st.shot}</strong>: {st.description}</li>
-                                                ))}
-                                            </ul>
-                                        </div>
-
-                                        <div className="p-3 bg-surface border rounded-lg">
-                                            <strong className="text-micro text-primary uppercase block mb-1">Textos Sugeridos:</strong>
-                                            <p className="text-small"><strong>Hook:</strong> "{rolledIdea.hooks.emotional}"</p>
-                                            <p className="text-small mt-1"><strong>Copy:</strong> {rolledIdea.copies.emotional.slice(0, 100)}...</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            {/* DADO REMOVIDO */}
 
                             {/* 💖 GRID DE FAVORITOS Y GUARDADOS */}
                             {favorites.length > 0 && (
@@ -1492,13 +849,8 @@ export const MarketingAI: React.FC = () => {
                                                 <button 
                                                     className="btn btn-secondary btn-sm mt-3 w-full"
                                                     onClick={() => {
-                                                        if (fav.favType === 'sugerencia') {
-                                                            setSelectedSuggestion(fav);
-                                                            setActiveTab('today');
-                                                        } else {
-                                                            setRolledIdea(fav);
-                                                            setActiveTab('today');
-                                                        }
+                                                        setSelectedSuggestion(fav);
+                                                        setActiveTab('today');
                                                     }}
                                                 >
                                                     Abrir sugerencia
