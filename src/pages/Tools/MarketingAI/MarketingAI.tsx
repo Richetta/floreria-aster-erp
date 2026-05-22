@@ -866,72 +866,92 @@ export const MarketingAI: React.FC = () => {
                     {/* TAB 2: REELS / DIRECTOR CREATIVO */}
                     {activeTab === 'reels' && (
                         <div className="tab-pane animate-fade-in">
-                            <div className="pane-header">
-                                <h2>🎥 Estudio de Creación de Reels</h2>
-                                <p>Crea guiones cinematográficos estéticos para cualquier flor de tu catálogo adaptados a tu taller botánico.</p>
-                            </div>
-
-                            <div className="reels-builder-card glass-panel p-4 mb-6">
-                                <div className="form-group mb-4">
-                                    <label className="form-label font-bold text-small">Seleccionar Flor o Producto del Inventario:</label>
+                            <div className="pane-header flex flex-col md:flex-row justify-between md:items-end border-b border-border pb-4 mb-8 gap-4">
+                                <div>
+                                    <h2 className="text-2xl font-display font-bold text-primary mb-1">Director Creativo</h2>
+                                    <p className="text-muted">Storyboarding y dirección de arte para Reels.</p>
+                                </div>
+                                <div className="reels-product-selector w-full md:w-auto">
                                     <select 
-                                        className="form-input w-full"
+                                        className="form-input border-0 border-b border-border bg-transparent text-primary font-medium focus:ring-0 focus:border-primary px-0 pb-1 w-full md:w-64"
                                         value={customPromoProduct}
                                         onChange={(e) => setCustomPromoProduct(e.target.value)}
                                     >
-                                        <option value="">-- Seleccionar de la Base de Datos --</option>
+                                        <option value="">Seleccionar Producto en Stock...</option>
                                         {(products.length > 0 ? products : defaultProducts).map(p => (
-                                            <option key={p.id} value={p.name}>{p.name} (Stock: {p.stock})</option>
+                                            <option key={p.id} value={p.name}>{p.name} ({p.stock} unid.)</option>
                                         ))}
                                     </select>
                                 </div>
+                            </div>
 
-                                <div className="interactive-reel-teaser bg-surface p-4 rounded-lg border border-border">
-                                    <h4 className="font-bold flex items-center gap-2 mb-2 text-primary">
-                                        <Sparkles size={18} />
-                                        Guion Generado para: {customPromoProduct || 'Flores Frescas Variadas'}
-                                    </h4>
-                                    <p className="text-small text-muted mb-4">
-                                        Este guion ha sido adaptado dinámicamente según la frescura y la estética de la flor seleccionada. Utilizalo para grabar con tu celular directamente en el taller de la florería.
+                            <div className="reels-studio-layout grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                {/* Columna Izquierda: Storyboard Timeline */}
+                                <div className="lg:col-span-2">
+                                    <div className="flex items-center gap-2 mb-6">
+                                        <Camera size={20} className="text-primary" />
+                                        <h3 className="text-lg font-bold text-primary">Storyboard Generado</h3>
+                                    </div>
+                                    <p className="text-small text-muted mb-8 max-w-2xl">
+                                        Guion adaptado dinámicamente para resaltar la textura y frescura de {customPromoProduct ? `las ${customPromoProduct}` : 'las flores'}.
                                     </p>
 
-                                    <div className="storyboard-steps-compact">
-                                        <div className="compact-step">
-                                            <strong>🎬 Hook Visual (1-3 seg):</strong> Plano de súper detalle mostrando la caída de gotas de agua sobre los pétalos de {customPromoProduct || 'las flores'}.
+                                    <div className="storyboard-timeline space-y-8 relative before:absolute before:inset-y-0 before:left-[15px] before:w-[2px] before:bg-border pl-10">
+                                        <div className="timeline-step relative">
+                                            <div className="absolute -left-[40px] top-1 w-8 h-8 rounded-full bg-background border-2 border-primary flex items-center justify-center text-micro font-bold text-primary">01</div>
+                                            <h4 className="font-bold text-primary mb-1 text-base">Hook Visual (1-3 seg)</h4>
+                                            <p className="text-small text-muted leading-relaxed">Plano de súper detalle mostrando la caída de gotas de agua sobre los pétalos de {customPromoProduct || 'las flores'}.</p>
                                         </div>
-                                        <div className="compact-step">
-                                            <strong>✂️ Nudo Creativo (3-12 seg):</strong> Plano acelerado cenital mostrando tus manos combinando follajes verdes (eucalipto) con {customPromoProduct || 'las flores principales'}.
+                                        <div className="timeline-step relative">
+                                            <div className="absolute -left-[40px] top-1 w-8 h-8 rounded-full bg-background border-2 border-border flex items-center justify-center text-micro font-bold text-muted">02</div>
+                                            <h4 className="font-bold text-primary mb-1 text-base">Nudo Creativo (3-12 seg)</h4>
+                                            <p className="text-small text-muted leading-relaxed">Plano acelerado cenital mostrando tus manos combinando follajes verdes (eucalipto) con {customPromoProduct || 'las flores principales'}.</p>
                                         </div>
-                                        <div className="compact-step">
-                                            <strong>📦 Desenlace / Cierre (12-15 seg):</strong> Plano medio sonriente abrazando el ramo y mostrándolo orgulloso/a a la cámara.
+                                        <div className="timeline-step relative">
+                                            <div className="absolute -left-[40px] top-1 w-8 h-8 rounded-full bg-background border-2 border-border flex items-center justify-center text-micro font-bold text-muted">03</div>
+                                            <h4 className="font-bold text-primary mb-1 text-base">Desenlace / Cierre (12-15 seg)</h4>
+                                            <p className="text-small text-muted leading-relaxed">Plano medio sonriente abrazando el ramo y mostrándolo orgulloso/a a la cámara.</p>
                                         </div>
                                     </div>
+                                </div>
 
-                                    {/* Instagram Feed Mockup */}
-                                    <div className="grid-instagram-mockup-wrapper mt-6">
-                                        <h5 className="font-bold text-micro text-muted flex items-center gap-1 mb-2">
-                                            <Instagram size={14} />
-                                            Simulador Visual de Feed (Mockup)
-                                        </h5>
-                                        <div className="instagram-grid-mockup">
-                                            <div className="ig-grid-item active-preview">
-                                                <span className="material-symbols-rounded">movie</span>
-                                                <p className="mockup-label">Reel Sugerido</p>
-                                                <div className="mockup-color-palette">
-                                                    {getPaletteByProduct(customPromoProduct).colors.slice(0, 3).map((col, idx) => (
-                                                        <span key={idx} style={{ backgroundColor: col }} />
-                                                    ))}
-                                                </div>
+                                {/* Columna Derecha: Dirección de Arte */}
+                                <div>
+                                    <div className="art-direction-panel bg-surface border border-border p-6 shadow-sm">
+                                        <h3 className="text-xs font-bold text-primary uppercase tracking-widest mb-6 flex items-center gap-2">
+                                            <Palette size={16} />
+                                            Dirección de Arte
+                                        </h3>
+                                        
+                                        <div className="mb-8">
+                                            <span className="block text-micro text-muted uppercase tracking-wider mb-3">Paleta Sugerida</span>
+                                            <div className="font-medium text-primary text-sm mb-3">{getPaletteByProduct(customPromoProduct).name}</div>
+                                            <div className="flex gap-3">
+                                                {getPaletteByProduct(customPromoProduct).colors.slice(0, 4).map((col, idx) => (
+                                                    <div key={idx} className="w-10 h-10 rounded-full shadow-inner border border-black/5" style={{ backgroundColor: col }} title={col} />
+                                                ))}
                                             </div>
-                                            <div className="ig-grid-item placeholder-grid">💐</div>
-                                            <div className="ig-grid-item placeholder-grid">🌾</div>
-                                            <div className="ig-grid-item placeholder-grid">🥀</div>
-                                            <div className="ig-grid-item placeholder-grid">🌹</div>
-                                            <div className="ig-grid-item placeholder-grid">🌷</div>
                                         </div>
-                                        <p className="text-micro text-center text-muted mt-2">
-                                            Tu Reel encajará estéticamente usando la paleta sugerida: <strong>{getPaletteByProduct(customPromoProduct).name}</strong>.
-                                        </p>
+
+                                        <div className="mb-8">
+                                            <span className="block text-micro text-muted uppercase tracking-wider mb-3">Simulador de Feed</span>
+                                            <div className="grid grid-cols-3 gap-1 rounded overflow-hidden">
+                                                <div className="aspect-square bg-border relative overflow-hidden flex items-center justify-center group">
+                                                    <div className="absolute inset-0 bg-primary opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                                                    <Instagram size={18} className="text-white relative z-10" />
+                                                </div>
+                                                <div className="aspect-square bg-surface-hover"></div>
+                                                <div className="aspect-square bg-surface-hover"></div>
+                                                <div className="aspect-square bg-surface-hover"></div>
+                                                <div className="aspect-square bg-surface-hover"></div>
+                                                <div className="aspect-square bg-surface-hover"></div>
+                                            </div>
+                                        </div>
+
+                                        <button className="w-full btn btn-primary flex items-center justify-center gap-2 h-10">
+                                            <Download size={16} />
+                                            Exportar Guion
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -1300,85 +1320,7 @@ export const MarketingAI: React.FC = () => {
                         </div>
                     )}
 
-                    {/* TAB 7: MI JARDÍN DIGITAL & MEDALLAS */}
-                    {activeTab === 'garden' && (
-                        <div className="tab-pane animate-fade-in">
-                            <div className="pane-header">
-                                <h2>🌱 Mi Jardín Digital & Historial Creativo</h2>
-                                <p>Cuidar tu marketing es como cuidar tu flor favorita: la constancia hace florecer tu ERP. Mirá tu progreso, XP y logros.</p>
-                            </div>
-
-                            <div className="garden-status-grid">
-                                <div className="garden-rules-card glass-panel p-4 text-center">
-                                    <span className="material-symbols-rounded trophy-icon">military_tech</span>
-                                    <h3>Reglas del Cultivo Digital</h3>
-                                    <p className="text-small mt-2">
-                                        Cada sugerencia completada en **"Qué hacer hoy"** te otorga **+15 XP**. Al llegar a 100 XP, subes de nivel creativo y tu flor cambia de color y florece. ¡Los logros desbloqueados te premian con **+20 XP** adicionales!
-                                    </p>
-                                </div>
-
-                                {/* 🏆 SISTEMA DE MEDALLAS / LOGROS */}
-                                <div className="achievements-section-card glass-panel p-6">
-                                    <h3 className="flex items-center gap-2 mb-4">
-                                        <Award size={20} className="text-accent" />
-                                        <span>Tus Medallas y Logros Creativos</span>
-                                    </h3>
-                                    <div className="achievements-grid">
-                                        {ACHIEVEMENTS.map((ach) => {
-                                            const isUnlocked = unlockedAchievements.includes(ach.id);
-                                            return (
-                                                <div 
-                                                    key={ach.id} 
-                                                    className={`achievement-badge-card ${isUnlocked ? 'unlocked' : 'locked'}`}
-                                                    title={ach.desc}
-                                                >
-                                                    <div className="badge-icon-wrap">
-                                                        <span className="badge-emoji">{ach.icon}</span>
-                                                        {!isUnlocked && <span className="lock-icon">🔒</span>}
-                                                    </div>
-                                                    <h4>{ach.title}</h4>
-                                                    <p className="text-micro text-center text-muted mt-1">{ach.desc}</p>
-                                                    {isUnlocked ? (
-                                                        <span className="badge-status-unlocked text-micro text-success">¡Desbloqueado!</span>
-                                                    ) : (
-                                                        <span className="badge-status-locked text-micro text-muted">Bloqueado</span>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                <div className="garden-history-card glass-panel p-4">
-                                    <h3 className="flex items-center gap-2 mb-3">
-                                        <BookmarkCheck size={20} className="text-primary" />
-                                        Historial de Acciones de Marketing
-                                    </h3>
-                                    {history.length === 0 ? (
-                                        <p className="text-body text-center py-6 text-muted">Aún no has completado acciones de marketing. ¡Comenzá hoy mismo! 🌸</p>
-                                    ) : (
-                                        <div className="history-timeline">
-                                            {history.map((item) => (
-                                                <div key={item.id} className="history-item">
-                                                    <div className="history-dot"></div>
-                                                    <div className="history-content">
-                                                        <strong>{item.title}</strong>
-                                                        <div className="history-meta flex justify-between mt-1">
-                                                            <span className="text-micro text-muted">{item.date}</span>
-                                                            <span className="text-micro text-success font-bold">+{item.xpGained} XP</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* COLUMNA DERECHA: El Corazón Creativo y Gamificado (JARDÍN DIGITAL SIDEBAR) */}
+                    {/* COLUMNA DERECHA: El Corazón Creativo y Gamificado (JARDÍN DIGITAL SIDEBAR) */}
                 <div className="marketing-dashboard-sidebar">
                     {/* Widget del Estado del Jardín Digital */}
                     <div className="card garden-level-widget glass-panel text-center">
