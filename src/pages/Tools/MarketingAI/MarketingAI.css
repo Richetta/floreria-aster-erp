@@ -64,7 +64,7 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.35rem 0.85rem;
-  background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%);
+  background-color: #fef2f2;
   border: 1px solid #fecdd3;
   color: #be123c;
   font-size: 0.85rem;
@@ -73,7 +73,6 @@
   margin-bottom: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  box-shadow: 0 2px 4px rgba(225, 29, 72, 0.05);
 }
 
 .marketing-header h1 {
