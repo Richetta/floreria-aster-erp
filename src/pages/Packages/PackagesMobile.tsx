@@ -133,59 +133,126 @@ export const PackagesMobile = () => {
                     </div>
                 ) : (
                     <div className="packages-cards-grid">
-                        {filteredPackages.map((pkg: any) => (
-                            <div key={pkg.id} className="package-card-mobile">
-                                <div className="package-card-top">
-                                    <div className="package-info">
-                                        <span className="package-section-badge">{pkg.section}</span>
-                                        <h3 className="package-name">{pkg.name}</h3>
-                                    </div>
-                                    <div className="package-actions">
-                                        <button className="icon-btn-sm" onClick={() => handleEdit(pkg)}>
-                                            <span className="material-symbols-rounded">edit</span>
-                                        </button>
-                                        <button className="icon-btn-sm danger" onClick={() => handleDelete(pkg.id, pkg.name)}>
-                                            <span className="material-symbols-rounded">delete</span>
-                                        </button>
-                                    </div>
-                                </div>
+                        {filteredPackages.map((pkg: any) => {
+                            const estimatedCost = calculateCost(pkg);
+                            const markup = estimatedCost > 0 ? pkg.price / estimatedCost : 0;
 
-                                {pkg.description && (
-                                    <p className="package-description">{pkg.description}</p>
-                                )}
-
-                                <div className="package-recipe-mini">
-                                    <div className="recipe-mini-header">
-                                        <span className="material-symbols-rounded">inventory_2</span>
-                                        <span>{pkg.items.length} items</span>
+                            return (
+                                <div key={pkg.id} className="package-card-mobile">
+                                    {/* Visual CSS Floral Avatar */}
+                                    <div className="floral-avatar-wrapper">
+                                        <div className="floral-bouquet-mini">
+                                            <div className="stem-layer">
+                                                <div className="stem stem-1"></div>
+                                                <div className="stem stem-2"></div>
+                                                <div className="stem stem-3"></div>
+                                            </div>
+                                            <div className="bloom-layer">
+                                                {pkg.items.slice(0, 5).map((item: any, idx: number) => {
+                                                    const prod = products.find(p => p.id === item.productId);
+                                                    const prodName = prod ? prod.name.toLowerCase() : 'flor';
+                                                    let color = '#D9A09A'; // Default rose
+                                                    if (prodName.includes('rosa') || prodName.includes('red') || prodName.includes('rojo')) color = '#C85A53';
+                                                    else if (prodName.includes('amarill') || prodName.includes('gold') || prodName.includes('sol')) color = '#E9C46A';
+                                                    else if (prodName.includes('blan') || prodName.includes('whit') || prodName.includes('crem')) color = '#FAF6EE';
+                                                    else if (prodName.includes('azul') || prodName.includes('blue') || prodName.includes('violet')) color = '#5D8CAE';
+                                                    else if (prodName.includes('ment') || prodName.includes('verd') || prodName.includes('hoj') || prodName.includes('euca')) color = '#74A38A';
+                                                    
+                                                    const bloomCount = Math.min(item.quantity, 3);
+                                                    return Array.from({ length: bloomCount }).map((_, bIdx) => {
+                                                        const angle = (idx * 60 + bIdx * 30) % 360;
+                                                        const dist = 10 + (idx * 3) % 10;
+                                                        const x = Math.cos((angle * Math.PI) / 180) * dist;
+                                                        const y = Math.sin((angle * Math.PI) / 180) * dist;
+                                                        return (
+                                                            <div 
+                                                                key={`${idx}-${bIdx}`} 
+                                                                className="mini-bloom" 
+                                                                style={{
+                                                                    backgroundColor: color,
+                                                                    transform: `translate(${x}px, ${y}px)`,
+                                                                    boxShadow: `0 2px 6px ${color}44`,
+                                                                    border: '1px solid rgba(0,0,0,0.05)'
+                                                                }}
+                                                            />
+                                                        );
+                                                    });
+                                                })}
+                                                <div className="mini-bloom center-bloom" style={{ backgroundColor: '#E9C46A' }}></div>
+                                            </div>
+                                            <div className="kraft-bow">🎀</div>
+                                        </div>
                                     </div>
-                                    <div className="recipe-mini-list">
-                                        {pkg.items.slice(0, 2).map((item: any) => {
-                                            const prod = products.find(p => p.id === item.productId);
-                                            return (
-                                                <div key={item.productId} className="recipe-mini-item">
-                                                    <span>{item.quantity}x {prod?.name || 'Producto'}</span>
-                                                </div>
-                                            );
-                                        })}
-                                        {pkg.items.length > 2 && (
-                                            <div className="recipe-more">+{pkg.items.length - 2} más</div>
+
+                                    <div className="package-card-top">
+                                        <div className="package-info">
+                                            <span className="package-section-badge">{pkg.section}</span>
+                                            <h3 className="package-name">{pkg.name}</h3>
+                                        </div>
+                                        <div className="package-actions">
+                                            <button className="icon-btn-sm" onClick={() => handleEdit(pkg)}>
+                                                <span className="material-symbols-rounded">edit</span>
+                                            </button>
+                                            <button className="icon-btn-sm danger" onClick={() => handleDelete(pkg.id, pkg.name)}>
+                                                <span className="material-symbols-rounded">delete</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {pkg.description && (
+                                        <p className="package-description">{pkg.description}</p>
+                                    )}
+
+                                    {/* Markup Coach Coach Tag */}
+                                    <div style={{ margin: '0.25rem 0' }}>
+                                        {markup < 1.5 ? (
+                                            <span className="markup-coach-tag markup-low">
+                                                🔴 Baja ({markup.toFixed(1)}x)
+                                            </span>
+                                        ) : markup <= 2.2 ? (
+                                            <span className="markup-coach-tag markup-good">
+                                                🟡 Buena ({markup.toFixed(1)}x)
+                                            </span>
+                                        ) : (
+                                            <span className="markup-coach-tag markup-excellent">
+                                                🟢 Exc. ({markup.toFixed(1)}x)
+                                            </span>
                                         )}
                                     </div>
-                                </div>
 
-                                <div className="package-card-bottom">
-                                    <div className="package-cost">
-                                        <span className="cost-label">Costo</span>
-                                        <span className="cost-value">${calculateCost(pkg).toLocaleString()}</span>
+                                    <div className="package-recipe-mini">
+                                        <div className="recipe-mini-header">
+                                            <span className="material-symbols-rounded">inventory_2</span>
+                                            <span>{pkg.items.length} items</span>
+                                        </div>
+                                        <div className="recipe-mini-list">
+                                            {pkg.items.slice(0, 2).map((item: any) => {
+                                                const prod = products.find(p => p.id === item.productId);
+                                                return (
+                                                    <div key={item.productId} className="recipe-mini-item">
+                                                        <span>{item.quantity}x {prod?.name || 'Producto'}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                            {pkg.items.length > 2 && (
+                                                <div className="recipe-more">+{pkg.items.length - 2} más</div>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="package-price">
-                                        <span className="price-label">Precio</span>
-                                        <span className="price-value">${pkg.price.toLocaleString()}</span>
+
+                                    <div className="package-card-bottom">
+                                        <div className="package-cost">
+                                            <span className="cost-label">Costo</span>
+                                            <span className="cost-value">${estimatedCost.toLocaleString()}</span>
+                                        </div>
+                                        <div className="package-price">
+                                            <span className="price-label">Precio</span>
+                                            <span className="price-value">${pkg.price.toLocaleString()}</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

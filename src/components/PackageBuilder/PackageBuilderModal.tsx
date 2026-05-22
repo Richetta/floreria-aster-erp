@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Search, Plus, Minus, Package as PackageIcon, Save, Folder } from 'lucide-react';
+import { X, Search, Plus, Minus, Save, Folder } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Package, PackageItem, Product } from '../../store/useStore';
 import { useModal } from '../../hooks/useModal';
@@ -129,7 +129,42 @@ export const PackageBuilderModal: React.FC<PackageBuilderModalProps> = ({
 
     if (!isOpen) return null;
 
+    // Cost, markup and margin calculations in real time
     const totalCost = calculateCost();
+    const markupMultiplier = totalCost > 0 ? (Number(price) || 0) / totalCost : 0;
+    const profitMargin = (Number(price) || 0) > 0 ? ((Number(price) - totalCost) / Number(price)) * 100 : 0;
+
+    // Pointer position on the slider (from 1.0x to 3.0x mapped to 0% to 100%)
+    const pointerPos = Math.min(Math.max(((markupMultiplier - 1.0) / 2.0) * 100, 0), 100);
+
+    // Creative Composition Assistant tips
+    const compositionTip = (() => {
+        const totalFlowers = items.reduce((sum, item) => sum + item.quantity, 0);
+        if (totalFlowers === 0) return "¡Mesa de Armado despejada! Seleccioná flores del inventario para empezar tu composición.";
+        
+        const greenCount = items.reduce((sum, item) => {
+            const prod = products.find(p => p.id === item.productId);
+            if (!prod) return sum;
+            const name = prod.name.toLowerCase();
+            const cat = prod.category.toLowerCase();
+            if (name.includes('verde') || name.includes('eucalipto') || name.includes('hoja') || name.includes('follaje') || cat.includes('verde') || cat.includes('follaje')) {
+                return sum + item.quantity;
+            }
+            return sum;
+        }, 0);
+        
+        const greenRatio = totalFlowers > 0 ? greenCount / totalFlowers : 0;
+        
+        if (greenRatio < 0.25) {
+            return "💡 Consejo Creativo: Agregá un 25-30% de follaje (Eucalipto, Hojas) para darle volumen, estructura y contraste a tu Ramo.";
+        }
+        
+        if (totalFlowers > 15) {
+            return "💡 Consejo Creativo: Tenés una composición premium muy densa. Asegurá un envoltorio de kraft firme y cintas de lino de color tierra.";
+        }
+        
+        return "💡 Balance Ideal: Tu mezcla de follaje y flores principales está en excelente armonía. ¡Se ve espectacular!";
+    })();
 
     return (
         <div className="builder-overlay">
@@ -140,7 +175,7 @@ export const PackageBuilderModal: React.FC<PackageBuilderModalProps> = ({
                             {packageToEdit ? 'Editando Arreglo' : 'La Mesa de Armado'}
                         </h2>
                         <p className="text-small text-white opacity-80 mt-1">
-                            Agrega productos de la lista (abajo) a la mesa (arriba)
+                            Agrega flores de tu inventario y mira crecer tu ramo en tiempo real
                         </p>
                     </div>
                     <button className="btn-icon text-white hover:bg-white/10" onClick={onClose}>
@@ -149,7 +184,7 @@ export const PackageBuilderModal: React.FC<PackageBuilderModalProps> = ({
                 </header>
 
                 <div className="builder-content">
-                    {/* Left/Top Panel: The Recipe (La Mesa) */}
+                    {/* Left/Top Panel: The Creative Cedar Wood Canvas (La Mesa) */}
                     <div className="recipe-panel">
                         <div className="form-group mb-4">
                             <input 
@@ -161,7 +196,7 @@ export const PackageBuilderModal: React.FC<PackageBuilderModalProps> = ({
                                 autoFocus
                             />
                         </div>
-                        <div className="grid grid-2 gap-4 mb-6">
+                        <div className="grid grid-2 gap-4 mb-2">
                             <div className="form-group">
                                 <label className="form-label text-small">Clasificación</label>
                                 <select 
@@ -189,51 +224,118 @@ export const PackageBuilderModal: React.FC<PackageBuilderModalProps> = ({
                             </div>
                         </div>
 
-                        <h3 className="text-large font-bold mb-3 flex items-center gap-2">
-                            <PackageIcon className="text-primary" size={20} />
-                            Ingredientes en la Mesa ({items.length})
-                        </h3>
-
-                        <div className="ingredients-list">
-                            {items.length === 0 ? (
-                                <div className="empty-ingredients">
-                                    <p className="text-muted text-center py-6">Selecciona productos del inventario para armar este arreglo.</p>
+                        {/* Cedar wood canvas workspace */}
+                        <div className="worktable-canvas">
+                            {/* Animated CSS Floral Bouquet Visualizer */}
+                            <div className="canvas-visualizer">
+                                <div className="bouquet-visualizer-container">
+                                    <div className="v-stems">
+                                        {items.map((item, idx) => {
+                                            return Array.from({ length: Math.min(item.quantity, 4) }).map((_, bIdx) => (
+                                                <div 
+                                                    key={`stem-${idx}-${bIdx}`} 
+                                                    className={`v-stem stem-rotate-${(idx * 3 + bIdx) % 7}`} 
+                                                />
+                                            ));
+                                        })}
+                                    </div>
+                                    <div className="v-blooms">
+                                        {items.map((item, idx) => {
+                                            const prod = products.find(p => p.id === item.productId);
+                                            const prodName = prod ? prod.name.toLowerCase() : '';
+                                            let color = '#D9A09A'; // Default rose
+                                            if (prodName.includes('rosa') || prodName.includes('red') || prodName.includes('rojo')) color = '#C85A53';
+                                            else if (prodName.includes('amarill') || prodName.includes('gold') || prodName.includes('sol')) color = '#E9C46A';
+                                            else if (prodName.includes('blan') || prodName.includes('whit') || prodName.includes('crem')) color = '#FAF6EE';
+                                            else if (prodName.includes('azul') || prodName.includes('blue') || prodName.includes('violet')) color = '#5D8CAE';
+                                            else if (prodName.includes('ment') || prodName.includes('verd') || prodName.includes('hoj') || prodName.includes('euca')) color = '#74A38A';
+                                            
+                                            const bloomCount = Math.min(item.quantity, 4);
+                                            return Array.from({ length: bloomCount }).map((_, bIdx) => {
+                                                const angle = (idx * 55 + bIdx * 25) % 360;
+                                                const dist = 20 + (idx * 8 + bIdx * 4) % 30;
+                                                const x = Math.cos((angle * Math.PI) / 180) * dist;
+                                                const y = Math.sin((angle * Math.PI) / 180) * dist;
+                                                const isLeaf = color === '#74A38A';
+                                                return (
+                                                    <div 
+                                                        key={`bloom-${idx}-${bIdx}`} 
+                                                        className={`v-bloom ${isLeaf ? 'v-leaf' : ''}`}
+                                                        style={{
+                                                            backgroundColor: color,
+                                                            transform: `translate(${x}px, ${y}px) scale(${1 + (bIdx % 3) * 0.1})`,
+                                                            boxShadow: `0 4px 10px ${color}55`,
+                                                        }}
+                                                    />
+                                                );
+                                            });
+                                        })}
+                                        {items.length === 0 && <div className="v-placeholder-bloom">🌿 LA MESA DE ARMADO 🌿</div>}
+                                    </div>
+                                    <div className="v-kraft-wrap"></div>
                                 </div>
-                            ) : (
-                                items.map(item => {
-                                    const prod = products.find(p => p.id === item.productId);
-                                    if (!prod) return null;
-                                    return (
-                                        <div key={item.productId} className="ingredient-row">
-                                            <div className="ingredient-info">
-                                                <h4 className="font-medium text-body">{prod.name}</h4>
-                                                <p className="text-micro text-muted">Costo esti.: ${(prod.price * 0.5 * item.quantity).toLocaleString()}</p>
+                            </div>
+
+                            {/* Circular floating botanical chips laying on canvas */}
+                            <div className="floating-botanical-chips">
+                                {items.length === 0 ? (
+                                    <p className="text-muted text-center w-full py-4 text-small font-semibold">
+                                        Selecciona elementos en el panel derecho para comenzar a componer 🎨
+                                    </p>
+                                ) : (
+                                    items.map(item => {
+                                        const prod = products.find(p => p.id === item.productId);
+                                        if (!prod) return null;
+                                        
+                                        const prodName = prod.name.toLowerCase();
+                                        let color = '#D9A09A'; // Default rose
+                                        if (prodName.includes('rosa') || prodName.includes('red') || prodName.includes('rojo')) color = '#C85A53';
+                                        else if (prodName.includes('amarill') || prodName.includes('gold') || prodName.includes('sol')) color = '#E9C46A';
+                                        else if (prodName.includes('blan') || prodName.includes('whit') || prodName.includes('crem')) color = '#FAF6EE';
+                                        else if (prodName.includes('azul') || prodName.includes('blue') || prodName.includes('violet')) color = '#5D8CAE';
+                                        else if (prodName.includes('ment') || prodName.includes('verd') || prodName.includes('hoj') || prodName.includes('euca')) color = '#74A38A';
+                                        
+                                        return (
+                                            <div key={item.productId} className="botanical-chip">
+                                                <span className="chip-indicator" style={{ backgroundColor: color }}></span>
+                                                <div className="chip-details">
+                                                    <span className="chip-name">{prod.name}</span>
+                                                    <span className="chip-cost">${(prod.price * 0.5 * item.quantity).toLocaleString()}</span>
+                                                </div>
+                                                <div className="chip-actions">
+                                                    <button className="qty-btn" onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1)}>
+                                                        <Minus size={10} />
+                                                    </button>
+                                                    <span className="chip-qty">{item.quantity}</span>
+                                                    <button className="qty-btn" onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1)}>
+                                                        <Plus size={10} />
+                                                    </button>
+                                                    <button className="chip-delete" onClick={() => handleRemoveItem(item.productId)}>
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="quantity-controls">
-                                                <button onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1)}>
-                                                    <Minus size={16} />
-                                                </button>
-                                                <span className="qty-value">{item.quantity}</span>
-                                                <button onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1)}>
-                                                    <Plus size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Dynamic Creative composition tip box */}
+                        <div className="creative-tip-card">
+                            {compositionTip}
                         </div>
                     </div>
 
-                    {/* Right/Bottom Panel: Inventory View */}
+                    {/* Right Panel: Inventory list */}
                     <div className="inventory-panel">
                         <div className="inventory-header">
-                            <h3 className="font-bold mb-3">Tu Inventario</h3>
+                            <h3 className="font-bold text-h3 text-charcoal">Seleccionar Ingredientes</h3>
                             <div className="search-pill-small">
                                 <Search size={16} className="text-muted" />
                                 <input 
                                     type="text" 
-                                    placeholder="Buscar flor, envoltorio..." 
+                                    placeholder="Buscar flor, follaje, envoltorios..." 
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -246,7 +348,7 @@ export const PackageBuilderModal: React.FC<PackageBuilderModalProps> = ({
                                         className={`builder-tab ${activeCategory === cat ? 'active' : ''}`}
                                         onClick={() => setActiveCategory(cat)}
                                     >
-                                        <Folder size={14} className="mr-1" />
+                                        <Folder size={14} className="mr-1" style={{ display: 'inline', verticalAlign: 'middle' }} />
                                         {cat}
                                     </button>
                                 ))}
@@ -262,35 +364,62 @@ export const PackageBuilderModal: React.FC<PackageBuilderModalProps> = ({
                                 >
                                     <span className="block font-medium text-left truncate">{prod.name}</span>
                                     <div className="flex justify-between items-center mt-2 opacity-70">
-                                        <span className="text-micro">Stock: {prod.stock}</span>
-                                        <span className="text-micro font-bold">+ Agregar</span>
+                                        <span className="text-micro font-semibold text-muted">Stock: {prod.stock}</span>
+                                        <span className="text-micro font-bold text-primary">+ Añadir</span>
                                     </div>
                                 </button>
                             ))}
                             {filteredProducts.length === 0 && (
                                 <div className="col-span-full text-center py-8 text-muted text-small">
-                                    No hay productos en esta categoría.
+                                    No hay elementos en esta categoría que coincidan.
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Fixed Footer: Financials and Save */}
+                {/* Fixed Footer: Real-time price markup coach */}
                 <footer className="builder-footer">
                     <div className="financials">
                         <div className="cost-summary">
-                            <span className="text-micro uppercase tracking-wider text-muted font-bold block">Costo estimado de los materiales</span>
+                            <span className="text-micro">Costo Materiales</span>
                             <span className="text-xl font-bold">${totalCost.toLocaleString()}</span>
                         </div>
+
+                        {/* Interactive Profitability / Markup Coach */}
+                        <div className="markup-coach-container">
+                            <div className="flex justify-between items-center">
+                                <span className="text-micro uppercase font-bold text-muted">Multiplicador Rentabilidad</span>
+                                {markupMultiplier === 0 ? (
+                                    <span className="markup-status-badge markup-low">Fijar Precio</span>
+                                ) : markupMultiplier < 1.5 ? (
+                                    <span className="markup-status-badge markup-low">🔴 Baja ({markupMultiplier.toFixed(1)}x)</span>
+                                ) : markupMultiplier <= 2.2 ? (
+                                    <span className="markup-status-badge markup-good">🟡 Buena ({markupMultiplier.toFixed(1)}x)</span>
+                                ) : (
+                                    <span className="markup-status-badge markup-excellent">🟢 Excelente ({markupMultiplier.toFixed(1)}x)</span>
+                                )}
+                            </div>
+                            
+                            <div className="markup-coach-slider">
+                                <div className="markup-coach-pointer" style={{ left: `${pointerPos}%` }} />
+                            </div>
+
+                            <div className="markup-status-label">
+                                <span>1.0x Costo</span>
+                                <span>{profitMargin > 0 ? `${profitMargin.toFixed(0)}% Margen Neto` : '0% Margen'}</span>
+                                <span>3.0x+ Multipl.</span>
+                            </div>
+                        </div>
+
                         <div className="price-input-group">
-                            <label className="text-micro uppercase tracking-wider text-primary font-bold block mb-1">Precio de Venta Público *</label>
-                            <div className="input-with-symbol relative">
+                            <label className="text-micro block mb-1">Precio Público *</label>
+                            <div className="input-with-symbol">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted font-bold">$</span>
                                 <input 
                                     type="number" 
-                                    className="form-input text-h3 pl-8 py-2 w-48 text-primary shadow-sm" 
-                                    placeholder="15000"
+                                    className="form-input text-h3 pl-8 py-2 w-48" 
+                                    placeholder="0"
                                     value={price}
                                     onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
                                 />
@@ -300,8 +429,8 @@ export const PackageBuilderModal: React.FC<PackageBuilderModalProps> = ({
                     
                     <div className="footer-actions">
                         <button className="btn btn-secondary px-6" onClick={onClose}>Cancelar</button>
-                        <button className="btn btn-primary btn-lg px-8 shadow-primary" onClick={handleSave}>
-                            <Save size={20} className="mr-2" />
+                        <button className="btn btn-primary btn-lg px-8" onClick={handleSave}>
+                            <Save size={20} className="mr-2" style={{ display: 'inline', verticalAlign: 'middle' }} />
                             {packageToEdit ? 'Actualizar Arreglo' : 'Guardar Arreglo'}
                         </button>
                     </div>

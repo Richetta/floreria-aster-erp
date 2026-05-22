@@ -288,7 +288,7 @@ export const DashboardDesktop = () => {
 
             {/* Recordatorio de Deudas - Solo Admin */}
             {isAdmin && totalDebt > 0 && (
-                <section className="card mt-6 bg-warning-light border border-warning">
+                <section className="card mt-6 debt-card-override">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-h3 flex items-center gap-2">
                             <DollarSign size={24} className="text-warning" />

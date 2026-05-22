@@ -1,106 +1,90 @@
+/* ==========================================================================
+   PackagesDesktop.css - Taller de Ramos Premium "Jardín de Aster" (Desktop)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,800;1,400&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --font-serif: 'Playfair Display', Georgia, serif;
+    --font-sans: 'Outfit', sans-serif;
+    
+    /* Organic Palette */
+    --color-bg-cream: #FAF9F6;
+    --color-sage: #2C4D3E;
+    --color-sage-light: #E8EFEA;
+    --color-terracotta: #C87A53;
+    --color-terracotta-light: #FAF0EC;
+    --color-wheat: #E9C46A;
+    --color-wheat-light: #FDF8EA;
+    --color-rose: #D9A09A;
+    --color-rose-light: #FAF0F0;
+    --color-charcoal: #1C2421;
+    --color-muted: #53605A;
+    --color-border-warm: #E2DDD5;
+    
+    --radius-premium: 24px;
+    --shadow-soft: 0 10px 30px rgba(44, 77, 62, 0.04);
+    --shadow-hover: 0 20px 40px rgba(44, 77, 62, 0.12);
+}
+
 .packages-page {
-    padding-bottom: 2rem;
-}
-
-@media (max-width: 768px) {
-    .packages-page {
-        padding: 1rem;
-    }
-
-    .packages-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-
-    .modern-card {
-        padding: 1rem;
-    }
-
-    .package-card-header {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .search-pill {
-        width: 100%;
-        max-width: none;
-    }
-}
-
-.packages-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.5rem;
-}
-
-@media (max-width: 640px) {
-    .packages-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-.modern-card {
-    display: flex;
-    flex-direction: column;
+    max-width: 1400px;
+    margin: 0 auto;
     padding: 1.5rem;
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    height: 100%;
+    font-family: var(--font-sans);
+    animation: fadeIn 0.8s ease-out;
 }
 
-.modern-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    border-color: var(--color-primary-light);
+/* ─── PAGE HEADER ──────────────────────────────────────────────────────── */
+.packages-page .page-header {
+    background: linear-gradient(135deg, #2C4D3E 0%, #172D24 100%);
+    padding: 2.5rem 3rem;
+    border-radius: var(--radius-premium);
+    color: #ffffff;
+    box-shadow: 0 15px 35px -5px rgba(23, 45, 36, 0.2);
+    margin-bottom: 2rem !important;
 }
 
-.package-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+.packages-page .page-header h1 {
+    font-family: var(--font-serif);
+    font-weight: 800;
+    font-size: 2.5rem;
+    color: #ffffff !important;
 }
 
-.recipe-item {
-    border-bottom: 1px dashed var(--color-border);
+.packages-page .page-header p {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 1.1rem;
 }
 
-.recipe-item:last-child {
-    border-bottom: none;
-}
-
-.cost-box {
-    background: var(--color-surface-hover);
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-border);
-}
-
-/* Empty State */
-.empty-state {
+/* ─── FILTER CONTROLS ──────────────────────────────────────────────────── */
+.inventory-controls {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 4rem 2rem;
-    background: transparent;
-    border: 2px dashed var(--color-border);
-    box-shadow: none;
+    gap: 1rem;
+    background: #ffffff;
+    padding: 1.5rem 2rem;
+    border-radius: 20px;
+    border: 1px solid var(--color-border-warm);
+    box-shadow: var(--shadow-soft);
 }
 
-/* Search and Filters reused via global classes but tweaked here */
 .search-pill {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-full);
-    padding: 0.75rem 1.25rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    max-width: 500px;
+    background: var(--color-bg-cream);
+    border: 1px solid var(--color-border-warm);
+    border-radius: 30px;
+    padding: 0.75rem 1.5rem;
+    max-width: 600px;
+    transition: all 0.3s ease;
+}
+
+.search-pill:focus-within {
+    border-color: var(--color-sage);
+    box-shadow: 0 0 0 3px rgba(44, 77, 62, 0.1);
+    background: #ffffff;
 }
 
 .search-pill input {
@@ -108,5 +92,340 @@
     border: none;
     outline: none;
     width: 100%;
+    font-family: var(--font-sans);
     font-size: 0.95rem;
+    color: var(--color-charcoal);
+}
+
+.tag-filters-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.filter-chip {
+    background: var(--color-bg-cream);
+    color: var(--color-muted);
+    border: 1px solid var(--color-border-warm);
+    padding: 0.5rem 1.25rem;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+}
+
+.filter-chip:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-sage);
+    color: var(--color-sage);
+    background: #ffffff;
+}
+
+.filter-chip.active {
+    background: var(--color-sage) !important;
+    color: #ffffff !important;
+    border-color: var(--color-sage) !important;
+    box-shadow: 0 8px 16px rgba(44, 77, 62, 0.2);
+}
+
+/* ─── PINTEREST STYLE GRID ─────────────────────────────────────────────── */
+.packages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    align-items: start;
+}
+
+/* ─── PINTEREST FLAP/PIN CARD ──────────────────────────────────────────── */
+.package-card.modern-card {
+    background: #ffffff;
+    border: 1px solid var(--color-border-warm);
+    border-radius: var(--radius-premium);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-soft);
+    transition: all 0.35s cubic-bezier(0.165, 0.84, 0.44, 1);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.package-card.modern-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--color-sage);
+}
+
+/* ─── MINI FLORAL BOUQUET PREVIEW (CSS) ────────────────────────────────── */
+.floral-avatar-wrapper {
+    background: linear-gradient(135deg, #FAF8F5 0%, #EFEBE4 100%);
+    width: 100%;
+    height: 180px;
+    border-radius: 18px;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(44, 77, 62, 0.05);
+}
+
+.floral-bouquet-mini {
+    position: relative;
+    width: 100px;
+    height: 140px;
+}
+
+.stem-layer {
+    position: absolute;
+    bottom: 20px;
+    left: 45px;
+    width: 10px;
+    height: 60px;
+}
+
+.stem {
+    position: absolute;
+    width: 3px;
+    height: 50px;
+    background: #74A38A;
+    border-radius: 2px;
+}
+
+.stem-1 { transform: rotate(-12deg); left: -4px; }
+.stem-2 { transform: rotate(0deg); left: 1px; }
+.stem-3 { transform: rotate(15deg); left: 6px; }
+
+.bloom-layer {
+    position: absolute;
+    top: 25px;
+    left: 50px;
+    width: 0;
+    height: 0;
+}
+
+.mini-bloom {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-left: -12px;
+    margin-top: -12px;
+    transition: transform 0.3s ease;
+}
+
+.center-bloom {
+    width: 28px;
+    height: 28px;
+    margin-left: -14px;
+    margin-top: -14px;
+    z-index: 10;
+    border: 2px solid #ffffff;
+}
+
+.kraft-bow {
+    position: absolute;
+    bottom: 30px;
+    left: 36px;
+    font-size: 1.3rem;
+    z-index: 15;
+    animation: sway 3s ease-in-out infinite alternate;
+}
+
+@keyframes sway {
+    from { transform: rotate(-8deg); }
+    to { transform: rotate(8deg); }
+}
+
+/* ─── DETAILS & ACTIONS ────────────────────────────────────────────────── */
+.package-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.package-card-header h3 {
+    font-family: var(--font-serif);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--color-charcoal);
+    margin: 0;
+}
+
+.category-badge {
+    background: var(--color-sage-light);
+    color: var(--color-sage);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.35rem 0.85rem;
+    border-radius: 30px;
+    border: 1px solid rgba(44, 77, 62, 0.15);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-cream);
+    border: 1px solid var(--color-border-warm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+    background: #ffffff;
+    transform: scale(1.08);
+}
+
+.btn-icon.hover-primary:hover {
+    color: var(--color-sage) !important;
+    border-color: var(--color-sage);
+}
+
+.btn-icon.hover-danger:hover {
+    color: var(--color-terracotta) !important;
+    border-color: var(--color-terracotta);
+}
+
+/* ─── KRAFT RECIPE LIST ────────────────────────────────────────────────── */
+.package-recipe {
+    background: var(--color-bg-cream);
+    border: 1px dashed var(--color-border-warm);
+    border-radius: 16px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.recipe-item {
+    border-bottom: 1px dashed rgba(83, 96, 90, 0.15) !important;
+    padding: 0.4rem 0 !important;
+}
+
+.recipe-item:last-child {
+    border-bottom: none !important;
+}
+
+.recipe-item .text-primary {
+    color: var(--color-sage) !important;
+    font-weight: 700;
+}
+
+/* ─── PROFITABILITY COACH BADGES ────────────────────────────────────────── */
+.markup-coach-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-top: 0.5rem;
+    border: 1px solid transparent;
+}
+
+.markup-low {
+    background: var(--color-terracotta-light);
+    color: var(--color-terracotta);
+    border-color: rgba(200, 122, 83, 0.2);
+}
+
+.markup-good {
+    background: var(--color-wheat-light);
+    color: #b0820f;
+    border-color: rgba(233, 196, 106, 0.3);
+}
+
+.markup-excellent {
+    background: var(--color-sage-light);
+    color: var(--color-sage);
+    border-color: rgba(44, 77, 62, 0.25);
+}
+
+/* ─── FOOTER INFO ──────────────────────────────────────────────────────── */
+.package-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-bg-cream);
+}
+
+.cost-box {
+    background: var(--color-bg-cream);
+    border: 1px solid var(--color-border-warm);
+    padding: 0.4rem 0.85rem;
+    border-radius: 12px;
+}
+
+.cost-box span,
+.price-box span {
+    font-size: 0.65rem !important;
+    letter-spacing: 0.05em;
+    color: var(--color-muted);
+}
+
+.cost-box p {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--color-charcoal);
+}
+
+.price-box p {
+    font-family: var(--font-serif);
+    font-size: 1.65rem;
+    font-weight: 800;
+    margin: 0;
+    color: var(--color-sage);
+}
+
+/* ─── EMPTY STATE ──────────────────────────────────────────────────────── */
+.empty-state.card {
+    background: #ffffff;
+    border: 2px dashed var(--color-border-warm);
+    border-radius: var(--radius-premium);
+    padding: 4rem 2rem;
+    text-align: center;
+    box-shadow: var(--shadow-soft);
+}
+
+.empty-state h3 {
+    font-family: var(--font-serif);
+    font-weight: 800;
+    font-size: 1.75rem;
+}
+
+/* ─── LOADING OVERLAY ──────────────────────────────────────────────────── */
+.loading-overlay {
+    backdrop-filter: blur(8px);
+}
+
+.spinner {
+    border-top-color: var(--color-sage) !important;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
 }

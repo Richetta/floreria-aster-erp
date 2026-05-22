@@ -1,164 +1,409 @@
+/* ==========================================================================
+   PackageBuilderModal.css - La Mesa de Armado Premium "Jardín de Aster"
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,800;1,400&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --font-serif: 'Playfair Display', Georgia, serif;
+    --font-sans: 'Outfit', sans-serif;
+    
+    /* Natural Botanical Palette */
+    --color-bg-light: #FAF9F6;
+    --color-sage: #2C4D3E;
+    --color-sage-light: #E8EFEA;
+    --color-terracotta: #C87A53;
+    --color-terracotta-light: #FAF0EC;
+    --color-wheat: #E9C46A;
+    --color-wheat-light: #FDF8EA;
+    --color-rose: #D9A09A;
+    --color-rose-light: #FAF0F0;
+    --color-charcoal: #1C2421;
+    --color-muted: #53605A;
+    --color-border-warm: #E2DDD5;
+    
+    --radius-premium: 24px;
+    --shadow-soft: 0 10px 30px rgba(44, 77, 62, 0.04);
+    --shadow-hover: 0 20px 40px rgba(44, 77, 62, 0.12);
+}
+
 .builder-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    z-index: 1000;
+    background: rgba(28, 36, 33, 0.6);
+    backdrop-filter: blur(12px);
+    z-index: 1500;
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 2rem;
+    font-family: var(--font-sans);
 }
 
 .builder-container {
-    background: var(--color-background);
+    background: var(--color-bg-light);
     width: 100%;
-    max-width: 1100px;
+    max-width: 1200px;
     height: 90vh;
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-premium);
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-hover);
+    border: 1px solid var(--color-border-warm);
+    animation: zoomIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
 
 .builder-header {
-    background: var(--color-primary);
+    background: linear-gradient(135deg, #2C4D3E 0%, #172D24 100%);
     padding: 1.5rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.builder-header h2,
-.builder-header p,
-.builder-header .text-white {
-    color: #ffffff !important;
+.builder-header h2 {
+    font-family: var(--font-serif);
+    font-weight: 800;
+    font-size: 1.75rem;
+    margin: 0;
 }
 
 .builder-content {
     display: grid;
-    grid-template-columns: 50% 50%;
+    grid-template-columns: 55% 45%;
     flex: 1;
     overflow: hidden;
+    background: var(--color-bg-light);
 }
 
-/* Custom Scrollbar for Recipe Panel */
-.recipe-panel::-webkit-scrollbar {
-    width: 6px;
-}
-.recipe-panel::-webkit-scrollbar-track {
-    background: transparent;
-}
-.recipe-panel::-webkit-scrollbar-thumb {
-    background-color: var(--color-border);
-    border-radius: 20px;
-}
-
-/* RECIPE PANEL (LEFT) */
+/* ─── LEFT PANEL: THE CREATIVE CANVAS ───────────────────────────────────── */
 .recipe-panel {
-    background: var(--color-surface);
+    background: #ffffff;
     padding: 2rem;
     overflow-y: auto;
-    border-right: 1px solid var(--color-border);
+    border-right: 1px solid var(--color-border-warm);
     display: flex;
     flex-direction: column;
+    gap: 1.5rem;
 }
 
 .builder-name-input {
     border: none;
-    border-bottom: 2px solid var(--color-border);
+    border-bottom: 2px dashed var(--color-border-warm);
     border-radius: 0;
     padding: 0.5rem 0;
     background: transparent;
     width: 100%;
+    font-family: var(--font-serif);
+    font-weight: 800;
+    color: var(--color-charcoal);
+    transition: border-bottom-color 0.3s;
 }
+
 .builder-name-input:focus {
     box-shadow: none;
-    border-bottom-color: var(--color-primary);
+    border-bottom-color: var(--color-sage);
     outline: none;
 }
 
-.ingredients-list {
-    background: var(--color-background);
-    border: 1px dashed var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 1rem;
-    min-height: 200px;
-    flex: 1;
-}
-
-.ingredient-row {
+/* ─── CEDAR WOOD CRAFT WORKTABLE ────────────────────────────────────────── */
+.worktable-canvas {
+    background: radial-gradient(circle, #EAE2D5 0%, #D8CFC4 100%);
+    border: 8px solid #8B5A2B; /* Deep cedar wood border */
+    box-shadow: inset 0 0 25px rgba(0,0,0,0.18), var(--shadow-soft);
+    border-radius: 20px;
+    position: relative;
+    padding: 1.5rem;
+    min-height: 420px;
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
-    align-items: center;
-    background: var(--color-surface);
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius-md);
-    margin-bottom: 0.5rem;
-    border: 1px solid var(--color-border);
-    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: all 0.3s ease;
 }
 
-.quantity-controls {
-    display: flex;
-    align-items: center;
-    background: var(--color-background);
-    border-radius: var(--radius-full);
-    border: 1px solid var(--color-border);
-    padding: 0.25rem;
+.worktable-canvas::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(139, 90, 43, 0.03) 0px, rgba(139, 90, 43, 0.03) 2px, transparent 2px, transparent 20px);
+    pointer-events: none;
 }
 
-.quantity-controls button {
-    background: var(--color-surface);
-    border: none;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
+/* ─── CSS BOUQUET VISUALIZER ────────────────────────────────────────────── */
+.canvas-visualizer {
     display: flex;
     justify-content: center;
     align-items: center;
-    cursor: pointer;
-    color: var(--color-text);
-    transition: background 0.2s;
+    position: relative;
+    height: 200px;
+    z-index: 5;
 }
 
-.quantity-controls button:hover {
-    background: var(--color-border);
+.bouquet-visualizer-container {
+    position: relative;
+    width: 150px;
+    height: 180px;
 }
 
-.quantity-controls .qty-value {
-    min-width: 30px;
+.v-stems {
+    position: absolute;
+    bottom: 30px;
+    left: 70px;
+    width: 10px;
+    height: 80px;
+    z-index: 1;
+}
+
+.v-stem {
+    position: absolute;
+    width: 3px;
+    height: 70px;
+    background: #5A8F76;
+    border-radius: 4px;
+    transform-origin: bottom center;
+}
+
+.stem-rotate-0 { transform: rotate(-20deg); }
+.stem-rotate-1 { transform: rotate(-10deg); }
+.stem-rotate-2 { transform: rotate(0deg); }
+.stem-rotate-3 { transform: rotate(10deg); }
+.stem-rotate-4 { transform: rotate(20deg); }
+.stem-rotate-5 { transform: rotate(-15deg); }
+.stem-rotate-6 { transform: rotate(15deg); }
+
+.v-blooms {
+    position: absolute;
+    top: 40px;
+    left: 75px;
+    width: 0;
+    height: 0;
+    z-index: 5;
+}
+
+.v-bloom {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-left: -15px;
+    margin-top: -15px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.v-leaf {
+    border-radius: 50% 0 50% 0 !important;
+    transform: rotate(45deg);
+    border: none !important;
+}
+
+.v-placeholder-bloom {
+    position: absolute;
+    width: 250px;
+    margin-left: -125px;
+    margin-top: -15px;
     text-align: center;
-    font-weight: bold;
-    font-size: 1.1rem;
+    color: var(--color-muted);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    opacity: 0.55;
+    background: rgba(255, 255, 255, 0.4);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+    border: 1px dashed rgba(44, 77, 62, 0.2);
 }
 
-/* INVENTORY PANEL (RIGHT) */
-.inventory-panel {
+.v-kraft-wrap {
+    position: absolute;
+    bottom: 25px;
+    left: 45px;
+    width: 60px;
+    height: 45px;
+    background: #E1C699; /* Kraft wrapping cone */
+    border-radius: 5px 5px 30px 30px;
+    transform: perspective(40px) rotateX(15deg);
+    z-index: 4;
+    border: 1px solid #C8AF85;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.v-kraft-wrap::after {
+    content: '💝';
+    position: absolute;
+    top: 10px;
+    left: 19px;
+    font-size: 0.9rem;
+}
+
+/* ─── BOTANICAL FLOATING CHIPS ──────────────────────────────────────────── */
+.floating-botanical-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    z-index: 10;
+    max-height: 180px;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.65);
+    padding: 0.75rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(6px);
+}
+
+.botanical-chip {
+    background: #ffffff;
+    border: 1px solid var(--color-border-warm);
+    border-radius: 30px;
+    padding: 0.35rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.chip-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.chip-details {
     display: flex;
     flex-direction: column;
-    background: var(--color-background);
+}
+
+.chip-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-charcoal);
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chip-cost {
+    font-size: 0.6rem;
+    color: var(--color-muted);
+}
+
+.chip-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-left: 1px solid var(--color-border-warm);
+    padding-left: 0.5rem;
+    margin-left: 0.25rem;
+}
+
+.qty-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-bg-light);
+    border: 1px solid var(--color-border-warm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-charcoal);
+    transition: all 0.2s;
+}
+
+.qty-btn:hover {
+    background: var(--color-sage-light);
+    color: var(--color-sage);
+}
+
+.chip-qty {
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 12px;
+    text-align: center;
+}
+
+.chip-delete {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--color-terracotta);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    margin-left: 0.25rem;
+    transition: transform 0.2s;
+}
+
+.chip-delete:hover {
+    transform: scale(1.2);
+}
+
+/* ─── CREATIVE RECIPE ASSISTANT WIDGET ──────────────────────────────────── */
+.creative-tip-card {
+    background: var(--color-wheat-light);
+    border: 1px solid rgba(233, 196, 106, 0.4);
+    border-left: 5px solid var(--color-wheat);
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #8c6a0c;
+    line-height: 1.5;
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+/* ─── RIGHT PANEL: THE INVENTORY ────────────────────────────────────────── */
+.inventory-panel {
+    background: var(--color-bg-light);
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
 }
 
 .inventory-header {
     padding: 1.5rem 2rem 0;
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
+    background: #ffffff;
+    border-bottom: 1px solid var(--color-border-warm);
 }
 
 .search-pill-small {
     display: flex;
     align-items: center;
-    background: var(--color-background);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-full);
-    padding: 0.5rem 1rem;
     gap: 0.5rem;
+    background: var(--color-bg-light);
+    border: 1px solid var(--color-border-warm);
+    border-radius: 30px;
+    padding: 0.5rem 1rem;
+    margin-top: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.search-pill-small:focus-within {
+    border-color: var(--color-sage);
+    background: #ffffff;
 }
 
 .search-pill-small input {
@@ -167,79 +412,118 @@
     outline: none;
     width: 100%;
     font-size: 0.9rem;
+    font-family: var(--font-sans);
 }
 
 .builder-tabs {
     display: flex;
     gap: 0.5rem;
     overflow-x: auto;
-    padding-bottom: 1rem;
-    scrollbar-width: none; /* Firefox */
-}
-.builder-tabs::-webkit-scrollbar {
-    display: none; /* Chrome */
+    padding: 1rem 0;
+    scrollbar-width: none;
 }
 
 .builder-tab {
-    padding: 0.5rem 1rem;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    font-size: 0.9rem;
+    padding: 0.4rem 1rem;
+    background: var(--color-bg-light);
+    border: 1px solid var(--color-border-warm);
+    border-radius: 30px;
+    font-size: 0.8rem;
     font-weight: 600;
-    color: var(--color-text-muted);
+    color: var(--color-muted);
     cursor: pointer;
     white-space: nowrap;
     display: flex;
     align-items: center;
+    transition: all 0.25s ease;
 }
 
 .builder-tab.active {
-    color: var(--color-primary);
-    border-bottom-color: var(--color-primary);
+    background: var(--color-sage);
+    color: #ffffff;
+    border-color: var(--color-sage);
+    box-shadow: 0 4px 10px rgba(44, 77, 62, 0.15);
 }
 
 .inventory-grid {
     padding: 1.5rem 2rem;
     overflow-y: auto;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.85rem;
+    flex: 1;
 }
 
 .inventory-item-btn {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: 1rem;
+    background: #ffffff;
+    border: 1px solid var(--color-border-warm);
+    border-radius: 16px;
+    padding: 1rem 0.85rem;
     cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: all 0.25s cubic-bezier(0.165, 0.84, 0.44, 1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100px;
 }
 
 .inventory-item-btn:hover {
-    border-color: var(--color-primary);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    border-color: var(--color-sage);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(44, 77, 62, 0.08);
 }
 
-/* FIXED FOOTER */
+.inventory-item-btn span {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    color: var(--color-charcoal);
+    font-size: 0.85rem;
+}
+
+.inventory-item-btn .text-micro {
+    font-size: 0.65rem;
+    color: var(--color-muted);
+}
+
+/* ─── FIXED FOOTER WITH PRICING & MARKUP COACH ──────────────────────────── */
 .builder-footer {
-    background: var(--color-surface);
+    background: #ffffff;
     padding: 1.5rem 2rem;
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid var(--color-border-warm);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 2rem;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.03);
 }
 
 .financials {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 3rem;
+    gap: 2.5rem;
     flex: 1;
-    max-width: 600px;
+}
+
+.cost-summary {
+    display: flex;
+    flex-direction: column;
+}
+
+.cost-summary .text-micro {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--color-muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.cost-summary .text-xl {
+    font-family: var(--font-serif);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--color-charcoal);
 }
 
 .price-input-group {
@@ -247,32 +531,90 @@
     flex-direction: column;
 }
 
-.input-with-symbol {
-    position: relative;
-    display: inline-block;
+.price-input-group label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--color-sage);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 }
 
 .input-with-symbol input {
-    padding-left: 1.5rem;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-border);
-    width: 150px;
+    background: var(--color-bg-light);
+    border: 1px solid var(--color-border-warm);
+    border-radius: 12px;
+    padding-left: 2rem !important;
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-sage);
+    width: 160px;
+    transition: all 0.3s;
 }
 
-.input-with-symbol span {
+.input-with-symbol input:focus {
+    background: #ffffff;
+    border-color: var(--color-sage);
+    box-shadow: 0 0 0 3px rgba(44, 77, 62, 0.1);
+    outline: none;
+}
+
+/* ─── DYNAMIC MARKUP COACH SLIDER BAR ────────────────────────────────────── */
+.markup-coach-container {
+    flex: 1.2;
+    display: flex;
+    flex-direction: column;
+    padding: 0 1rem;
+}
+
+.markup-coach-slider {
+    width: 100%;
+    height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(to right, #C87A53 0%, #E9C46A 45%, #2C4D3E 90%);
+    position: relative;
+    margin: 0.5rem 0;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.markup-coach-pointer {
     position: absolute;
-    left: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    background: #ffffff;
+    border: 4px solid var(--color-charcoal);
+    border-radius: 50%;
+    top: -4px;
+    margin-left: -9px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    transition: left 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
+.markup-status-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--color-muted);
+}
+
+.markup-status-badge {
+    align-self: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 30px;
+    border: 1px solid transparent;
+}
+
+/* ─── FOOTER ACTIONS ────────────────────────────────────────────────────── */
 .footer-actions {
     display: flex;
-    gap: 1rem;
-    margin-left: 2rem;
+    gap: 0.75rem;
 }
 
-@media (max-width: 900px) {
+/* ─── RESPONSIVE SPLIT LAYOUT ───────────────────────────────────────────── */
+@media (max-width: 960px) {
     .builder-overlay {
         padding: 0;
     }
@@ -281,22 +623,39 @@
         border-radius: 0;
     }
     .builder-content {
-        flex-direction: column;
+        grid-template-columns: 1fr;
+        grid-template-rows: 55vh 45vh;
     }
-    .recipe-panel, .inventory-panel {
-        flex: none;
-        height: 40vh; /* roughly split */
+    .recipe-panel {
+        border-right: none;
+        border-bottom: 1px solid var(--color-border-warm);
+        padding: 1.25rem;
+    }
+    .worktable-canvas {
+        min-height: 220px;
+        padding: 1rem;
+    }
+    .canvas-visualizer {
+        height: 120px;
+    }
+    .bouquet-visualizer-container {
+        transform: scale(0.7);
+        transform-origin: center center;
     }
     .inventory-panel {
-        flex: 1; /* take remaining height */
+        overflow-y: auto;
     }
     .builder-footer {
         flex-direction: column;
-        gap: 1.5rem;
+        padding: 1.25rem;
+        gap: 1.25rem;
     }
     .financials {
         width: 100%;
-        justify-content: space-between;
+        gap: 1rem;
+    }
+    .markup-coach-container {
+        padding: 0;
     }
     .footer-actions {
         width: 100%;
