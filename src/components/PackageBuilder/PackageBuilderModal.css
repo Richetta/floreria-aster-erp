@@ -4,7 +4,6 @@
 
 :root {
     --font-serif: var(--font-sans);
-    --font-sans: var(--font-sans);
     
     /* Natural Botanical Palette */
     --color-bg-light: #FAF9F6;

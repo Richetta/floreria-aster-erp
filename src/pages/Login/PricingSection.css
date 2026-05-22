@@ -420,7 +420,7 @@
   font-size: 4rem;
   color: var(--primary-light);
   opacity: 0.3;
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
 }
 
 .pricing-social__quote cite {

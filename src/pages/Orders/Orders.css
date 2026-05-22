@@ -2028,7 +2028,7 @@
     border-radius: 12px;
     border: 1px dashed #DCCDBF;
     font-style: italic;
-    font-family: 'Georgia', serif;
+    font-family: var(--font-sans);
     position: relative;
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
@@ -2040,7 +2040,7 @@
     left: 10px;
     font-size: 2rem;
     color: rgba(139, 69, 19, 0.1);
-    font-family: 'Georgia', serif;
+    font-family: var(--font-sans);
 }
 
 .edit-textarea {
@@ -2356,6 +2356,6 @@
     left: 10px;
     font-size: 4rem;
     color: #FBCFE8;
-    font-family: serif;
+    font-family: var(--font-sans);
     line-height: 1;
 }
