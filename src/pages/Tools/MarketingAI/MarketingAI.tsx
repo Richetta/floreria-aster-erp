@@ -1,25 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-    Sparkles,
-    Calendar,
-    Flame,
-    Copy,
-    Check,
-    Camera,
-    ShoppingBag,
-    Award,
-    Compass,
-    Heart,
-    Instagram,
-    Palette,
-    Layers,
-    ArrowLeft,
-    CheckCircle2,
-    BookmarkCheck,
-    Dices,
-    Send,
-    Trash2
-} from 'lucide-react';
+import { Sparkles, Calendar, Flame, Copy, Check, Camera, ShoppingBag, Compass, Heart, Instagram, Palette, Layers, ArrowLeft, CheckCircle2, BookmarkCheck, Send, Trash2, Download } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
 import { useNavigate } from 'react-router-dom';
 import type { Product, Customer } from '../../../store/slices/types';
@@ -169,8 +149,8 @@ export const MarketingAI: React.FC = () => {
         localStorage.setItem('floriai_history', JSON.stringify(newHistory));
     };
 
-    // Funciones de Gamificación desactivadas
-    const triggerUnlock = (achievementId: string) => { return; };
+    // Funciones gamificadas dummy (para no romper el resto del componente)
+    const triggerUnlock = (_id?: string) => { return; };
 
     // Dinámica de completar sugerencia (Sin XP)
     const handleCompleteSuggestion = (suggestionId: string, title: string) => {
@@ -1319,143 +1299,32 @@ export const MarketingAI: React.FC = () => {
                             </div>
                         </div>
                     )}
+                </div>
 
-                    {/* COLUMNA DERECHA: El Corazón Creativo y Gamificado (JARDÍN DIGITAL SIDEBAR) */}
+                {/* COLUMNA DERECHA: Recomendaciones */}
                 <div className="marketing-dashboard-sidebar">
-                    {/* Widget del Estado del Jardín Digital */}
-                    <div className="card garden-level-widget glass-panel text-center">
-                        <div className="widget-header mb-4">
-                            <span className="badge badge-accent flex items-center gap-1 mx-auto">
-                                <Award size={16} />
-                                <span>NIVEL CREATIVO {level}</span>
-                            </span>
-                        </div>
-
-                        {/* Dibujo de la Flor Interactiva con Sway Effect en CSS */}
-                        <div className="flower-interactive-avatar" onClick={() => triggerUnlock('garden_lvl3')}>
-                            <div className="sky-particles">
-                                <span className="particle p1">✨</span>
-                                <span className="particle p2">✨</span>
-                                <span className="particle p3">✨</span>
-                            </div>
-                            <div className="flower-pot">
-                                {/* Hojas y Tallos según el nivel */}
-                                <div className="flower-stem">
-                                    <div className="leaf left-leaf"></div>
-                                    <div className="leaf right-leaf"></div>
-                                </div>
-                                {/* La flor en la cima cambiando de color según el nivel */}
-                                <div className={`flower-head level-color-${(level % 4) + 1}`}>
-                                    <div className="flower-center"></div>
-                                    <div className="petal p-top"></div>
-                                    <div className="petal p-bottom"></div>
-                                    <div className="petal p-left"></div>
-                                    <div className="petal p-right"></div>
-                                    <div className="petal p-tl"></div>
-                                    <div className="petal p-tr"></div>
-                                    <div className="petal p-bl"></div>
-                                    <div className="petal p-br"></div>
-                                </div>
-                                <div className="pot-body">
-                                    <div className="pot-rim"></div>
-                                    <span className="pot-brand">FloriAI</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Barra de progreso de XP */}
-                        <div className="xp-progress-bar-container mt-4">
-                            <div className="xp-labels flex justify-between text-micro font-bold mb-1">
-                                <span>Progreso a Nivel {level + 1}</span>
-                                <span>{xp} / 100 XP</span>
-                            </div>
-                            <div className="xp-bar-bg">
-                                <div className="xp-bar-fill" style={{ width: `${xp}%` }}></div>
-                            </div>
-                        </div>
-
-                        <p className="text-small text-muted mt-3 italic">
-                            {xp < 40 ? '«Tu flor está pidiendo a gritos un Reel estético para crecer hoy.»' : ''}
-                            {xp >= 40 && xp < 80 ? '«¡Va con fuerza! Una campaña más y tu flor florece a lo grande.»' : ''}
-                            {xp >= 80 ? '«¡A punto de florecer! Escribile a ese cliente de cumpleaños para subir de nivel.»' : ''}
-                        </p>
-                    </div>
-
-                    {/* Widget del Taller de Inspiración de Vidriera */}
-                    <div className="card window-dressing-inspiration-widget glass-panel mt-6">
-                        <h3 className="text-small font-bold flex items-center gap-2 mb-3">
-                            <Compass size={18} className="text-accent" />
-                            Inspiración de Vidriera (Visual Display)
+                    <div className="card window-dressing-inspiration-widget bg-surface border rounded-xl p-6">
+                        <h3 className="text-small font-bold flex items-center gap-2 mb-3 text-primary">
+                            <Compass size={18} />
+                            Inspiración Botánica
                         </h3>
-                        <p className="text-small">
-                            El color dominante de la semana debe ser el **{getPaletteByProduct(currentSuggestion.details.idea).name}**. 
-                            Colocá jarrones de barro rústico o cerámica en escalones a diferentes alturas en tu vidriera principal. 
-                            Añadí una pequeña pizarra manuscrita con la frase:
-                        </p>
-                        <blockquote className="vidriera-quote mt-2">
-                            "Tu hogar debería sentirse como un abrazo cálido al entrar. 🕯️🍂"
-                        </blockquote>
-                        <p className="text-micro text-muted mt-2">
-                            💡 *Tip de iluminación:* Encendé luces cálidas tipo guirnalda led al atardecer para generar sensación de cobijo interior.
+                        <p className="text-small text-muted">
+                            Agrupa por texturas para generar impacto visual desde la calle.
                         </p>
                     </div>
                 </div>
-
             </div>
-
-            {/* Notificación de Éxito de Tareas completadas o Logros */}
+            
+            {/* Notificaciones */}
             {copiedTextType === 'success-complete' && (
                 <div className="floriai-toast-notification animate-slide-in">
-                    <span className="material-symbols-rounded icon">celebration</span>
                     <div className="toast-content">
                         <strong>¡Tarea Completada!</strong>
-                        <p>Ganaste **+15 XP**. Tu jardín digital te lo agradece. 🌱✨</p>
-                    </div>
-                </div>
-            )}
-
-            {copiedTextType && copiedTextType.startsWith('achievement-') && (
-                <div className="floriai-toast-notification achievement animate-slide-in">
-                    <span className="material-symbols-rounded icon">military_tech</span>
-                    <div className="toast-content">
-                        <strong>🏆 ¡MEDALLA DESBLOQUEADA!</strong>
-                        <p>
-                            Desbloqueaste el logro **{ACHIEVEMENTS.find(a => a.id === copiedTextType.replace('achievement-', ''))?.title}**. 
-                            Ganás **+20 XP**. ¡Excelente hábito! 🏅🌿
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {copiedTextType === 'fav-saved' && (
-                <div className="floriai-toast-notification fav-toast animate-slide-in">
-                    <span className="material-symbols-rounded icon">favorite</span>
-                    <div className="toast-content">
-                        <strong>¡Idea Guardada!</strong>
-                        <p>Se guardó en tu bandeja de Favoritos con éxito. 💖</p>
-                    </div>
-                </div>
-            )}
-
-            {copiedTextType === 'fav-removed' && (
-                <div className="floriai-toast-notification fav-toast animate-slide-in">
-                    <span className="material-symbols-rounded icon">heart_broken</span>
-                    <div className="toast-content">
-                        <strong>Idea Eliminada</strong>
-                        <p>Se removió de tus guardados correctamente.</p>
-                    </div>
-                </div>
-            )}
-
-            {copiedTextType && copiedTextType.startsWith('cross-') && (
-                <div className="floriai-toast-notification cross-toast animate-slide-in">
-                    <span className="material-symbols-rounded icon">psychology</span>
-                    <div className="toast-content">
-                        <strong>Traducción Explorada</strong>
-                        <p>¡Inspiración agregada a tu mente creativa! +20 XP. 🧠💡</p>
                     </div>
                 </div>
             )}
         </div>
     );
 };
+
+export default MarketingAI;
