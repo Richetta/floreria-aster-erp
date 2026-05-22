@@ -21,6 +21,15 @@ const tools = [
         bg: '#eff6ff',
     },
     {
+        id: 'marketing-copilot',
+        title: 'FloriAI: Copiloto de Marketing',
+        description: 'Asistente creativo y asesor inteligente conectado a tu inventario real. Generá ideas de reels, copies de WhatsApp, campañas de sobrestock y hacé crecer tu jardín digital diario.',
+        icon: 'psychology_alt',
+        path: '/herramientas/marketing',
+        color: '#c47a5a',
+        bg: '#fff1f2',
+    },
+    {
         id: 'coming-soon',
         title: 'Más herramientas pronto',
         description: 'Estamos trabajando en nuevas herramientas para mejorar tu operación diaria.',

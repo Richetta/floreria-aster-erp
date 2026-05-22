@@ -28,6 +28,7 @@ import { Reminders } from './pages/Reminders';
 import { CalendarDesktop } from './pages/Calendar';
 import { ToolsHub } from './pages/Tools';
 import { BarcodePrinter } from './pages/Tools/BarcodePrinter';
+import { MarketingAI } from './pages/Tools/MarketingAI/MarketingAI';
 import { useAuth } from './store/useAuth';
 import { useSubscription } from './store/useSubscription';
 import { SubscriptionSuccess, SubscriptionFailure, SubscriptionPending } from './pages/Subscription/SubscriptionResult';
@@ -199,6 +200,7 @@ function App() {
                         <Route path="usuarios" element={<UsersPage />} />
                         <Route path="herramientas" element={<ToolsHub />} />
                         <Route path="herramientas/codigos" element={<BarcodePrinter />} />
+                        <Route path="herramientas/marketing" element={<MarketingAI />} />
                         <Route path="workspace" element={<WorkspaceExplorer />} />
                     </Route>
 
