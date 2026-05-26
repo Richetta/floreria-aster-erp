@@ -17,6 +17,7 @@ export type Product = {
     salesCount?: number;
     lastSaleDate?: string;
     weeklySales?: number;
+    images?: string[];
 };
 
 export type Category = {

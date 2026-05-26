@@ -81,6 +81,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     max_stock: z.number().int().positive().optional().nullable(),
     is_barcode: z.boolean().default(false),
     tags: z.array(z.string()).default([]),
+    images: z.array(z.string()).optional(),
     custom_filter_options: z.array(z.string().uuid()).optional()
   });
 
@@ -259,7 +260,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
             is_active: true,
             is_barcode: body.is_barcode,
             tags: body.tags,
-            images: [],
+            images: body.images || [],
             created_at: new Date(),
             updated_at: new Date(),
             deleted_at: null

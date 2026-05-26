@@ -46,6 +46,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         min: 5,
         supplierId: '',
         tags: [],
+        imageUrl: '',
         custom_filter_options: []
     });
 
@@ -78,6 +79,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     min: productToEdit.min || 5,
                     supplierId: productToEdit.supplierId || '',
                     tags: productToEdit.tags || [],
+                    imageUrl: productToEdit.images?.[0] || '',
                     custom_filter_options: productToEdit.custom_filter_options || []
                 });
             } else {
@@ -93,6 +95,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     min: 5,
                     supplierId: '',
                     tags: [],
+                    imageUrl: '',
                     custom_filter_options: []
                 });
             }
@@ -167,9 +170,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         // Resolve category_id from category name
         const resolvedCategoryId = categoriesData?.find(c => c.name === formData.category)?.id;
 
+        const { imageUrl, ...restFormData } = formData;
+        const images = imageUrl ? [imageUrl] : [];
+
         if (productToEdit) {
             await updateProduct(productToEdit.id, {
-                ...formData,
+                ...restFormData,
+                images,
                 category_id: resolvedCategoryId,
                 price: validatedPrice!,
                 cost: validatedCost!,
@@ -191,6 +198,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 stock: validatedStock!,
                 min: validatedMin!,
                 tags: formData.tags || [],
+                images,
                 custom_filter_options: formData.custom_filter_options
             };
             await addProduct(newProduct);
@@ -245,6 +253,39 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 autoFocus
                             />
+                        </div>
+
+                        <div className="form-group mb-4">
+                            <label className="form-label">Foto del Producto (URL Imagen)</label>
+                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="https://ejemplo.com/tu-foto.jpg"
+                                    value={formData.imageUrl || ''}
+                                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                                    style={{ flex: 1 }}
+                                />
+                                {formData.imageUrl && (
+                                    <div style={{ flexShrink: 0 }}>
+                                        <img 
+                                            src={formData.imageUrl} 
+                                            alt="Producto preview" 
+                                            style={{ 
+                                                width: '38px', 
+                                                height: '38px', 
+                                                borderRadius: '8px', 
+                                                objectFit: 'cover', 
+                                                border: '1px solid #cbd5e1',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                                            }} 
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="grid grid-2 gap-4 mb-4">
