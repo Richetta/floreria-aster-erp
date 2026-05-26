@@ -108,8 +108,8 @@ fastify.addHook('onRequest', async (request, reply) => {
     return;
   }
 
-  // Skip auth routes and debug status (they handle their own logic or are public)
-  if (url.startsWith('/api/auth') || url.startsWith('/api/subscription/webhook') || url === '/api/debug-status') {
+  // Skip auth routes, debug status, and public storefront endpoints (no JWT needed)
+  if (url.startsWith('/api/auth') || url.startsWith('/api/subscription/webhook') || url.startsWith('/api/storefront') || url === '/api/debug-status') {
     return;
   }
 
@@ -191,10 +191,12 @@ console.log('Loading comments.js...');
 await fastify.register(import('./routes/comments.js'), { prefix: '/api/comments' });
 console.log('Loading diagnostic.js...');
 await fastify.register(import('./routes/diagnostic.js'), { prefix: '/api/admin' });
-console.log('Loading subscription.js...');
-await fastify.register(import('./routes/subscription.js'), { prefix: '/api/subscription' });
-console.log('Loading calendar.js...');
-await fastify.register(import('./routes/calendar.js'), { prefix: '/api/calendar' });
+  console.log('Loading subscription.js...');
+  await fastify.register(import('./routes/subscription.js'), { prefix: '/api/subscription' });
+  console.log('Loading calendar.js...');
+  await fastify.register(import('./routes/calendar.js'), { prefix: '/api/calendar' });
+  console.log('Loading storefront.js...');
+  await fastify.register(import('./routes/storefront.js'), { prefix: '/api/storefront' });
 
 // Diagnostic Route — removed for security (was exposing config without auth)
 
@@ -240,10 +242,11 @@ const start = async () => {
     console.log('--- STARTING SERVER ---');
 
     // Run emergency migrations
-    const { runEmergencyMigrations, runGoogleCalendarMigrations, runSubscriptionMigrations } = await import('./db/migrations.js');
+    const { runEmergencyMigrations, runGoogleCalendarMigrations, runSubscriptionMigrations, runStorefrontMigrations } = await import('./db/migrations.js');
     await runEmergencyMigrations();
     await runGoogleCalendarMigrations();
     await runSubscriptionMigrations();
+    await runStorefrontMigrations();
 
     console.log(`Starting Fastify on port ${config.port}...`);
     await fastify.listen({ port: config.port, host: '0.0.0.0' });

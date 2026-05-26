@@ -80,6 +80,8 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
                     address: data.address,
                     instagram: data.settings?.instagram || '',
                     currency: data.currency,
+                    slug: data.slug || '',
+                    settings: data.settings || {},
                     paymentMethods: (data.settings?.payment_methods && data.settings.payment_methods.length > 0) 
                         ? data.settings.payment_methods 
                         : [{ id: 'default-cash', name: 'Efectivo', type: 'cash', is_active: true }]
@@ -92,16 +94,19 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
     updateShopInfo: async (info) => {
         try {
-            const currentSettings = (await api.getBusinessInfo()).settings || {};
+            const data = await api.getBusinessInfo();
+            const currentSettings = data.settings || {};
             await api.updateBusinessInfo({
-                name: info.name,
-                address: info.address,
-                phone: info.phone,
-                logo_url: info.logo,
-                currency: info.currency,
+                name: info.name !== undefined ? info.name : data.name,
+                address: info.address !== undefined ? info.address : data.address,
+                phone: info.phone !== undefined ? info.phone : data.phone,
+                logo_url: info.logo !== undefined ? info.logo : data.logo_url,
+                currency: info.currency !== undefined ? info.currency : data.currency,
+                slug: info.slug !== undefined ? info.slug : data.slug,
                 settings: {
                     ...currentSettings,
-                    instagram: info.instagram ?? currentSettings.instagram
+                    instagram: info.instagram ?? currentSettings.instagram,
+                    storefront: info.settings?.storefront ?? currentSettings.storefront
                 }
             });
             set(state => ({ shopInfo: { ...state.shopInfo, ...info } }));

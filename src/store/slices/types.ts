@@ -168,6 +168,8 @@ export type ShopInfo = {
     instagram?: string;
     currency: string;
     paymentMethods?: PaymentMethod[];
+    slug?: string;
+    settings?: Record<string, any>;
 };
 
 export type PaymentMethod = {

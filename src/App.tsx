@@ -35,6 +35,7 @@ import { SubscriptionSuccess, SubscriptionFailure, SubscriptionPending } from '.
 import { PlanOnboarding } from './pages/Subscription/PlanOnboarding';
 import { UsersPage } from './pages/Users';
 import { WorkspaceExplorer } from './pages/WorkspaceExplorer/WorkspaceExplorer';
+import { PublicStorefront } from './pages/PublicStorefront/PublicStorefront';
 
 // ============================================
 // PROTECTED ROUTE COMPONENT
@@ -203,6 +204,9 @@ function App() {
                         <Route path="herramientas/marketing" element={<MarketingAI />} />
                         <Route path="workspace" element={<WorkspaceExplorer />} />
                     </Route>
+
+                    {/* Public Storefront Route */}
+                    <Route path="/:storeSlug" element={<PublicStorefront />} />
 
                     {/* 404 Route */}
                     <Route path="*" element={<Navigate to="/" replace />} />

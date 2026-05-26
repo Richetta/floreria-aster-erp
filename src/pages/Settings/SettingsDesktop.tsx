@@ -24,8 +24,38 @@ export const SettingsDesktop = () => {
 
     const [formData, setFormData] = useState(shopInfo);
     const [isSaved, setIsSaved] = useState(false);
-    const [activeTab, setActiveTab] = useState<'general' | 'payments' | 'data' | 'users' | 'subscription'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'payments' | 'data' | 'users' | 'subscription' | 'storefront'>('general');
     const [theme, setTheme] = useState('violet');
+
+    // Storefront dynamic settings state
+    const storefront = shopInfo.settings?.storefront || {};
+    const [storefrontSlug, setStorefrontSlug] = useState(shopInfo.slug || '');
+    const [storefrontActive, setStorefrontActive] = useState(storefront.active ?? true);
+    const [bannerTitle, setBannerTitle] = useState(storefront.banner_title || shopInfo.name || '');
+    const [bannerSubtitle, setBannerSubtitle] = useState(storefront.banner_subtitle || 'Bienvenidos a nuestra tienda online');
+    const [whatsappNumber, setWhatsappNumber] = useState(storefront.whatsapp_number || shopInfo.phone || '');
+    const [themeColor, setThemeColor] = useState(storefront.theme_color || '#1e3f20');
+    const [mpEnabled, setMpEnabled] = useState(storefront.mp_enabled ?? false);
+    const [mpPublicKey, setMpPublicKey] = useState(storefront.mercadopago_public_key || '');
+    const [mpAccessToken, setMpAccessToken] = useState(storefront.mercadopago_access_token || '');
+    
+    const [showMpToken, setShowMpToken] = useState(false);
+    const [copySuccess, setCopySuccess] = useState(false);
+
+    useEffect(() => {
+        if (shopInfo) {
+            const sf = shopInfo.settings?.storefront || {};
+            setStorefrontSlug(shopInfo.slug || '');
+            setStorefrontActive(sf.active ?? true);
+            setBannerTitle(sf.banner_title || shopInfo.name || '');
+            setBannerSubtitle(sf.banner_subtitle || 'Bienvenidos a nuestra tienda online');
+            setWhatsappNumber(sf.whatsapp_number || shopInfo.phone || '');
+            setThemeColor(sf.theme_color || '#1e3f20');
+            setMpEnabled(sf.mp_enabled ?? false);
+            setMpPublicKey(sf.mercadopago_public_key || '');
+            setMpAccessToken(sf.mercadopago_access_token || '');
+        }
+    }, [shopInfo]);
 
     const { alertModal, confirmModal, showAlert, showConfirm } = useModal();
 
@@ -48,7 +78,7 @@ export const SettingsDesktop = () => {
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const tab = params.get('tab') as any;
-        if (tab && ['general', 'payments', 'data', 'users', 'subscription'].includes(tab)) {
+        if (tab && ['general', 'payments', 'data', 'users', 'subscription', 'storefront'].includes(tab)) {
             setActiveTab(tab);
         }
     }, [location]);
@@ -181,6 +211,13 @@ export const SettingsDesktop = () => {
                 >
                     <CreditCard size={18} />
                     <span>Suscripción</span>
+                </button>
+                <button
+                    className={`settings-tab ${activeTab === 'storefront' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('storefront')}
+                >
+                    <Store size={18} />
+                    <span>Mi Tienda Online</span>
                 </button>
             </div>
 
@@ -457,6 +494,345 @@ export const SettingsDesktop = () => {
                                 <MessageSquare size={20} className="text-purple-500" />
                                 <span>Chat interno y coordinación en pedidos y clientes.</span>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'subscription' && (
+                    <SubscriptionTab />
+                )}
+
+                {activeTab === 'storefront' && (
+                    <div className="settings-tab-content">
+                        <div className="settings-card settings-card-wide">
+                            <div className="card-header">
+                                <div className="card-header-icon card-header-icon-primary">
+                                    <Smartphone size={24} />
+                                </div>
+                                <div className="card-header-text">
+                                    <h2>Mi tienda online</h2>
+                                    <p>Configurá tu catálogo digital público para vender por WhatsApp y MercadoPago</p>
+                                </div>
+                            </div>
+
+                            <div className="storefront-link-preview-box" style={{
+                                background: 'var(--explorer-bg-light, #f8fafc)',
+                                border: '1px solid var(--explorer-border, #e2e8f0)',
+                                borderRadius: '12px',
+                                padding: '1.25rem',
+                                marginBottom: '2rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '1rem'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div style={{
+                                        background: 'var(--color-primary-light, #eaf2eb)',
+                                        color: 'var(--color-primary, #4F7A5A)',
+                                        padding: '0.5rem',
+                                        borderRadius: '8px'
+                                    }}>
+                                        <Store size={24} />
+                                    </div>
+                                    <div>
+                                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>Tu link público para compartir:</p>
+                                        <p style={{ margin: '0.1rem 0 0 0', fontSize: '1rem', fontWeight: 600, color: 'var(--color-primary-dark, #2b4931)' }}>
+                                            {window.location.protocol}//{window.location.host}/{storefrontSlug || 'tu-tienda'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <button 
+                                        className="btn btn-secondary" 
+                                        onClick={() => {
+                                            const link = `${window.location.protocol}//${window.location.host}/${storefrontSlug || 'tu-tienda'}`;
+                                            navigator.clipboard.writeText(link);
+                                            setCopySuccess(true);
+                                            setTimeout(() => setCopySuccess(false), 2000);
+                                        }}
+                                        type="button"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                    >
+                                        <Check size={16} className={copySuccess ? 'text-success' : 'hidden'} style={{ display: copySuccess ? 'block' : 'none' }} />
+                                        <span>{copySuccess ? 'Copiado' : 'Copiar Link'}</span>
+                                    </button>
+                                    <a 
+                                        href={`/${storefrontSlug}`} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className={`btn btn-primary ${!storefrontActive ? 'btn-disabled' : ''}`}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', pointerEvents: storefrontActive ? 'auto' : 'none', opacity: storefrontActive ? 1 : 0.6 }}
+                                    >
+                                        Ver Catálogo
+                                    </a>
+                                </div>
+                            </div>
+
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                // Clean up the slug to ensure it only has lowercase letters, numbers, and hyphens
+                                const cleanSlug = storefrontSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+                                updateShopInfo({
+                                    ...shopInfo,
+                                    slug: cleanSlug,
+                                    settings: {
+                                        ...shopInfo.settings,
+                                        storefront: {
+                                            active: storefrontActive,
+                                            banner_title: bannerTitle,
+                                            banner_subtitle: bannerSubtitle,
+                                            whatsapp_number: whatsappNumber,
+                                            theme_color: themeColor,
+                                            mp_enabled: mpEnabled,
+                                            mercadopago_public_key: mpPublicKey,
+                                            mercadopago_access_token: mpAccessToken,
+                                            payment_methods: mpEnabled ? ['whatsapp', 'mercadopago'] : ['whatsapp']
+                                        }
+                                    }
+                                });
+                                setIsSaved(true);
+                                setTimeout(() => setIsSaved(false), 3000);
+                            }} className="settings-form">
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">Dirección Web (Slug / floreriaaster)</label>
+                                        <div className="input-with-icon">
+                                            <Store size={18} className="input-icon" />
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={storefrontSlug}
+                                                onChange={e => {
+                                                    const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+                                                    setStorefrontSlug(val);
+                                                }}
+                                                placeholder="nombre-de-tu-local"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                        <label className="form-label" style={{ marginBottom: '0.5rem' }}>Estado del Catálogo</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={storefrontActive}
+                                                    onChange={e => setStorefrontActive(e.target.checked)}
+                                                    style={{ opacity: 0, width: 0, height: 0 }}
+                                                />
+                                                <span style={{
+                                                    position: 'absolute',
+                                                    cursor: 'pointer',
+                                                    top: 0, left: 0, right: 0, bottom: 0,
+                                                    backgroundColor: storefrontActive ? '#10b981' : '#cbd5e1',
+                                                    transition: '.2s',
+                                                    borderRadius: '24px'
+                                                }}>
+                                                    <span style={{
+                                                        position: 'absolute',
+                                                        content: '""',
+                                                        height: '18px', width: '18px',
+                                                        left: storefrontActive ? '22px' : '3px',
+                                                        bottom: '3px',
+                                                        backgroundColor: 'white',
+                                                        transition: '.2s',
+                                                        borderRadius: '50%'
+                                                    }} />
+                                                </span>
+                                            </label>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: 500, color: storefrontActive ? '#10b981' : '#64748b' }}>
+                                                {storefrontActive ? 'Tienda Pública Activa' : 'Mantenimiento / Pausada'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">WhatsApp de Pedidos</label>
+                                        <div className="input-with-icon">
+                                            <Smartphone size={18} className="input-icon" />
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={whatsappNumber}
+                                                onChange={e => setWhatsappNumber(e.target.value)}
+                                                placeholder="Ej: +5491112345678"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Color de Marca (Branding)</label>
+                                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                            <input
+                                                type="color"
+                                                value={themeColor}
+                                                onChange={e => setThemeColor(e.target.value)}
+                                                style={{
+                                                    border: 'none',
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    padding: 0
+                                                }}
+                                            />
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={themeColor}
+                                                onChange={e => setThemeColor(e.target.value)}
+                                                style={{ maxWidth: '120px' }}
+                                            />
+                                            <div style={{
+                                                width: '24px',
+                                                height: '24px',
+                                                borderRadius: '50%',
+                                                backgroundColor: themeColor,
+                                                border: '1px solid #cbd5e1'
+                                            }} />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Título del Banner</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={bannerTitle}
+                                            onChange={e => setBannerTitle(e.target.value)}
+                                            placeholder="Ej: Bienvenidos a Florería Aster"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Subtítulo del Banner</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={bannerSubtitle}
+                                            onChange={e => setBannerSubtitle(e.target.value)}
+                                            placeholder="Ej: Flores frescas y regalos únicos"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="settings-card" style={{ marginTop: '2rem', border: '1px solid #cbd5e1', boxShadow: 'none' }}>
+                                    <div className="card-header" style={{ padding: '0 0 1.25rem 0', borderBottom: '1px solid var(--explorer-border, #e2e8f0)' }}>
+                                        <div className="card-header-icon card-header-icon-success" style={{ background: '#eafaf1', color: '#10b981' }}>
+                                            <CreditCard size={20} />
+                                        </div>
+                                        <div className="card-header-text">
+                                            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Cobros con MercadoPago</h3>
+                                            <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>Cobrá online con tarjeta y saldo en MercadoPago de forma descentralizada</p>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ padding: '1.25rem 0 0 0' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                                            <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={mpEnabled}
+                                                    onChange={e => setMpEnabled(e.target.checked)}
+                                                    style={{ opacity: 0, width: 0, height: 0 }}
+                                                />
+                                                <span style={{
+                                                    position: 'absolute',
+                                                    cursor: 'pointer',
+                                                    top: 0, left: 0, right: 0, bottom: 0,
+                                                    backgroundColor: mpEnabled ? '#10b981' : '#cbd5e1',
+                                                    transition: '.2s',
+                                                    borderRadius: '24px'
+                                                }}>
+                                                    <span style={{
+                                                        position: 'absolute',
+                                                        content: '""',
+                                                        height: '18px', width: '18px',
+                                                        left: mpEnabled ? '22px' : '3px',
+                                                        bottom: '3px',
+                                                        backgroundColor: 'white',
+                                                        transition: '.2s',
+                                                        borderRadius: '50%'
+                                                    }} />
+                                                </span>
+                                            </label>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: 500, color: mpEnabled ? '#10b981' : '#64748b' }}>
+                                                {mpEnabled ? 'Pasarela MercadoPago Habilitada' : 'Pasarela Desactivada (Solo WhatsApp)'}
+                                            </span>
+                                        </div>
+
+                                        {mpEnabled && (
+                                            <div className="form-grid animate-fade-in" style={{ gap: '1.25rem' }}>
+                                                <div className="form-group">
+                                                    <label className="form-label">MercadoPago Public Key</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={mpPublicKey}
+                                                        onChange={e => setMpPublicKey(e.target.value)}
+                                                        placeholder="Ej: APP_USR-..."
+                                                        required={mpEnabled}
+                                                    />
+                                                </div>
+
+                                                <div className="form-group">
+                                                    <label className="form-label">MercadoPago Access Token</label>
+                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                        <input
+                                                            type={showMpToken ? 'text' : 'password'}
+                                                            className="form-input"
+                                                            value={mpAccessToken}
+                                                            onChange={e => setMpAccessToken(e.target.value)}
+                                                            placeholder="Ej: APP_USR-..."
+                                                            required={mpEnabled}
+                                                            style={{ flex: 1 }}
+                                                        />
+                                                        <button 
+                                                            className="btn btn-secondary"
+                                                            onClick={() => setShowMpToken(!showMpToken)}
+                                                            type="button"
+                                                            style={{ padding: '0 0.75rem' }}
+                                                        >
+                                                            {showMpToken ? 'Ocultar' : 'Mostrar'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{
+                                                    background: '#fffbeb',
+                                                    border: '1px solid #fef3c7',
+                                                    color: '#b45309',
+                                                    padding: '0.75rem',
+                                                    borderRadius: '8px',
+                                                    fontSize: '0.8rem',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.5rem',
+                                                    gridColumn: '1 / -1'
+                                                }}>
+                                                    <Shield size={16} style={{ flexShrink: 0 }} />
+                                                    <span>
+                                                        Las credenciales se almacenan en forma encriptada en la base de datos de tu local. Nunca compartas tu token con nadie.
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="form-actions" style={{ marginTop: '2rem' }}>
+                                    <button type="submit" className={`btn btn-primary ${isSaved ? 'btn-saved' : ''}`}>
+                                        <Save size={18} />
+                                        {isSaved ? '¡Guardado!' : 'Guardar Configuración de Tienda'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 )}

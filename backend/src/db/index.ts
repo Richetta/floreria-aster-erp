@@ -59,6 +59,7 @@ interface BusinessesTable {
   default_margin: number;
   opening_time: string | null;
   closing_time: string | null;
+  slug: string | null;
   created_at: Date;
   updated_at: Date;
 }

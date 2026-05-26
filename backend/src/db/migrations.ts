@@ -399,3 +399,28 @@ export async function runCustomSubscriptionUpdates() {
     console.error('❌ Custom subscription updates failed:', error);
   }
 }
+
+/**
+ * Storefront Integration Migrations
+ * Adds slug column to businesses and seeds the default business slug.
+ */
+export async function runStorefrontMigrations() {
+  console.log('--- STARTING STOREFRONT MIGRATIONS ---');
+  try {
+    // 1. Add slug column to businesses table
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS slug VARCHAR(100) UNIQUE`.execute(db);
+    console.log('✔ Column slug in businesses table verified/created');
+
+    // 2. Seed default business slug 'floreriaaster' if it's null
+    await sql`
+      UPDATE businesses 
+      SET slug = 'floreriaaster' 
+      WHERE id = '00000000-0000-0000-0000-000000000001' AND (slug IS NULL OR slug = '')
+    `.execute(db);
+    console.log('✔ Default business slug seeded');
+    console.log('--- STOREFRONT MIGRATIONS COMPLETED ---');
+  } catch (error) {
+    console.error('❌ Storefront migrations failed (non-fatal):', error);
+  }
+}
+
