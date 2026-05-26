@@ -47,7 +47,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         supplierId: '',
         tags: [],
         imageUrl: '',
-        custom_filter_options: []
+        custom_filter_options: [],
+        storefront_published: false
     });
 
     const [isAddingBrand, setIsAddingBrand] = useState(false);
@@ -79,8 +80,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     min: productToEdit.min || 5,
                     supplierId: productToEdit.supplierId || '',
                     tags: productToEdit.tags || [],
-                    imageUrl: productToEdit.images?.[0] || '',
-                    custom_filter_options: productToEdit.custom_filter_options || []
+                    imageUrl: productToEdit.images?.join(', ') || '',
+                    custom_filter_options: productToEdit.custom_filter_options || [],
+                    storefront_published: productToEdit.storefront_published || false
                 });
             } else {
                 setFormData({
@@ -96,7 +98,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     supplierId: '',
                     tags: [],
                     imageUrl: '',
-                    custom_filter_options: []
+                    custom_filter_options: [],
+                    storefront_published: false
                 });
             }
         }
@@ -171,7 +174,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         const resolvedCategoryId = categoriesData?.find(c => c.name === formData.category)?.id;
 
         const { imageUrl, ...restFormData } = formData;
-        const images = imageUrl ? [imageUrl] : [];
+        const images = imageUrl 
+            ? imageUrl.split(',').map((url: string) => url.trim()).filter((url: string) => url.length > 0)
+            : [];
 
         if (productToEdit) {
             await updateProduct(productToEdit.id, {
@@ -199,7 +204,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 min: validatedMin!,
                 tags: formData.tags || [],
                 images,
-                custom_filter_options: formData.custom_filter_options
+                custom_filter_options: formData.custom_filter_options,
+                storefront_published: formData.storefront_published
             };
             await addProduct(newProduct);
         }
@@ -256,36 +262,64 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                         </div>
 
                         <div className="form-group mb-4">
-                            <label className="form-label">Foto del Producto (URL Imagen)</label>
-                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                            <label className="form-label">Fotos del Producto (URLs separadas por coma)</label>
+                            <input
+                                type="text"
+                                className="form-input mb-2"
+                                placeholder="https://url1.com, https://url2.com"
+                                value={formData.imageUrl || ''}
+                                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                                style={{ width: '100%' }}
+                            />
+                            {formData.imageUrl && (
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                                    {formData.imageUrl.split(',').map((url: string) => url.trim()).filter((url: string) => url.length > 0).map((url: string, index: number) => (
+                                        <div key={index} style={{ position: 'relative', width: '48px', height: '48px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
+                                            <img 
+                                                src={url} 
+                                                alt={`Preview ${index}`} 
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="form-group mb-4" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem', backgroundColor: 'var(--color-primary-light, #eaf2eb)', borderRadius: '8px' }}>
+                            <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '40px', height: '20px', cursor: 'pointer' }}>
                                 <input
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="https://ejemplo.com/tu-foto.jpg"
-                                    value={formData.imageUrl || ''}
-                                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                                    style={{ flex: 1 }}
+                                    type="checkbox"
+                                    checked={formData.storefront_published || false}
+                                    onChange={e => setFormData({ ...formData, storefront_published: e.target.checked })}
+                                    style={{ opacity: 0, width: 0, height: 0 }}
                                 />
-                                {formData.imageUrl && (
-                                    <div style={{ flexShrink: 0 }}>
-                                        <img 
-                                            src={formData.imageUrl} 
-                                            alt="Producto preview" 
-                                            style={{ 
-                                                width: '38px', 
-                                                height: '38px', 
-                                                borderRadius: '8px', 
-                                                objectFit: 'cover', 
-                                                border: '1px solid #cbd5e1',
-                                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                                            }} 
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).style.display = 'none';
-                                            }}
-                                        />
-                                    </div>
-                                )}
-                            </div>
+                                <span style={{
+                                    position: 'absolute',
+                                    cursor: 'pointer',
+                                    top: 0, left: 0, right: 0, bottom: 0,
+                                    backgroundColor: formData.storefront_published ? 'var(--color-primary, #4F7A5A)' : '#cbd5e1',
+                                    transition: '.2s',
+                                    borderRadius: '20px'
+                                }}>
+                                    <span style={{
+                                        position: 'absolute',
+                                        content: '""',
+                                        height: '14px', width: '14px',
+                                        left: formData.storefront_published ? '23px' : '3px',
+                                        bottom: '3px',
+                                        backgroundColor: 'white',
+                                        transition: '.2s',
+                                        borderRadius: '50%'
+                                    }} />
+                                </span>
+                            </label>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-primary, #4F7A5A)' }}>
+                                Publicar en Tienda Online
+                            </span>
                         </div>
 
                         <div className="grid grid-2 gap-4 mb-4">

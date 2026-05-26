@@ -5,7 +5,7 @@ import {
     MapPin, CreditCard,
     Check, Shield, Wallet, HardDrive,
     Smartphone, Store, Instagram, Database, Upload, Palette, Cloud,
-    BarChart3, Zap, MessageSquare, UserCheck, Mail, CheckCircle, Circle
+    BarChart3, Zap, MessageSquare, UserCheck, Mail, CheckCircle, Circle, Percent
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
@@ -37,8 +37,9 @@ export const SettingsDesktop = () => {
     const [themeColor, setThemeColor] = useState(storefront.theme_color || '#1e3f20');
     const [mpEnabled, setMpEnabled] = useState(storefront.mp_enabled ?? false);
     const [mpPublicKey, setMpPublicKey] = useState(storefront.mercadopago_public_key || '');
-    const [mpAccessToken, setMpAccessToken] = useState(storefront.mercadopago_access_token || '');
+    const [mpAccessToken, setMpAccessToken] = useState(storefront.mp_access_token || storefront.mercadopago_access_token || '');
     const [logoUrl, setLogoUrl] = useState(shopInfo.logo || '');
+    const [priceMarkup, setPriceMarkup] = useState<number>(storefront.price_markup || 0);
     
     const [showMpToken, setShowMpToken] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
@@ -54,8 +55,9 @@ export const SettingsDesktop = () => {
             setThemeColor(sf.theme_color || '#1e3f20');
             setMpEnabled(sf.mp_enabled ?? false);
             setMpPublicKey(sf.mercadopago_public_key || '');
-            setMpAccessToken(sf.mercadopago_access_token || '');
+            setMpAccessToken(sf.mp_access_token || sf.mercadopago_access_token || '');
             setLogoUrl(shopInfo.logo || '');
+            setPriceMarkup(sf.price_markup || 0);
         }
     }, [shopInfo]);
 
@@ -587,6 +589,7 @@ export const SettingsDesktop = () => {
                                             banner_subtitle: bannerSubtitle,
                                             whatsapp_number: whatsappNumber,
                                             theme_color: themeColor,
+                                            price_markup: Number(priceMarkup) || 0,
                                             mp_enabled: mpEnabled,
                                             mercadopago_public_key: mpPublicKey,
                                             mercadopago_access_token: mpAccessToken,
@@ -732,6 +735,22 @@ export const SettingsDesktop = () => {
                                                 backgroundColor: themeColor,
                                                 border: '1px solid #cbd5e1'
                                             }} />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Recargo de Precios en la Web (%)</label>
+                                        <div className="input-with-icon">
+                                            <Percent size={18} className="input-icon" />
+                                            <input
+                                                type="number"
+                                                className="form-input"
+                                                value={priceMarkup}
+                                                onChange={e => setPriceMarkup(Math.max(0, Number(e.target.value)))}
+                                                placeholder="Ej: 10 para aumentar 10% los precios"
+                                                min="0"
+                                                step="0.01"
+                                            />
                                         </div>
                                     </div>
 

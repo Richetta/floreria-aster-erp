@@ -12,6 +12,8 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
     description: z.string().optional().or(z.literal('')),
     price: z.number().positive(),
     is_active: z.boolean().default(true),
+    images: z.array(z.string()).optional(),
+    storefront_published: z.boolean().optional(),
     components: z.array(z.object({
       product_id: z.string().uuid(),
       quantity: z.number().int().positive()
@@ -202,7 +204,8 @@ export const packagesRoutes: FastifyPluginAsync = async (fastify) => {
             suggested_price: body.price,
             is_active: body.is_active,
             created_by: user.sub,
-            images: [],
+            images: body.images || [],
+            storefront_published: body.storefront_published || false,
             tags: [],
             created_at: new Date(),
             updated_at: new Date()

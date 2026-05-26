@@ -66,7 +66,6 @@ async function checkProductLimit(businessId: string, reply: any) {
 
 export const productsRoutes: FastifyPluginAsync = async (fastify) => {
   // Create product schema
-  // Create product schema
   const createProductSchema = z.object({
     code: z.string().min(1),
     name: z.string().min(2),
@@ -82,7 +81,8 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     is_barcode: z.boolean().default(false),
     tags: z.array(z.string()).default([]),
     images: z.array(z.string()).optional(),
-    custom_filter_options: z.array(z.string().uuid()).optional()
+    custom_filter_options: z.array(z.string().uuid()).optional(),
+    storefront_published: z.boolean().optional()
   });
 
   // Update product schema (partial)

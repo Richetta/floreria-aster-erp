@@ -424,3 +424,78 @@ export async function runStorefrontMigrations() {
   }
 }
 
+/**
+ * Storefront Expansion Migrations (Tienda Online 2.0)
+ * Adds storefront_published columns to products/packages and creates storefront_reviews.
+ */
+export async function runStorefrontExpansionMigrations() {
+  console.log('--- STARTING STOREFRONT EXPANSION MIGRATIONS ---');
+  try {
+    // 1. Add storefront_published column to products table
+    try {
+      await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS storefront_published BOOLEAN DEFAULT FALSE`.execute(db);
+      console.log('✔ Column storefront_published added to products table');
+    } catch (e) {
+      console.log('ℹ Column storefront_published in products table (already exists or error handled)');
+    }
+
+    // 2. Add storefront_published column to packages table
+    try {
+      await sql`ALTER TABLE packages ADD COLUMN IF NOT EXISTS storefront_published BOOLEAN DEFAULT FALSE`.execute(db);
+      console.log('✔ Column storefront_published added to packages table');
+    } catch (e) {
+      console.log('ℹ Column storefront_published in packages table (already exists or error handled)');
+    }
+
+    // 3. Create storefront_reviews table
+    await sql`
+      CREATE TABLE IF NOT EXISTS storefront_reviews (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+        package_id UUID REFERENCES packages(id) ON DELETE CASCADE,
+        author_name VARCHAR(100) NOT NULL,
+        rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+        comment TEXT,
+        is_approved BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `.execute(db);
+    console.log('✔ Table storefront_reviews verified/created');
+
+    // 4. Enable RLS on storefront_reviews
+    try {
+      await sql`ALTER TABLE storefront_reviews ENABLE ROW LEVEL SECURITY`.execute(db);
+      console.log('✔ RLS enabled on storefront_reviews');
+    } catch (e) {
+      console.log('ℹ RLS on storefront_reviews (error handled)');
+    }
+
+    // 5. Create RLS Policy for storefront_reviews
+    try {
+      await sql`DROP POLICY IF EXISTS tenant_isolation_storefront_reviews ON storefront_reviews`.execute(db);
+    } catch (e) {
+      // Policy might not exist
+    }
+
+    await sql`
+      CREATE POLICY tenant_isolation_storefront_reviews ON storefront_reviews
+      FOR ALL
+      USING (business_id = get_current_business_id())
+      WITH CHECK (business_id = get_current_business_id())
+    `.execute(db);
+    console.log('✔ RLS policy for storefront_reviews verified/created');
+
+    // 6. Create indexes on business_id and product_id/package_id
+    await sql`CREATE INDEX IF NOT EXISTS idx_reviews_business ON storefront_reviews(business_id)`.execute(db);
+    await sql`CREATE INDEX IF NOT EXISTS idx_reviews_product ON storefront_reviews(product_id)`.execute(db);
+    await sql`CREATE INDEX IF NOT EXISTS idx_reviews_package ON storefront_reviews(package_id)`.execute(db);
+    console.log('✔ Indexes for storefront_reviews verified/created');
+
+    console.log('--- STOREFRONT EXPANSION MIGRATIONS COMPLETED ---');
+  } catch (error) {
+    console.error('❌ Storefront expansion migrations failed (non-fatal):', error);
+  }
+}
+
+

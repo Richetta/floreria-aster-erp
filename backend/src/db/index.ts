@@ -40,6 +40,7 @@ export interface Database {
   custom_filters: CustomFiltersTable;
   custom_filter_options: CustomFilterOptionsTable;
   product_custom_filter_values: ProductCustomFilterValuesTable;
+  storefront_reviews: StorefrontReviewsTable;
 }
 
 // ============================================
@@ -129,6 +130,7 @@ interface ProductsTable {
   created_at: Date;
   updated_at: Date;
   deleted_at: Date | null;
+  storefront_published: boolean | null;
 }
 
 interface PriceHistoryTable {
@@ -262,6 +264,7 @@ interface PackagesTable {
   created_at: Date;
   updated_at: Date;
   deleted_at: Date | null;
+  storefront_published: boolean | null;
 }
 
 interface PackageComponentsTable {
@@ -387,6 +390,18 @@ interface AppSettingsTable {
   key: string;
   value: Record<string, any>;
   updated_at: Date;
+}
+
+interface StorefrontReviewsTable {
+  id: string;
+  business_id: string;
+  product_id: string | null;
+  package_id: string | null;
+  author_name: string;
+  rating: number;
+  comment: string | null;
+  is_approved: boolean;
+  created_at: Date;
 }
 
 interface UserActivityTable {

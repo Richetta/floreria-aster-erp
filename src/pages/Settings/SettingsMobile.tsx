@@ -4,7 +4,7 @@ import { useAuth } from '../../store/useAuth';
 import { useModal } from '../../hooks/useModal';
 import { useNavigate } from 'react-router-dom';
 import { AlertModal, ConfirmModal } from '../../components/ui/Modals';
-import { Check, CreditCard, Shield, Save, ArrowLeft } from 'lucide-react';
+import { Check, CreditCard, Shield, Save, ArrowLeft, Percent } from 'lucide-react';
 import './SettingsMobile.css';
 
 export const SettingsMobile = () => {
@@ -28,8 +28,9 @@ export const SettingsMobile = () => {
     const [themeColor, setThemeColor] = useState(storefront.theme_color || '#1e3f20');
     const [mpEnabled, setMpEnabled] = useState(storefront.mp_enabled ?? false);
     const [mpPublicKey, setMpPublicKey] = useState(storefront.mercadopago_public_key || '');
-    const [mpAccessToken, setMpAccessToken] = useState(storefront.mercadopago_access_token || '');
+    const [mpAccessToken, setMpAccessToken] = useState(storefront.mp_access_token || storefront.mercadopago_access_token || '');
     const [logoUrl, setLogoUrl] = useState(shopInfo.logo || '');
+    const [priceMarkup, setPriceMarkup] = useState<number>(storefront.price_markup || 0);
     
     const [showMpToken, setShowMpToken] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
@@ -46,8 +47,9 @@ export const SettingsMobile = () => {
             setThemeColor(sf.theme_color || '#1e3f20');
             setMpEnabled(sf.mp_enabled ?? false);
             setMpPublicKey(sf.mercadopago_public_key || '');
-            setMpAccessToken(sf.mercadopago_access_token || '');
+            setMpAccessToken(sf.mp_access_token || sf.mercadopago_access_token || '');
             setLogoUrl(shopInfo.logo || '');
+            setPriceMarkup(sf.price_markup || 0);
         }
     }, [shopInfo]);
 
@@ -290,18 +292,19 @@ export const SettingsMobile = () => {
                                 logo: logoUrl || undefined,
                                 settings: {
                                     ...shopInfo.settings,
-                                    storefront: {
-                                        active: storefrontActive,
-                                        banner_title: bannerTitle,
-                                        banner_subtitle: bannerSubtitle,
-                                        whatsapp_number: whatsappNumber,
-                                        theme_color: themeColor,
-                                        mp_enabled: mpEnabled,
-                                        mercadopago_public_key: mpPublicKey,
-                                        mercadopago_access_token: mpAccessToken,
-                                        payment_methods: mpEnabled ? ['whatsapp', 'mercadopago'] : ['whatsapp']
+                                        storefront: {
+                                            active: storefrontActive,
+                                            banner_title: bannerTitle,
+                                            banner_subtitle: bannerSubtitle,
+                                            whatsapp_number: whatsappNumber,
+                                            theme_color: themeColor,
+                                            price_markup: Number(priceMarkup) || 0,
+                                            mp_enabled: mpEnabled,
+                                            mercadopago_public_key: mpPublicKey,
+                                            mercadopago_access_token: mpAccessToken,
+                                            payment_methods: mpEnabled ? ['whatsapp', 'mercadopago'] : ['whatsapp']
+                                        }
                                     }
-                                }
                             });
                             setIsSaved(true);
                             setTimeout(() => setIsSaved(false), 3000);
@@ -409,6 +412,23 @@ export const SettingsMobile = () => {
                                             value={themeColor}
                                             onChange={e => setThemeColor(e.target.value)}
                                             style={{ flex: 1 }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Recargo de Precios en la Web (%)</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <Percent size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                                        <input
+                                            type="number"
+                                            className="form-input"
+                                            value={priceMarkup}
+                                            onChange={e => setPriceMarkup(Math.max(0, Number(e.target.value)))}
+                                            placeholder="Ej: 10 para aumentar 10% los precios"
+                                            min="0"
+                                            step="0.01"
+                                            style={{ width: '100%', padding: '0.65rem 0.65rem 0.65rem 2.2rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
                                         />
                                     </div>
                                 </div>

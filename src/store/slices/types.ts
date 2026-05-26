@@ -18,6 +18,7 @@ export type Product = {
     lastSaleDate?: string;
     weeklySales?: number;
     images?: string[];
+    storefront_published?: boolean;
 };
 
 export type Category = {

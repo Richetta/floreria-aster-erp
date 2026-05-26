@@ -3,7 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { 
     ShoppingBag, Search, Plus, Minus, X, Check, 
     MessageCircle, MapPin, Calendar, Clock,
-    ShoppingCart, Sparkles, Send, Store
+    ShoppingCart, Sparkles, Send, Store,
+    Star, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import './PublicStorefront.css';
 
@@ -30,6 +31,7 @@ export const PublicStorefront = () => {
     const [error, setError] = useState<string | null>(null);
     const [storeConfig, setStoreConfig] = useState<any>(null);
     const [products, setProducts] = useState<any[]>([]);
+    const [combos, setCombos] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
     
     // UI states
@@ -40,6 +42,23 @@ export const PublicStorefront = () => {
     const [checkoutStep, setCheckoutStep] = useState<'cart' | 'details' | 'success'>('cart');
     const [mpStatus, setMpStatus] = useState<string | null>(null);
     const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+    
+    // Detailed Item & Reviews States
+    const [selectedDetailItem, setSelectedDetailItem] = useState<any | null>(null);
+    const [detailReviews, setDetailReviews] = useState<any[]>([]);
+    const [loadingReviews, setLoadingReviews] = useState(false);
+    const [reviewAuthor, setReviewAuthor] = useState('');
+    const [reviewRating, setReviewRating] = useState(5);
+    const [reviewComment, setReviewComment] = useState('');
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const [isAddingReview, setIsAddingReview] = useState(false);
+    const [detailQty, setDetailQty] = useState(1);
+
+    // General store reviews states
+    const [generalReviews, setGeneralReviews] = useState<any[]>([]);
+    const [isGeneralReviewsOpen, setIsGeneralReviewsOpen] = useState(false);
+    const [isAddingGeneralReview, setIsAddingGeneralReview] = useState(false);
     
     // Checkout form state
     const [formName, setFormName] = useState('');
@@ -82,6 +101,7 @@ export const PublicStorefront = () => {
                 const data = await response.json();
                 setStoreConfig(data);
                 setProducts(data.products || []);
+                setCombos(data.combos || []);
                 setCategories(data.categories || []);
                 setError(null);
             } catch (err: any) {
@@ -118,6 +138,129 @@ export const PublicStorefront = () => {
         }
     }, [storeConfig]);
 
+    // Fetch reviews for selected product/combo
+    useEffect(() => {
+        const fetchItemReviews = async () => {
+            if (!selectedDetailItem || !storeSlug) return;
+            try {
+                setLoadingReviews(true);
+                const itemIdQuery = selectedDetailItem.isCombo 
+                    ? `package_id=${selectedDetailItem.id}` 
+                    : `product_id=${selectedDetailItem.id}`;
+                const response = await fetch(`${API_BASE_URL}/storefront/reviews/${storeSlug}?${itemIdQuery}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setDetailReviews(data || []);
+                }
+            } catch (err) {
+                console.error('Error fetching reviews:', err);
+            } finally {
+                setLoadingReviews(false);
+            }
+        };
+
+        fetchItemReviews();
+        setActiveImageIndex(0);
+        setIsAddingReview(false);
+        setDetailQty(1);
+    }, [selectedDetailItem, storeSlug]);
+
+    // Fetch general reviews for the storefront
+    useEffect(() => {
+        const fetchGeneralReviews = async () => {
+            if (!storeSlug) return;
+            try {
+                const response = await fetch(`${API_BASE_URL}/storefront/reviews/${storeSlug}?type=general`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setGeneralReviews(data || []);
+                }
+            } catch (err) {
+                console.error('Error fetching general reviews:', err);
+            }
+        };
+
+        fetchGeneralReviews();
+    }, [storeSlug]);
+
+    // Submit review handler
+    const handleReviewSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!reviewAuthor.trim() || !storeSlug) return;
+
+        try {
+            setSubmittingReview(true);
+            const payload = {
+                author_name: reviewAuthor,
+                rating: reviewRating,
+                comment: reviewComment || null,
+                product_id: selectedDetailItem?.isCombo ? null : selectedDetailItem?.id,
+                package_id: selectedDetailItem?.isCombo ? selectedDetailItem?.id : null
+            };
+
+            const response = await fetch(`${API_BASE_URL}/storefront/reviews/${storeSlug}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                const newRev = await response.json();
+                setDetailReviews(prev => [newRev, ...prev]);
+                setReviewAuthor('');
+                setReviewComment('');
+                setReviewRating(5);
+                setIsAddingReview(false);
+                alert('¡Gracias por tu reseña! Tu opinión es muy importante.');
+            } else {
+                throw new Error('Error al enviar la reseña');
+            }
+        } catch (err: any) {
+            alert(err.message || 'Error al enviar la reseña.');
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
+
+    // Submit general store review handler
+    const handleGeneralReviewSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!reviewAuthor.trim() || !storeSlug) return;
+
+        try {
+            setSubmittingReview(true);
+            const payload = {
+                author_name: reviewAuthor,
+                rating: reviewRating,
+                comment: reviewComment || null,
+                product_id: null,
+                package_id: null
+            };
+
+            const response = await fetch(`${API_BASE_URL}/storefront/reviews/${storeSlug}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                const newRev = await response.json();
+                setGeneralReviews(prev => [newRev, ...prev]);
+                setReviewAuthor('');
+                setReviewComment('');
+                setReviewRating(5);
+                setIsAddingGeneralReview(false);
+                alert('¡Gracias por calificar nuestra tienda!');
+            } else {
+                throw new Error('Error al enviar la reseña');
+            }
+        } catch (err: any) {
+            alert(err.message || 'Error al enviar la calificación.');
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
+
     // Utility: Adjust Hex Color Brightness for hover effects
     const adjustColorBrightness = (hex: string, percent: number) => {
         let R = parseInt(hex.substring(1, 3), 16);
@@ -146,6 +289,17 @@ export const PublicStorefront = () => {
         });
     };
 
+    // Cart Helper with specific quantity
+    const addToCartWithQty = (product: any, qty: number) => {
+        setCart(prev => {
+            const existing = prev.find(item => item.id === product.id);
+            if (existing) {
+                return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + qty } : item);
+            }
+            return [...prev, { id: product.id, name: product.name, price: Number(product.price), quantity: qty, images: product.images }];
+        });
+    };
+
     const updateQuantity = (productId: string, amount: number) => {
         setCart(prev => {
             return prev.map(item => {
@@ -161,12 +315,20 @@ export const PublicStorefront = () => {
     const totalCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalCartAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    // Dynamic catalog filtering
-    const filteredProducts = products.filter(product => {
-        const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                              (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
-        const matchesCategory = !selectedCategory || product.category_id === selectedCategory;
-        return matchesSearch && matchesCategory;
+    // Dynamic catalog filtering (combines products & published combos)
+    const filteredItems = [
+        ...products.map(p => ({ ...p, isCombo: false })),
+        ...combos.map(c => ({ ...c, price: c.suggested_price, isCombo: true }))
+    ].filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
+        
+        if (selectedCategory === 'combos') {
+            return matchesSearch && item.isCombo;
+        }
+        
+        const matchesCategory = !selectedCategory || item.category_id === selectedCategory;
+        return matchesSearch && matchesCategory && !item.isCombo;
     });
 
     // Formatting currency ARS
@@ -391,6 +553,17 @@ export const PublicStorefront = () => {
                                 <span>{storeConfig.business.address.split(',')[0]}</span>
                             </div>
                         )}
+                        <div 
+                            className="shop-rating-pill" 
+                            onClick={() => setIsGeneralReviewsOpen(true)}
+                        >
+                            <Star size={14} className="star-filled" />
+                            <span>
+                                {generalReviews.length > 0
+                                    ? `${(generalReviews.reduce((sum, r) => sum + r.rating, 0) / generalReviews.length).toFixed(1)} (${generalReviews.length} opin.)`
+                                    : 'Calificar Tienda'}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -423,6 +596,14 @@ export const PublicStorefront = () => {
                         >
                             Todos
                         </button>
+                        {combos.length > 0 && (
+                            <button
+                                className={`category-pill ${selectedCategory === 'combos' ? 'active' : ''}`}
+                                onClick={() => setSelectedCategory('combos')}
+                            >
+                                🎁 Combos Especiales
+                            </button>
+                        )}
                         {categories.map(cat => (
                             <button
                                 key={cat.id}
@@ -437,20 +618,28 @@ export const PublicStorefront = () => {
 
                 {/* Product Grid */}
                 <div className="products-grid-section">
-                    {filteredProducts.length === 0 ? (
+                    {filteredItems.length === 0 ? (
                         <div className="empty-catalog-box">
                             <Sparkles size={36} className="text-gray-300" />
                             <p>No encontramos productos en esta sección.</p>
                         </div>
                     ) : (
                         <div className="public-products-grid">
-                            {filteredProducts.map(product => {
+                            {filteredItems.map(product => {
                                 const outOfStock = Number(product.stock_quantity) <= 0;
                                 const isLowStock = !outOfStock && Number(product.stock_quantity) <= 4;
                                 
                                 return (
-                                    <div key={product.id} className={`public-product-card ${outOfStock ? 'out-of-stock' : ''}`}>
+                                    <div 
+                                        key={product.id} 
+                                        className={`public-product-card ${outOfStock ? 'out-of-stock' : ''}`}
+                                        onClick={() => setSelectedDetailItem(product)}
+                                        style={{ cursor: 'pointer' }}
+                                    >
                                         <div className="p-img-box">
+                                            {product.isCombo && (
+                                                <div className="badge-combo-card">Combo Especial</div>
+                                            )}
                                             {product.images && product.images.length > 0 ? (
                                                 <img src={product.images[0]} alt={product.name} className="product-card-img" />
                                             ) : (
@@ -467,8 +656,8 @@ export const PublicStorefront = () => {
                                         </div>
                                         <div className="p-details">
                                             <h3 className="p-name">{product.name}</h3>
-                                            <p className="p-desc">{product.description || 'Flores y frescura garantizada.'}</p>
-                                            <div className="p-price-action">
+                                            <p className="p-desc">{product.description || (product.isCombo ? 'Combo especial de productos seleccionados.' : 'Flores y frescura garantizada.')}</p>
+                                            <div className="p-price-action" onClick={e => e.stopPropagation()}>
                                                 <span className="p-price">{formatCurrency(product.price)}</span>
                                                 <button 
                                                     className={`btn btn-primary add-to-cart-btn ${outOfStock ? 'disabled' : ''}`}
@@ -837,6 +1026,383 @@ export const PublicStorefront = () => {
                 </div>
             )}
 
+            {/* Detailed Product Page Modal Overlay */}
+            {selectedDetailItem && (() => {
+                const outOfStock = Number(selectedDetailItem.stock_quantity) <= 0;
+                const isLowStock = !outOfStock && Number(selectedDetailItem.stock_quantity) <= 4;
+                const imagesList = selectedDetailItem.images && selectedDetailItem.images.length > 0
+                    ? selectedDetailItem.images
+                    : [];
+
+                const avgRating = detailReviews.length > 0
+                    ? (detailReviews.reduce((sum, r) => sum + r.rating, 0) / detailReviews.length).toFixed(1)
+                    : null;
+
+                return (
+                    <div className="detail-drawer-overlay">
+                        <div className="detail-drawer-backdrop" onClick={() => setSelectedDetailItem(null)}></div>
+                        
+                        <div className="detail-drawer animate-slide-up">
+                            <header className="drawer-header">
+                                <div className="dh-title-box">
+                                    <ShoppingBag size={20} />
+                                    <h2>Detalle del Producto</h2>
+                                </div>
+                                <button className="drawer-close" onClick={() => setSelectedDetailItem(null)}>
+                                    <X size={24} />
+                                </button>
+                            </header>
+
+                            <div className="drawer-scroll-body drawer-detail-body">
+                                {/* Tactile swipeable/slider photo gallery carousel */}
+                                <div className="image-carousel-container">
+                                    {imagesList.length > 0 ? (
+                                        <>
+                                            <div 
+                                                className="carousel-track" 
+                                                style={{ transform: `translateX(-${activeImageIndex * 100}%)` }}
+                                            >
+                                                {imagesList.map((img: string, idx: number) => (
+                                                    <div key={idx} className="carousel-slide">
+                                                        <img src={img} alt={`${selectedDetailItem.name} ${idx}`} className="carousel-img" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {imagesList.length > 1 && (
+                                                <>
+                                                    <button 
+                                                        className="carousel-nav-btn prev"
+                                                        onClick={() => setActiveImageIndex(prev => (prev === 0 ? imagesList.length - 1 : prev - 1))}
+                                                    >
+                                                        <ChevronLeft size={20} />
+                                                    </button>
+                                                    <button 
+                                                        className="carousel-nav-btn next"
+                                                        onClick={() => setActiveImageIndex(prev => (prev === imagesList.length - 1 ? 0 : prev + 1))}
+                                                    >
+                                                        <ChevronRight size={20} />
+                                                    </button>
+                                                    <div className="carousel-indicators">
+                                                        {imagesList.map((_: any, idx: number) => (
+                                                            <div 
+                                                                key={idx} 
+                                                                className={`carousel-dot ${activeImageIndex === idx ? 'active' : ''}`}
+                                                                onClick={() => setActiveImageIndex(idx)}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="product-card-img-placeholder" style={{ height: '100%' }}>
+                                            <Sparkles size={48} />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Title, Combo Badge, Price */}
+                                {selectedDetailItem.isCombo && (
+                                    <div className="badge-combo">
+                                        <Sparkles size={12} />
+                                        <span>Combo Especial</span>
+                                    </div>
+                                )}
+                                <h1 className="detail-p-name">{selectedDetailItem.name}</h1>
+                                <div className="detail-p-price">{formatCurrency(selectedDetailItem.price)}</div>
+                                
+                                {isLowStock && (
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f43f5e', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '1rem' }}>
+                                        <span>⚠️ ¡Últimas unidades disponibles!</span>
+                                    </div>
+                                )}
+                                
+                                <p className="detail-p-desc">
+                                    {selectedDetailItem.description || (selectedDetailItem.isCombo ? 'Llevate este combo especial de productos seleccionados con descuento garantizado.' : 'Flores de la mejor calidad y frescura garantizada por nuestros floristas locales.')}
+                                </p>
+
+                                {/* Reviews Header */}
+                                <div className="reviews-section-header">
+                                    <h4>Opiniones de clientes</h4>
+                                    <div className="reviews-summary-badge">
+                                        <Star size={16} className="star-filled" />
+                                        <span>{avgRating ? `${avgRating} (${detailReviews.length})` : 'Sin opiniones'}</span>
+                                    </div>
+                                </div>
+
+                                {/* Review form toggler */}
+                                {!isAddingReview ? (
+                                    <button 
+                                        className="btn-toggle-review mb-4"
+                                        onClick={() => setIsAddingReview(true)}
+                                    >
+                                        + Dejar una opinión
+                                    </button>
+                                ) : (
+                                    <form onSubmit={handleReviewSubmit} className="review-form-box">
+                                        <h5>Dejanos tu calificación</h5>
+                                        <div className="star-rating-input">
+                                            {[1, 2, 3, 4, 5].map(star => (
+                                                <Star 
+                                                    key={star}
+                                                    size={24}
+                                                    className={`star-interactive ${star <= reviewRating ? 'star-filled' : 'star-empty'}`}
+                                                    onClick={() => setReviewRating(star)}
+                                                />
+                                            ))}
+                                        </div>
+                                        <div className="c-field-group mb-2">
+                                            <label>Tu Nombre *</label>
+                                            <input 
+                                                type="text" 
+                                                required
+                                                value={reviewAuthor}
+                                                onChange={e => setReviewAuthor(e.target.value)}
+                                                placeholder="Ej: Alejandra R."
+                                                style={{ padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                                            />
+                                        </div>
+                                        <div className="c-field-group mb-2">
+                                            <label>Comentario (Opcional)</label>
+                                            <textarea 
+                                                value={reviewComment}
+                                                onChange={e => setReviewComment(e.target.value)}
+                                                placeholder="¿Qué te pareció este ramo/flor?"
+                                                rows={3}
+                                                style={{ padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button 
+                                                type="button" 
+                                                className="btn"
+                                                onClick={() => setIsAddingReview(false)}
+                                                style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem' }}
+                                            >
+                                                Cancelar
+                                            </button>
+                                            <button 
+                                                type="submit" 
+                                                className="btn btn-primary submit-review-btn"
+                                                disabled={submittingReview}
+                                                style={{ flex: 2, backgroundColor: 'var(--storefront-primary)' }}
+                                            >
+                                                {submittingReview ? 'Enviando...' : 'Enviar Calificación'}
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+
+                                {/* Reviews List */}
+                                <div className="reviews-grid-list">
+                                    {loadingReviews ? (
+                                        <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--storefront-text-muted)' }}>Cargando opiniones...</p>
+                                    ) : detailReviews.length === 0 ? (
+                                        <div className="empty-reviews-prompt">
+                                            Sé el primero en calificar este producto y compartir tu experiencia.
+                                        </div>
+                                    ) : (
+                                        detailReviews.map((rev) => (
+                                            <div key={rev.id} className="review-card-item animate-fade-in">
+                                                <div className="review-card-header">
+                                                    <span className="review-author">{rev.author_name}</span>
+                                                    <span className="review-date">{new Date(rev.created_at).toLocaleDateString('es-AR')}</span>
+                                                </div>
+                                                <div className="review-stars">
+                                                    {[1,2,3,4,5].map(s => (
+                                                        <Star 
+                                                            key={s} 
+                                                            size={14} 
+                                                            className={s <= rev.rating ? 'star-filled' : 'star-empty'} 
+                                                        />
+                                                    ))}
+                                                </div>
+                                                {rev.comment && (
+                                                    <p className="review-comment-text">{rev.comment}</p>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Sticky Buy/Add controls bar */}
+                            <footer className="detail-purchase-bar">
+                                {!outOfStock && (
+                                    <div className="detail-qty-control">
+                                        <button 
+                                            className="detail-qty-btn"
+                                            onClick={() => setDetailQty(prev => Math.max(1, prev - 1))}
+                                        >
+                                            <Minus size={14} />
+                                        </button>
+                                        <span className="detail-qty-count">{detailQty}</span>
+                                        <button 
+                                            className="detail-qty-btn"
+                                            onClick={() => setDetailQty(prev => prev + 1)}
+                                        >
+                                            <Plus size={14} />
+                                        </button>
+                                    </div>
+                                )}
+                                <button 
+                                    className={`btn btn-primary btn-detail-add ${outOfStock ? 'disabled' : ''}`}
+                                    onClick={() => {
+                                        addToCartWithQty(selectedDetailItem, detailQty);
+                                        setSelectedDetailItem(null);
+                                    }}
+                                    disabled={outOfStock}
+                                    style={{ backgroundColor: 'var(--storefront-primary)' }}
+                                >
+                                    <ShoppingCart size={18} />
+                                    <span>{outOfStock ? 'Agotado' : 'Agregar al carrito'}</span>
+                                </button>
+                            </footer>
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* General Shop Reviews Testimonials Modal Overlay */}
+            {isGeneralReviewsOpen && (
+                <div className="detail-drawer-overlay">
+                    <div className="detail-drawer-backdrop" onClick={() => setIsGeneralReviewsOpen(false)}></div>
+                    
+                    <div className="detail-drawer animate-slide-up">
+                        <header className="drawer-header">
+                            <div className="dh-title-box">
+                                <Star size={20} className="star-filled" />
+                                <h2>Opiniones de la Tienda</h2>
+                            </div>
+                            <button className="drawer-close" onClick={() => setIsGeneralReviewsOpen(false)}>
+                                <X size={24} />
+                            </button>
+                        </header>
+
+                        <div className="drawer-scroll-body drawer-detail-body">
+                            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--storefront-text-main)' }}>
+                                    {generalReviews.length > 0
+                                        ? (generalReviews.reduce((sum, r) => sum + r.rating, 0) / generalReviews.length).toFixed(1)
+                                        : '0.0'}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', margin: '0.5rem 0' }}>
+                                    {[1,2,3,4,5].map(s => {
+                                        const avg = generalReviews.length > 0 ? (generalReviews.reduce((sum, r) => sum + r.rating, 0) / generalReviews.length) : 0;
+                                        return (
+                                            <Star 
+                                                key={s} 
+                                                size={20} 
+                                                className={s <= Math.round(avg) ? 'star-filled' : 'star-empty'} 
+                                            />
+                                        );
+                                    })}
+                                </div>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--storefront-text-muted)' }}>
+                                    Basado en {generalReviews.length} valoraciones de compradores reales
+                                </p>
+                            </div>
+
+                            {/* General reviews submission toggler */}
+                            {!isAddingGeneralReview ? (
+                                <button 
+                                    className="btn btn-primary submit-review-btn mb-4"
+                                    onClick={() => setIsAddingGeneralReview(true)}
+                                    style={{ backgroundColor: 'var(--storefront-primary)', width: 'auto', margin: '0 auto 1.5rem', display: 'flex' }}
+                                >
+                                    Dejar un comentario del local
+                                </button>
+                            ) : (
+                                <form onSubmit={handleGeneralReviewSubmit} className="review-form-box" style={{ textAlign: 'left' }}>
+                                    <h5>Calificar el local y servicio</h5>
+                                    <div className="star-rating-input">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <Star 
+                                                key={star}
+                                                size={24}
+                                                className={`star-interactive ${star <= reviewRating ? 'star-filled' : 'star-empty'}`}
+                                                onClick={() => setReviewRating(star)}
+                                            />
+                                        ))}
+                                    </div>
+                                    <div className="c-field-group mb-2">
+                                        <label>Tu Nombre *</label>
+                                        <input 
+                                            type="text" 
+                                            required
+                                            value={reviewAuthor}
+                                            onChange={e => setReviewAuthor(e.target.value)}
+                                            placeholder="Ej: Marcelo T."
+                                            style={{ padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                                        />
+                                    </div>
+                                    <div className="c-field-group mb-2">
+                                        <label>Comentario sobre el servicio (Opcional)</label>
+                                        <textarea 
+                                            value={reviewComment}
+                                            onChange={e => setReviewComment(e.target.value)}
+                                            placeholder="¿Qué tal fue la atención, entrega o calidad de la tienda?"
+                                            rows={3}
+                                            style={{ padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button 
+                                            type="button" 
+                                            className="btn"
+                                            onClick={() => setIsAddingGeneralReview(false)}
+                                            style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem' }}
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button 
+                                            type="submit" 
+                                            className="btn btn-primary submit-review-btn"
+                                            disabled={submittingReview}
+                                            style={{ flex: 2, backgroundColor: 'var(--storefront-primary)' }}
+                                        >
+                                            {submittingReview ? 'Enviando...' : 'Enviar Calificación'}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+
+                            {/* Reviews List */}
+                            <div className="reviews-grid-list">
+                                {generalReviews.length === 0 ? (
+                                    <div className="empty-reviews-prompt">
+                                        Aún no hay opiniones de la tienda. ¡Sé el primero en calificar tu compra!
+                                    </div>
+                                ) : (
+                                    generalReviews.map((rev) => (
+                                        <div key={rev.id} className="review-card-item animate-fade-in">
+                                            <div className="review-card-header">
+                                                <span className="review-author">{rev.author_name}</span>
+                                                <span className="review-date">{new Date(rev.created_at).toLocaleDateString('es-AR')}</span>
+                                            </div>
+                                            <div className="review-stars">
+                                                {[1,2,3,4,5].map(s => (
+                                                    <Star 
+                                                        key={s} 
+                                                        size={14} 
+                                                        className={s <= rev.rating ? 'star-filled' : 'star-empty'} 
+                                                    />
+                                                ))}
+                                            </div>
+                                            {rev.comment && (
+                                                <p className="review-comment-text">{rev.comment}</p>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };
+
+export default PublicStorefront;

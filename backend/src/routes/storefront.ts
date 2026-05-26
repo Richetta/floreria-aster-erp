@@ -53,20 +53,36 @@ export const storefrontRoutes: FastifyPluginAsync = async (fastify) => {
             business: { name: business.name, logo_url: business.logo_url },
             settings: { active: false, banner_title: business.name },
             products: [],
+            combos: [],
             categories: []
           };
         }
 
-        // Fetch active products
+        // Fetch active products that are published on storefront
         const products = await trx
           .selectFrom('products')
           .select([
             'id', 'code', 'barcode', 'name', 'description', 
             'category_id', 'brand_id', 'price', 'stock_quantity', 
-            'is_active', 'tags', 'images'
+            'is_active', 'tags', 'images', 'storefront_published'
           ])
           .where('business_id', '=', business.id)
           .where('is_active', '=', true)
+          .where('storefront_published', '=', true)
+          .where('deleted_at', 'is', null)
+          .orderBy('name', 'asc')
+          .execute();
+
+        // Fetch active combos (packages) that are published on storefront
+        const combos = await trx
+          .selectFrom('packages')
+          .select([
+            'id', 'name', 'description', 'suggested_price', 
+            'is_active', 'images', 'tags', 'storefront_published'
+          ])
+          .where('business_id', '=', business.id)
+          .where('is_active', '=', true)
+          .where('storefront_published', '=', true)
           .where('deleted_at', 'is', null)
           .orderBy('name', 'asc')
           .execute();
@@ -80,10 +96,38 @@ export const storefrontRoutes: FastifyPluginAsync = async (fastify) => {
           .orderBy('name', 'asc')
           .execute();
 
+        // Apply price markup percentage dynamically
+        const markupPercent = Number(storefrontSettings.price_markup || 0);
+        
+        const productsWithMarkup = products.map(p => {
+          if (markupPercent > 0) {
+            const basePrice = Number(p.price || 0);
+            const markedUpPrice = basePrice * (1 + markupPercent / 100);
+            return {
+              ...p,
+              price: Math.round(markedUpPrice * 100) / 100
+            };
+          }
+          return p;
+        });
+
+        const combosWithMarkup = combos.map(c => {
+          if (markupPercent > 0) {
+            const basePrice = Number(c.suggested_price || 0);
+            const markedUpPrice = basePrice * (1 + markupPercent / 100);
+            return {
+              ...c,
+              suggested_price: Math.round(markedUpPrice * 100) / 100
+            };
+          }
+          return c;
+        });
+
         return {
           business,
           settings: storefrontSettings,
-          products,
+          products: productsWithMarkup,
+          combos: combosWithMarkup,
           categories
         };
       });
@@ -578,6 +622,109 @@ export const storefrontRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (error: any) {
       console.error('[MP Webhook ERROR]:', error.message, error.stack);
       return reply.status(500).send({ error: 'Webhook processing failed', details: error.message });
+    }
+  });
+
+  // ============================================
+  // GET REVIEWS (PUBLIC)
+  // ============================================
+  fastify.get('/reviews/:slug', async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    const { product_id, package_id, type } = request.query as { product_id?: string; package_id?: string; type?: string };
+
+    try {
+      // 1. Resolve business by slug
+      const business = await db
+        .selectFrom('businesses')
+        .select(['id'])
+        .where('slug', '=', slug)
+        .executeTakeFirst();
+
+      if (!business) {
+        return reply.status(404).send({ error: 'Negocio no encontrado' });
+      }
+
+      const reviews = await db.connection().execute(async (trx) => {
+        await sql`SELECT set_config('app.current_business_id', ${business.id}, true)`.execute(trx);
+
+        let query = trx
+          .selectFrom('storefront_reviews')
+          .selectAll()
+          .where('business_id', '=', business.id)
+          .where('is_approved', '=', true);
+
+        if (product_id) {
+          query = query.where('product_id', '=', product_id);
+        } else if (package_id) {
+          query = query.where('package_id', '=', package_id);
+        } else if (type === 'general') {
+          query = query.where('product_id', 'is', null).where('package_id', 'is', null);
+        }
+
+        return await query.orderBy('created_at', 'desc').execute();
+      });
+
+      return reply.send(reviews);
+    } catch (error: any) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Error al obtener las reseñas' });
+    }
+  });
+
+  // ============================================
+  // POST REVIEW (PUBLIC)
+  // ============================================
+  fastify.post('/reviews/:slug', async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    const schema = z.object({
+      author_name: z.string().min(1, 'El nombre es obligatorio').max(100),
+      rating: z.number().int().min(1).max(5),
+      comment: z.string().optional().nullable(),
+      product_id: z.string().uuid().optional().nullable(),
+      package_id: z.string().uuid().optional().nullable()
+    });
+
+    try {
+      const body = schema.parse(request.body);
+
+      // 1. Resolve business by slug
+      const business = await db
+        .selectFrom('businesses')
+        .select(['id'])
+        .where('slug', '=', slug)
+        .executeTakeFirst();
+
+      if (!business) {
+        return reply.status(404).send({ error: 'Negocio no encontrado' });
+      }
+
+      const newReview = await db.connection().execute(async (trx) => {
+        await sql`SELECT set_config('app.current_business_id', ${business.id}, true)`.execute(trx);
+
+        return await trx
+          .insertInto('storefront_reviews')
+          .values({
+            id: randomUUID(),
+            business_id: business.id,
+            product_id: body.product_id || null,
+            package_id: body.package_id || null,
+            author_name: body.author_name,
+            rating: body.rating,
+            comment: body.comment || null,
+            is_approved: true,
+            created_at: new Date()
+          } as any)
+          .returningAll()
+          .executeTakeFirst();
+      });
+
+      return reply.status(201).send(newReview);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'Error de validación', details: error.errors });
+      }
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Error al enviar la reseña' });
     }
   });
 
