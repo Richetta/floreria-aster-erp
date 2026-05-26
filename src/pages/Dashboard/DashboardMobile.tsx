@@ -133,6 +133,7 @@ export const DashboardMobile = () => {
 
     const quickActions = [
         { label: 'Vender', icon: 'point_of_sale', path: '/pos', color: '#5E9B7E', bg: '#D7EFE1' },
+        { label: 'Tienda', icon: 'storefront', path: '/personalizar-tienda', color: '#8B5CF6', bg: '#EDF0FD' },
         { label: 'Pedidos', icon: 'receipt_long', path: '/pedidos', color: '#6FAE8D', bg: '#EAE7E0' },
         { label: 'Stock', icon: 'inventory_2', path: '/productos', color: '#DFA6A0', bg: '#F6F5F1' },
         { label: 'Clientes', icon: 'group', path: '/clientes', color: '#D8C3A5', bg: '#F6F5F1' },

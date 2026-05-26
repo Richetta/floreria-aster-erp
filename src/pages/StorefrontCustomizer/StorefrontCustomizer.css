@@ -1,0 +1,891 @@
+/* ==========================================================================
+   STOREFRONT CUSTOMIZER - ERP WORKSPACE DESIGN
+   ========================================================================== */
+
+.customizer-workspace {
+    font-family: 'Outfit', sans-serif;
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 2rem;
+    min-height: calc(100vh - 120px);
+    padding-bottom: 80px; /* Space for floating save bar */
+}
+
+@media (max-width: 1024px) {
+    .customizer-workspace {
+        grid-template-columns: 1fr;
+    }
+}
+
+.customizer-panel-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Glassmorphic card design */
+.customizer-card {
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03);
+}
+
+.customizer-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.customizer-card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Tabs */
+.customizer-tabs {
+    display: flex;
+    gap: 0.5rem;
+    background: #f8fafc;
+    padding: 0.35rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.customizer-tab-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    border: none;
+    background: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.customizer-tab-btn:hover {
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.customizer-tab-btn.active {
+    color: #8b5cf6;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.08);
+}
+
+/* Form Styles */
+.customizer-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+
+@media (max-width: 640px) {
+    .customizer-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.form-group-full {
+    grid-column: span 2;
+}
+
+@media (max-width: 640px) {
+    .form-group-full {
+        grid-column: span 1;
+    }
+}
+
+.customizer-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.4rem;
+}
+
+.customizer-input,
+.customizer-textarea {
+    width: 100%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+    font-size: 0.9rem;
+    color: #0f172a;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.customizer-input:focus,
+.customizer-textarea:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.08);
+}
+
+.customizer-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Preset Presets */
+.color-presets-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.color-preset-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    transition: all 0.2s;
+}
+
+.color-preset-circle {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.color-preset-pill:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.color-preset-pill.active {
+    border-color: #8b5cf6;
+    background: #f5f3ff;
+    color: #7c3aed;
+}
+
+/* Seasonal Cards Grid */
+.seasonal-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.seasonal-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem 0.75rem;
+    text-align: center;
+    background: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.seasonal-card-icon {
+    font-size: 1.75rem;
+    display: block;
+    transition: transform 0.2s;
+}
+
+.seasonal-card-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #334155;
+    margin: 0;
+}
+
+.seasonal-card-desc {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.seasonal-card:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.seasonal-card:hover .seasonal-card-icon {
+    transform: scale(1.1);
+}
+
+.seasonal-card.active {
+    border-color: #8b5cf6;
+    background: #f5f3ff;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.08);
+}
+
+.seasonal-card.active .seasonal-card-title {
+    color: #7c3aed;
+}
+
+/* Catalog Editor */
+.customizer-catalog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+}
+
+.customizer-catalog-search {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+}
+
+.customizer-catalog-search input {
+    width: 100%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.6rem 1rem 0.6rem 2.25rem;
+    font-size: 0.85rem;
+    color: #0f172a;
+    font-family: inherit;
+}
+
+.customizer-catalog-search input:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    background: #ffffff;
+}
+
+.customizer-catalog-search svg {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+}
+
+.catalog-filter-chips {
+    display: flex;
+    gap: 0.35rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 0.25rem;
+}
+
+.catalog-filter-chips::-webkit-scrollbar {
+    display: none;
+}
+
+.catalog-chip {
+    padding: 0.4rem 0.85rem;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.catalog-chip:hover {
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+.catalog-chip.active {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #ffffff;
+}
+
+.customizer-catalog-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.catalog-item-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    transition: all 0.2s;
+}
+
+.catalog-item-row:hover {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02);
+}
+
+.catalog-item-image {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #e2e8f0;
+}
+
+.catalog-item-image-fallback {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+}
+
+.catalog-item-info {
+    flex: 1;
+}
+
+.catalog-item-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.15rem 0;
+}
+
+.catalog-item-price {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    margin: 0;
+}
+
+.catalog-item-badge-input {
+    width: 110px;
+}
+
+.catalog-item-badge-input input {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    font-family: inherit;
+}
+
+.catalog-item-badge-input input:focus {
+    outline: none;
+    border-color: #8b5cf6;
+}
+
+.catalog-item-publish-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Switch styling */
+.customizer-switch {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 22px;
+}
+
+.customizer-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.customizer-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: .2s;
+    border-radius: 34px;
+}
+
+.customizer-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .2s;
+    border-radius: 50%;
+}
+
+input:checked + .customizer-slider {
+    background-color: #10b981;
+}
+
+input:checked + .customizer-slider:before {
+    transform: translateX(20px);
+}
+
+.publish-status-text {
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 50px;
+}
+
+/* Phone Simulator Preview Panel */
+.customizer-panel-right {
+    position: sticky;
+    top: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.phone-simulator-frame {
+    width: 320px;
+    height: 640px;
+    border: 12px solid #0f172a;
+    border-radius: 40px;
+    background: #000000;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Dynamic carrier/notch */
+.phone-notch {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 20px;
+    background: #0f172a;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    z-index: 1001;
+}
+
+.phone-status-bar {
+    height: 32px;
+    background: transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1.25rem;
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    z-index: 1000;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+}
+
+.phone-status-bar-dark {
+    color: #0f172a;
+}
+
+.phone-status-right {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.phone-preview-content {
+    flex: 1;
+    background: #fafafa;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    padding-top: 32px; /* Spacer for status bar */
+    scrollbar-width: none;
+}
+
+.phone-preview-content::-webkit-scrollbar {
+    display: none;
+}
+
+/* Mock Storefront elements */
+.mock-promo-banner {
+    background: #e11d48;
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 0.35rem 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.mock-shop-header {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: #ffffff;
+    position: relative;
+    overflow: hidden;
+}
+
+.mock-shop-logo-box {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: #ffffff;
+    margin: 0 auto 0.5rem auto;
+    padding: 2px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mock-shop-logo {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.mock-shop-logo-fallback {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--theme-light, rgba(0,0,0,0.05));
+    color: var(--theme-color, #1e3f20);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.25rem;
+}
+
+.mock-shop-name {
+    font-size: 1.15rem;
+    font-weight: 800;
+    margin: 0 0 0.15rem 0;
+    letter-spacing: -0.01em;
+}
+
+.mock-shop-tagline {
+    font-size: 0.75rem;
+    opacity: 0.9;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.3;
+}
+
+.mock-shop-socials {
+    display: flex;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+.mock-social-pill {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-size: 0.55rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.mock-shop-search {
+    padding: 0.75rem 0.75rem 0.5rem 0.75rem;
+    position: sticky;
+    top: 0;
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    z-index: 10;
+}
+
+.mock-search-box {
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.mock-catalog-categories {
+    display: flex;
+    gap: 0.35rem;
+    overflow-x: auto;
+    padding: 0.5rem 0.75rem;
+    background: #ffffff;
+    scrollbar-width: none;
+}
+
+.mock-cat-chip {
+    padding: 0.35rem 0.65rem;
+    border-radius: 15px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mock-cat-chip.active {
+    background: var(--theme-color, #1e3f20);
+    color: #ffffff;
+}
+
+.mock-products-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding: 0.75rem;
+}
+
+.mock-product-card {
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.mock-product-image-box {
+    height: 90px;
+    background: #e2e8f0;
+    position: relative;
+}
+
+.mock-product-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mock-product-promo-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.55rem;
+    font-weight: 700;
+    color: #e11d48;
+    padding: 0.15rem 0.35rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.mock-product-body {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.mock-product-name {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.15rem 0;
+    line-clamp: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.mock-product-price {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--theme-color, #1e3f20);
+    margin: 0 0 0.35rem 0;
+}
+
+.mock-product-btn {
+    width: 100%;
+    border: none;
+    border-radius: 6px;
+    background: var(--theme-color, #1e3f20);
+    color: #ffffff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.3rem 0;
+    cursor: pointer;
+    text-align: center;
+}
+
+.phone-home-indicator {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 4px;
+    background: #0f172a;
+    border-radius: 2px;
+    z-index: 1001;
+}
+
+/* Floating Save Bar */
+.floating-save-bar {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    width: 90%;
+    max-width: 800px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
+    border-radius: 20px;
+    padding: 0.9rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 2000;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.floating-save-bar.visible {
+    transform: translateX(-50%) translateY(0);
+}
+
+.floating-save-bar-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #ffffff;
+}
+
+.floating-save-bar-icon {
+    color: #c084fc;
+}
+
+.floating-save-bar-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.floating-save-bar-desc {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.floating-save-bar-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-floating-cancel {
+    background: none;
+    border: 1px solid #475569;
+    color: #cbd5e1;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-floating-cancel:hover {
+    color: #ffffff;
+    border-color: #cbd5e1;
+}
+
+.btn-floating-save {
+    background: #8b5cf6;
+    border: none;
+    color: #ffffff;
+    padding: 0.5rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    transition: all 0.2s;
+}
+
+.btn-floating-save:hover {
+    background: #7c3aed;
+    box-shadow: 0 6px 18px rgba(139, 92, 246, 0.4);
+}
+
+/* Seasonal Particle Container inside simulated phone */
+.mock-particle-container {
+    position: absolute;
+    top: 32px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 5;
+}
+
+.mock-particle {
+    position: absolute;
+    top: -15px;
+    font-size: 0.75rem;
+    opacity: 0.7;
+    animation: mockFalling linear infinite;
+}
+
+@keyframes mockFalling {
+    0% {
+        transform: translateY(0) rotate(0deg) translateX(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.65;
+    }
+    90% {
+        opacity: 0.65;
+    }
+    100% {
+        transform: translateY(600px) rotate(360deg) translateX(15px);
+        opacity: 0;
+    }
+}

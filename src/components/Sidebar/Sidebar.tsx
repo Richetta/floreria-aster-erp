@@ -30,7 +30,8 @@ import {
   UserCheck,
   User as UserIcon,
   Eye,
-  EyeOff
+  EyeOff,
+  Globe
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { useStore } from '../../store/useStore';
@@ -63,6 +64,7 @@ type NavItem = NavLinkItem | NavGroup;
 const navItems: NavItem[] = [
   { path: '/', icon: LayoutDashboard, label: 'Inicio', desc: 'Resumen del día' },
   { path: '/pos', icon: ShoppingCart, label: 'Vender', desc: 'Nueva venta rápida', highlight: true, permission: 'canManageOrders' },
+  { path: '/personalizar-tienda', icon: Globe, label: 'Tienda Online', desc: 'Personalizar web de ventas', permission: 'canManageSettings' },
   {
     id: 'pedidos',
     icon: Truck,

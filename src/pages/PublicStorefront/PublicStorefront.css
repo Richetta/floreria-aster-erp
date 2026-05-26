@@ -1359,3 +1359,123 @@
     transform: translateY(-1px);
 }
 
+/* ==========================================================================
+   TIENDA ONLINE 3.0 - NEW BRANDING & HOLIDAYS UPGRADES
+   ========================================================================== */
+
+/* Top alerts promo belt strip */
+.storefront-promo-strip {
+    background: #db2777; /* Default pink vibrant, dynamically styled in season */
+    background: linear-gradient(90deg, #be123c 0%, #db2777 50%, #7c3aed 100%);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 0.5rem 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    z-index: 1002;
+    position: relative;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+/* Floating dynamic particles */
+.public-particle-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1; /* Behind products and controls */
+}
+
+.public-particle {
+    position: fixed;
+    top: -30px;
+    opacity: 0.6;
+    user-select: none;
+    pointer-events: none;
+    animation: publicFalling linear infinite;
+    will-change: transform, opacity;
+}
+
+@keyframes publicFalling {
+    0% {
+        transform: translateY(0) rotate(0deg) translateX(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.65;
+    }
+    90% {
+        opacity: 0.65;
+    }
+    100% {
+        transform: translateY(105vh) rotate(360deg) translateX(50px);
+        opacity: 0;
+    }
+}
+
+/* Card custom promotional badges */
+.public-promo-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #db2777; /* Vibrant pink accent */
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 0.25rem 0.65rem;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    letter-spacing: -0.01em;
+    z-index: 2;
+    animation: pulseBadge 2s infinite ease-in-out;
+}
+
+@keyframes pulseBadge {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); }
+}
+
+/* About us card layout */
+.store-about-section {
+    padding: 2.5rem 1rem;
+    background-color: var(--storefront-surface);
+    border-top: 1px solid var(--storefront-border);
+    margin-top: 2rem;
+}
+
+.store-about-card {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+    background: var(--storefront-bg);
+    border: 1px solid var(--storefront-border);
+    padding: 2rem 1.5rem;
+    border-radius: 16px;
+    box-shadow: var(--storefront-shadow-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Interactive Card Elevations Overrides */
+.public-product-card {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease !important;
+}
+
+.public-product-card:hover {
+    transform: translateY(-5px) !important;
+    box-shadow: var(--storefront-shadow-md) !important;
+}
+
+

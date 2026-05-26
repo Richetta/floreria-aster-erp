@@ -9,7 +9,8 @@ import {
     ShoppingCart,
     MessageCircle,
     DollarSign,
-    Sun
+    Sun,
+    Globe
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
@@ -124,9 +125,15 @@ export const DashboardDesktop = () => {
                         {formattedDate}.
                     </p>
                 </div>
-                <button className="btn btn-primary start-sale-btn" onClick={() => navigate('/pos')}>
-                    Nueva Venta Rápida
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button className="btn btn-secondary" onClick={() => navigate('/personalizar-tienda')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderColor: '#8b5cf6', color: '#6d28d9', background: '#f5f3ff', fontWeight: 600 }}>
+                        <Globe size={18} />
+                        Personalizar Tienda
+                    </button>
+                    <button className="btn btn-primary start-sale-btn" onClick={() => navigate('/pos')}>
+                        Nueva Venta Rápida
+                    </button>
+                </div>
             </header>
 
             {/* KPI Cards - Diferentes según el rol */}
@@ -190,6 +197,10 @@ export const DashboardDesktop = () => {
                     <div className="kpi-secondary-item">
                         <Package size={18} className="text-success" />
                         <span className="text-small">{products.length} productos en stock</span>
+                    </div>
+                    <div className="kpi-secondary-item cursor-pointer" onClick={() => navigate('/personalizar-tienda')} style={{ transition: 'all 0.2s', border: '1px dashed #c084fc', background: '#faf5ff' }}>
+                        <Globe size={18} className="text-purple" style={{ color: '#8b5cf6' }} />
+                        <span className="text-small" style={{ color: '#7c3aed', fontWeight: 600 }}>Tienda Online: Personalizar marca y catálogo ✨</span>
                     </div>
                 </section>
             )}

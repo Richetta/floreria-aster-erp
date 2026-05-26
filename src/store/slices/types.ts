@@ -135,6 +135,8 @@ export type Package = {
     price: number;
     items: PackageItem[];
     isActive: boolean;
+    storefront_published?: boolean;
+    images?: string | string[];
 };
 
 export type SupplierLocal = {

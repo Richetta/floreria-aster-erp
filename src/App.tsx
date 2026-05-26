@@ -36,6 +36,7 @@ import { PlanOnboarding } from './pages/Subscription/PlanOnboarding';
 import { UsersPage } from './pages/Users';
 import { WorkspaceExplorer } from './pages/WorkspaceExplorer/WorkspaceExplorer';
 import { PublicStorefront } from './pages/PublicStorefront/PublicStorefront';
+import { StorefrontCustomizer } from './pages/StorefrontCustomizer/StorefrontCustomizer';
 
 // ============================================
 // PROTECTED ROUTE COMPONENT
@@ -203,6 +204,7 @@ function App() {
                         <Route path="herramientas/codigos" element={<BarcodePrinter />} />
                         <Route path="herramientas/marketing" element={<MarketingAI />} />
                         <Route path="workspace" element={<WorkspaceExplorer />} />
+                        <Route path="personalizar-tienda" element={<StorefrontCustomizer />} />
                     </Route>
 
                     {/* Public Storefront Route */}

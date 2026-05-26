@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { 
     ShoppingBag, Search, Plus, Minus, X, Check, 
     MessageCircle, MapPin, Calendar, Clock,
     ShoppingCart, Sparkles, Send, Store,
-    Star, ChevronLeft, ChevronRight
+    Star, ChevronLeft, ChevronRight, Instagram, Facebook
 } from 'lucide-react';
 import './PublicStorefront.css';
 
@@ -130,11 +130,27 @@ export const PublicStorefront = () => {
 
     // Set brand theme colors dynamically
     useEffect(() => {
-        if (storeConfig?.settings?.theme_color) {
-            const color = storeConfig.settings.theme_color;
+        if (storeConfig?.settings) {
+            const settings = storeConfig.settings;
+            const color = settings.theme_color || '#1e3f20';
+            
             document.documentElement.style.setProperty('--storefront-primary', color);
             document.documentElement.style.setProperty('--storefront-primary-light', `${color}15`);
             document.documentElement.style.setProperty('--storefront-primary-hover', adjustColorBrightness(color, -15));
+
+            // Set seasonal background properties
+            const theme = settings.seasonal_theme || 'none';
+            if (theme === 'valentines') {
+                document.documentElement.style.setProperty('--storefront-bg', '#fff5f5');
+            } else if (theme === 'mother_day') {
+                document.documentElement.style.setProperty('--storefront-bg', '#fff0f6');
+            } else if (theme === 'christmas') {
+                document.documentElement.style.setProperty('--storefront-bg', '#f0fdf4');
+            } else if (theme === 'spring') {
+                document.documentElement.style.setProperty('--storefront-bg', '#fefce8');
+            } else {
+                document.documentElement.style.setProperty('--storefront-bg', '#fafafa');
+            }
         }
     }, [storeConfig]);
 
@@ -491,6 +507,36 @@ export const PublicStorefront = () => {
         );
     }
 
+    const activeTheme = storeConfig?.settings?.seasonal_theme || 'none';
+    
+    // Generate particles
+    const publicParticles = useMemo<any[]>(() => {
+        if (activeTheme === 'none') return [];
+        let emojis = ['🌸', '🌹', '🌷'];
+        if (activeTheme === 'valentines') emojis = ['💖', '❤️', '🌹'];
+        if (activeTheme === 'christmas') emojis = ['❄️', '❄️', '✨'];
+        if (activeTheme === 'spring') emojis = ['🌻', '🍃', '🌱'];
+
+        return Array.from({ length: 25 }).map((_, idx) => {
+            const emoji = emojis[idx % emojis.length];
+            const left = Math.random() * 100;
+            const delay = Math.random() * 8;
+            const duration = 6 + Math.random() * 8;
+            const scale = 0.7 + Math.random() * 0.8;
+            
+            return {
+                id: idx,
+                emoji,
+                style: {
+                    left: `${left}%`,
+                    animationDelay: `${delay}s`,
+                    animationDuration: `${duration}s`,
+                    fontSize: `${scale}rem`
+                }
+            };
+        });
+    }, [activeTheme]);
+
     // Inactive Store View
     if (storeConfig.settings?.active === false) {
         return (
@@ -517,6 +563,25 @@ export const PublicStorefront = () => {
 
     return (
         <div className="storefront-wrapper">
+
+            {/* Seasonal Particles Container */}
+            {activeTheme !== 'none' && (
+                <div className="public-particle-container">
+                    {publicParticles.map(p => (
+                        <span key={p.id} className="public-particle" style={p.style}>
+                            {p.emoji}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {/* Promo alerts ribbon at top */}
+            {storeConfig.settings?.banner_badge && (
+                <div className="storefront-promo-strip">
+                    <Sparkles size={12} className="inline mr-1 text-yellow-300 animate-pulse" />
+                    <span>{storeConfig.settings.banner_badge}</span>
+                </div>
+            )}
             
             {/* Header banner */}
             <header className="store-header" style={{
@@ -524,8 +589,8 @@ export const PublicStorefront = () => {
             }}>
                 <div className="store-header-content">
                     <div className="store-logo-wrapper">
-                        {storeConfig.business?.logo_url ? (
-                            <img src={storeConfig.business.logo_url} alt={storeConfig.business.name} className="store-logo" />
+                        {storeConfig.settings?.logo_url || storeConfig.business?.logo_url ? (
+                            <img src={storeConfig.settings?.logo_url || storeConfig.business?.logo_url} alt={storeConfig.business?.name} className="store-logo" />
                         ) : (
                             <div className="store-logo-fallback">
                                 {storeConfig.business?.name?.charAt(0).toUpperCase() || 'F'}
@@ -545,6 +610,28 @@ export const PublicStorefront = () => {
                             >
                                 <MessageCircle size={14} />
                                 <span>WhatsApp</span>
+                            </a>
+                        )}
+                        {storeConfig.settings?.social_instagram && (
+                            <a 
+                                href={`https://instagram.com/${storeConfig.settings.social_instagram}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="quick-link-pill"
+                            >
+                                <Instagram size={14} />
+                                <span>@{storeConfig.settings.social_instagram}</span>
+                            </a>
+                        )}
+                        {storeConfig.settings?.social_facebook && (
+                            <a 
+                                href={`https://facebook.com/${storeConfig.settings.social_facebook}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="quick-link-pill"
+                            >
+                                <Facebook size={14} />
+                                <span>fb.com/{storeConfig.settings.social_facebook}</span>
                             </a>
                         )}
                         {storeConfig.business?.address && (
@@ -637,7 +724,13 @@ export const PublicStorefront = () => {
                                         style={{ cursor: 'pointer' }}
                                     >
                                         <div className="p-img-box">
-                                            {product.isCombo && (
+                                            {/* Custom Promotional badge from settings */}
+                                            {storeConfig.settings?.promotions?.[product.id]?.badge && (
+                                                <div className="public-promo-badge">
+                                                    {storeConfig.settings.promotions[product.id].badge}
+                                                </div>
+                                            )}
+                                            {product.isCombo && !storeConfig.settings?.promotions?.[product.id]?.badge && (
                                                 <div className="badge-combo-card">Combo Especial</div>
                                             )}
                                             {product.images && product.images.length > 0 ? (
@@ -676,6 +769,17 @@ export const PublicStorefront = () => {
                     )}
                 </div>
             </main>
+
+            {/* About us bio section */}
+            {storeConfig.settings?.about_us && (
+                <section className="store-about-section">
+                    <div className="store-about-card">
+                        <Store size={24} className="store-about-icon" style={{ color: 'var(--storefront-primary)', marginBottom: '0.5rem' }} />
+                        <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 0.5rem 0' }}>Sobre Nosotros</h3>
+                        <p style={{ fontSize: '0.9rem', color: 'var(--storefront-text-muted)', lineHeight: 1.5, margin: 0 }}>{storeConfig.settings.about_us}</p>
+                    </div>
+                </section>
+            )}
 
             {/* Permanent Floating Cart Button */}
             {totalCartItems > 0 && !isCartOpen && (
