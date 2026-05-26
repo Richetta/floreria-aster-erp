@@ -65,11 +65,12 @@ export const businessRoutes: FastifyPluginAsync = async (fastify) => {
     const user = request.user as any;
     const schema = z.object({
       name: z.string().min(1).optional(),
-      address: z.string().optional(),
-      phone: z.string().optional(),
-      email: z.string().email().optional(),
+      address: z.string().optional().nullable(),
+      phone: z.string().optional().nullable(),
+      email: z.string().email().optional().nullable(),
       logo_url: z.string().url().optional().nullable(),
       currency: z.string().optional(),
+      slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/).optional().nullable(),
       settings: z.record(z.any()).optional()
     });
 
@@ -83,11 +84,12 @@ export const businessRoutes: FastifyPluginAsync = async (fastify) => {
         updated_at: new Date()
       };
       if (body.name) updateData.name = body.name;
-      if (body.address) updateData.address = body.address;
-      if (body.phone) updateData.phone = body.phone;
-      if (body.email) updateData.email = body.email;
+      if (body.address !== undefined) updateData.address = body.address;
+      if (body.phone !== undefined) updateData.phone = body.phone;
+      if (body.email !== undefined) updateData.email = body.email;
       if (body.logo_url !== undefined) updateData.logo_url = body.logo_url;
       if (body.currency) updateData.currency = body.currency;
+      if (body.slug !== undefined) updateData.slug = body.slug;
 
       const result = await db
         .updateTable('businesses')

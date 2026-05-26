@@ -29,6 +29,7 @@ export const SettingsMobile = () => {
     const [mpEnabled, setMpEnabled] = useState(storefront.mp_enabled ?? false);
     const [mpPublicKey, setMpPublicKey] = useState(storefront.mercadopago_public_key || '');
     const [mpAccessToken, setMpAccessToken] = useState(storefront.mercadopago_access_token || '');
+    const [logoUrl, setLogoUrl] = useState(shopInfo.logo || '');
     
     const [showMpToken, setShowMpToken] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
@@ -46,6 +47,7 @@ export const SettingsMobile = () => {
             setMpEnabled(sf.mp_enabled ?? false);
             setMpPublicKey(sf.mercadopago_public_key || '');
             setMpAccessToken(sf.mercadopago_access_token || '');
+            setLogoUrl(shopInfo.logo || '');
         }
     }, [shopInfo]);
 
@@ -285,6 +287,7 @@ export const SettingsMobile = () => {
                             updateShopInfo({
                                 ...shopInfo,
                                 slug: cleanSlug,
+                                logo: logoUrl || undefined,
                                 settings: {
                                     ...shopInfo.settings,
                                     storefront: {
@@ -313,8 +316,38 @@ export const SettingsMobile = () => {
                                         onChange={e => setStorefrontSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                                         placeholder="nombre-de-tu-local"
                                         required
-                                        style={{ width: '100%' }}
+                                        style={{ width: '100%', padding: '0.65rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
                                     />
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Logo del Negocio (URL Imagen)</label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={logoUrl}
+                                            onChange={e => setLogoUrl(e.target.value)}
+                                            placeholder="https://ejemplo.com/tu-logo.png"
+                                            style={{ flex: 1, padding: '0.65rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                                        />
+                                        {logoUrl && (
+                                            <img 
+                                                src={logoUrl} 
+                                                alt="Logo preview" 
+                                                style={{ 
+                                                    width: '38px', 
+                                                    height: '38px', 
+                                                    borderRadius: '50%', 
+                                                    objectFit: 'cover', 
+                                                    border: '1px solid #cbd5e1'
+                                                }} 
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                }}
+                                            />
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.25rem 0' }}>

@@ -38,6 +38,7 @@ export const SettingsDesktop = () => {
     const [mpEnabled, setMpEnabled] = useState(storefront.mp_enabled ?? false);
     const [mpPublicKey, setMpPublicKey] = useState(storefront.mercadopago_public_key || '');
     const [mpAccessToken, setMpAccessToken] = useState(storefront.mercadopago_access_token || '');
+    const [logoUrl, setLogoUrl] = useState(shopInfo.logo || '');
     
     const [showMpToken, setShowMpToken] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
@@ -54,6 +55,7 @@ export const SettingsDesktop = () => {
             setMpEnabled(sf.mp_enabled ?? false);
             setMpPublicKey(sf.mercadopago_public_key || '');
             setMpAccessToken(sf.mercadopago_access_token || '');
+            setLogoUrl(shopInfo.logo || '');
         }
     }, [shopInfo]);
 
@@ -576,6 +578,7 @@ export const SettingsDesktop = () => {
                                 updateShopInfo({
                                     ...shopInfo,
                                     slug: cleanSlug,
+                                    logo: logoUrl || undefined,
                                     settings: {
                                         ...shopInfo.settings,
                                         storefront: {
@@ -610,6 +613,41 @@ export const SettingsDesktop = () => {
                                                 placeholder="nombre-de-tu-local"
                                                 required
                                             />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Logo del Negocio (URL Imagen)</label>
+                                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                            <div className="input-with-icon" style={{ flex: 1 }}>
+                                                <Upload size={18} className="input-icon" />
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={logoUrl}
+                                                    onChange={e => setLogoUrl(e.target.value)}
+                                                    placeholder="https://ejemplo.com/tu-logo.png"
+                                                />
+                                            </div>
+                                            {logoUrl && (
+                                                <div style={{ flexShrink: 0 }}>
+                                                    <img 
+                                                        src={logoUrl} 
+                                                        alt="Logo preview" 
+                                                        style={{ 
+                                                            width: '38px', 
+                                                            height: '38px', 
+                                                            borderRadius: '50%', 
+                                                            objectFit: 'cover', 
+                                                            border: '2px solid var(--color-primary-light, #eaf2eb)',
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                                                        }} 
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
