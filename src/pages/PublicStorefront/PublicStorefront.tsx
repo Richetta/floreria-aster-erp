@@ -78,6 +78,10 @@ export const PublicStorefront = () => {
     // Submitting order loader
     const [submittingOrder, setSubmittingOrder] = useState(false);
     
+    // Hero slider state
+    const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+
+    
     // Load Outfit Font dynamically
     useEffect(() => {
         const link = document.createElement('link');
@@ -88,6 +92,17 @@ export const PublicStorefront = () => {
             document.head.removeChild(link);
         };
     }, []);
+
+    // Hero Slider auto-advance
+    useEffect(() => {
+        const slides = storeConfig?.settings?.hero_slides;
+        if (!slides || slides.length <= 1) return;
+        const timer = setInterval(() => {
+            setHeroSlideIndex(prev => (prev + 1) % slides.length);
+        }, 4500);
+        return () => clearInterval(timer);
+    }, [storeConfig]);
+
 
     // Load store configuration and products
     useEffect(() => {
@@ -658,8 +673,175 @@ export const PublicStorefront = () => {
                 </div>
             </header>
 
+            {/* ── HERO SLIDER ─────────────────────────────────────── */}
+            {storeConfig.settings?.hero_slides?.length > 0 && (
+                <section className="hero-slider-section">
+                    <div
+                        className="hero-slider-track"
+                        style={{ transform: `translateX(-${heroSlideIndex * 100}%)` }}
+                    >
+                        {storeConfig.settings.hero_slides.map((slide: any, idx: number) => (
+                            <div key={slide.id || idx} className="hero-slide">
+                                <img src={slide.image_url} alt={slide.title || 'Banner'} className="hero-slide-img" />
+                                <div className="hero-slide-overlay" />
+                                {(slide.title || slide.subtitle || slide.cta_text) && (
+                                    <div className="hero-slide-content">
+                                        {slide.title && <h2 className="hero-slide-title">{slide.title}</h2>}
+                                        {slide.subtitle && <p className="hero-slide-subtitle">{slide.subtitle}</p>}
+                                        {slide.cta_text && (
+                                            <button
+                                                className="hero-slide-cta"
+                                                style={{ backgroundColor: 'var(--storefront-primary)' }}
+                                                onClick={() => document.querySelector('.store-catalog-container')?.scrollIntoView({ behavior: 'smooth' })}
+                                            >
+                                                {slide.cta_text}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    {storeConfig.settings.hero_slides.length > 1 && (
+                        <>
+                            <button className="hero-nav prev" onClick={() => setHeroSlideIndex(i => (i - 1 + storeConfig.settings.hero_slides.length) % storeConfig.settings.hero_slides.length)}>
+                                <ChevronLeft size={22} />
+                            </button>
+                            <button className="hero-nav next" onClick={() => setHeroSlideIndex(i => (i + 1) % storeConfig.settings.hero_slides.length)}>
+                                <ChevronRight size={22} />
+                            </button>
+                            <div className="hero-dots">
+                                {storeConfig.settings.hero_slides.map((_: any, idx: number) => (
+                                    <button
+                                        key={idx}
+                                        className={`hero-dot ${heroSlideIndex === idx ? 'active' : ''}`}
+                                        onClick={() => setHeroSlideIndex(idx)}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </section>
+            )}
+
+            {/* ── TRUST BAR ────────────────────────────────────────── */}
+            <div className="trust-bar">
+                <div className="trust-item">
+                    <span className="trust-icon">🌸</span>
+                    <span>Flores frescas garantizadas</span>
+                </div>
+                <div className="trust-item">
+                    <span className="trust-icon">🚚</span>
+                    <span>{storeConfig.settings?.delivery_zones ? `Envío a ${storeConfig.settings.delivery_zones.split(',')[0]}` : 'Envío a domicilio'}</span>
+                </div>
+                <div className="trust-item">
+                    <span className="trust-icon">💬</span>
+                    <span>Atención por WhatsApp</span>
+                </div>
+                <div className="trust-item">
+                    <span className="trust-icon">🔒</span>
+                    <span>Pago 100% seguro</span>
+                </div>
+            </div>
+
+            {/* ── PUBLICACIONES DESTACADAS ─────────────────────────── */}
+            {(() => {
+                const posts = (storeConfig.settings?.storefront_posts || []).filter((p: any) => p.active && p.is_featured);
+                if (posts.length === 0) return null;
+                return (
+                    <section className="sf-featured-section">
+                        <div className="sf-section-header">
+                            <h2 className="sf-section-title">
+                                <span>⭐</span>
+                                {storeConfig.settings?.featured_collection_title || 'Nuestros Destacados'}
+                            </h2>
+                        </div>
+                        <div className="sf-featured-scroll">
+                            {posts.map((post: any) => (
+                                <div key={post.id} className="sf-featured-card">
+                                    <div
+                                        className="sf-featured-img"
+                                        style={{
+                                            backgroundImage: post.image_url ? `url(${post.image_url})` : undefined,
+                                            backgroundPosition: post.image_position || 'center',
+                                            backgroundSize: `${post.image_zoom || 100}%`
+                                        }}
+                                    >
+                                        {!post.image_url && <Sparkles size={28} />}
+                                        {post.badge && <div className="sf-post-badge">{post.badge}</div>}
+                                    </div>
+                                    <div className="sf-featured-info">
+                                        <p className="sf-post-cat">{post.category_tag}</p>
+                                        <h3 className="sf-post-title">{post.title}</h3>
+                                        <p className="sf-post-desc">{post.description}</p>
+                                        <div className="sf-post-footer">
+                                            <span className="sf-post-price">{formatCurrency(post.price)}</span>
+                                            <button
+                                                className="sf-post-add-btn"
+                                                style={{ backgroundColor: 'var(--storefront-primary)' }}
+                                                onClick={() => addToCart({ ...post, images: post.image_url ? [post.image_url] : [] })}
+                                            >
+                                                <Plus size={15} /> Agregar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                );
+            })()}
+
+            {/* ── PUBLICACIONES ACTIVAS (no destacadas) ────────────── */}
+            {(() => {
+                const posts = (storeConfig.settings?.storefront_posts || []).filter((p: any) => p.active && !p.is_featured);
+                if (posts.length === 0) return null;
+                return (
+                    <section className="sf-posts-section">
+                        <div className="sf-section-header">
+                            <h2 className="sf-section-title">
+                                <span>🌿</span>
+                                Publicaciones de la Tienda
+                            </h2>
+                        </div>
+                        <div className="sf-posts-grid">
+                            {posts.map((post: any) => (
+                                <div key={post.id} className="sf-post-card">
+                                    <div
+                                        className="sf-post-img"
+                                        style={{
+                                            backgroundImage: post.image_url ? `url(${post.image_url})` : undefined,
+                                            backgroundPosition: post.image_position || 'center',
+                                            backgroundSize: `${post.image_zoom || 100}%`
+                                        }}
+                                    >
+                                        {!post.image_url && <Sparkles size={24} />}
+                                        {post.badge && <div className="sf-post-badge">{post.badge}</div>}
+                                    </div>
+                                    <div className="sf-post-info">
+                                        <p className="sf-post-cat">{post.category_tag}</p>
+                                        <h3 className="sf-post-title">{post.title}</h3>
+                                        <div className="sf-post-footer">
+                                            <span className="sf-post-price">{formatCurrency(post.price)}</span>
+                                            <button
+                                                className="sf-post-add-btn"
+                                                style={{ backgroundColor: 'var(--storefront-primary)' }}
+                                                onClick={() => addToCart({ ...post, images: post.image_url ? [post.image_url] : [] })}
+                                            >
+                                                <Plus size={15} /> Agregar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                );
+            })()}
+
             {/* Catalog content */}
             <main className="store-catalog-container">
+
                 
                 {/* Search and Filters */}
                 <div className="catalog-filters-sticky">
@@ -773,16 +955,103 @@ export const PublicStorefront = () => {
                 </div>
             </main>
 
-            {/* About us bio section */}
-            {storeConfig.settings?.about_us && (
-                <section className="store-about-section">
-                    <div className="store-about-card">
-                        <Store size={24} className="store-about-icon" style={{ color: 'var(--storefront-primary)', marginBottom: '0.5rem' }} />
-                        <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 0.5rem 0' }}>Sobre Nosotros</h3>
-                        <p style={{ fontSize: '0.9rem', color: 'var(--storefront-text-muted)', lineHeight: 1.5, margin: 0 }}>{storeConfig.settings.about_us}</p>
+            {/* ── FOOTER PREMIUM ───────────────────────────────────── */}
+            <footer className="sf-footer">
+                <div className="sf-footer-inner">
+
+                    {/* Brand column */}
+                    <div className="sf-footer-brand">
+                        {storeConfig.settings?.logo_url ? (
+                            <img src={storeConfig.settings.logo_url} alt={storeConfig.business?.name} className="sf-footer-logo" />
+                        ) : (
+                            <div className="sf-footer-logo-fallback" style={{ backgroundColor: 'var(--storefront-primary)' }}>
+                                {storeConfig.business?.name?.charAt(0) || 'F'}
+                            </div>
+                        )}
+                        <h3 className="sf-footer-name">{storeConfig.business?.name}</h3>
+                        {storeConfig.settings?.about_us && (
+                            <p className="sf-footer-bio">{storeConfig.settings.about_us}</p>
+                        )}
+                        <div className="sf-footer-social">
+                            {storeConfig.settings?.social_instagram && (
+                                <a href={`https://instagram.com/${storeConfig.settings.social_instagram}`} target="_blank" rel="noopener noreferrer" className="sf-social-link">
+                                    <Instagram size={18} />
+                                </a>
+                            )}
+                            {storeConfig.settings?.social_facebook && (
+                                <a href={`https://facebook.com/${storeConfig.settings.social_facebook}`} target="_blank" rel="noopener noreferrer" className="sf-social-link">
+                                    <Facebook size={18} />
+                                </a>
+                            )}
+                            {storeConfig.settings?.whatsapp_number && (
+                                <a href={`https://wa.me/${storeConfig.settings.whatsapp_number.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="sf-social-link">
+                                    <MessageCircle size={18} />
+                                </a>
+                            )}
+                        </div>
                     </div>
-                </section>
-            )}
+
+                    {/* Info column */}
+                    <div className="sf-footer-info">
+                        <h4 className="sf-footer-col-title">Información</h4>
+                        {storeConfig.business?.address && (
+                            <div className="sf-footer-row">
+                                <MapPin size={14} />
+                                <span>{storeConfig.business.address}</span>
+                            </div>
+                        )}
+                        {storeConfig.settings?.whatsapp_number && (
+                            <div className="sf-footer-row">
+                                <MessageCircle size={14} />
+                                <span>{storeConfig.settings.whatsapp_number}</span>
+                            </div>
+                        )}
+                        {storeConfig.settings?.delivery_days && (
+                            <div className="sf-footer-row">
+                                <Clock size={14} />
+                                <span>{storeConfig.settings.delivery_days}</span>
+                            </div>
+                        )}
+                        {storeConfig.settings?.delivery_zones && (
+                            <div className="sf-footer-row">
+                                <MapPin size={14} />
+                                <span>Zonas: {storeConfig.settings.delivery_zones}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* CTA column */}
+                    <div className="sf-footer-cta">
+                        <h4 className="sf-footer-col-title">¿Querés hacer un pedido?</h4>
+                        <p className="sf-footer-cta-text">Escribinos por WhatsApp o hacé tu pedido directamente desde el catálogo.</p>
+                        {storeConfig.settings?.whatsapp_number && (
+                            <a
+                                href={`https://wa.me/${storeConfig.settings.whatsapp_number.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hola! Quisiera hacer un pedido desde la tienda online.')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="sf-footer-wa-btn"
+                                style={{ backgroundColor: 'var(--storefront-primary)' }}
+                            >
+                                <MessageCircle size={18} />
+                                Escribir por WhatsApp
+                            </a>
+                        )}
+                        <button
+                            className="sf-footer-catalog-btn"
+                            onClick={() => document.querySelector('.store-catalog-container')?.scrollIntoView({ behavior: 'smooth' })}
+                        >
+                            <ShoppingBag size={16} />
+                            Ver catálogo completo
+                        </button>
+                    </div>
+                </div>
+
+                <div className="sf-footer-bottom">
+                    <span>© {new Date().getFullYear()} {storeConfig.business?.name} · Tienda Online</span>
+                    <span className="sf-footer-powered">Powered by Mi Jardín ERP 🌸</span>
+                </div>
+            </footer>
+
 
             {/* Permanent Floating Cart Button */}
             {totalCartItems > 0 && !isCartOpen && (
