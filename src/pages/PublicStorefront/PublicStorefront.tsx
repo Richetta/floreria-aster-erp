@@ -486,30 +486,11 @@ export const PublicStorefront = () => {
         window.open(waUrl, '_blank');
     };
 
-    if (loading) {
-        return (
-            <div className="store-loading-screen">
-                <div className="spinner"></div>
-                <p>Cargando catálogo...</p>
-            </div>
-        );
-    }
-
-    if (error || !storeConfig) {
-        return (
-            <div className="store-error-screen">
-                <div className="error-card">
-                    <X size={48} className="text-error" />
-                    <h2>Tienda no disponible</h2>
-                    <p>{error || 'No pudimos cargar la configuración del catálogo.'}</p>
-                </div>
-            </div>
-        );
-    }
-
+    // ⚠️ ALL hooks MUST be called before any early return (React Rules of Hooks)
+    // activeTheme and publicParticles are computed here safely with optional chaining
     const activeTheme = storeConfig?.settings?.seasonal_theme || 'none';
     
-    // Generate particles
+    // Generate particles — hook at top level, before any conditional returns
     const publicParticles = useMemo<any[]>(() => {
         if (activeTheme === 'none') return [];
         let emojis = ['🌸', '🌹', '🌷'];
@@ -536,6 +517,28 @@ export const PublicStorefront = () => {
             };
         });
     }, [activeTheme]);
+
+    // Early returns AFTER all hooks
+    if (loading) {
+        return (
+            <div className="store-loading-screen">
+                <div className="spinner"></div>
+                <p>Cargando catálogo...</p>
+            </div>
+        );
+    }
+
+    if (error || !storeConfig) {
+        return (
+            <div className="store-error-screen">
+                <div className="error-card">
+                    <X size={48} className="text-error" />
+                    <h2>Tienda no disponible</h2>
+                    <p>{error || 'No pudimos cargar la configuración del catálogo.'}</p>
+                </div>
+            </div>
+        );
+    }
 
     // Inactive Store View
     if (storeConfig.settings?.active === false) {

@@ -1,41 +1,83 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
-    useStore, 
-    type Product, 
-    type Package 
+    useStore 
 } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
 import { api } from '../../services/api';
 import { 
-    Globe, 
-    Save, 
-    Undo, 
-    Sparkles, 
-    MessageCircle, 
-    Instagram, 
-    Search, 
-    Plus, 
-    Store, 
-    Layers, 
-    Smartphone, 
-    Info 
+    Globe, Save, Undo, Sparkles, Instagram, Facebook,
+    Search, Plus, Store, Image,
+    Info, ExternalLink, Copy, Check,
+    Settings, ShoppingBag, Star, Trash2, Edit3,
+    Eye, EyeOff, Shield, CreditCard, Percent, ChevronUp, ChevronDown,
+    X, ArrowRight, Palette, Camera
 } from 'lucide-react';
 import { ProductModal } from '../../components/ProductModal/ProductModal';
 import { PackageBuilderModal } from '../../components/PackageBuilder/PackageBuilderModal';
 import './StorefrontCustomizer.css';
 
-// Predefined Brand Palette Presets
+// ─────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────
+interface HeroSlide {
+    id: string;
+    image_url: string;
+    title?: string;
+    subtitle?: string;
+    cta_text?: string;
+}
+
+interface StorefrontPost {
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+    image_url: string;
+    image_position?: string; // 'center', 'top', 'bottom', 'left', 'right'
+    image_zoom?: number;     // 100-200 (percentage)
+    badge?: string;
+    is_featured: boolean;
+    category_tag: string;
+    active: boolean;
+    created_at: string;
+}
+
+// ─────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────
 const BRAND_PRESETS = [
-    { id: 'forest', name: 'Verde Bosque', color: '#1e3f20', light: '#1e3f2015' },
-    { id: 'rose', name: 'Rosa Carmesí', color: '#be123c', light: '#be123c15' },
-    { id: 'blossom', name: 'Flor Rosa', color: '#db2777', light: '#db277715' },
-    { id: 'lavender', name: 'Lavanda Real', color: '#6d28d9', light: '#6d28d915' },
-    { id: 'charcoal', name: 'Gris Carbón', color: '#334155', light: '#33415515' },
-    { id: 'sunset', name: 'Atardecer', color: '#c2410c', light: '#c2410c15' }
+    { id: 'forest',   name: 'Verde Bosque',  color: '#1e3f20', accent: '#4ade80' },
+    { id: 'rose',     name: 'Rosa Carmesí',  color: '#be123c', accent: '#fb7185' },
+    { id: 'blossom',  name: 'Flor Rosa',     color: '#9d174d', accent: '#f9a8d4' },
+    { id: 'lavender', name: 'Lavanda Real',  color: '#5b21b6', accent: '#a78bfa' },
+    { id: 'earth',    name: 'Tierra Cálida', color: '#7c2d12', accent: '#fb923c' },
+    { id: 'sage',     name: 'Salvia',        color: '#3d6b4f', accent: '#86efac' },
+    { id: 'charcoal', name: 'Carbón Premium',color: '#1e293b', accent: '#94a3b8' },
+    { id: 'sunset',   name: 'Atardecer',     color: '#c2410c', accent: '#fbbf24' },
 ];
 
+const SEASONAL_THEMES = [
+    { id: 'none',       emoji: '🌿', name: 'Estándar',         desc: 'Sin efectos especiales',           bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)' },
+    { id: 'valentines', emoji: '💖', name: 'San Valentín',     desc: 'Corazones flotantes, fondo rosa',  bg: 'linear-gradient(135deg,#fff0f6,#fce7f3)' },
+    { id: 'mother_day', emoji: '🌸', name: 'Día de la Madre',  desc: 'Pétalos suaves, lila pastel',      bg: 'linear-gradient(135deg,#fdf4ff,#f0abfc20)' },
+    { id: 'spring',     emoji: '🌻', name: 'Primavera',        desc: 'Flores y hojas, fondo luminoso',   bg: 'linear-gradient(135deg,#fefce8,#ecfccb)' },
+    { id: 'christmas',  emoji: '🎄', name: 'Navidad',          desc: 'Nieve cayendo, verde esmeralda',   bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)' },
+];
+
+const CATEGORY_TAGS = ['Destacado', 'Novedad', 'Temporada', 'Romántico', 'Cumpleaños', 'Condolencias', 'Corporativo', 'Otro'];
+
+const IMAGE_POSITIONS = [
+    { value: 'center', label: 'Centro' },
+    { value: 'top', label: 'Arriba' },
+    { value: 'bottom', label: 'Abajo' },
+    { value: 'left center', label: 'Izquierda' },
+    { value: 'right center', label: 'Derecha' },
+];
+
+// ─────────────────────────────────────────────
+// COMPONENT
+// ─────────────────────────────────────────────
 export const StorefrontCustomizer = () => {
-    // Global Store States & Actions
     const products = useStore(state => state.products);
     const packages = useStore(state => state.packages);
     const categories = useStore(state => state.categoriesData);
@@ -44,884 +86,955 @@ export const StorefrontCustomizer = () => {
     const loadCategories = useStore(state => state.loadCategories);
     const updateProduct = useStore(state => state.updateProduct);
     const updatePackage = useStore(state => state.updatePackage);
+    const loadShopInfo = useStore(state => state.loadShopInfo);
 
-    const { user } = useAuth();
-    const isAdmin = user?.role === 'admin';
+    const { user: _user } = useAuth();
 
-    // Page & tab navigation state
-    const [activeTab, setActiveTab] = useState<'info' | 'style' | 'catalog'>('info');
-    
-    // UI states
+    // ── Navigation ──────────────────────────────
+    const [activeTab, setActiveTab] = useState<'inicio' | 'marca' | 'diseno' | 'publicaciones' | 'banners' | 'config'>('inicio');
+
+    // ── UI States ───────────────────────────────
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [slug, setSlug] = useState('');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
+    const [copySuccess, setCopySuccess] = useState(false);
+    const [showMpToken, setShowMpToken] = useState(false);
 
-    // Catalog filtering
+    // ── Catalog ─────────────────────────────────
     const [catalogSearch, setCatalogSearch] = useState('');
     const [catalogCategory, setCatalogCategory] = useState<string | null>(null);
 
-    // ERP Creation Modals
+    // ── Modals ───────────────────────────────────
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
 
-    // Customizer form state
+    // ── Post editor state ───────────────────────
+    const [editingPost, setEditingPost] = useState<StorefrontPost | null>(null);
+    const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+    const [postForm, setPostForm] = useState<Partial<StorefrontPost>>({
+        title: '', description: '', price: 0, image_url: '',
+        image_position: 'center', image_zoom: 100,
+        badge: '', is_featured: false, category_tag: 'Destacado', active: true
+    });
+
+    // ── Hero slide editor ───────────────────────
+    const [slideForm, setSlideForm] = useState<Partial<HeroSlide>>({ image_url: '', title: '', subtitle: '', cta_text: '' });
+
+    // ── Main form ────────────────────────────────
     const [form, setForm] = useState({
+        // Marca
         active: true,
         banner_title: '',
         banner_subtitle: 'Bienvenidos a nuestra tienda online',
         whatsapp_number: '',
-        theme_color: '#1e3f20',
-        theme_preset: 'forest',
-        price_markup: 0,
         logo_url: '',
+        profile_image_url: '',
         about_us: '',
         social_instagram: '',
         social_facebook: '',
         banner_badge: '',
+        delivery_zones: '',
+        delivery_days: '',
+        // Diseño
+        theme_color: '#1e3f20',
+        theme_preset: 'forest',
         seasonal_theme: 'none' as 'none' | 'mother_day' | 'valentines' | 'spring' | 'christmas',
+        // Publicaciones (array stored as JSON)
+        storefront_posts: [] as StorefrontPost[],
+        // Banners
+        hero_slides: [] as HeroSlide[],
+        featured_collection_title: 'Nuestros Destacados',
+        // Config
+        price_markup: 0,
+        mp_enabled: false,
+        mercadopago_public_key: '',
+        mercadopago_access_token: '',
         promotions: {} as Record<string, { badge?: string; discount_percent?: number }>
     });
 
-    // Reference form to track unsaved edits
     const [savedForm, setSavedForm] = useState({ ...form });
+    const hasChanges = JSON.stringify(form) !== JSON.stringify(savedForm);
 
-    // Load everything on mount
+    // ── Load initial data ─────────────────────────
     useEffect(() => {
-        const loadInitialData = async () => {
+        const init = async () => {
             try {
                 setLoading(true);
-                setErrorMsg(null);
-                
-                // Load products, packages & categories
-                await Promise.allSettled([
-                    loadProducts(),
-                    loadPackages(),
-                    loadCategories()
-                ]);
+                await Promise.allSettled([loadProducts(), loadPackages(), loadCategories()]);
+                const data = await api.request('/business') as any;
+                const sf = data.settings?.storefront || {};
+                setSlug(data.slug || '');
 
-                // Fetch business settings
-                const business = await api.request<any>('/business');
-                if (business) {
-                    setSlug(business.slug || '');
-                    
-                    const sf = business.settings?.storefront || {};
-                    const initialForm = {
-                        active: sf.active ?? true,
-                        banner_title: sf.banner_title || business.name || '',
-                        banner_subtitle: sf.banner_subtitle || 'Bienvenidos a nuestra tienda online',
-                        whatsapp_number: sf.whatsapp_number || business.phone || '',
-                        theme_color: sf.theme_color || '#1e3f20',
-                        theme_preset: sf.theme_preset || 'forest',
-                        price_markup: Number(sf.price_markup || 0),
-                        logo_url: sf.logo_url || business.logo_url || '',
-                        about_us: sf.about_us || '',
-                        social_instagram: sf.social_instagram || '',
-                        social_facebook: sf.social_facebook || '',
-                        banner_badge: sf.banner_badge || '',
-                        seasonal_theme: (sf.seasonal_theme || 'none') as 'none' | 'mother_day' | 'valentines' | 'spring' | 'christmas',
-                        promotions: sf.promotions || {}
-                    };
-                    
-                    setForm(initialForm);
-                    setSavedForm(initialForm);
-                }
+                const loadedForm = {
+                    active: sf.active ?? true,
+                    banner_title: sf.banner_title || data.name || '',
+                    banner_subtitle: sf.banner_subtitle || 'Bienvenidos a nuestra tienda online',
+                    whatsapp_number: sf.whatsapp_number || data.phone || '',
+                    logo_url: sf.logo_url || (data as any).logo_url || '',
+                    profile_image_url: sf.profile_image_url || '',
+                    about_us: sf.about_us || '',
+                    social_instagram: sf.social_instagram || '',
+                    social_facebook: sf.social_facebook || '',
+                    banner_badge: sf.banner_badge || '',
+                    delivery_zones: sf.delivery_zones || '',
+                    delivery_days: sf.delivery_days || '',
+                    theme_color: sf.theme_color || '#1e3f20',
+                    theme_preset: sf.theme_preset || 'forest',
+                    seasonal_theme: sf.seasonal_theme || 'none',
+                    storefront_posts: sf.storefront_posts || [],
+                    hero_slides: sf.hero_slides || [],
+                    featured_collection_title: sf.featured_collection_title || 'Nuestros Destacados',
+                    price_markup: sf.price_markup || 0,
+                    mp_enabled: sf.mp_enabled ?? false,
+                    mercadopago_public_key: sf.mercadopago_public_key || '',
+                    mercadopago_access_token: sf.mercadopago_access_token || sf.mp_access_token || '',
+                    promotions: sf.promotions || {}
+                };
+                setForm(loadedForm);
+                setSavedForm(loadedForm);
             } catch (err: any) {
-                console.error('Error fetching settings:', err);
-                setErrorMsg('No se pudo cargar la configuración de la tienda.');
+                setErrorMsg('Error al cargar la configuración');
             } finally {
                 setLoading(false);
             }
         };
-
-        loadInitialData();
+        init();
     }, []);
 
-    // Check if there are unsaved changes
-    const hasUnsavedChanges = useMemo(() => {
-        return JSON.stringify(form) !== JSON.stringify(savedForm);
-    }, [form, savedForm]);
-
-    // Handle standard inputs
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setForm(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
-
-    // Preset color selector
-    const selectColorPreset = (preset: typeof BRAND_PRESETS[0]) => {
-        setForm(prev => ({
-            ...prev,
-            theme_preset: preset.id,
-            theme_color: preset.color
-        }));
-    };
-
-    // Selective publishing actions
-    const toggleProductPublish = async (prod: Product) => {
-        const isPublished = !!prod.storefront_published;
-        try {
-            await updateProduct(prod.id, { storefront_published: !isPublished });
-        } catch (err) {
-            alert('Error al actualizar publicación del producto.');
-        }
-    };
-
-    const togglePackagePublish = async (pkg: Package) => {
-        const isPublished = !!pkg.storefront_published;
-        try {
-            await updatePackage(pkg.id, { storefront_published: !isPublished });
-        } catch (err) {
-            alert('Error al actualizar publicación del ramo.');
-        }
-    };
-
-    // Promotion Badges inline editor
-    const handleBadgeChange = (itemId: string, val: string) => {
-        setForm(prev => {
-            const currentPromos = { ...prev.promotions };
-            if (!val.trim()) {
-                delete currentPromos[itemId];
-            } else {
-                currentPromos[itemId] = {
-                    ...currentPromos[itemId],
-                    badge: val
-                };
-            }
-            return {
-                ...prev,
-                promotions: currentPromos
-            };
-        });
-    };
-
-    // Save configuration updates
-    const handleSaveSettings = async () => {
-        if (!isAdmin) {
-            alert('No tienes permisos suficientes para modificar ajustes.');
-            return;
-        }
-
+    // ── Save ──────────────────────────────────────
+    const handleSave = async () => {
         try {
             setSaving(true);
             setErrorMsg(null);
-            setSuccessMsg(null);
-
-            // Clean up slug properties and structure payload
-            const payload = {
-                settings: {
-                    storefront: form
-                }
-            };
-
+            const data = await api.request('/business') as any;
+            const currentSettings = (data as any).settings || {};
             await api.request('/business', {
                 method: 'PUT',
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    settings: {
+                        ...currentSettings,
+                        storefront: {
+                            ...(currentSettings.storefront || {}),
+                            ...form
+                        }
+                    }
+                })
             });
-
             setSavedForm({ ...form });
-            setSuccessMsg('¡Ajustes de marca guardados exitosamente!');
+            await loadShopInfo();
+            setSuccessMsg('✅ ¡Configuración guardada con éxito!');
             setTimeout(() => setSuccessMsg(null), 3000);
         } catch (err: any) {
-            console.error('Error saving settings:', err);
-            setErrorMsg(err.message || 'Error al guardar los ajustes.');
+            setErrorMsg('Error al guardar: ' + (err.message || 'Error desconocido'));
         } finally {
             setSaving(false);
         }
     };
 
-    // Discard unsaved edits
-    const handleDiscardChanges = () => {
-        setForm({ ...savedForm });
-    };
+    const handleDiscard = () => setForm({ ...savedForm });
 
-    // Dynamic catalog filtering combining Products and Packages
-    const filteredCatalogItems = useMemo(() => {
-        const combined: any[] = [
-            ...products.map(p => ({ ...p, isCombo: false })),
-            ...packages.map(p => ({ ...p, price: p.price, isCombo: true }))
-        ];
-
-        return combined.filter(item => {
-            const description = item.description || '';
-            const matchesSearch = item.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-                                  description.toLowerCase().includes(catalogSearch.toLowerCase());
-            
-            if (catalogCategory === 'combos') {
-                return matchesSearch && item.isCombo;
-            }
-            
-            const matchesCategory = !catalogCategory || item.category_id === catalogCategory;
-            return matchesSearch && matchesCategory && !item.isCombo;
-        });
-    }, [products, packages, catalogSearch, catalogCategory]);
-
-    // Setup HSL brights and hover properties dynamically for phone simulator preview
-    const phoneStyleProps = useMemo(() => {
-        const hex = form.theme_color || '#1e3f20';
-        let R = parseInt(hex.substring(1, 3), 16);
-        let G = parseInt(hex.substring(3, 5), 16);
-        let B = parseInt(hex.substring(5, 7), 16);
-
-        // Compute primary light with alpha 0.15 on the fly
-        const primaryLight = `rgba(${R}, ${G}, ${B}, 0.15)`;
-        
-        return {
-            '--theme-color': hex,
-            '--theme-light': primaryLight
-        } as React.CSSProperties;
-    }, [form.theme_color]);
-
-    // Computed Time for phone simulator
-    const formattedPhoneTime = useMemo(() => {
-        const now = new Date();
-        return now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    // ── Field helpers ─────────────────────────────
+    const setField = useCallback(<K extends keyof typeof form>(key: K, value: typeof form[K]) => {
+        setForm(prev => ({ ...prev, [key]: value }));
     }, []);
 
-    // Generate falling seasonal preview particles
-    const previewParticles = useMemo(() => {
-        if (form.seasonal_theme === 'none') return [];
-        
-        let emojis = ['🌸', '🌹', '🌷'];
-        if (form.seasonal_theme === 'valentines') emojis = ['💖', '❤️', '🌹'];
-        if (form.seasonal_theme === 'christmas') emojis = ['❄️', '❄️', '✨'];
-        if (form.seasonal_theme === 'spring') emojis = ['🌻', '🍃', '🌱'];
+    // ── Catalog publish toggle ─────────────────────
+    const handlePublishToggle = async (item: any, isCombo: boolean) => {
+        const newVal = !item.storefront_published;
+        try {
+            if (isCombo) {
+                await api.request(`/packages/${item.id}`, { method: 'PUT', body: JSON.stringify({ storefront_published: newVal }) } as any);
+                updatePackage(item.id, { storefront_published: newVal } as any);
+            } else {
+                await api.request(`/products/${item.id}`, { method: 'PUT', body: JSON.stringify({ storefront_published: newVal }) } as any);
+                updateProduct(item.id, { storefront_published: newVal } as any);
+            }
+        } catch { setErrorMsg('Error al actualizar publicación'); }
+    };
 
-        return Array.from({ length: 15 }).map((_, idx) => {
-            const emoji = emojis[idx % emojis.length];
-            const left = Math.random() * 100;
-            const delay = Math.random() * 5;
-            const duration = 4 + Math.random() * 4;
-            const scale = 0.6 + Math.random() * 0.6;
-            
-            return {
-                id: idx,
-                emoji,
-                style: {
-                    left: `${left}%`,
-                    animationDelay: `${delay}s`,
-                    animationDuration: `${duration}s`,
-                    fontSize: `${scale}rem`
-                }
-            };
+    // ── Posts CRUD ─────────────────────────────────
+    const openNewPost = () => {
+        setEditingPost(null);
+        setPostForm({ title: '', description: '', price: 0, image_url: '', image_position: 'center', image_zoom: 100, badge: '', is_featured: false, category_tag: 'Destacado', active: true });
+        setIsPostModalOpen(true);
+    };
+
+    const openEditPost = (post: StorefrontPost) => {
+        setEditingPost(post);
+        setPostForm({ ...post });
+        setIsPostModalOpen(true);
+    };
+
+    const handleSavePost = () => {
+        const newPost: StorefrontPost = {
+            id: editingPost?.id || `post_${Date.now()}`,
+            title: postForm.title || '',
+            description: postForm.description || '',
+            price: Number(postForm.price) || 0,
+            image_url: postForm.image_url || '',
+            image_position: postForm.image_position || 'center',
+            image_zoom: postForm.image_zoom || 100,
+            badge: postForm.badge || '',
+            is_featured: postForm.is_featured ?? false,
+            category_tag: postForm.category_tag || 'Destacado',
+            active: postForm.active ?? true,
+            created_at: editingPost?.created_at || new Date().toISOString()
+        };
+
+        setForm(prev => {
+            const posts = editingPost
+                ? prev.storefront_posts.map(p => p.id === editingPost.id ? newPost : p)
+                : [...prev.storefront_posts, newPost];
+            return { ...prev, storefront_posts: posts };
         });
-    }, [form.seasonal_theme]);
+        setIsPostModalOpen(false);
+    };
+
+    const handleDeletePost = (id: string) => {
+        setForm(prev => ({ ...prev, storefront_posts: prev.storefront_posts.filter(p => p.id !== id) }));
+    };
+
+    const handleTogglePostActive = (id: string) => {
+        setForm(prev => ({
+            ...prev,
+            storefront_posts: prev.storefront_posts.map(p => p.id === id ? { ...p, active: !p.active } : p)
+        }));
+    };
+
+    // ── Hero Slides CRUD ───────────────────────────
+    const handleAddSlide = () => {
+        if (!slideForm.image_url?.trim()) return;
+        const newSlide: HeroSlide = {
+            id: `slide_${Date.now()}`,
+            image_url: slideForm.image_url || '',
+            title: slideForm.title || '',
+            subtitle: slideForm.subtitle || '',
+            cta_text: slideForm.cta_text || ''
+        };
+        setForm(prev => ({ ...prev, hero_slides: [...prev.hero_slides, newSlide] }));
+        setSlideForm({ image_url: '', title: '', subtitle: '', cta_text: '' });
+    };
+
+    const handleDeleteSlide = (id: string) => {
+        setForm(prev => ({ ...prev, hero_slides: prev.hero_slides.filter(s => s.id !== id) }));
+    };
+
+    const handleMoveSlide = (id: string, dir: 'up' | 'down') => {
+        setForm(prev => {
+            const slides = [...prev.hero_slides];
+            const idx = slides.findIndex(s => s.id === id);
+            if (dir === 'up' && idx > 0) [slides[idx], slides[idx - 1]] = [slides[idx - 1], slides[idx]];
+            if (dir === 'down' && idx < slides.length - 1) [slides[idx], slides[idx + 1]] = [slides[idx + 1], slides[idx]];
+            return { ...prev, hero_slides: slides };
+        });
+    };
+
+    // ── Catalog filter ──────────────────────────────
+    const allCatalogItems = [
+        ...products.map(p => ({ ...p, isCombo: false })),
+        ...packages.map(p => ({ ...p, isCombo: true, price: (p as any).suggested_price }))
+    ].filter(item => {
+        const q = catalogSearch.toLowerCase();
+        const matchSearch = !q || item.name.toLowerCase().includes(q);
+        const matchCat = !catalogCategory || (item as any).category_id === catalogCategory;
+        return matchSearch && matchCat;
+    });
+
+    // ── Copy URL ────────────────────────────────────
+    const storeUrl = slug ? `${window.location.protocol}//${window.location.host}/${slug}` : '';
+    const handleCopyUrl = () => {
+        if (!storeUrl) return;
+        navigator.clipboard.writeText(storeUrl);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // RENDER
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    if (loading) {
+        return (
+            <div className="sc-loading">
+                <div className="sc-loading-spinner" />
+                <p>Cargando centro de control...</p>
+            </div>
+        );
+    }
 
     return (
-        <div style={{ padding: '0.25rem' }}>
-            <header className="page-header mb-6 flex justify-between items-center">
-                <div>
-                    <h1 className="text-h1 flex items-center gap-2">
-                        <Globe className="text-purple-600" size={28} />
-                        Personalizar Tienda Online
-                    </h1>
-                    <p className="text-body mt-2 text-muted">
-                        Diseñá la estética, logo y banners festivos de tu vitrina pública, y elegí qué publicar.
-                    </p>
+        <div className="sc-wrapper">
+
+            {/* ── Header ─────────────────────────────── */}
+            <div className="sc-header">
+                <div className="sc-header-left">
+                    <div className="sc-header-icon"><Globe size={20} /></div>
+                    <div>
+                        <h1 className="sc-header-title">Tienda Online</h1>
+                        <p className="sc-header-sub">Centro de control de tu vitrina digital</p>
+                    </div>
                 </div>
-            </header>
-
-            {loading ? (
-                <div style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>
-                    <div className="spinner" style={{ margin: '0 auto 1rem auto' }}></div>
-                    <p style={{ fontWeight: 600 }}>Cargando configuraciones de marca...</p>
+                <div className="sc-header-right">
+                    {storeUrl && (
+                        <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="sc-btn-ghost">
+                            <ExternalLink size={15} />
+                            <span>Ver tienda</span>
+                        </a>
+                    )}
+                    <div className={`sc-status-pill ${form.active ? 'active' : 'paused'}`}>
+                        <span className="sc-status-dot" />
+                        {form.active ? 'Tienda Activa' : 'Pausada'}
+                    </div>
                 </div>
-            ) : (
-                <div className="customizer-workspace">
-                    
-                    {/* Left Column: Form Settings Tabs */}
-                    <div className="customizer-panel-left">
-                        {errorMsg && (
-                            <div className="bg-red-50 text-red-700 p-3 rounded-lg border border-red-200 text-small">
-                                {errorMsg}
-                            </div>
-                        )}
-                        {successMsg && (
-                            <div className="bg-green-50 text-green-700 p-3 rounded-lg border border-green-200 text-small">
-                                {successMsg}
-                            </div>
-                        )}
+            </div>
 
-                        <div className="customizer-tabs">
-                            <button 
-                                className={`customizer-tab-btn ${activeTab === 'info' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('info')}
-                            >
-                                <Store size={18} />
-                                Marca e Info
-                            </button>
-                            <button 
-                                className={`customizer-tab-btn ${activeTab === 'style' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('style')}
-                            >
-                                <Sparkles size={18} />
-                                Diseño y Estilos
-                            </button>
-                            <button 
-                                className={`customizer-tab-btn ${activeTab === 'catalog' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('catalog')}
-                            >
-                                <Layers size={18} />
-                                Catálogo Selectivo
-                            </button>
-                        </div>
+            {/* ── Tabs ───────────────────────────────── */}
+            <div className="sc-tabs-bar">
+                {[
+                    { id: 'inicio',         icon: Store,       label: 'Inicio' },
+                    { id: 'marca',          icon: Camera,      label: 'Marca' },
+                    { id: 'diseno',         icon: Palette,     label: 'Diseño' },
+                    { id: 'publicaciones',  icon: ShoppingBag, label: 'Publicaciones' },
+                    { id: 'banners',        icon: Image,       label: 'Banners' },
+                    { id: 'config',         icon: Settings,    label: 'Configuración' },
+                ].map(tab => (
+                    <button
+                        key={tab.id}
+                        className={`sc-tab ${activeTab === tab.id ? 'active' : ''}`}
+                        onClick={() => setActiveTab(tab.id as any)}
+                    >
+                        <tab.icon size={16} />
+                        <span>{tab.label}</span>
+                    </button>
+                ))}
+            </div>
 
-                        {/* Tab Content: Marca e Info */}
-                        {activeTab === 'info' && (
-                            <div className="customizer-card">
-                                <div className="customizer-card-header">
-                                    <h3 className="customizer-card-title">
-                                        <Store size={20} className="text-purple-500" />
-                                        Información de Marca
-                                    </h3>
-                                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Paso 1 de 3</span>
-                                </div>
-
-                                <div className="customizer-form-grid">
-                                    <div className="form-group-full">
-                                        <label className="customizer-label">Nombre de la Tienda (Banner Principal)</label>
-                                        <input 
-                                            type="text" 
-                                            className="customizer-input" 
-                                            name="banner_title" 
-                                            value={form.banner_title} 
-                                            onChange={handleInputChange} 
-                                            placeholder="Ej. Florería Mi Jardín"
-                                        />
-                                    </div>
-
-                                    <div className="form-group-full">
-                                        <label className="customizer-label">Lema / Eslogan</label>
-                                        <input 
-                                            type="text" 
-                                            className="customizer-input" 
-                                            name="banner_subtitle" 
-                                            value={form.banner_subtitle} 
-                                            onChange={handleInputChange} 
-                                            placeholder="Ej. Expresa tus sentimientos con flores"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="customizer-label">WhatsApp de Contacto (Pedidos)</label>
-                                        <input 
-                                            type="text" 
-                                            className="customizer-input" 
-                                            name="whatsapp_number" 
-                                            value={form.whatsapp_number} 
-                                            onChange={handleInputChange} 
-                                            placeholder="Ej. +5491133445566"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="customizer-label">Enlace URL del Logo</label>
-                                        <input 
-                                            type="text" 
-                                            className="customizer-input" 
-                                            name="logo_url" 
-                                            value={form.logo_url} 
-                                            onChange={handleInputChange} 
-                                            placeholder="https://enlace-a-tu-logo.png"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="customizer-label">Instagram (Slug de Usuario)</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <span style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.85rem', color: '#64748b', fontWeight: 700 }}>@</span>
-                                            <input 
-                                                type="text" 
-                                                className="customizer-input" 
-                                                style={{ paddingLeft: '1.75rem' }}
-                                                name="social_instagram" 
-                                                value={form.social_instagram} 
-                                                onChange={handleInputChange} 
-                                                placeholder="floreria_jardin"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="customizer-label">Facebook (Slug de Usuario)</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <span style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.85rem', color: '#64748b', fontWeight: 700 }}>fb.com/</span>
-                                            <input 
-                                                type="text" 
-                                                className="customizer-input" 
-                                                style={{ paddingLeft: '4.5rem' }}
-                                                name="social_facebook" 
-                                                value={form.social_facebook} 
-                                                onChange={handleInputChange} 
-                                                placeholder="floreria_jardin"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="form-group-full">
-                                        <label className="customizer-label">Cinta Promocional Superior (Cintillo Alert)</label>
-                                        <input 
-                                            type="text" 
-                                            className="customizer-input" 
-                                            name="banner_badge" 
-                                            value={form.banner_badge} 
-                                            onChange={handleInputChange} 
-                                            placeholder="Ej. ¡Envío gratis a Belgrano y Palermo por compras superiores a $15.000!"
-                                        />
-                                    </div>
-
-                                    <div className="form-group-full">
-                                        <label className="customizer-label">Sobre Nosotros / Biografía (Pie de página)</label>
-                                        <textarea 
-                                            className="customizer-textarea" 
-                                            name="about_us" 
-                                            value={form.about_us} 
-                                            onChange={handleInputChange} 
-                                            placeholder="Breve historia de tu floristería para wowear a tus clientes en el pie de página..."
-                                        />
-                                    </div>
-                                    <div className="form-group-full pt-4 border-t border-dashed mt-4 text-small" style={{ color: '#475569', fontWeight: 500 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#f5f3ff', border: '1px solid #ddd6fe', padding: '0.75rem', borderRadius: '10px' }}>
-                                            <Globe size={18} style={{ color: '#8b5cf6' }} />
-                                            <span>
-                                                URL de tu Tienda Pública: <a href={`/${slug}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6d28d9', textDecoration: 'underline', fontWeight: 700 }}>{window.location.protocol}//{window.location.host}/{slug || 'tu-tienda'}</a>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Tab Content: Diseño y Estilo */}
-                        {activeTab === 'style' && (
-                            <div className="customizer-card">
-                                <div className="customizer-card-header">
-                                    <h3 className="customizer-card-title">
-                                        <Sparkles size={20} className="text-purple-500" />
-                                        Diseño y Estética Premium
-                                    </h3>
-                                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Paso 2 de 3</span>
-                                </div>
-
-                                <div className="form-group mb-6">
-                                    <label className="customizer-label">Color de Marca (Tema Primario)</label>
-                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                        <input 
-                                            type="color" 
-                                            name="theme_color" 
-                                            value={form.theme_color} 
-                                            onChange={handleInputChange}
-                                            style={{ width: '48px', height: '48px', padding: '0', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
-                                        />
-                                        <div>
-                                            <input 
-                                                type="text" 
-                                                className="customizer-input" 
-                                                style={{ width: '120px', fontFamily: 'monospace', fontWeight: 600 }}
-                                                name="theme_color" 
-                                                value={form.theme_color} 
-                                                onChange={handleInputChange}
-                                                maxLength={7}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="color-presets-grid mt-4">
-                                        {BRAND_PRESETS.map(p => (
-                                            <button 
-                                                key={p.id}
-                                                type="button"
-                                                className={`color-preset-pill ${form.theme_preset === p.id ? 'active' : ''}`}
-                                                onClick={() => selectColorPreset(p)}
-                                            >
-                                                <span className="color-preset-circle" style={{ backgroundColor: p.color }} />
-                                                {p.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="form-group pt-4 border-t border-dashed mt-6">
-                                    <label className="customizer-label flex items-center gap-1">
-                                        Temáticas Festivas / Fechas Especiales
-                                        <Sparkles size={14} className="text-warning" />
-                                    </label>
-                                    <p className="text-micro text-muted mb-4">
-                                        Activa animaciones fluidas (copos de nieve, corazones, pétalos flotantes) y gradientes premium según la época del año.
-                                    </p>
-
-                                    <div className="seasonal-theme-grid">
-                                        <div 
-                                            className={`seasonal-card ${form.seasonal_theme === 'none' ? 'active' : ''}`}
-                                            onClick={() => setForm(prev => ({ ...prev, seasonal_theme: 'none' }))}
-                                        >
-                                            <span className="seasonal-card-icon">🌿</span>
-                                            <h4 className="seasonal-card-title">Estándar</h4>
-                                            <p className="seasonal-card-desc">Limpio y atemporal</p>
-                                        </div>
-
-                                        <div 
-                                            className={`seasonal-card ${form.seasonal_theme === 'valentines' ? 'active' : ''}`}
-                                            onClick={() => setForm(prev => ({ ...prev, seasonal_theme: 'valentines' }))}
-                                        >
-                                            <span className="seasonal-card-icon">💖</span>
-                                            <h4 className="seasonal-card-title">San Valentín</h4>
-                                            <p className="seasonal-card-desc">Lluvia de corazones</p>
-                                        </div>
-
-                                        <div 
-                                            className={`seasonal-card ${form.seasonal_theme === 'mother_day' ? 'active' : ''}`}
-                                            onClick={() => setForm(prev => ({ ...prev, seasonal_theme: 'mother_day' }))}
-                                        >
-                                            <span className="seasonal-card-icon">🌸</span>
-                                            <h4 className="seasonal-card-title">Día de Madre</h4>
-                                            <p className="seasonal-card-desc font-bold">Lluvia de pétalos</p>
-                                        </div>
-
-                                        <div 
-                                            className={`seasonal-card ${form.seasonal_theme === 'spring' ? 'active' : ''}`}
-                                            onClick={() => setForm(prev => ({ ...prev, seasonal_theme: 'spring' }))}
-                                        >
-                                            <span className="seasonal-card-icon">🌻</span>
-                                            <h4 className="seasonal-card-title">Primavera</h4>
-                                            <p className="seasonal-card-desc">Girasoles & hojas</p>
-                                        </div>
-
-                                        <div 
-                                            className={`seasonal-card ${form.seasonal_theme === 'christmas' ? 'active' : ''}`}
-                                            onClick={() => setForm(prev => ({ ...prev, seasonal_theme: 'christmas' }))}
-                                        >
-                                            <span className="seasonal-card-icon">🎄</span>
-                                            <h4 className="seasonal-card-title">Navidad</h4>
-                                            <p className="seasonal-card-desc">Copos de nieve</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Tab Content: Catálogo Selectivo */}
-                        {activeTab === 'catalog' && (
-                            <div className="customizer-card">
-                                <div className="customizer-card-header">
-                                    <h3 className="customizer-card-title">
-                                        <Layers size={20} className="text-purple-500" />
-                                        Selección de Catálogo & Ofertas
-                                    </h3>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <button className="btn btn-secondary btn-sm" onClick={() => setIsProductModalOpen(true)}>
-                                            <Plus size={14} />
-                                            + Producto
-                                        </button>
-                                        <button className="btn btn-secondary btn-sm" onClick={() => setIsPackageModalOpen(true)}>
-                                            <Plus size={14} />
-                                            + Combo
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="customizer-catalog-header">
-                                    <div className="customizer-catalog-search">
-                                        <Search size={16} />
-                                        <input 
-                                            type="text" 
-                                            placeholder="Buscar productos o ramos..."
-                                            value={catalogSearch}
-                                            onChange={e => setCatalogSearch(e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="catalog-filter-chips">
-                                        <button 
-                                            className={`catalog-chip ${catalogCategory === null ? 'active' : ''}`}
-                                            onClick={() => setCatalogCategory(null)}
-                                        >
-                                            Todos ({products.length + packages.length})
-                                        </button>
-                                        <button 
-                                            className={`catalog-chip ${catalogCategory === 'combos' ? 'active' : ''}`}
-                                            onClick={() => setCatalogCategory('combos')}
-                                        >
-                                            Ramos & Combos ({packages.length})
-                                        </button>
-                                        {categories.map(cat => (
-                                            <button 
-                                                key={cat.id}
-                                                className={`catalog-chip ${catalogCategory === cat.id ? 'active' : ''}`}
-                                                onClick={() => setCatalogCategory(cat.id)}
-                                            >
-                                                {cat.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="customizer-catalog-list">
-                                    {filteredCatalogItems.length === 0 ? (
-                                        <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
-                                            No se encontraron artículos en tu stock.
-                                        </div>
-                                    ) : (
-                                        filteredCatalogItems.map((item: any) => {
-                                            const published = !!item.storefront_published;
-                                            const promoObj = form.promotions?.[item.id] || {};
-                                            const badge = promoObj.badge || '';
-
-                                            // Parse photo
-                                            let photoUrl = '';
-                                            if (item.images) {
-                                                const imgArr = typeof item.images === 'string' 
-                                                    ? (item.images as string).split(',') 
-                                                    : (Array.isArray(item.images) ? item.images : []);
-                                                if (imgArr.length > 0) photoUrl = imgArr[0];
-                                            }
-
-                                            return (
-                                                <div key={item.id} className="catalog-item-row">
-                                                    {photoUrl ? (
-                                                        <img src={photoUrl} alt={item.name} className="catalog-item-image" />
-                                                    ) : (
-                                                        <div className="catalog-item-image-fallback">
-                                                            {item.isCombo ? <Layers size={18} /> : <Store size={18} />}
-                                                        </div>
-                                                    )}
-
-                                                    <div className="catalog-item-info">
-                                                        <h4 className="catalog-item-name">
-                                                            {item.name}
-                                                            {item.isCombo && (
-                                                                <span className="badge badge-secondary ml-2" style={{ padding: '0.1rem 0.35rem', fontSize: '0.65rem', background: '#eae7e0', color: '#425149' }}>Combo</span>
-                                                            )}
-                                                        </h4>
-                                                        <p className="catalog-item-price">${Number(item.price || 0).toLocaleString()}</p>
-                                                    </div>
-
-                                                    {/* Promotional ribbon input */}
-                                                    <div className="catalog-item-badge-input">
-                                                        <input 
-                                                            type="text" 
-                                                            placeholder="Cinta ej. 15% OFF" 
-                                                            value={badge}
-                                                            onChange={e => handleBadgeChange(item.id, e.target.value)}
-                                                            title="Ej. 'Destacado', 'Oferta', '10% OFF'. Se mostrará sobre la tarjeta en el storefront público."
-                                                        />
-                                                    </div>
-
-                                                    {/* Selective toggle switch */}
-                                                    <div className="catalog-item-publish-toggle">
-                                                        <span className="publish-status-text" style={{ color: published ? '#10b981' : '#64748b' }}>
-                                                            {published ? 'Público' : 'Oculto'}
-                                                        </span>
-                                                        <label className="customizer-switch">
-                                                            <input 
-                                                                type="checkbox" 
-                                                                checked={published}
-                                                                onChange={() => item.isCombo ? togglePackagePublish(item as any) : toggleProductPublish(item as any)}
-                                                            />
-                                                            <span className="customizer-slider"></span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right Column: Live CSS Phone Simulator Frame */}
-                    <div className="customizer-panel-right">
-                        <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>
-                            <Smartphone size={16} />
-                            <span>Simulador de Teléfono en Vivo</span>
-                        </div>
-
-                        <div className="phone-simulator-frame" style={phoneStyleProps}>
-                            {/* Notch camera */}
-                            <div className="phone-notch" />
-                            
-                            {/* Dynamic battery & time status bar */}
-                            <div className={`phone-status-bar ${form.seasonal_theme !== 'none' ? 'phone-status-bar-dark' : ''}`}>
-                                <span>{formattedPhoneTime}</span>
-                                <div className="phone-status-right">
-                                    <span>LTE</span>
-                                    <span style={{ fontSize: '0.55rem' }}>🔋 100%</span>
-                                </div>
-                            </div>
-
-                            <div className="phone-preview-content">
-                                
-                                {/* Dynamic Seasonal Particles Preview */}
-                                {form.seasonal_theme !== 'none' && (
-                                    <div className="mock-particle-container">
-                                        {previewParticles.map(p => (
-                                            <span 
-                                                key={p.id} 
-                                                className="mock-particle"
-                                                style={p.style}
-                                            >
-                                                {p.emoji}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Premium banner alert */}
-                                {form.banner_badge && (
-                                    <div className="mock-promo-banner">
-                                        <Sparkles size={8} />
-                                        <span>{form.banner_badge}</span>
-                                    </div>
-                                )}
-
-                                {/* Simulated Shop Header */}
-                                <div 
-                                    className="mock-shop-header" 
-                                    style={{ 
-                                        backgroundColor: form.theme_color, 
-                                        backgroundImage: form.seasonal_theme === 'valentines' 
-                                            ? 'linear-gradient(to bottom, #be123c, #9f1239)' 
-                                            : form.seasonal_theme === 'mother_day'
-                                            ? 'linear-gradient(to bottom, #db2777, #be185d)'
-                                            : form.seasonal_theme === 'christmas'
-                                            ? 'linear-gradient(to bottom, #15803d, #166534)'
-                                            : form.seasonal_theme === 'spring'
-                                            ? 'linear-gradient(to bottom, #4d7c0f, #3f6212)'
-                                            : 'none'
-                                    }}
-                                >
-                                    <div className="mock-shop-logo-box">
-                                        {form.logo_url ? (
-                                            <img src={form.logo_url} alt="Logo" className="mock-shop-logo" />
-                                        ) : (
-                                            <div className="mock-shop-logo-fallback">
-                                                {form.banner_title ? form.banner_title.substring(0, 2).toUpperCase() : 'FL'}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <h2 className="mock-shop-name">{form.banner_title || 'Mi Florería'}</h2>
-                                    <p className="mock-shop-tagline">{form.banner_subtitle}</p>
-
-                                    <div className="mock-shop-socials">
-                                        {form.whatsapp_number && (
-                                            <span className="mock-social-pill">
-                                                <MessageCircle size={8} />
-                                                WhatsApp
-                                            </span>
-                                        )}
-                                        {form.social_instagram && (
-                                            <span className="mock-social-pill">
-                                                <Instagram size={8} />
-                                                Instagram
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Simulated Sticky Search & Catalog Filter */}
-                                <div className="mock-shop-search">
-                                    <div className="mock-search-box">
-                                        <span>🔍 Buscar ramos o arreglos...</span>
-                                    </div>
-                                </div>
-
-                                <div className="mock-catalog-categories">
-                                    <span className="mock-cat-chip active">Todo</span>
-                                    <span className="mock-cat-chip">Ramos</span>
-                                    <span className="mock-cat-chip">Rosas</span>
-                                    <span className="mock-cat-chip">Plantas</span>
-                                </div>
-
-                                {/* Mock catalog cards in phone simulator */}
-                                <div className="mock-products-grid">
-                                    {/* Mock Card 1 */}
-                                    <div className="mock-product-card">
-                                        <div className="mock-product-image-box">
-                                            <div className="mock-product-promo-badge">🌸 Destacado</div>
-                                            <div style={{ width: '100%', height: '100%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>🌹</div>
-                                        </div>
-                                        <div className="mock-product-body">
-                                            <h4 className="mock-product-name">Ramo Tulipanes Tulip</h4>
-                                            <p className="mock-product-price" style={{ color: form.theme_color }}>$12.500</p>
-                                            <button className="mock-product-btn" style={{ backgroundColor: form.theme_color }}>Comprar</button>
-                                        </div>
-                                    </div>
-
-                                    {/* Mock Card 2 */}
-                                    <div className="mock-product-card">
-                                        <div className="mock-product-image-box">
-                                            <div className="mock-product-promo-badge">🔥 Oferta</div>
-                                            <div style={{ width: '100%', height: '100%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>🌻</div>
-                                        </div>
-                                        <div className="mock-product-body">
-                                            <h4 className="mock-product-name">Arreglo Girasoles Sol</h4>
-                                            <p className="mock-product-price" style={{ color: form.theme_color }}>$9.800</p>
-                                            <button className="mock-product-btn" style={{ backgroundColor: form.theme_color }}>Comprar</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Simulated home indicator */}
-                            <div className="phone-home-indicator" />
-                        </div>
-                    </div>
-
-                    {/* Floating Save Actions Bar (only shows when form has changes) */}
-                    <div className={`floating-save-bar ${hasUnsavedChanges ? 'visible' : ''}`}>
-                        <div className="floating-save-bar-info">
-                            <Info className="floating-save-bar-icon" size={20} />
-                            <div>
-                                <p className="floating-save-bar-title">Tienes cambios sin guardar</p>
-                                <p className="floating-save-bar-desc">Modificaste el branding o el diseño de tu Tienda Online 3.0.</p>
-                            </div>
-                        </div>
-
-                        <div className="floating-save-bar-actions">
-                            <button 
-                                className="btn-floating-cancel" 
-                                onClick={handleDiscardChanges}
-                                disabled={saving}
-                            >
-                                <Undo size={14} style={{ display: 'inline', marginRight: '0.25rem' }} />
-                                Descartar
-                            </button>
-                            <button 
-                                className="btn-floating-save" 
-                                onClick={handleSaveSettings}
-                                disabled={saving}
-                            >
-                                <Save size={14} style={{ display: 'inline', marginRight: '0.25rem' }} />
-                                {saving ? 'Guardando...' : 'Guardar Cambios'}
-                            </button>
-                        </div>
-                    </div>
-
+            {/* ── Alerts ─────────────────────────────── */}
+            {errorMsg && (
+                <div className="sc-alert sc-alert-error">
+                    <X size={16} /><span>{errorMsg}</span>
+                    <button onClick={() => setErrorMsg(null)}><X size={14} /></button>
+                </div>
+            )}
+            {successMsg && (
+                <div className="sc-alert sc-alert-success">
+                    <Check size={16} /><span>{successMsg}</span>
                 </div>
             )}
 
-            {/* Standard ERP creation modals triggered from Catalog Setup */}
-            <ProductModal 
-                isOpen={isProductModalOpen}
-                onClose={() => {
-                    setIsProductModalOpen(false);
-                    loadProducts();
-                }}
-            />
+            {/* ── Content ────────────────────────────── */}
+            <div className="sc-content">
 
-            <PackageBuilderModal 
-                isOpen={isPackageModalOpen}
-                onClose={() => {
-                    setIsPackageModalOpen(false);
-                    loadPackages();
-                }}
-            />
+                {/* ════════════════ TAB: INICIO ════════════════ */}
+                {activeTab === 'inicio' && (
+                    <div className="sc-tab-content">
+                        <div className="sc-inicio-grid">
+
+                            {/* Store Status Card */}
+                            <div className="sc-card sc-card-status">
+                                <div className="sc-card-header">
+                                    <Globe size={20} />
+                                    <h2>Estado de tu Tienda</h2>
+                                </div>
+                                <div className="sc-status-url-box">
+                                    <div className="sc-url-label">URL pública de tu tienda:</div>
+                                    <div className="sc-url-row">
+                                        <span className="sc-url-text">{storeUrl || '— Aún no configurado —'}</span>
+                                        {storeUrl && (
+                                            <button className="sc-url-copy" onClick={handleCopyUrl}>
+                                                {copySuccess ? <Check size={15} /> : <Copy size={15} />}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="sc-inicio-actions">
+                                    {storeUrl && (
+                                        <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="sc-btn-primary">
+                                            <ExternalLink size={15} /><span>Abrir tienda</span>
+                                        </a>
+                                    )}
+                                    <button className="sc-btn-secondary" onClick={() => setActiveTab('config')}>
+                                        <Settings size={15} /><span>Configurar</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Quick Stats */}
+                            <div className="sc-inicio-stats">
+                                <div className="sc-stat-card">
+                                    <span className="sc-stat-num">{products.filter(p => p.storefront_published).length}</span>
+                                    <span className="sc-stat-label">Productos publicados</span>
+                                </div>
+                                <div className="sc-stat-card">
+                                    <span className="sc-stat-num">{packages.filter(p => p.storefront_published).length}</span>
+                                    <span className="sc-stat-label">Combos publicados</span>
+                                </div>
+                                <div className="sc-stat-card">
+                                    <span className="sc-stat-num">{form.storefront_posts.filter(p => p.active).length}</span>
+                                    <span className="sc-stat-label">Publicaciones activas</span>
+                                </div>
+                                <div className="sc-stat-card">
+                                    <span className="sc-stat-num">{form.hero_slides.length}</span>
+                                    <span className="sc-stat-label">Slides del banner</span>
+                                </div>
+                            </div>
+
+                            {/* Quick Access */}
+                            <div className="sc-card">
+                                <div className="sc-card-header"><Sparkles size={18} /><h2>Accesos Rápidos</h2></div>
+                                <div className="sc-quicklinks">
+                                    {[
+                                        { label: 'Editar marca y logo',    icon: Camera,      tab: 'marca' },
+                                        { label: 'Cambiar colores y tema', icon: Palette,     tab: 'diseno' },
+                                        { label: 'Crear publicación',      icon: ShoppingBag, tab: 'publicaciones' },
+                                        { label: 'Editar banner hero',     icon: Image,       tab: 'banners' },
+                                        { label: 'MercadoPago y slug',     icon: Settings,    tab: 'config' },
+                                    ].map(link => (
+                                        <button key={link.tab} className="sc-quicklink-btn" onClick={() => setActiveTab(link.tab as any)}>
+                                            <link.icon size={16} />
+                                            <span>{link.label}</span>
+                                            <ArrowRight size={14} />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Tip card */}
+                            <div className="sc-card sc-card-tip">
+                                <div className="sc-card-header"><Info size={18} /><h2>💡 Tip de Imágenes</h2></div>
+                                <p>Para tus imágenes, recomendamos subir las fotos a <strong>Imgur</strong> o <strong>ImgBB</strong> (gratuitos) y usar la URL directa en los campos de imagen.</p>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                                    <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer" className="sc-btn-ghost">Imgur →</a>
+                                    <a href="https://imgbb.com" target="_blank" rel="noopener noreferrer" className="sc-btn-ghost">ImgBB →</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ════════════════ TAB: MARCA ════════════════ */}
+                {activeTab === 'marca' && (
+                    <div className="sc-tab-content">
+                        <div className="sc-form-grid">
+                            <div className="sc-card sc-card-wide">
+                                <div className="sc-card-header"><Camera size={18} /><h2>Identidad Visual</h2></div>
+
+                                <div className="sc-form-row">
+                                    <div className="sc-form-group">
+                                        <label className="sc-label">Logo de la Tienda (URL)</label>
+                                        <input type="url" className="sc-input" value={form.logo_url} onChange={e => setField('logo_url', e.target.value)} placeholder="https://imgur.com/tu-logo.png" />
+                                        {form.logo_url && (
+                                            <div className="sc-img-preview">
+                                                <img src={form.logo_url} alt="Logo preview" onError={e => (e.currentTarget.style.display = 'none')} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="sc-form-group">
+                                        <label className="sc-label">Foto de Perfil de la Tienda (URL)</label>
+                                        <input type="url" className="sc-input" value={form.profile_image_url} onChange={e => setField('profile_image_url', e.target.value)} placeholder="https://imgur.com/foto-perfil.jpg" />
+                                        {form.profile_image_url && (
+                                            <div className="sc-img-preview sc-img-preview-round">
+                                                <img src={form.profile_image_url} alt="Perfil preview" onError={e => (e.currentTarget.style.display = 'none')} />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="sc-form-row">
+                                    <div className="sc-form-group">
+                                        <label className="sc-label">Nombre de la Tienda *</label>
+                                        <input type="text" className="sc-input" value={form.banner_title} onChange={e => setField('banner_title', e.target.value)} placeholder="Ej: Florería Aster" />
+                                    </div>
+                                    <div className="sc-form-group">
+                                        <label className="sc-label">Eslogan / Subtítulo</label>
+                                        <input type="text" className="sc-input" value={form.banner_subtitle} onChange={e => setField('banner_subtitle', e.target.value)} placeholder="Ej: Flores con alma, desde 1998" />
+                                    </div>
+                                </div>
+
+                                <div className="sc-form-group">
+                                    <label className="sc-label">Sobre Nosotros (aparece en el footer de la tienda)</label>
+                                    <textarea className="sc-textarea" rows={3} value={form.about_us} onChange={e => setField('about_us', e.target.value)} placeholder="Contá la historia de tu florería, tu pasión por las flores, tu experiencia..." />
+                                </div>
+
+                                <div className="sc-form-row">
+                                    <div className="sc-form-group">
+                                        <label className="sc-label">WhatsApp de Contacto *</label>
+                                        <input type="tel" className="sc-input" value={form.whatsapp_number} onChange={e => setField('whatsapp_number', e.target.value)} placeholder="+5491112345678" />
+                                    </div>
+                                    <div className="sc-form-group">
+                                        <label className="sc-label">Cinta Promocional Superior</label>
+                                        <input type="text" className="sc-input" value={form.banner_badge} onChange={e => setField('banner_badge', e.target.value)} placeholder="Ej: ✨ Envíos gratis en compras +$10.000" />
+                                    </div>
+                                </div>
+
+                                <div className="sc-form-row">
+                                    <div className="sc-form-group">
+                                        <label className="sc-label"><Instagram size={14} style={{ display: 'inline', marginRight: 4 }} />Instagram (usuario sin @)</label>
+                                        <input type="text" className="sc-input" value={form.social_instagram} onChange={e => setField('social_instagram', e.target.value)} placeholder="floreria_aster" />
+                                    </div>
+                                    <div className="sc-form-group">
+                                        <label className="sc-label"><Facebook size={14} style={{ display: 'inline', marginRight: 4 }} />Facebook (usuario sin fb.com/)</label>
+                                        <input type="text" className="sc-input" value={form.social_facebook} onChange={e => setField('social_facebook', e.target.value)} placeholder="floreria.aster" />
+                                    </div>
+                                </div>
+
+                                <div className="sc-form-row">
+                                    <div className="sc-form-group">
+                                        <label className="sc-label">Zonas de Entrega</label>
+                                        <input type="text" className="sc-input" value={form.delivery_zones} onChange={e => setField('delivery_zones', e.target.value)} placeholder="Ej: Belgrano, Palermo, Recoleta, CABA" />
+                                    </div>
+                                    <div className="sc-form-group">
+                                        <label className="sc-label">Horarios de Entrega</label>
+                                        <input type="text" className="sc-input" value={form.delivery_days} onChange={e => setField('delivery_days', e.target.value)} placeholder="Ej: Lun-Sáb 9 a 19hs, Dom 10 a 14hs" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ════════════════ TAB: DISEÑO ════════════════ */}
+                {activeTab === 'diseno' && (
+                    <div className="sc-tab-content">
+                        <div className="sc-form-grid">
+
+                            {/* Color Section */}
+                            <div className="sc-card">
+                                <div className="sc-card-header"><Palette size={18} /><h2>Color de Marca</h2></div>
+                                <div className="sc-presets-grid">
+                                    {BRAND_PRESETS.map(preset => (
+                                        <button
+                                            key={preset.id}
+                                            className={`sc-preset-btn ${form.theme_preset === preset.id ? 'active' : ''}`}
+                                            onClick={() => { setField('theme_preset', preset.id); setField('theme_color', preset.color); }}
+                                        >
+                                            <div className="sc-preset-swatch" style={{ background: `linear-gradient(135deg, ${preset.color}, ${preset.accent})` }} />
+                                            <span>{preset.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="sc-color-custom">
+                                    <label className="sc-label">Color personalizado</label>
+                                    <div className="sc-color-row">
+                                        <input type="color" className="sc-color-picker" value={form.theme_color} onChange={e => { setField('theme_color', e.target.value); setField('theme_preset', 'custom'); }} />
+                                        <input type="text" className="sc-input sc-input-sm" value={form.theme_color} onChange={e => { setField('theme_color', e.target.value); setField('theme_preset', 'custom'); }} />
+                                        <div className="sc-color-preview" style={{ backgroundColor: form.theme_color }} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Seasonal Theme */}
+                            <div className="sc-card">
+                                <div className="sc-card-header"><Sparkles size={18} /><h2>Tema Estacional</h2></div>
+                                <p className="sc-card-desc">El tema activo aplica efectos de partículas flotantes y colores especiales en la tienda pública.</p>
+                                <div className="sc-seasonal-grid">
+                                    {SEASONAL_THEMES.map(theme => (
+                                        <button
+                                            key={theme.id}
+                                            className={`sc-seasonal-btn ${form.seasonal_theme === theme.id ? 'active' : ''}`}
+                                            onClick={() => setField('seasonal_theme', theme.id as any)}
+                                            style={{ '--seasonal-bg': theme.bg } as any}
+                                        >
+                                            <span className="sc-seasonal-emoji">{theme.emoji}</span>
+                                            <span className="sc-seasonal-name">{theme.name}</span>
+                                            <span className="sc-seasonal-desc">{theme.desc}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ════════════════ TAB: PUBLICACIONES ════════════════ */}
+                {activeTab === 'publicaciones' && (
+                    <div className="sc-tab-content">
+
+                        {/* Own Posts Section */}
+                        <div className="sc-card sc-card-wide">
+                            <div className="sc-card-header">
+                                <ShoppingBag size={18} />
+                                <h2>Publicaciones Propias</h2>
+                                <button className="sc-btn-primary sc-btn-sm" onClick={openNewPost}>
+                                    <Plus size={15} /><span>Nueva publicación</span>
+                                </button>
+                            </div>
+                            <p className="sc-card-desc">Creá publicaciones exclusivas para tu tienda, independientes del inventario. Ideal para paquetes especiales, servicios, o productos únicos.</p>
+
+                            {form.storefront_posts.length === 0 ? (
+                                <div className="sc-empty-state">
+                                    <ShoppingBag size={36} />
+                                    <p>Aún no tenés publicaciones propias.</p>
+                                    <button className="sc-btn-primary" onClick={openNewPost}><Plus size={15} />Crear primera publicación</button>
+                                </div>
+                            ) : (
+                                <div className="sc-posts-grid">
+                                    {form.storefront_posts.map(post => (
+                                        <div key={post.id} className={`sc-post-card ${!post.active ? 'inactive' : ''}`}>
+                                            <div className="sc-post-img" style={{
+                                                backgroundImage: post.image_url ? `url(${post.image_url})` : undefined,
+                                                backgroundPosition: post.image_position || 'center',
+                                                backgroundSize: `${post.image_zoom || 100}%`
+                                            }}>
+                                                {!post.image_url && <Image size={28} />}
+                                                {post.badge && <div className="sc-post-badge">{post.badge}</div>}
+                                                {post.is_featured && <div className="sc-post-featured"><Star size={12} />Destacado</div>}
+                                            </div>
+                                            <div className="sc-post-info">
+                                                <p className="sc-post-tag">{post.category_tag}</p>
+                                                <h3 className="sc-post-title">{post.title}</h3>
+                                                <p className="sc-post-price">${post.price.toLocaleString('es-AR')}</p>
+                                            </div>
+                                            <div className="sc-post-actions">
+                                                <button className="sc-icon-btn" onClick={() => handleTogglePostActive(post.id)} title={post.active ? 'Ocultar' : 'Publicar'}>
+                                                    {post.active ? <EyeOff size={15} /> : <Eye size={15} />}
+                                                </button>
+                                                <button className="sc-icon-btn" onClick={() => openEditPost(post)} title="Editar">
+                                                    <Edit3 size={15} />
+                                                </button>
+                                                <button className="sc-icon-btn sc-icon-btn-danger" onClick={() => handleDeletePost(post.id)} title="Eliminar">
+                                                    <Trash2 size={15} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Stock Catalog Section */}
+                        <div className="sc-card sc-card-wide" style={{ marginTop: '1.5rem' }}>
+                            <div className="sc-card-header">
+                                <Store size={18} />
+                                <h2>Publicar desde Inventario</h2>
+                                <div className="sc-catalog-tools">
+                                    <div className="sc-search-box">
+                                        <Search size={15} />
+                                        <input type="text" placeholder="Buscar..." value={catalogSearch} onChange={e => setCatalogSearch(e.target.value)} />
+                                    </div>
+                                    <button className="sc-btn-ghost sc-btn-sm" onClick={() => setIsProductModalOpen(true)}><Plus size={14} />Producto</button>
+                                    <button className="sc-btn-ghost sc-btn-sm" onClick={() => setIsPackageModalOpen(true)}><Plus size={14} />Combo</button>
+                                </div>
+                            </div>
+                            <p className="sc-card-desc">Activá el toggle para publicar un producto o combo existente en tu tienda online.</p>
+
+                            {/* Category filter chips */}
+                            <div className="sc-filter-chips">
+                                <button className={`sc-chip ${!catalogCategory ? 'active' : ''}`} onClick={() => setCatalogCategory(null)}>Todos</button>
+                                {categories.map(cat => (
+                                    <button key={cat.id} className={`sc-chip ${catalogCategory === cat.id ? 'active' : ''}`} onClick={() => setCatalogCategory(cat.id)}>{cat.name}</button>
+                                ))}
+                            </div>
+
+                            <div className="sc-catalog-list">
+                                {allCatalogItems.length === 0 ? (
+                                    <div className="sc-empty-state"><Store size={36} /><p>No hay productos en tu inventario todavía.</p></div>
+                                ) : allCatalogItems.map(item => (
+                                    <div key={item.id} className={`sc-catalog-row ${item.storefront_published ? 'published' : ''}`}>
+                                        <div className="sc-catalog-img">
+                                            {(item as any).images?.[0] || (item as any).image_url ? (
+                                                <img src={(item as any).images?.[0] || (item as any).image_url} alt={item.name} />
+                                            ) : <Sparkles size={18} />}
+                                        </div>
+                                        <div className="sc-catalog-info">
+                                            <span className="sc-catalog-name">{item.name}</span>
+                                            <span className="sc-catalog-meta">
+                                                {item.isCombo ? '🎁 Combo' : '🌸 Producto'} · ${Number(item.price || 0).toLocaleString('es-AR')}
+                                            </span>
+                                        </div>
+                                        <div className="sc-catalog-badge-input">
+                                            <input
+                                                type="text"
+                                                placeholder='Etiqueta (ej: "15% OFF")'
+                                                value={form.promotions[item.id]?.badge || ''}
+                                                onChange={e => setForm(prev => ({
+                                                    ...prev,
+                                                    promotions: { ...prev.promotions, [item.id]: { ...prev.promotions[item.id], badge: e.target.value } }
+                                                }))}
+                                            />
+                                        </div>
+                                        <label className="sc-toggle">
+                                            <input type="checkbox" checked={!!item.storefront_published} onChange={() => handlePublishToggle(item, item.isCombo)} />
+                                            <span className="sc-toggle-slider" />
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ════════════════ TAB: BANNERS ════════════════ */}
+                {activeTab === 'banners' && (
+                    <div className="sc-tab-content">
+                        <div className="sc-card sc-card-wide">
+                            <div className="sc-card-header"><Image size={18} /><h2>Banner Hero (Deslizable)</h2></div>
+                            <p className="sc-card-desc">Agregá hasta 5 slides que rotan automáticamente en la parte superior de tu tienda. Usá imágenes de alta calidad (mínimo 1200×600px).</p>
+
+                            {/* Slide list */}
+                            {form.hero_slides.length > 0 && (
+                                <div className="sc-slides-list">
+                                    {form.hero_slides.map((slide, idx) => (
+                                        <div key={slide.id} className="sc-slide-row">
+                                            <div className="sc-slide-preview" style={{ backgroundImage: `url(${slide.image_url})` }}>
+                                                {!slide.image_url && <Image size={20} />}
+                                            </div>
+                                            <div className="sc-slide-info">
+                                                <p className="sc-slide-title">{slide.title || '(Sin título)'}</p>
+                                                <p className="sc-slide-url">{slide.image_url || 'Sin imagen'}</p>
+                                                {slide.cta_text && <span className="sc-slide-cta">{slide.cta_text}</span>}
+                                            </div>
+                                            <div className="sc-slide-controls">
+                                                <button className="sc-icon-btn" onClick={() => handleMoveSlide(slide.id, 'up')} disabled={idx === 0}><ChevronUp size={15} /></button>
+                                                <button className="sc-icon-btn" onClick={() => handleMoveSlide(slide.id, 'down')} disabled={idx === form.hero_slides.length - 1}><ChevronDown size={15} /></button>
+                                                <button className="sc-icon-btn sc-icon-btn-danger" onClick={() => handleDeleteSlide(slide.id)}><Trash2 size={15} /></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Add slide form */}
+                            {form.hero_slides.length < 5 && (
+                                <div className="sc-add-slide-form">
+                                    <h3 className="sc-form-section-title">+ Agregar slide</h3>
+                                    <div className="sc-form-row">
+                                        <div className="sc-form-group">
+                                            <label className="sc-label">URL de imagen *</label>
+                                            <input type="url" className="sc-input" value={slideForm.image_url} onChange={e => setSlideForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://imgur.com/imagen.jpg" />
+                                        </div>
+                                        <div className="sc-form-group">
+                                            <label className="sc-label">Título del slide</label>
+                                            <input type="text" className="sc-input" value={slideForm.title} onChange={e => setSlideForm(p => ({ ...p, title: e.target.value }))} placeholder="Ej: Flores para este Día de la Madre" />
+                                        </div>
+                                    </div>
+                                    <div className="sc-form-row">
+                                        <div className="sc-form-group">
+                                            <label className="sc-label">Subtítulo</label>
+                                            <input type="text" className="sc-input" value={slideForm.subtitle} onChange={e => setSlideForm(p => ({ ...p, subtitle: e.target.value }))} placeholder="Ej: Pedí antes de las 14hs y llega hoy" />
+                                        </div>
+                                        <div className="sc-form-group">
+                                            <label className="sc-label">Texto del botón CTA</label>
+                                            <input type="text" className="sc-input" value={slideForm.cta_text} onChange={e => setSlideForm(p => ({ ...p, cta_text: e.target.value }))} placeholder="Ej: Ver colección →" />
+                                        </div>
+                                    </div>
+                                    {slideForm.image_url && (
+                                        <div className="sc-slide-img-preview">
+                                            <img src={slideForm.image_url} alt="Preview" onError={e => (e.currentTarget.style.display = 'none')} />
+                                        </div>
+                                    )}
+                                    <button className="sc-btn-primary" onClick={handleAddSlide} disabled={!slideForm.image_url?.trim()}>
+                                        <Plus size={16} /><span>Agregar slide</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Featured section title */}
+                        <div className="sc-card" style={{ marginTop: '1.5rem' }}>
+                            <div className="sc-card-header"><Star size={18} /><h2>Sección Destacados</h2></div>
+                            <div className="sc-form-group">
+                                <label className="sc-label">Título de la sección de destacados</label>
+                                <input type="text" className="sc-input" value={form.featured_collection_title} onChange={e => setField('featured_collection_title', e.target.value)} placeholder="Nuestros Destacados" />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ════════════════ TAB: CONFIGURACIÓN ════════════════ */}
+                {activeTab === 'config' && (
+                    <div className="sc-tab-content">
+                        <div className="sc-form-grid">
+
+                            {/* Status & URL */}
+                            <div className="sc-card">
+                                <div className="sc-card-header"><Globe size={18} /><h2>URL y Estado</h2></div>
+                                <div className="sc-form-group">
+                                    <label className="sc-label">Dirección web de tu tienda (slug)</label>
+                                    <div className="sc-url-display">
+                                        <span className="sc-url-prefix">{window.location.host}/</span>
+                                        <span className="sc-url-slug">{slug}</span>
+                                    </div>
+                                    <p className="sc-hint"><Info size={12} /> El slug se define en la configuración general de tu negocio para proteger URLs ya indexadas.</p>
+                                </div>
+
+                                <div className="sc-form-group">
+                                    <label className="sc-label">Estado del catálogo público</label>
+                                    <div className="sc-toggle-row">
+                                        <label className="sc-toggle">
+                                            <input type="checkbox" checked={form.active} onChange={e => setField('active', e.target.checked)} />
+                                            <span className="sc-toggle-slider" />
+                                        </label>
+                                        <span className={`sc-toggle-label ${form.active ? 'on' : 'off'}`}>
+                                            {form.active ? '✅ Tienda Pública Activa' : '⏸️ En Mantenimiento / Pausada'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Pricing */}
+                            <div className="sc-card">
+                                <div className="sc-card-header"><Percent size={18} /><h2>Recargo de Precios</h2></div>
+                                <div className="sc-form-group">
+                                    <label className="sc-label">Porcentaje de recargo en precios web (%)</label>
+                                    <input type="number" className="sc-input" value={form.price_markup} onChange={e => setField('price_markup', Math.max(0, Number(e.target.value)))} min="0" step="0.5" placeholder="0" />
+                                    <p className="sc-hint"><Info size={12} /> Un recargo del 10% aplicará automáticamente sobre los precios del catálogo en la tienda pública.</p>
+                                </div>
+                            </div>
+
+                            {/* MercadoPago */}
+                            <div className="sc-card sc-card-wide">
+                                <div className="sc-card-header"><CreditCard size={18} /><h2>Cobros con MercadoPago</h2></div>
+                                <div className="sc-toggle-row" style={{ marginBottom: '1.25rem' }}>
+                                    <label className="sc-toggle">
+                                        <input type="checkbox" checked={form.mp_enabled} onChange={e => setField('mp_enabled', e.target.checked)} />
+                                        <span className="sc-toggle-slider" />
+                                    </label>
+                                    <span className={`sc-toggle-label ${form.mp_enabled ? 'on' : 'off'}`}>
+                                        {form.mp_enabled ? 'MercadoPago habilitado' : 'Solo WhatsApp (sin MercadoPago)'}
+                                    </span>
+                                </div>
+
+                                {form.mp_enabled && (
+                                    <div className="sc-form-row">
+                                        <div className="sc-form-group">
+                                            <label className="sc-label">Public Key</label>
+                                            <input type="text" className="sc-input" value={form.mercadopago_public_key} onChange={e => setField('mercadopago_public_key', e.target.value)} placeholder="APP_USR-..." />
+                                        </div>
+                                        <div className="sc-form-group">
+                                            <label className="sc-label">Access Token (secreto)</label>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <input type={showMpToken ? 'text' : 'password'} className="sc-input" style={{ flex: 1 }} value={form.mercadopago_access_token} onChange={e => setField('mercadopago_access_token', e.target.value)} placeholder="APP_USR-..." />
+                                                <button className="sc-btn-ghost" onClick={() => setShowMpToken(v => !v)} type="button">{showMpToken ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+                                            </div>
+                                        </div>
+                                        <div className="sc-alert sc-alert-warning" style={{ gridColumn: '1/-1' }}>
+                                            <Shield size={15} /><span>Tus credenciales se almacenan encriptadas. Nunca las compartas con nadie.</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* ── Floating Save Bar ─────────────────────── */}
+            {hasChanges && (
+                <div className="sc-save-bar">
+                    <span className="sc-save-hint">Tenés cambios sin guardar</span>
+                    <button className="sc-btn-ghost" onClick={handleDiscard}><Undo size={15} />Descartar</button>
+                    <button className="sc-btn-save" onClick={handleSave} disabled={saving}>
+                        <Save size={15} />
+                        {saving ? 'Guardando...' : 'Guardar cambios'}
+                    </button>
+                </div>
+            )}
+
+            {/* ── Post Modal ───────────────────────────── */}
+            {isPostModalOpen && (
+                <div className="sc-modal-overlay" onClick={() => setIsPostModalOpen(false)}>
+                    <div className="sc-modal" onClick={e => e.stopPropagation()}>
+                        <div className="sc-modal-header">
+                            <h2>{editingPost ? 'Editar publicación' : 'Nueva publicación'}</h2>
+                            <button className="sc-icon-btn" onClick={() => setIsPostModalOpen(false)}><X size={18} /></button>
+                        </div>
+                        <div className="sc-modal-body">
+                            <div className="sc-form-row">
+                                <div className="sc-form-group">
+                                    <label className="sc-label">Título *</label>
+                                    <input type="text" className="sc-input" value={postForm.title} onChange={e => setPostForm(p => ({ ...p, title: e.target.value }))} />
+                                </div>
+                                <div className="sc-form-group">
+                                    <label className="sc-label">Precio *</label>
+                                    <input type="number" className="sc-input" value={postForm.price} onChange={e => setPostForm(p => ({ ...p, price: Number(e.target.value) }))} min="0" />
+                                </div>
+                            </div>
+                            <div className="sc-form-group">
+                                <label className="sc-label">Descripción</label>
+                                <textarea className="sc-textarea" rows={2} value={postForm.description} onChange={e => setPostForm(p => ({ ...p, description: e.target.value }))} />
+                            </div>
+                            <div className="sc-form-group">
+                                <label className="sc-label">URL de imagen</label>
+                                <input type="url" className="sc-input" value={postForm.image_url} onChange={e => setPostForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://imgur.com/..." />
+                            </div>
+
+                            {/* Image Editor */}
+                            {postForm.image_url && (
+                                <div className="sc-img-editor">
+                                    <div className="sc-img-editor-preview" style={{
+                                        backgroundImage: `url(${postForm.image_url})`,
+                                        backgroundPosition: postForm.image_position || 'center',
+                                        backgroundSize: `${postForm.image_zoom || 100}%`
+                                    }} />
+                                    <div className="sc-img-editor-controls">
+                                        <div className="sc-form-group">
+                                            <label className="sc-label">Posición de imagen</label>
+                                            <div className="sc-btn-group">
+                                                {IMAGE_POSITIONS.map(pos => (
+                                                    <button key={pos.value} className={`sc-btn-option ${postForm.image_position === pos.value ? 'active' : ''}`} onClick={() => setPostForm(p => ({ ...p, image_position: pos.value }))}>
+                                                        {pos.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="sc-form-group">
+                                            <label className="sc-label">Zoom: {postForm.image_zoom}%</label>
+                                            <input type="range" min="100" max="200" step="5" value={postForm.image_zoom} onChange={e => setPostForm(p => ({ ...p, image_zoom: Number(e.target.value) }))} />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="sc-form-row">
+                                <div className="sc-form-group">
+                                    <label className="sc-label">Categoría</label>
+                                    <select className="sc-input" value={postForm.category_tag} onChange={e => setPostForm(p => ({ ...p, category_tag: e.target.value }))}>
+                                        {CATEGORY_TAGS.map(t => <option key={t}>{t}</option>)}
+                                    </select>
+                                </div>
+                                <div className="sc-form-group">
+                                    <label className="sc-label">Etiqueta especial (ej: "20% OFF")</label>
+                                    <input type="text" className="sc-input" value={postForm.badge} onChange={e => setPostForm(p => ({ ...p, badge: e.target.value }))} />
+                                </div>
+                            </div>
+
+                            <div className="sc-toggles-row">
+                                <label className="sc-toggle-label-inline">
+                                    <input type="checkbox" checked={postForm.is_featured} onChange={e => setPostForm(p => ({ ...p, is_featured: e.target.checked }))} />
+                                    <Star size={14} /> Destacado
+                                </label>
+                                <label className="sc-toggle-label-inline">
+                                    <input type="checkbox" checked={postForm.active} onChange={e => setPostForm(p => ({ ...p, active: e.target.checked }))} />
+                                    <Eye size={14} /> Publicado
+                                </label>
+                            </div>
+                        </div>
+                        <div className="sc-modal-footer">
+                            <button className="sc-btn-ghost" onClick={() => setIsPostModalOpen(false)}>Cancelar</button>
+                            <button className="sc-btn-primary" onClick={handleSavePost} disabled={!postForm.title?.trim()}>
+                                <Save size={15} />{editingPost ? 'Guardar cambios' : 'Crear publicación'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── ERP Modals ───────────────────────────── */}
+            {isProductModalOpen && (
+                <ProductModal
+                    isOpen={isProductModalOpen}
+                    onClose={() => { loadProducts(); setIsProductModalOpen(false); }}
+                />
+            )}
+            {isPackageModalOpen && (
+                <PackageBuilderModal
+                    isOpen={isPackageModalOpen}
+                    onClose={() => { loadPackages(); setIsPackageModalOpen(false); }}
+                />
+            )}
         </div>
     );
 };
-export default StorefrontCustomizer;
