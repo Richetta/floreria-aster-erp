@@ -446,3 +446,27 @@ export interface ApiError {
   details?: any[];
   statusCode?: number;
 }
+
+// ============================================
+// AUDIT LOG TYPES
+// ============================================
+
+export interface AuditLog {
+  id: string;
+  business_id: string;
+  user_id: string;
+  action: string;
+  entity_type: 'products' | 'categories' | 'customers' | 'suppliers';
+  entity_id: string;
+  details: {
+    name?: string;
+    old_values?: Record<string, any>;
+    new_values?: Record<string, any>;
+  };
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+  user_name?: string;
+  user_email?: string;
+}
+

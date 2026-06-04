@@ -407,6 +407,23 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
               ) : (
                 <span className="system-badge">Espejo ERP</span>
               )}
+              {file.entity === 'custom' && (
+                <span className="offline-badge" style={{
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  color: '#f59e0b',
+                  border: '1px solid rgba(245, 158, 11, 0.2)',
+                  fontSize: '0.7rem',
+                  padding: '3px 8px',
+                  borderRadius: '12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: '600',
+                  marginLeft: '8px'
+                }}>
+                  <AlertTriangle size={11} /> Solo Local
+                </span>
+              )}
             </div>
             <p className="sheet-description">{file.description || 'Vista de hoja de cálculo virtual.'}</p>
           </div>

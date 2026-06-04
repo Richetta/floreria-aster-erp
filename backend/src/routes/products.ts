@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { sql } from 'kysely';
 import { randomUUID } from 'crypto';
 import { db } from '../db/index.js';
+import { logAudit } from '../utils/audit.js';
+
 
 // Helper: Check subscription product limit
 async function checkProductLimit(businessId: string, reply: any) {
@@ -299,6 +301,27 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
           await trx.insertInto('product_custom_filter_values').values(filterValuesToInsert).execute();
         }
 
+        // Log audit
+        await logAudit(trx, {
+          business_id: user.business_id,
+          user_id: user.sub,
+          action: 'create_product',
+          entity_type: 'products',
+          entity_id: productId,
+          details: {
+            new_values: {
+              name: body.name,
+              code: body.code,
+              price: body.price,
+              cost: body.cost,
+              stock_quantity: initialStock,
+              category_id: body.category_id
+            }
+          },
+          ip_address: request.ip,
+          user_agent: request.headers['user-agent']
+        });
+
         return product;
       });
 
@@ -337,7 +360,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
 
         const currentProduct = await trx
           .selectFrom('products')
-          .select(['cost', 'price', 'stock_quantity'])
+          .select(['name', 'code', 'cost', 'price', 'stock_quantity', 'category_id'])
           .where('id', '=', id)
           .executeTakeFirst();
 
@@ -420,7 +443,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
         // Remove custom_filter_options from body to avoid DB error on products table
         const { custom_filter_options, ...productData } = body;
 
-        return await trx
+        const updated = await trx
           .updateTable('products')
           .set({
             ...productData,
@@ -430,6 +453,39 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
           .where('id', '=', id)
           .returningAll()
           .executeTakeFirst();
+
+        if (updated) {
+          const oldValues: Record<string, any> = {};
+          const newValues: Record<string, any> = {};
+
+          for (const key of Object.keys(productData)) {
+            const oldVal = (currentProduct as any)[key];
+            const newVal = (productData as any)[key];
+            if (oldVal !== newVal && newVal !== undefined) {
+              oldValues[key] = oldVal;
+              newValues[key] = newVal;
+            }
+          }
+
+          if (Object.keys(oldValues).length > 0) {
+            await logAudit(trx, {
+              business_id: user.business_id,
+              user_id: user.sub,
+              action: 'update_product',
+              entity_type: 'products',
+              entity_id: id,
+              details: {
+                name: currentProduct.name,
+                old_values: oldValues,
+                new_values: newValues
+              },
+              ip_address: request.ip,
+              user_agent: request.headers['user-agent']
+            });
+          }
+        }
+
+        return updated;
       });
 
       return reply.send(result);
@@ -456,6 +512,15 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
 
     await db.transaction().execute(async (trx) => {
       await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+
+      const product = await trx
+        .selectFrom('products')
+        .select(['name', 'code', 'cost', 'price', 'stock_quantity', 'category_id'])
+        .where('id', '=', id)
+        .executeTakeFirst();
+
+      if (!product) throw new Error('Product not found');
+
       await trx
         .updateTable('products')
         .set({
@@ -464,6 +529,27 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
         })
         .where('id', '=', id)
         .execute();
+
+      await logAudit(trx, {
+        business_id: user.business_id,
+        user_id: user.sub,
+        action: 'delete_product',
+        entity_type: 'products',
+        entity_id: id,
+        details: {
+          name: product.name,
+          old_values: {
+            name: product.name,
+            code: product.code,
+            cost: product.cost,
+            price: product.price,
+            stock_quantity: product.stock_quantity,
+            category_id: product.category_id
+          }
+        },
+        ip_address: request.ip,
+        user_agent: request.headers['user-agent']
+      });
     });
 
     return reply.send({ success: true });

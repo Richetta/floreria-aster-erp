@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { sql } from 'kysely';
 import { randomUUID } from 'crypto';
 import { db } from '../db/index.js';
+import { logAudit } from '../utils/audit.js';
+
 
 export const customersRoutes: FastifyPluginAsync = async (fastify) => {
   // Create customer schema
@@ -169,10 +171,11 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
       const result = await db.transaction().execute(async (trx) => {
         await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        return await trx
+        const customerId = randomUUID();
+        const customer = await trx
           .insertInto('customers')
           .values({
-            id: randomUUID(),
+            id: customerId,
             business_id: user.business_id,
             name: body.name,
             phone: body.phone,
@@ -196,6 +199,26 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
           } as any)
           .returningAll()
           .executeTakeFirst();
+
+        await logAudit(trx, {
+          business_id: user.business_id,
+          user_id: user.sub,
+          action: 'create_customer',
+          entity_type: 'customers',
+          entity_id: customerId,
+          details: {
+            new_values: {
+              name: body.name,
+              phone: body.phone,
+              email: body.email || null,
+              notes: body.notes || null
+            }
+          },
+          ip_address: request.ip,
+          user_agent: request.headers['user-agent']
+        });
+
+        return customer;
       });
 
       return reply.status(201).send(result);
@@ -226,7 +249,20 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
       const result = await db.transaction().execute(async (trx) => {
         await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
 
-        return await trx
+        const currentCustomer = await trx
+          .selectFrom('customers')
+          .select(['name', 'phone', 'email', 'notes', 'address_street', 'address_number', 'address_floor', 'address_city'])
+          .where('id', '=', id)
+          .where('business_id', '=', user.business_id)
+          .executeTakeFirst();
+
+        if (!currentCustomer) {
+          const errorInstance = new Error('Cliente no encontrado');
+          (errorInstance as any).statusCode = 404;
+          throw errorInstance;
+        }
+
+        const updated = await trx
           .updateTable('customers')
           .set({
             ...body,
@@ -238,6 +274,39 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
           .where('id', '=', id)
           .returningAll()
           .executeTakeFirst();
+
+        if (updated) {
+          const oldValues: Record<string, any> = {};
+          const newValues: Record<string, any> = {};
+
+          for (const key of Object.keys(body)) {
+            const oldVal = (currentCustomer as any)[key];
+            const newVal = (body as any)[key];
+            if (oldVal !== newVal && newVal !== undefined) {
+              oldValues[key] = oldVal;
+              newValues[key] = newVal;
+            }
+          }
+
+          if (Object.keys(oldValues).length > 0) {
+            await logAudit(trx, {
+              business_id: user.business_id,
+              user_id: user.sub,
+              action: 'update_customer',
+              entity_type: 'customers',
+              entity_id: id,
+              details: {
+                name: currentCustomer.name,
+                old_values: oldValues,
+                new_values: newValues
+              },
+              ip_address: request.ip,
+              user_agent: request.headers['user-agent']
+            });
+          }
+        }
+
+        return updated;
       });
 
       if (!result) {
@@ -268,6 +337,16 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
 
     await db.transaction().execute(async (trx) => {
       await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(trx);
+
+      const customer = await trx
+        .selectFrom('customers')
+        .select(['name', 'phone', 'email', 'notes'])
+        .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
+        .executeTakeFirst();
+
+      if (!customer) throw new Error('Customer not found');
+
       await trx
         .updateTable('customers')
         .set({
@@ -277,6 +356,25 @@ export const customersRoutes: FastifyPluginAsync = async (fastify) => {
         .where('id', '=', id)
         .where('business_id', '=', user.business_id)
         .execute();
+
+      await logAudit(trx, {
+        business_id: user.business_id,
+        user_id: user.sub,
+        action: 'delete_customer',
+        entity_type: 'customers',
+        entity_id: id,
+        details: {
+          name: customer.name,
+          old_values: {
+            name: customer.name,
+            phone: customer.phone,
+            email: customer.email,
+            notes: customer.notes
+          }
+        },
+        ip_address: request.ip,
+        user_agent: request.headers['user-agent']
+      });
     });
 
     return reply.send({ success: true });

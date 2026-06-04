@@ -19,10 +19,11 @@ import type {
   AuthResponse, 
   UserInvitation, 
   InternalComment,
-  UserRole
+  UserRole,
+  AuditLog
 } from '../types';
 
-export type { User, AuthResponse, UserInvitation, InternalComment, UserRole };
+export type { User, AuthResponse, UserInvitation, InternalComment, UserRole, AuditLog };
 
 export type CustomFilterOption = {
   id: string;
@@ -1184,6 +1185,20 @@ export class ApiClient {
   /** Fuerza la sincronización manual de un pedido a Google Calendar */
   async syncOrderToCalendar(orderId: string): Promise<{ success: boolean; google_event_id?: string }> {
     return this.request(`/calendar/sync/${orderId}`, { method: 'POST' });
+  }
+
+  // ============================================
+  // AUDIT LOGS ENDPOINTS
+  // ============================================
+
+  async getAuditLogs(): Promise<AuditLog[]> {
+    return this.request<AuditLog[]>('/audit-logs');
+  }
+
+  async rollbackAuditLog(id: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/audit-logs/${id}/rollback`, {
+      method: 'POST',
+    });
   }
 }
 

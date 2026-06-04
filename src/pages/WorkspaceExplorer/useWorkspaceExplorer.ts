@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../store/useAuth';
 import { flattenCategories } from '../../store/slices/mappers';
+import { generateIdWithPrefix } from '../../utils/idGenerator';
+
 
 export interface Column {
   key: string;
@@ -910,8 +912,38 @@ export const useWorkspaceExplorer = () => {
               await store.updateProduct(id, mappedUpdates);
             }
           }
+        } else if (entity === 'categories') {
+          if (isNew) {
+            const row = updatedRows.find(r => String(r.id) === String(id));
+            const rowFields = row || {};
+            const name = String(rowFields.name || fields.name || '').trim();
+            if (name) {
+              const parentName = String(rowFields.parent_name || fields.parent_name || '').trim();
+              const flatCategories = flattenCategories(store.categoriesData);
+              const parentCategory = flatCategories.find(c => c.name.toLowerCase().trim() === parentName.toLowerCase());
+              await store.addCategory(name, parentCategory?.id);
+            }
+          } else {
+            const currentCat = flattenCategories(store.categoriesData).find(c => c.id === id);
+            if (currentCat && 'name' in fields) {
+              const newName = String(fields.name).trim();
+              if (newName && newName !== currentCat.name) {
+                await store.renameCategory(currentCat.name, newName);
+              }
+            }
+          }
         } else if (entity === 'customers') {
-          if (!isNew) {
+          if (isNew) {
+            const row = updatedRows.find(r => String(r.id) === String(id));
+            const rowFields = row || {};
+            await store.addCustomer({
+              id: generateIdWithPrefix('c'),
+              name: String(rowFields.name || fields.name || 'Nuevo Cliente'),
+              phone: String(rowFields.phone || fields.phone || '-'),
+              email: String(rowFields.email || fields.email || ''),
+              notes: String(rowFields.notes || fields.notes || '')
+            } as any);
+          } else {
             const mappedUpdates: any = {};
             if ('name' in fields) mappedUpdates.name = String(fields.name);
             if ('phone' in fields) mappedUpdates.phone = String(fields.phone);
@@ -923,7 +955,19 @@ export const useWorkspaceExplorer = () => {
             }
           }
         } else if (entity === 'suppliers') {
-          if (!isNew) {
+          if (isNew) {
+            const row = updatedRows.find(r => String(r.id) === String(id));
+            const rowFields = row || {};
+            await store.addSupplier({
+              id: generateIdWithPrefix('sup'),
+              name: String(rowFields.name || fields.name || 'Nuevo Proveedor'),
+              contactName: String(rowFields.contactName || fields.contactName || '-'),
+              phone: String(rowFields.phone || fields.phone || '-'),
+              address: String(rowFields.address || fields.address || ''),
+              category: String(rowFields.category || fields.category || 'Otros'),
+              lastVisit: '-'
+            } as any);
+          } else {
             const mappedUpdates: any = {};
             if ('name' in fields) mappedUpdates.name = String(fields.name);
             if ('contactName' in fields) mappedUpdates.contactName = String(fields.contactName);
@@ -954,7 +998,18 @@ export const useWorkspaceExplorer = () => {
       }
 
       // Re-trigger loading of store to refresh the table representation
-      await triggerLoadData(entity);
+      if (entity === 'products') {
+        await store.loadProducts();
+        await store.loadCategories(true);
+      } else if (entity === 'categories') {
+        await store.loadCategories(true);
+      } else if (entity === 'customers') {
+        await store.loadCustomers();
+      } else if (entity === 'suppliers') {
+        await store.loadSuppliers();
+      } else if (entity === 'orders') {
+        await store.loadOrders();
+      }
     }
   };
 

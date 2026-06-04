@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { sql } from 'kysely';
 import { randomUUID } from 'crypto';
 import { db } from '../db/index.js';
+import { logAudit } from '../utils/audit.js';
+
 
 export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
   // Create supplier schema
@@ -119,26 +121,53 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
 
       await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
-      const result = await db
-        .insertInto('suppliers')
-        .values({
-          id: randomUUID(),
+      const supplierId = randomUUID();
+
+      const result = await db.transaction().execute(async (trx) => {
+        const res = await trx
+          .insertInto('suppliers')
+          .values({
+            id: supplierId,
+            business_id: user.business_id,
+            name: body.name,
+            contact_name: body.contact_name || null,
+            phone: body.phone,
+            email: body.email || null,
+            address: body.address || null,
+            category: body.category || null,
+            notes: body.notes || null,
+            next_visit_date: body.next_visit_date ? new Date(body.next_visit_date) : null,
+            is_active: true,
+            created_by: user.sub,
+            created_at: new Date(),
+            updated_at: new Date()
+          })
+          .returningAll()
+          .executeTakeFirst();
+
+        await logAudit(trx, {
           business_id: user.business_id,
-          name: body.name,
-          contact_name: body.contact_name || null,
-          phone: body.phone,
-          email: body.email || null,
-          address: body.address || null,
-          category: body.category || null,
-          notes: body.notes || null,
-          next_visit_date: body.next_visit_date ? new Date(body.next_visit_date) : null,
-          is_active: true,
-          created_by: user.sub,
-          created_at: new Date(),
-          updated_at: new Date()
-        })
-        .returningAll()
-        .executeTakeFirst();
+          user_id: user.sub,
+          action: 'create_supplier',
+          entity_type: 'suppliers',
+          entity_id: supplierId,
+          details: {
+            new_values: {
+              name: body.name,
+              contact_name: body.contact_name || null,
+              phone: body.phone,
+              email: body.email || null,
+              address: body.address || null,
+              category: body.category || null,
+              notes: body.notes || null
+            }
+          },
+          ip_address: request.ip,
+          user_agent: request.headers['user-agent']
+        });
+
+        return res;
+      });
 
       return reply.status(201).send(result);
     } catch (error: any) {
@@ -167,16 +196,63 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
 
       await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
-      const result = await db
-        .updateTable('suppliers')
-        .set({
-          ...body,
-          next_visit_date: body.next_visit_date ? new Date(body.next_visit_date) : undefined,
-          updated_at: new Date()
-        })
-        .where('id', '=', id)
-        .returningAll()
-        .executeTakeFirst();
+      const result = await db.transaction().execute(async (trx) => {
+        const currentSupplier = await trx
+          .selectFrom('suppliers')
+          .selectAll()
+          .where('id', '=', id)
+          .where('business_id', '=', user.business_id)
+          .where('deleted_at', 'is', null)
+          .executeTakeFirst();
+
+        if (!currentSupplier) {
+          return null;
+        }
+
+        const res = await trx
+          .updateTable('suppliers')
+          .set({
+            ...body,
+            next_visit_date: body.next_visit_date ? new Date(body.next_visit_date) : undefined,
+            updated_at: new Date()
+          })
+          .where('id', '=', id)
+          .returningAll()
+          .executeTakeFirst();
+
+        if (res) {
+          const oldValues: Record<string, any> = {};
+          const newValues: Record<string, any> = {};
+
+          for (const key of Object.keys(body)) {
+            const oldVal = (currentSupplier as any)[key];
+            const newVal = (body as any)[key];
+            if (oldVal !== newVal && newVal !== undefined) {
+              oldValues[key] = oldVal;
+              newValues[key] = newVal;
+            }
+          }
+
+          if (Object.keys(oldValues).length > 0) {
+            await logAudit(trx, {
+              business_id: user.business_id,
+              user_id: user.sub,
+              action: 'update_supplier',
+              entity_type: 'suppliers',
+              entity_id: id,
+              details: {
+                name: currentSupplier.name,
+                old_values: oldValues,
+                new_values: newValues
+              },
+              ip_address: request.ip,
+              user_agent: request.headers['user-agent']
+            });
+          }
+        }
+
+        return res;
+      });
 
       if (!result) {
         return reply.status(404).send({ error: 'Supplier not found' });
@@ -206,14 +282,55 @@ export const suppliersRoutes: FastifyPluginAsync = async (fastify) => {
 
     await sql`SELECT set_config('app.current_business_id', ${user.business_id}, true)`.execute(db);
 
-    await db
-      .updateTable('suppliers')
-      .set({
-        deleted_at: new Date()
-      })
-      .where('id', '=', id)
-      .where('business_id', '=', user.business_id)
-      .execute();
+    const result = await db.transaction().execute(async (trx) => {
+      const supplier = await trx
+        .selectFrom('suppliers')
+        .select(['name', 'contact_name', 'phone', 'email', 'address', 'category', 'notes'])
+        .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
+        .where('deleted_at', 'is', null)
+        .executeTakeFirst();
+
+      if (!supplier) return false;
+
+      await trx
+        .updateTable('suppliers')
+        .set({
+          deleted_at: new Date(),
+          is_active: false
+        })
+        .where('id', '=', id)
+        .where('business_id', '=', user.business_id)
+        .execute();
+
+      await logAudit(trx, {
+        business_id: user.business_id,
+        user_id: user.sub,
+        action: 'delete_supplier',
+        entity_type: 'suppliers',
+        entity_id: id,
+        details: {
+          name: supplier.name,
+          old_values: {
+            name: supplier.name,
+            contact_name: supplier.contact_name,
+            phone: supplier.phone,
+            email: supplier.email,
+            address: supplier.address,
+            category: supplier.category,
+            notes: supplier.notes
+          }
+        },
+        ip_address: request.ip,
+        user_agent: request.headers['user-agent']
+      });
+
+      return true;
+    });
+
+    if (!result) {
+      return reply.status(404).send({ error: 'Supplier not found' });
+    }
 
     return reply.send({ success: true });
   });

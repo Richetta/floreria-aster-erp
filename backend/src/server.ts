@@ -179,6 +179,8 @@ console.log('Loading reminders.js...');
 await fastify.register(import('./routes/reminders.js'), { prefix: '/api/reminders' });
 console.log('Loading activity.js...');
 await fastify.register(import('./routes/activity.js'), { prefix: '/api/activity' });
+console.log('Loading audit-logs.js...');
+await fastify.register(import('./routes/audit-logs.js'), { prefix: '/api/audit-logs' });
 console.log('Loading categories.js...');
 await fastify.register(import('./routes/categories.js'), { prefix: '/api/categories' });
 console.log('Loading brands.js...');
