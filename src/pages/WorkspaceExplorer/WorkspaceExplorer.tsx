@@ -72,13 +72,6 @@ const getActionLabel = (action: string) => {
   return actionLabels[action] || action;
 };
 
-const getActionIcon = (action: string) => {
-  if (action.startsWith('create_')) return '🟢';
-  if (action.startsWith('update_')) return '🔵';
-  if (action.startsWith('delete_')) return '🔴';
-  return '📝';
-};
-
 export const WorkspaceExplorer: React.FC = () => {
   const {
     currentFolderId,
