@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useWorkspaceExplorer } from './useWorkspaceExplorer';
 import { VFSBrowser } from './components/VFSBrowser';
 import { SpreadsheetViewer } from './components/SpreadsheetViewer';
@@ -287,7 +288,7 @@ export const WorkspaceExplorer: React.FC = () => {
         )}
       </main>
       {/* Glassmorphic Sidebar Drawer for Audit Logs */}
-      {showHistory && (
+      {showHistory && createPortal(
         <div className="history-drawer-overlay" onClick={() => setShowHistory(false)}>
           <div className="history-drawer-content" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
@@ -395,11 +396,12 @@ export const WorkspaceExplorer: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Warning Confirmation Modal for Rollbacks */}
-      {showRollbackConfirm && rollbackTarget && (
+      {showRollbackConfirm && rollbackTarget && createPortal(
         <div className="rollback-modal-overlay" onClick={() => setShowRollbackConfirm(false)}>
           <div className="rollback-modal-content" onClick={e => e.stopPropagation()}>
             <div className="rollback-modal-header text-danger">
@@ -479,7 +481,8 @@ export const WorkspaceExplorer: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
