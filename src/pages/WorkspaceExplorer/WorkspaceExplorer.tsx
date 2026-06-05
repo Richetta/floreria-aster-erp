@@ -11,6 +11,74 @@ import { useStore } from '../../store/useStore';
 import { api } from '../../services/api';
 import './WorkspaceExplorer.css';
 
+const translateField = (key: string): string => {
+  const translations: Record<string, string> = {
+    name: 'Nombre',
+    code: 'Código',
+    barcode: 'Código de Barras',
+    description: 'Descripción',
+    cost: 'Costo',
+    price: 'Precio',
+    stock_quantity: 'Stock',
+    min_stock: 'Stock Mínimo',
+    category: 'Categoría',
+    category_name: 'Categoría',
+    phone: 'Teléfono',
+    email: 'Correo',
+    address: 'Dirección',
+    notes: 'Notas',
+    debtBalance: 'Saldo',
+    debt_balance: 'Saldo',
+    contactName: 'Nombre de Contacto',
+    contact_name: 'Contacto',
+    nextVisitDate: 'Próxima Visita',
+    next_visit_date: 'Visita'
+  };
+  return translations[key] || key;
+};
+
+const formatValue = (key: string, value: any): string => {
+  if (value === null || value === undefined || value === '') return 'vacío';
+  
+  if ((key === 'price' || key === 'cost' || key === 'debt_balance' || key === 'debtBalance') && typeof value === 'number') {
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
+  }
+  
+  if (key === 'next_visit_date' || key === 'nextVisitDate') {
+    try {
+      const d = new Date(value);
+      if (!isNaN(d.getTime())) return d.toLocaleDateString('es-AR');
+    } catch (_) {}
+  }
+  
+  return String(value);
+};
+
+const getActionLabel = (action: string) => {
+  const actionLabels: Record<string, string> = {
+    create_product: 'Producto Creado',
+    update_product: 'Producto Modificado',
+    delete_product: 'Producto Eliminado',
+    create_category: 'Categoría Creada',
+    update_category: 'Categoría Modificada',
+    delete_category: 'Categoría Eliminada',
+    create_customer: 'Cliente Creado',
+    update_customer: 'Cliente Modificado',
+    delete_customer: 'Cliente Eliminado',
+    create_supplier: 'Proveedor Creado',
+    update_supplier: 'Proveedor Modificado',
+    delete_supplier: 'Proveedor Eliminado'
+  };
+  return actionLabels[action] || action;
+};
+
+const getActionIcon = (action: string) => {
+  if (action.startsWith('create_')) return '🟢';
+  if (action.startsWith('update_')) return '🔵';
+  if (action.startsWith('delete_')) return '🔴';
+  return '📝';
+};
+
 export const WorkspaceExplorer: React.FC = () => {
   const {
     currentFolderId,
@@ -53,6 +121,131 @@ export const WorkspaceExplorer: React.FC = () => {
   const { user } = useAuth();
   const store = useStore();
   const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
+
+  const [expandedGroups, setExpandedGroups] = React.useState<Record<string, boolean>>({});
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  };
+
+  const groupedLogs = React.useMemo(() => {
+    if (auditLogs.length === 0) return [];
+    
+    const groups: any[] = [];
+    let currentGroup: any = null;
+    
+    const sortedLogs = [...auditLogs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    for (const log of sortedLogs) {
+      const logTime = new Date(log.created_at).getTime();
+      
+      if (!currentGroup) {
+        currentGroup = {
+          id: log.id,
+          user_id: log.user_id,
+          user_name: log.user_name,
+          user_email: log.user_email,
+          created_at: log.created_at,
+          logs: [log]
+        };
+      } else {
+        const groupTime = new Date(currentGroup.created_at).getTime();
+        const timeDiff = Math.abs(groupTime - logTime);
+        const sameUser = currentGroup.user_id === log.user_id;
+        
+        // Group if same user and within 8 seconds
+        if (sameUser && timeDiff <= 8000) {
+          currentGroup.logs.push(log);
+        } else {
+          groups.push(currentGroup);
+          currentGroup = {
+            id: log.id,
+            user_id: log.user_id,
+            user_name: log.user_name,
+            user_email: log.user_email,
+            created_at: log.created_at,
+            logs: [log]
+          };
+        }
+      }
+    }
+    
+    if (currentGroup) {
+      groups.push(currentGroup);
+    }
+    
+    return groups;
+  }, [auditLogs]);
+
+  const renderLogDetails = (log: any) => {
+    const action = log.action;
+    const details = log.details;
+    
+    if (action.startsWith('update_') && details?.new_values) {
+      const entries = Object.entries(details.new_values).filter(([key]) => {
+        return key !== 'id' && key !== 'business_id' && key !== 'created_at' && key !== 'updated_at' && key !== 'deleted_at';
+      });
+
+      if (entries.length === 0) return null;
+
+      return (
+        <div className="log-changes-diff-list">
+          {entries.map(([key, newVal]) => {
+            const oldVal = details.old_values?.[key];
+            const friendlyKey = translateField(key);
+            const friendlyOld = formatValue(key, oldVal);
+            const friendlyNew = formatValue(key, newVal);
+            
+            return (
+              <div key={key} className="diff-item-row">
+                <span className="diff-field-name">{friendlyKey}:</span>
+                <div className="diff-values-flow">
+                  <span className="diff-old-val">{friendlyOld}</span>
+                  <span className="diff-arrow">➔</span>
+                  <span className="diff-new-val">{friendlyNew}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+    
+    if (action.startsWith('create_') && details?.new_values) {
+      const entries = Object.entries(details.new_values).filter(([key, val]) => {
+        return key !== 'id' && key !== 'business_id' && key !== 'created_at' && key !== 'updated_at' && key !== 'deleted_at' && val !== null && val !== undefined && val !== '';
+      });
+
+      if (entries.length === 0) return null;
+
+      return (
+        <div className="log-changes-create-list">
+          <span className="create-label-text">Valores iniciales:</span>
+          <div className="create-values-grid">
+            {entries.map(([key, val]) => (
+              <div key={key} className="create-item-pill">
+                <span className="create-item-key">{translateField(key)}:</span>
+                <span className="create-item-val">{formatValue(key, val)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    
+    if (action.startsWith('delete_')) {
+      return (
+        <div className="log-changes-delete">
+          <span className="delete-info-text">Se eliminó de las planillas activas.</span>
+        </div>
+      );
+    }
+    
+    return null;
+  };
 
   const fetchAuditLogs = async () => {
     setIsHistoryLoading(true);
@@ -311,84 +504,118 @@ export const WorkspaceExplorer: React.FC = () => {
                   <div className="spinner"></div>
                   <span>Cargando historial...</span>
                 </div>
-              ) : auditLogs.length === 0 ? (
+              ) : groupedLogs.length === 0 ? (
                 <div className="drawer-empty">
                   <span>No hay cambios registrados en este local.</span>
                 </div>
               ) : (
                 <div className="audit-logs-list">
-                  {auditLogs.map((log) => {
-                    const dateStr = new Date(log.created_at).toLocaleString('es-AR', {
+                  {groupedLogs.map((group) => {
+                    const isExpanded = expandedGroups[group.id] || false;
+                    const dateStr = new Date(group.created_at).toLocaleString('es-AR', {
                       day: '2-digit',
                       month: '2-digit',
                       hour: '2-digit',
                       minute: '2-digit'
                     });
 
-                    // Translate action types
-                    const actionLabels: Record<string, string> = {
-                      create_product: 'Producto creado',
-                      update_product: 'Producto modificado',
-                      delete_product: 'Producto eliminado',
-                      create_category: 'Categoría creada',
-                      update_category: 'Categoría modificada',
-                      delete_category: 'Categoría eliminada',
-                      create_customer: 'Cliente creado',
-                      update_customer: 'Cliente modificado',
-                      delete_customer: 'Cliente eliminado',
-                      create_supplier: 'Proveedor creado',
-                      update_supplier: 'Proveedor modificado',
-                      delete_supplier: 'Proveedor eliminado'
-                    };
-
-                    const actionLabel = actionLabels[log.action] || log.action;
-                    const entityName = log.details?.name || `ID: ${log.entity_id.substring(0, 8)}...`;
-                    
-                    // Render description of fields updated
-                    const changesDesc = [];
-                    if (log.action.startsWith('update_') && log.details?.new_values) {
-                      for (const [key, val] of Object.entries(log.details.new_values)) {
-                        const oldVal = log.details.old_values?.[key];
-                        changesDesc.push(`${key}: "${oldVal ?? ''}" → "${val}"`);
-                      }
-                    }
+                    const isBatch = group.logs.length > 1;
+                    const counts = isBatch ? group.logs.reduce((acc: any, log: any) => {
+                      const act = log.action.split('_')[0]; // 'create' | 'update' | 'delete'
+                      acc[act] = (acc[act] || 0) + 1;
+                      return acc;
+                    }, { create: 0, update: 0, delete: 0 }) : null;
 
                     return (
-                      <div key={log.id} className="audit-log-card">
-                        <div className="log-header">
-                          <span className={`log-badge badge-${log.action.split('_')[0]}`}>
-                            {actionLabel}
-                          </span>
-                          <span className="log-time">{dateStr}</span>
-                        </div>
-                        <div className="log-entity">
-                          <strong>{entityName}</strong>
-                        </div>
-                        {changesDesc.length > 0 && (
-                          <div className="log-changes">
-                            {changesDesc.map((desc, idx) => (
-                              <div key={idx} className="change-item">{desc}</div>
-                            ))}
+                      <div key={group.id} className={`audit-group-card ${isBatch ? 'batch-card' : ''} ${isExpanded ? 'is-expanded' : ''}`}>
+                        <div className="group-header" onClick={() => isBatch && toggleGroup(group.id)}>
+                          <div className="group-meta-info">
+                            <span className="log-time">{dateStr}</span>
+                            <span className="log-author">por {group.user_name || 'Sistema'}</span>
                           </div>
-                        )}
-                        <div className="log-meta">
-                          <span>Por: {log.user_name || log.user_email || 'Sistema'}</span>
-                        </div>
-                        <div className="log-actions">
-                          {isAdminOrOwner ? (
-                            <button
-                              onClick={() => handleRollback(log)}
-                              className="btn-rollback-action"
-                              title="Revertir este cambio y restaurar valores anteriores"
-                            >
-                              Revertir
-                            </button>
-                          ) : (
-                            <span className="rollback-unauthorized" title="Se requiere rol de Administrador o Dueño">
-                              Solo lectura
+                          
+                          <div className="group-title-row">
+                            <span className={`group-badge ${isBatch ? 'badge-batch' : `badge-${group.logs[0].action.split('_')[0]}`}`}>
+                              {isBatch ? `Lote de Cambios (${group.logs.length})` : getActionLabel(group.logs[0].action)}
                             </span>
+                            
+                            {isBatch && (
+                              <span className="expand-indicator">
+                                {isExpanded ? '▲ Colapsar' : '▼ Expandir'}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {!isBatch && (
+                            <div className="single-log-entity">
+                              <strong>{group.logs[0].details?.name || `ID: ${group.logs[0].entity_id.substring(0, 8)}...`}</strong>
+                            </div>
                           )}
                         </div>
+
+                        {/* If it's a batch, list elements inside. If expanded, show details. */}
+                        {isBatch && counts && (
+                          <div className="batch-elements-summary">
+                            {!isExpanded ? (
+                              <div className="batch-summary-preview" onClick={() => toggleGroup(group.id)}>
+                                <div className="batch-summary-counts">
+                                  {counts.create > 0 && <span className="batch-count-badge badge-create">🟢 {counts.create} creados</span>}
+                                  {counts.update > 0 && <span className="batch-count-badge badge-update">🔵 {counts.update} modificados</span>}
+                                  {counts.delete > 0 && <span className="batch-count-badge badge-delete">🔴 {counts.delete} eliminados</span>}
+                                </div>
+                                <div className="batch-click-to-expand">
+                                  Ver detalle de los {group.logs.length} cambios
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="batch-elements-list">
+                                {group.logs.map((log: any) => (
+                                  <div key={log.id} className="batch-element-item animate-fade-in-down">
+                                    <div className="element-item-header">
+                                      <span className={`element-badge badge-${log.action.split('_')[0]}`}>
+                                        {getActionLabel(log.action)}
+                                      </span>
+                                      <strong>{log.details?.name || `ID: ${log.entity_id.substring(0, 8)}...`}</strong>
+                                    </div>
+                                    
+                                    {renderLogDetails(log)}
+                                    
+                                    {isAdminOrOwner && (
+                                      <div className="element-rollback-action">
+                                        <button
+                                          onClick={() => handleRollback(log)}
+                                          className="btn-rollback-action-mini"
+                                          title="Revertir este cambio del lote"
+                                        >
+                                          Revertir
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* If it's single, render its details directly */}
+                        {!isBatch && (
+                          <div className="single-log-details-area">
+                            {renderLogDetails(group.logs[0])}
+                            
+                            {isAdminOrOwner && (
+                              <div className="single-rollback-footer">
+                                <button
+                                  onClick={() => handleRollback(group.logs[0])}
+                                  className="btn-rollback-action-premium"
+                                  title="Revertir este cambio"
+                                >
+                                  Revertir Cambio
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
