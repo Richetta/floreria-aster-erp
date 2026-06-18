@@ -84,8 +84,10 @@ export const PublicStorefront = () => {
     
     // Load Outfit Font dynamically
     useEffect(() => {
+        const fontFam = storeConfig?.settings?.font_family || 'Inter';
+        const formattedFont = fontFam.replace(/ /g, '+');
         const link = document.createElement('link');
-        link.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap';
+        link.href = `https://fonts.googleapis.com/css2?family=${formattedFont}:wght@300;400;500;600;700;800&display=swap`;
         link.rel = 'stylesheet';
         document.head.appendChild(link);
         return () => {
@@ -152,6 +154,7 @@ export const PublicStorefront = () => {
             document.documentElement.style.setProperty('--storefront-primary', color);
             document.documentElement.style.setProperty('--storefront-primary-light', `${color}15`);
             document.documentElement.style.setProperty('--storefront-primary-hover', adjustColorBrightness(color, -15));
+            document.documentElement.style.setProperty('--storefront-font', storeConfig?.settings?.font_family || 'Inter');
 
             // Set seasonal background properties
             const theme = settings.seasonal_theme || 'none';
@@ -358,7 +361,12 @@ export const PublicStorefront = () => {
             return matchesSearch && item.isCombo;
         }
         
-        const matchesCategory = !selectedCategory || item.category_id === selectedCategory;
+        let matchesCategory = !selectedCategory || item.category_id === selectedCategory;
+        if (storeConfig?.settings?.web_categories?.length > 0 && selectedCategory) {
+            const promotions = storeConfig?.settings?.promotions || {};
+            const promo = promotions[item.id] || {};
+            matchesCategory = promo.web_category === selectedCategory;
+        }
         return matchesSearch && matchesCategory && !item.isCombo;
     });
 
@@ -685,7 +693,7 @@ export const PublicStorefront = () => {
                                 <img src={slide.image_url} alt={slide.title || 'Banner'} className="hero-slide-img" />
                                 <div className="hero-slide-overlay" />
                                 {(slide.title || slide.subtitle || slide.cta_text) && (
-                                    <div className="hero-slide-content">
+                                    <div className="hero-slide-content" style={{ textAlign: storeConfig?.settings?.banner_alignment || 'center' }}>
                                         {slide.title && <h2 className="hero-slide-title">{slide.title}</h2>}
                                         {slide.subtitle && <p className="hero-slide-subtitle">{slide.subtitle}</p>}
                                         {slide.cta_text && (

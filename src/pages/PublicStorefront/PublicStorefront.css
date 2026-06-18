@@ -2032,3 +2032,29 @@
 
 .sf-footer-powered { color: #334155; }
 
+
+/* --- Marquee --- */
+.storefront-marquee {
+  background: var(--storefront-primary);
+  color: white;
+  padding: 8px 0;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+.marquee-content {
+  display: flex;
+  animation: marquee-scroll 20s linear infinite;
+  gap: 2rem;
+}
+.marquee-content span {
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+}
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
