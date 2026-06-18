@@ -2918,4 +2918,298 @@ select.form-input-lg {
     filter: brightness(0.9);
 }
 
-
+/* ==============================================
+   POS V2 — SISTEMA DE SELECCIÓN GRUPAL
+   ============================================== */
+
+/* ── Checkbox en cada ítem del carrito ── */
+.cart-item-checkbox {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: #4F7A5A;
+    border-radius: 3px;
+    margin-right: 2px;
+}
+
+/* ── Ítem seleccionado ── */
+.cart-line-item.selected {
+    background: rgba(79, 122, 90, 0.07) !important;
+    border-left: 3px solid #4F7A5A !important;
+}
+
+/* ── Chip de ajuste inline (reemplaza el popover) ── */
+.cart-adj-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.62rem;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 5px;
+    letter-spacing: 0.01em;
+    line-height: 1.5;
+    flex-shrink: 0;
+}
+.cart-adj-chip.add {
+    background: rgba(5, 150, 105, 0.12);
+    color: #059669;
+    border: 1px solid rgba(5, 150, 105, 0.25);
+}
+.cart-adj-chip.subtract {
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+/* ── Barra de selección / ajuste grupal ── */
+.pos-selection-bar {
+    padding: 0.65rem 1rem;
+    background: linear-gradient(135deg, #f8faf8 0%, #f1f7f3 100%);
+    border-top: 1px solid #ddeae1;
+    border-bottom: 1px solid #ddeae1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sel-bar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.sel-bar-selectall {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    user-select: none;
+}
+.sel-bar-selectall input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #4F7A5A;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.sel-bar-clear {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.sel-bar-clear:hover {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+/* ── Controles: toggle tipo + input % + botón aplicar ── */
+.sel-bar-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.sel-type-toggle {
+    display: flex;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.sel-type-btn {
+    padding: 0.3rem 0.55rem;
+    border: none;
+    background: transparent;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.sel-type-btn.active-add {
+    background: #059669;
+    color: white;
+}
+.sel-type-btn.active-sub {
+    background: #dc2626;
+    color: white;
+}
+.sel-type-btn:not(.active-add):not(.active-sub):hover {
+    background: #f8fafc;
+    color: #475569;
+}
+
+.sel-pct-input {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    height: 30px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.sel-pct-input input {
+    width: 44px;
+    border: none;
+    outline: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+    color: #1e293b;
+    padding: 0 2px 0 6px;
+    background: transparent;
+}
+.sel-pct-input span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #94a3b8;
+    padding-right: 7px;
+}
+
+.sel-apply-btn {
+    flex: 1;
+    padding: 0.3rem 0.65rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.73rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    min-height: 30px;
+}
+.sel-apply-btn.apply-add {
+    background: #059669;
+    color: white;
+}
+.sel-apply-btn.apply-add:hover {
+    background: #047857;
+    box-shadow: 0 2px 8px rgba(5,150,105,0.3);
+    transform: translateY(-1px);
+}
+.sel-apply-btn.apply-sub {
+    background: #dc2626;
+    color: white;
+}
+.sel-apply-btn.apply-sub:hover {
+    background: #b91c1c;
+    box-shadow: 0 2px 8px rgba(220,38,38,0.3);
+    transform: translateY(-1px);
+}
+.sel-apply-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* ── Chips de presets ── */
+.sel-presets-row {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.sel-preset-chip {
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    white-space: nowrap;
+}
+.sel-preset-chip.type-add:hover,
+.sel-preset-chip.type-add.active {
+    background: #059669;
+    color: white;
+    border-color: #059669;
+    transform: scale(1.04);
+}
+.sel-preset-chip.type-sub:hover,
+.sel-preset-chip.type-sub.active {
+    background: #dc2626;
+    color: white;
+    border-color: #dc2626;
+    transform: scale(1.04);
+}
+.sel-preset-chip.neutral:hover,
+.sel-preset-chip.neutral.active {
+    background: #64748b;
+    color: white;
+    border-color: #64748b;
+}
+
+/* ── Badge de cantidad en catálogo ── */
+.catalog-cart-qty-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #4F7A5A;
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0 4px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(79,122,90,0.35);
+}
+
+/* Producto en carrito — fondo verde suave en catálogo */
+.product-list-item.selected {
+    border-color: #4F7A5A !important;
+    background: rgba(79, 122, 90, 0.04) !important;
+}
+
+/* ── Responsive compacto para pantallas <= 1280px ── */
+@media (max-width: 1280px) {
+    .pos-header {
+        padding: 0.75rem 1rem !important;
+    }
+    .pos-title-section h1 {
+        font-size: 1.1rem !important;
+    }
+    .pos-title-section p {
+        font-size: 0.75rem !important;
+    }
+    .product-list-item {
+        padding: 0.85rem 1rem !important;
+    }
+    .product-list-name {
+        font-size: 0.95rem !important;
+    }
+    .product-list-price {
+        font-size: 1rem !important;
+        min-width: 80px !important;
+    }
+}
+@media (max-width: 1024px) {
+    .pos-cart-panel {
+        width: 380px !important;
+    }
+}

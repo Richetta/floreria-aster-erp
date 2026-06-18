@@ -170,11 +170,11 @@
 
 /* ── Trial Banner ── */
 .trial-banner {
-  margin-bottom: var(--space-6);
-  padding: var(--space-4);
+  margin-bottom: 0;
+  padding: 5px var(--space-4);
   background: var(--info-light);
-  border-left: 4px solid var(--info);
-  border-radius: var(--radius-md);
+  border-left: 3px solid var(--info);
+  border-radius: 0;
 }
 
 .trial-banner--urgent {
@@ -195,8 +195,8 @@
 
 .trial-banner__content {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-4);
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .trial-banner__text {
@@ -204,16 +204,17 @@
 }
 
 .trial-banner__text strong {
-  display: block;
-  font-size: 0.95rem;
+  display: inline;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-dark);
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .trial-banner__text p {
+  display: none;
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
 }
 
@@ -221,13 +222,14 @@
   background: var(--info);
   color: white;
   border: none;
-  padding: var(--space-2) var(--space-5);
-  border-radius: 8px;
-  font-size: 0.9rem;
+  padding: 3px var(--space-3);
+  border-radius: 6px;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .trial-banner__btn:hover {
@@ -338,12 +340,12 @@
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .trial-banner__content {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
   }
 
   .trial-banner__btn {
-    width: 100%;
+    width: auto;
     text-align: center;
   }
 

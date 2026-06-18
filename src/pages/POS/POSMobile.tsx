@@ -48,18 +48,12 @@ export const POSMobile = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     // Cart step: 'summary' | 'checkout' | 'payment'
     const [cartStep, setCartStep] = useState<'summary' | 'payment'>('summary');
-    const [adjMode, setAdjMode] = useState<'subtract' | 'add'>('subtract');
-    const [adjValue, setAdjValue] = useState<number>(0);
-    const [adjPresets, setAdjPresets] = useState<number[]>(() => {
-        const saved = localStorage.getItem('pos_adjustment_presets');
-        return saved ? JSON.parse(saved) : [5, 10, 15];
-    });
-    const [activeAdjustmentDrawer, setActiveAdjustmentDrawer] = useState<boolean>(false);
-    const [showPresetsConfig, setShowPresetsConfig] = useState(false);
-    const [tempPresets, setTempPresets] = useState<number[]>([...adjPresets]);
-    const [activeItemAdjMenuId, setActiveItemAdjMenuId] = useState<string | null>(null);
-    const [tempAdjType, setTempAdjType] = useState<'add' | 'subtract'>('add');
-    const [tempAdjVal, setTempAdjVal] = useState<number>(0);
+
+
+    // V2: Selección grupal mobile
+    const [selectedCartItemIds, setSelectedCartItemIds] = useState<string[]>([]);
+    const [selAdjType, setSelAdjType] = useState<'add' | 'subtract'>('add');
+    const [selAdjVal, setSelAdjVal] = useState<number>(0);
 
     const { showAlert } = useModal();
     const navigate = useNavigate();
@@ -149,55 +143,110 @@ export const POSMobile = () => {
     }, [products, searchTerm, activeCategory, categoriesData]);
 
     // --- Barcode Scanner ---
-    const renderUnifiedAdjustment = () => (
-        <div className="pos-mobile-adjustment-unified" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
-                <div className="adj-bar-mobile" style={{ flex: 1 }}>
-                    <button 
-                        className={`adj-mode-btn ${adjMode}`}
-                        onClick={() => setAdjMode(adjMode === 'subtract' ? 'add' : 'subtract')}
-                    >
-                        {adjMode === 'subtract' ? '-' : '+'}
-                    </button>
-                    <div className="adj-input-container" onClick={() => setActiveAdjustmentDrawer(true)}>
-                        <span className="adj-value-display">{adjValue}%</span>
-                        <span className="adj-label">{adjMode === 'subtract' ? 'Descuento' : 'Recargo'}</span>
+    // Limpiar selección cuando cambia el carrito
+    useEffect(() => {
+        setSelectedCartItemIds(prev => prev.filter(id => cart.some(item => item.id === id)));
+    }, [cart]);
+
+    const toggleItemSelection = (id: string) => {
+        setSelectedCartItemIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    const renderSelectionBar = () => {
+        if (cart.length === 0) return null;
+        const isSelection = selectedCartItemIds.length > 0;
+        const allSelected = selectedCartItemIds.length === cart.length;
+
+        const handleApply = () => {
+            const type = selAdjVal === 0 ? 'none' : selAdjType;
+            if (isSelection) {
+                selectedCartItemIds.forEach(id => updateCartAdjustment(id, type as any, selAdjVal));
+                setSelectedCartItemIds([]);
+            } else {
+                bulkUpdateCartAdjustments(type as any, selAdjVal);
+            }
+        };
+
+        return (
+            <div className="pos-selection-bar">
+                <div className="sel-bar-header">
+                    <label className="sel-bar-selectall">
+                        <input
+                            type="checkbox"
+                            checked={allSelected}
+                            onChange={() => {
+                                if (allSelected || isSelection) setSelectedCartItemIds([]);
+                                else setSelectedCartItemIds(cart.map(i => i.id));
+                            }}
+                        />
+                        <span>
+                            {isSelection
+                                ? `${selectedCartItemIds.length} ítem${selectedCartItemIds.length > 1 ? 's' : ''} seleccionado${selectedCartItemIds.length > 1 ? 's' : ''}`
+                                : 'Ajuste rápido (a todos)'
+                            }
+                        </span>
+                    </label>
+                    {isSelection && (
+                        <button className="sel-bar-clear" onClick={() => setSelectedCartItemIds([])}>
+                            Limpiar
+                        </button>
+                    )}
+                </div>
+                <div className="sel-bar-controls">
+                    <div className="sel-type-toggle">
+                        <button
+                            className={`sel-type-btn ${selAdjType === 'add' ? 'active-add' : ''}`}
+                            onClick={() => setSelAdjType('add')}
+                        >
+                            + Recargo
+                        </button>
+                        <button
+                            className={`sel-type-btn ${selAdjType === 'subtract' ? 'active-sub' : ''}`}
+                            onClick={() => setSelAdjType('subtract')}
+                        >
+                            − Dcto
+                        </button>
                     </div>
-                    <button className="adj-config-btn" onClick={() => setShowPresetsConfig(true)}>
-                        <span className="material-symbols-rounded">settings</span>
+                    <div className="sel-pct-input">
+                        <input
+                            type="number"
+                            value={selAdjVal || ''}
+                            onChange={e => setSelAdjVal(Math.max(0, Number(e.target.value)))}
+                            placeholder="0"
+                            min="0"
+                            max="500"
+                        />
+                        <span>%</span>
+                    </div>
+                    <button
+                        className={`sel-apply-btn ${selAdjType === 'add' ? 'apply-add' : 'apply-sub'}`}
+                        onClick={handleApply}
+                    >
+                        {isSelection ? `${selectedCartItemIds.length}` : 'Todos'}
                     </button>
                 </div>
-                {cart.length > 0 && (
-                    <button 
-                        className="btn-apply-all-adj-mobile"
-                        onClick={() => {
-                            bulkUpdateCartAdjustments(
-                                adjValue === 0 ? 'none' : (adjMode === 'subtract' ? 'subtract' : 'add'),
-                                adjValue
-                            );
-                        }}
-                        style={{
-                            fontSize: '0.75rem',
-                            padding: '0.6rem 0.6rem',
-                            background: 'var(--primary-light, #ecfdf5)',
-                            color: 'var(--primary-color, #10b981)',
-                            border: '1px solid var(--primary-color, #10b981)',
-                            borderRadius: '10px',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            whiteSpace: 'nowrap',
-                            height: '46px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
+                <div className="sel-presets-row">
+                    {[10, 20, 30, 40, 50].map(val => (
+                        <button
+                            key={val}
+                            className={`sel-preset-chip ${selAdjVal === val ? 'active' : ''} ${selAdjType === 'add' ? 'type-add' : 'type-sub'}`}
+                            onClick={() => setSelAdjVal(val)}
+                        >
+                            {selAdjType === 'subtract' ? '-' : '+'}{val}%{val === 40 ? ' M.O.' : ''}
+                        </button>
+                    ))}
+                    <button
+                        className={`sel-preset-chip neutral ${selAdjVal === 0 ? 'active' : ''}`}
+                        onClick={() => { setSelAdjVal(0); bulkUpdateCartAdjustments('none', 0); }}
                     >
-                        Aplicar a todos
+                        Sin ajuste
                     </button>
-                )}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const handleBarcodeScan = async (scannedCode: string) => {
         let product = products.find(p => p.code === scannedCode || p.barcode === scannedCode);
@@ -269,10 +318,11 @@ export const POSMobile = () => {
                     });
                 }
                 showAlert({ title: '¡Pedido Guardado! 🌸', message: 'El pedido se registró correctamente.', variant: 'success' });
-                clearCart(); clearPosOrderForm(); setIsCartOpen(false);
-                setCartStep('summary'); setCheckoutMode('sale');
-                setAdjValue(0);
-            } catch {
+                clearCart();
+                clearPosOrderForm();
+                setSelAdjVal(0);
+                
+            } catch (error) {
                 showAlert({ title: 'Error', message: 'No se pudo guardar el pedido.', variant: 'error' });
             }
         } else {
@@ -285,7 +335,7 @@ export const POSMobile = () => {
                 if (success) {
                     showAlert({ title: '¡Venta Exitosa! 🌿', message: 'La venta se registró correctamente.', variant: 'success' });
                     clearCart(); setIsCartOpen(false); setCartStep('summary');
-                    setAdjValue(0);
+                    setSelAdjVal(0);
                 }
             } catch {
                 showAlert({ title: 'Error', message: 'Error procesando la venta.', variant: 'error' });
@@ -599,189 +649,59 @@ export const POSMobile = () => {
 
                             {/* Cart Items */}
                             <div className="pos-cart-items-list">
-                                {cart.map(item => (
-                                    <div key={item.id} className="pos-cart-item" style={{ position: 'relative' }}>
-                                        <div className="cart-item-icon">
-                                            <span className="material-symbols-rounded">{getCategoryIcon(item.category)}</span>
-                                        </div>
-                                        <div className="cart-item-details" style={{ flex: 1, minWidth: 0 }}>
-                                            <div className="cart-item-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginTop: '2px' }}>
-                                                <span className="cart-item-price-calc" style={{ fontSize: '0.75rem', color: '#64748b' }}>${item.price.toLocaleString('es-AR')} c/u</span>
-                                                
-                                                <div className="cart-item-adj-wrapper" style={{ position: 'relative' }}>
-                                                    <button 
-                                                        className={`cart-item-adj-badge ${item.adjustmentType || 'none'}`}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (activeItemAdjMenuId === item.id) {
-                                                                setActiveItemAdjMenuId(null);
-                                                            } else {
-                                                                setActiveItemAdjMenuId(item.id);
-                                                                setTempAdjType(item.adjustmentType === 'none' ? 'add' : item.adjustmentType);
-                                                                setTempAdjVal(item.adjustmentValue || 0);
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            fontSize: '0.65rem',
-                                                            padding: '0.1rem 0.3rem',
-                                                            borderRadius: '6px',
-                                                            border: '1px solid #e2e8f0',
-                                                            background: '#f8fafc',
-                                                            color: '#64748b',
-                                                            cursor: 'pointer',
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            fontWeight: 600,
-                                                            transition: 'all 0.15s'
-                                                        }}
-                                                    >
-                                                        {(!item.adjustmentType || item.adjustmentType === 'none' || !item.adjustmentValue) ? (
-                                                            <span>+ Ajuste</span>
-                                                        ) : (
-                                                            <span style={{ 
-                                                                color: item.adjustmentType === 'subtract' ? '#ef4444' : '#10b981',
-                                                                fontWeight: 700 
-                                                            }}>
-                                                                {item.adjustmentType === 'subtract' ? '-' : '+'}{item.adjustmentValue}%
-                                                            </span>
-                                                        )}
-                                                    </button>
-
-                                                    {activeItemAdjMenuId === item.id && (
-                                                        <>
-                                                            <div 
-                                                                className="cart-item-adj-backdrop" 
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setActiveItemAdjMenuId(null);
-                                                                }}
-                                                                style={{
-                                                                    position: 'fixed',
-                                                                    inset: 0,
-                                                                    zIndex: 999,
-                                                                    background: 'transparent'
-                                                                }}
-                                                            />
-                                                            <div 
-                                                                className="cart-item-adj-popover animate-scale-in"
-                                                                style={{
-                                                                    position: 'absolute',
-                                                                    top: '100%',
-                                                                    left: 0,
-                                                                    zIndex: 1000,
-                                                                    background: '#fff',
-                                                                    border: '1px solid #e2e8f0',
-                                                                    borderRadius: '10px',
-                                                                    padding: '0.6rem',
-                                                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                                                                    width: '170px',
-                                                                    marginTop: '4px',
-                                                                    display: 'flex',
-                                                                    flexDirection: 'column',
-                                                                    gap: '0.45rem'
-                                                                }}
-                                                            >
-                                                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e293b' }}>Ajuste de item</div>
-                                                                
-                                                                <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
-                                                                    <button 
-                                                                        className={`flex-1 text-center py-1 rounded ${tempAdjType === 'add' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
-                                                                        onClick={(e) => { e.stopPropagation(); setTempAdjType('add'); }}
-                                                                        style={{ flex: 1, fontSize: '0.65rem', border: 'none', cursor: 'pointer', padding: '0.25rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}
-                                                                    >
-                                                                        Recargo (+)
-                                                                    </button>
-                                                                    <button 
-                                                                        className={`flex-1 text-center py-1 rounded ${tempAdjType === 'subtract' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
-                                                                        onClick={(e) => { e.stopPropagation(); setTempAdjType('subtract'); }}
-                                                                        style={{ flex: 1, fontSize: '0.65rem', border: 'none', cursor: 'pointer', padding: '0.25rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}
-                                                                    >
-                                                                        Dcto (-)
-                                                                    </button>
-                                                                </div>
-
-                                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
-                                                                    {[0, 10, 20, 30, 40, 50].map(val => (
-                                                                        <button
-                                                                            key={val}
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                updateCartAdjustment(item.id, val === 0 ? 'none' : tempAdjType, val);
-                                                                                setActiveItemAdjMenuId(null);
-                                                                            }}
-                                                                            style={{
-                                                                                fontSize: '0.65rem',
-                                                                                padding: '0.25rem',
-                                                                                border: '1px solid #e2e8f0',
-                                                                                background: '#f8fafc',
-                                                                                borderRadius: '6px',
-                                                                                cursor: 'pointer',
-                                                                                fontWeight: 500
-                                                                            }}
-                                                                        >
-                                                                            {val === 0 ? '0%' : `${val === 40 ? '40% M.O.' : `${val}%`}`}
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
-
-                                                                <div style={{ display: 'flex', gap: '4px', width: '100%', alignItems: 'center' }}>
-                                                                    <input 
-                                                                        type="number"
-                                                                        value={tempAdjVal || ''}
-                                                                        onChange={e => setTempAdjVal(Number(e.target.value))}
-                                                                        placeholder="%"
-                                                                        style={{ width: '100%', fontSize: '0.75rem', padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '6px', height: '28px' }}
-                                                                        onClick={e => e.stopPropagation()}
-                                                                    />
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            updateCartAdjustment(item.id, tempAdjVal === 0 ? 'none' : tempAdjType, tempAdjVal);
-                                                                            setActiveItemAdjMenuId(null);
-                                                                        }}
-                                                                        style={{
-                                                                            fontSize: '0.7rem',
-                                                                            padding: '0.25rem 0.5rem',
-                                                                            background: 'var(--primary-color, #10b981)',
-                                                                            color: 'white',
-                                                                            border: 'none',
-                                                                            borderRadius: '6px',
-                                                                            cursor: 'pointer',
-                                                                            fontWeight: 600,
-                                                                            height: '28px'
-                                                                        }}
-                                                                    >
-                                                                        OK
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </>
+                                {cart.map(item => {
+                                    const isSelected = selectedCartItemIds.includes(item.id);
+                                    const hasAdj = item.adjustmentType !== 'none' && (item.adjustmentValue || 0) > 0;
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            className={`pos-cart-item${isSelected ? ' selected' : ''}`}
+                                        >
+                                            {/* Checkbox */}
+                                            <input
+                                                type="checkbox"
+                                                className="cart-item-checkbox"
+                                                style={{ flexShrink: 0 }}
+                                                checked={isSelected}
+                                                onChange={() => toggleItemSelection(item.id)}
+                                                onClick={e => e.stopPropagation()}
+                                            />
+                                            <div className="cart-item-icon">
+                                                <span className="material-symbols-rounded">{getCategoryIcon(item.category)}</span>
+                                            </div>
+                                            <div className="cart-item-details" style={{ flex: 1, minWidth: 0 }} onClick={() => toggleItemSelection(item.id)}>
+                                                <div className="cart-item-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '2px' }}>
+                                                    <span className="cart-item-price-calc" style={{ fontSize: '0.75rem', color: '#64748b' }}>${item.price.toLocaleString('es-AR')} c/u</span>
+                                                    {hasAdj && (
+                                                        <span className={`cart-adj-chip ${item.adjustmentType}`}>
+                                                            {item.adjustmentType === 'add' ? '+' : '-'}{item.adjustmentValue}%
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="cart-item-controls" style={{ marginLeft: '0.5rem', marginRight: '0.5rem' }}>
-                                            <button className="cart-qty-btn" onClick={() => removeFromCart(item.id)}>
-                                                <span className="material-symbols-rounded">{item.qty > 1 ? 'remove' : 'delete_outline'}</span>
-                                            </button>
-                                            <span className="cart-item-qty">{item.qty}</span>
-                                            <button className="cart-qty-btn add" onClick={() => addToCart(products.find(p => p.id === item.id) as Product)}>
-                                                <span className="material-symbols-rounded">add</span>
-                                            </button>
-                                        </div>
-                                        <div className="cart-item-total" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '70px' }}>
-                                            {item.adjustmentValue > 0 && item.adjustmentType !== 'none' && (
-                                                <span style={{ fontSize: '0.7rem', color: '#94a3b8', textDecoration: 'line-through', opacity: 0.7 }}>
-                                                    ${((item.price || 0) * item.qty).toLocaleString('es-AR')}
+                                            <div className="cart-item-controls" style={{ marginLeft: '0.25rem', marginRight: '0.25rem' }}>
+                                                <button className="cart-qty-btn" onClick={() => removeFromCart(item.id)}>
+                                                    <span className="material-symbols-rounded">{item.qty > 1 ? 'remove' : 'delete_outline'}</span>
+                                                </button>
+                                                <span className="cart-item-qty">{item.qty}</span>
+                                                <button className="cart-qty-btn add" onClick={() => addToCart(products.find(p => p.id === item.id) as Product)}>
+                                                    <span className="material-symbols-rounded">add</span>
+                                                </button>
+                                            </div>
+                                            <div className="cart-item-total" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '65px' }}>
+                                                {hasAdj && (
+                                                    <span style={{ fontSize: '0.68rem', color: '#94a3b8', textDecoration: 'line-through', opacity: 0.7 }}>
+                                                        ${((item.price || 0) * item.qty).toLocaleString('es-AR')}
+                                                    </span>
+                                                )}
+                                                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                                                    ${(getAdjustedItemPrice(item) * item.qty).toLocaleString('es-AR')}
                                                 </span>
-                                            )}
-                                            <span style={{ fontWeight: 700 }}>
-                                                ${(getAdjustedItemPrice(item) * item.qty).toLocaleString('es-AR')}
-                                            </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             {/* Note field */}
@@ -796,7 +716,7 @@ export const POSMobile = () => {
                             </div>
                         </div>
 
-                        {renderUnifiedAdjustment()}
+                        {renderSelectionBar()}
 
                         <div className="pos-cart-footer">
                             <div className="cart-totals" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '100%' }}>
@@ -886,9 +806,6 @@ export const POSMobile = () => {
                             </div>
 
 
-
-                            {renderUnifiedAdjustment()}
-
                             <div className="payment-selector-mobile">
 
                             <div className="payment-methods-section">
@@ -938,81 +855,6 @@ export const POSMobile = () => {
                 />
             )}
 
-            {/* Adjustment Drawer */}
-            <div className={`adj-drawer-overlay ${activeAdjustmentDrawer ? 'open' : ''}`} onClick={() => setActiveAdjustmentDrawer(false)}>
-                <div className="adj-drawer-content" onClick={e => e.stopPropagation()}>
-                    <div className="drawer-handle"></div>
-                    <div className="drawer-header-compact">
-                        <h3>Ajustar Total (%)</h3>
-                        <button className="drawer-close-btn" onClick={() => setActiveAdjustmentDrawer(false)}>
-                            <span className="material-symbols-rounded">close</span>
-                        </button>
-                    </div>
-                    
-                    <div className="drawer-body-compact">
-                        <div className="drawer-input-wrapper">
-                            <input 
-                                type="number" 
-                                className={`drawer-input-large ${adjMode === 'add' ? 'surcharge' : ''}`}
-                                value={adjValue || ''}
-                                onChange={e => setAdjValue(Number(e.target.value))}
-                                placeholder="0"
-                                autoFocus
-                            />
-                            <span className="input-suffix">%</span>
-                        </div>
-
-                        <div className="drawer-presets">
-                            {adjPresets.map(p => (
-                                <button 
-                                    key={p} 
-                                    className={`drawer-preset-btn ${adjMode === 'add' ? 'surcharge' : ''} ${adjValue === p ? 'active' : ''}`}
-                                    onClick={() => setAdjValue(p === adjValue ? 0 : p)}
-                                >
-                                    {p}%
-                                </button>
-                            ))}
-                        </div>
-
-                        <button className="drawer-apply-btn" onClick={() => setActiveAdjustmentDrawer(false)}>
-                            Aplicar
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Presets Config Modal (Mobile) */}
-            {showPresetsConfig && (
-                <div className="mobile-config-modal-overlay" onClick={() => setShowPresetsConfig(false)}>
-                    <div className="mobile-config-content" onClick={e => e.stopPropagation()}>
-                        <h3>Configurar Presets</h3>
-                        <div className="config-grid">
-                            {tempPresets.map((p, i) => (
-                                <div key={i} className="config-item">
-                                    <label>Preset #{i+1}</label>
-                                    <input 
-                                        type="number" 
-                                        value={p}
-                                        onChange={e => {
-                                            const newP = [...tempPresets];
-                                            newP[i] = Number(e.target.value);
-                                            setTempPresets(newP);
-                                        }}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                        <div className="config-actions">
-                            <button className="btn-cancel" onClick={() => setShowPresetsConfig(false)}>Cancelar</button>
-                            <button className="btn-save" onClick={() => {
-                                setAdjPresets([...tempPresets]);
-                                localStorage.setItem('pos_adjustment_presets', JSON.stringify(tempPresets));
-                                setShowPresetsConfig(false);
-                            }}>Guardar</button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
