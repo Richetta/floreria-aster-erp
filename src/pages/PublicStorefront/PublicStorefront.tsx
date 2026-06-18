@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { 
-    ShoppingBag, Search, Plus, Minus, X, Check, 
+    ShoppingBag, Search, Plus, Minus, X, Check, Eye, 
     MessageCircle, MapPin, Calendar, Clock,
     ShoppingCart, Sparkles, Send, Store,
     Star, ChevronLeft, ChevronRight, Instagram, Facebook
@@ -610,9 +610,7 @@ export const PublicStorefront = () => {
             )}
             
             {/* Header banner */}
-            <header className="store-header" style={{
-                background: `linear-gradient(135deg, var(--storefront-primary) 0%, ${adjustColorBrightness(storeConfig.settings?.theme_color || '#1e3f20', 30)} 100%)`
-            }}>
+            <header className={`store-header ${storeConfig.settings?.hero_slides?.length > 0 ? 'has-hero' : ''}`}>
                 <div className="store-header-content">
                     <div className="store-logo-wrapper">
                         {storeConfig.settings?.logo_url || storeConfig.business?.logo_url ? (
@@ -876,23 +874,36 @@ export const PublicStorefront = () => {
                         >
                             Todos
                         </button>
-                        {combos.length > 0 && (
+                        {storeConfig?.settings?.web_categories?.map((cat: string) => (
                             <button
-                                className={`category-pill ${selectedCategory === 'combos' ? 'active' : ''}`}
-                                onClick={() => setSelectedCategory('combos')}
+                                key={cat}
+                                className={`category-pill ${selectedCategory === cat ? 'active' : ''}`}
+                                onClick={() => setSelectedCategory(cat)}
                             >
-                                🎁 Combos Especiales
-                            </button>
-                        )}
-                        {categories.map(cat => (
-                            <button
-                                key={cat.id}
-                                className={`category-pill ${selectedCategory === cat.id ? 'active' : ''}`}
-                                onClick={() => setSelectedCategory(cat.id)}
-                            >
-                                {cat.name}
+                                {cat}
                             </button>
                         ))}
+                        {(!storeConfig?.settings?.web_categories || storeConfig.settings.web_categories.length === 0) && (
+                            <>
+                                {combos.some(c => c.storefront_published) && (
+                                    <button
+                                        className={`category-pill ${selectedCategory === 'combos' ? 'active' : ''}`}
+                                        onClick={() => setSelectedCategory('combos')}
+                                    >
+                                        Combos Especiales
+                                    </button>
+                                )}
+                                {categories.filter(cat => products.some(p => p.category_id === cat.id && p.storefront_published)).map(cat => (
+                                    <button
+                                        key={cat.id}
+                                        className={`category-pill ${selectedCategory === cat.id ? 'active' : ''}`}
+                                        onClick={() => setSelectedCategory(cat.id)}
+                                    >
+                                        {cat.name}
+                                    </button>
+                                ))}
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -943,16 +954,23 @@ export const PublicStorefront = () => {
                                         <div className="p-details">
                                             <h3 className="p-name">{product.name}</h3>
                                             <p className="p-desc">{product.description || (product.isCombo ? 'Combo especial de productos seleccionados.' : 'Flores y frescura garantizada.')}</p>
-                                            <div className="p-price-action" onClick={e => e.stopPropagation()}>
+                                            <div className="p-price-action">
                                                 <span className="p-price">{formatCurrency(product.price)}</span>
-                                                <button 
-                                                    className={`btn btn-primary add-to-cart-btn ${outOfStock ? 'disabled' : ''}`}
-                                                    onClick={() => addToCart(product)}
-                                                    disabled={outOfStock}
-                                                >
-                                                    <Plus size={16} />
-                                                    <span>Agregar</span>
-                                                </button>
+                                                <div className="p-action-buttons">
+                                                    <button 
+                                                        className="btn btn-secondary btn-view-detail"
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedDetailItem(product); }}
+                                                    >
+                                                        <Eye size={16} /> Ver más
+                                                    </button>
+                                                    <button 
+                                                        className={`btn btn-primary add-to-cart-btn ${outOfStock ? 'disabled' : ''}`}
+                                                        onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+                                                        disabled={outOfStock}
+                                                    >
+                                                        <Plus size={16} /> Agregar
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

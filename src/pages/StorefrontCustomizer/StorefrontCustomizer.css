@@ -608,3 +608,6 @@
     .sc-posts-grid { grid-template-columns: 1fr 1fr; }
     .sc-seasonal-grid { grid-template-columns: 1fr 1fr; }
 }
+
+.sc-icon-btn svg { color: inherit; width: 16px; height: 16px; }
+.sc-icon-btn { color: #374151 !important; }

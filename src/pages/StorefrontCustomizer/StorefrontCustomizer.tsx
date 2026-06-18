@@ -509,16 +509,6 @@ export const StorefrontCustomizer = () => {
                                     ))}
                                 </div>
                             </div>
-
-                            {/* Tip card */}
-                            <div className="sc-card sc-card-tip">
-                                <div className="sc-card-header"><Info size={18} /><h2>💡 Tip de Imágenes</h2></div>
-                                <p>Para tus imágenes, recomendamos subir las fotos a <strong>Imgur</strong> o <strong>ImgBB</strong> (gratuitos) y usar la URL directa en los campos de imagen.</p>
-                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                                    <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer" className="sc-btn-ghost">Imgur →</a>
-                                    <a href="https://imgbb.com" target="_blank" rel="noopener noreferrer" className="sc-btn-ghost">ImgBB →</a>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 )}
@@ -535,7 +525,7 @@ export const StorefrontCustomizer = () => {
                                         <label className="sc-label">Logo de la Tienda (URL)</label>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             <input type="url" className="sc-input" style={{ flex: 1 }} value={form.logo_url} onChange={e => setField('logo_url', e.target.value)} placeholder="https://..." />
-                                            <CloudinaryUploadWidget onSuccess={(url) => setField('logo_url', url)} options={{ cropping: true, croppingAspectRatio: 1 }}>
+                                            <CloudinaryUploadWidget onSuccess={(url) => setField('logo_url', url)} options={{ cropping: true, showSkipCropButton: false }}>
                                                 {(open) => (
                                                     <button type="button" className="sc-btn-secondary" onClick={open} title="Subir Imagen"><UploadCloud size={15} /></button>
                                                 )}
@@ -551,7 +541,7 @@ export const StorefrontCustomizer = () => {
                                         <label className="sc-label">Foto de Perfil de la Tienda (URL)</label>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             <input type="url" className="sc-input" style={{ flex: 1 }} value={form.profile_image_url} onChange={e => setField('profile_image_url', e.target.value)} placeholder="https://..." />
-                                            <CloudinaryUploadWidget onSuccess={(url) => setField('profile_image_url', url)} options={{ cropping: true, croppingAspectRatio: 1 }}>
+                                            <CloudinaryUploadWidget onSuccess={(url) => setField('profile_image_url', url)} options={{ cropping: true, showSkipCropButton: false }}>
                                                 {(open) => (
                                                     <button type="button" className="sc-btn-secondary" onClick={open} title="Subir Imagen"><UploadCloud size={15} /></button>
                                                 )}
@@ -923,7 +913,7 @@ export const StorefrontCustomizer = () => {
                                             <label className="sc-label">URL de imagen *</label>
                                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                 <input type="url" className="sc-input" style={{ flex: 1 }} value={slideForm.image_url} onChange={e => setSlideForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://..." />
-                                                <CloudinaryUploadWidget onSuccess={(url) => setSlideForm(p => ({ ...p, image_url: url }))} options={{ cropping: true, croppingAspectRatio: 2.5 }}>
+                                                <CloudinaryUploadWidget onSuccess={(url) => setSlideForm(p => ({ ...p, image_url: url }))} options={{ cropping: true, showSkipCropButton: false }}>
                                                     {(open) => (
                                                         <button type="button" className="sc-btn-secondary" onClick={open} title="Subir Imagen"><UploadCloud size={15} /></button>
                                                     )}
@@ -1085,7 +1075,7 @@ export const StorefrontCustomizer = () => {
                                 <label className="sc-label">URL de imagen</label>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     <input type="url" className="sc-input" style={{ flex: 1 }} value={postForm.image_url} onChange={e => setPostForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://..." />
-                                    <CloudinaryUploadWidget onSuccess={(url) => setPostForm(p => ({ ...p, image_url: url }))} options={{ cropping: true, croppingAspectRatio: 1 }}>
+                                    <CloudinaryUploadWidget onSuccess={(url) => setPostForm(p => ({ ...p, image_url: url }))} options={{ cropping: true, showSkipCropButton: false }}>
                                         {(open) => (
                                             <button type="button" className="sc-btn-secondary" onClick={open} title="Subir Imagen"><UploadCloud size={15} /></button>
                                         )}

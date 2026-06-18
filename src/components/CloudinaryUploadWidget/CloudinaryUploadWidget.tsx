@@ -28,7 +28,6 @@ export const CloudinaryUploadWidget = ({ onSuccess, options, children }: Cloudin
       sources: ['local', 'url', 'camera'],
       multiple: false,
       maxImageFileSize: 10000000, // 10MB
-      theme: 'minimal',
       language: 'es',
       text: {
         es: {
