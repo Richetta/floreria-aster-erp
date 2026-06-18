@@ -1668,7 +1668,8 @@ export const POSDesktop = () => {
                         </div>
 
                         {checkoutMode === 'order' && (
-                            /* PEDIR PARA DESPUÉS - Formulario Premium sin Acordeón */
+                            // PEDIR PARA DESPUÉS - Formulario Premium sin Acordeón
+                            <div className="order-form-spacious">
                                 {/* Step 1: Customer */}
                                 <div className="order-card-section">
                                     <div className="section-header-premium">
