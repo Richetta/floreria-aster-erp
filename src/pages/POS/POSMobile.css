@@ -1175,3 +1175,11 @@
     text-decoration: line-through;
     font-weight: 600;
 }
+
+/* Custom mobile adjustments styling */
+.cart-item-adj-badge:active {
+    filter: brightness(0.9);
+}
+.btn-apply-all-adj-mobile:active {
+    filter: brightness(0.9);
+}

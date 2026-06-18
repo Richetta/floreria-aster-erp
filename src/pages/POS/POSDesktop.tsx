@@ -89,6 +89,8 @@ export const POSDesktop = () => {
     const addToCart = useStore((state) => state.addToCart);
     const removeFromCart = useStore((state) => state.removeFromCart);
     const updateCartQty = useStore((state) => state.updateCartQty);
+    const updateCartAdjustment = useStore((state) => state.updateCartAdjustment);
+    const bulkUpdateCartAdjustments = useStore((state) => state.bulkUpdateCartAdjustments);
     const clearCart = useStore((state) => state.clearCart);
     
     const isAutoSyncEnabled = useStore((state) => state.isAutoSyncEnabled);
@@ -145,6 +147,9 @@ export const POSDesktop = () => {
     const [showPresetsMenu, setShowPresetsMenu] = useState(false);
     const [showPresetsConfig, setShowPresetsConfig] = useState(false);
     const [tempPresets, setTempPresets] = useState<number[]>([...adjPresets]);
+    const [activeItemAdjMenuId, setActiveItemAdjMenuId] = useState<string | null>(null);
+    const [tempAdjType, setTempAdjType] = useState<'add' | 'subtract' | 'none'>('add');
+    const [tempAdjVal, setTempAdjVal] = useState<number>(0);
 
     // Historial de escaneos para debugging
     const scanHistoryRef = useRef<{ code: string, timestamp: number, success: boolean, productName?: string }[]>([]);
@@ -503,14 +508,34 @@ export const POSDesktop = () => {
         );
     }, [customers, customerSearch]);
 
+    const getAdjustedItemPrice = (item: any) => {
+        const price = item.price || 0;
+        const adjVal = item.adjustmentValue || 0;
+        const adjTypeNormalized = item.adjustmentType || 'none';
+        const adjAmount = price * (adjVal / 100);
+        return adjTypeNormalized === 'subtract' 
+            ? Math.max(0, price - adjAmount) 
+            : (adjTypeNormalized === 'add' ? price + adjAmount : price);
+    };
+
     const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
     
-    // Formula: Total +/- Adjustment
-    const adjAmount = total * (adjValue / 100);
-    const finalTotalSale = adjMode === 'subtract' 
-        ? Math.max(0, total - adjAmount) 
-        : total + adjAmount;
+    const totalSurcharges = cart.reduce((sum, item) => {
+        if (item.adjustmentType === 'add' && item.adjustmentValue > 0) {
+            return sum + (item.price * item.qty) * (item.adjustmentValue / 100);
+        }
+        return sum;
+    }, 0);
+
+    const totalDiscounts = cart.reduce((sum, item) => {
+        if (item.adjustmentType === 'subtract' && item.adjustmentValue > 0) {
+            return sum + (item.price * item.qty) * (item.adjustmentValue / 100);
+        }
+        return sum;
+    }, 0);
+
+    const finalTotalSale = Math.max(0, total + totalSurcharges - totalDiscounts);
 
     const handleCheckout = async (method: string) => {
         guardOrder(async () => {
@@ -898,6 +923,33 @@ export const POSDesktop = () => {
                         </div>
                     )}
                 </div>
+                {cart.length > 0 && (
+                    <button 
+                        className="btn-apply-all-adj"
+                        onClick={() => {
+                            bulkUpdateCartAdjustments(
+                                adjValue === 0 ? 'none' : (adjMode === 'subtract' ? 'subtract' : 'add'),
+                                adjValue
+                            );
+                        }}
+                        style={{
+                            marginLeft: '8px',
+                            fontSize: '0.75rem',
+                            padding: '0.4rem 0.65rem',
+                            background: 'var(--primary-light, #ecfdf5)',
+                            color: 'var(--primary-color, #10b981)',
+                            border: '1px solid var(--primary-color, #10b981)',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.15s'
+                        }}
+                        title="Aplicar ajuste a todos los items del carrito"
+                    >
+                        Aplicar a todos
+                    </button>
+                )}
 
                 {showPresetsConfig && (
                     <div className="presets-config-modal">
@@ -1416,46 +1468,207 @@ export const POSDesktop = () => {
                                     </p>
                                 </div>
                             ) : (
-                                <div className="cart-items-list">
-                                {cart.map((item, idx) => (
-                                    <div className="cart-line-item" key={`${item.id}-${idx}`}>
-                                        {/* LEFT: Name + unit price */}
-                                        <div className="cart-item-main-info">
-                                            <h4 className="cart-item-name-compact">{item.name}</h4>
-                                            <p className="cart-item-unit-price">${(item.price || 0).toLocaleString()} c/u</p>
-                                        </div>
+                                 <div className="cart-items-list">
+                                 {cart.map((item, idx) => (
+                                     <div className="cart-line-item" key={`${item.id}-${idx}`} style={{ position: 'relative' }}>
+                                         {/* LEFT: Name + unit price + adjustment badge */}
+                                         <div className="cart-item-main-info" style={{ flex: 1, minWidth: 0 }}>
+                                             <h4 className="cart-item-name-compact">{item.name}</h4>
+                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '2px' }}>
+                                                 <p className="cart-item-unit-price">${(item.price || 0).toLocaleString()} c/u</p>
+                                                 
+                                                 <div className="cart-item-adj-wrapper" style={{ position: 'relative' }}>
+                                                     <button 
+                                                         className={`cart-item-adj-badge ${item.adjustmentType || 'none'}`}
+                                                         onClick={(e) => {
+                                                             e.stopPropagation();
+                                                             if (activeItemAdjMenuId === item.id) {
+                                                                 setActiveItemAdjMenuId(null);
+                                                             } else {
+                                                                 setActiveItemAdjMenuId(item.id);
+                                                                 setTempAdjType(item.adjustmentType === 'none' ? 'add' : item.adjustmentType);
+                                                                 setTempAdjVal(item.adjustmentValue || 0);
+                                                             }
+                                                         }}
+                                                         style={{
+                                                             fontSize: '0.65rem',
+                                                             padding: '0.1rem 0.35rem',
+                                                             borderRadius: '6px',
+                                                             border: '1px solid #e2e8f0',
+                                                             background: '#f8fafc',
+                                                             color: '#64748b',
+                                                             cursor: 'pointer',
+                                                             display: 'inline-flex',
+                                                             alignItems: 'center',
+                                                             fontWeight: 600,
+                                                             transition: 'all 0.15s'
+                                                         }}
+                                                     >
+                                                         {(!item.adjustmentType || item.adjustmentType === 'none' || !item.adjustmentValue) ? (
+                                                             <span>+ Ajuste</span>
+                                                         ) : (
+                                                             <span style={{ 
+                                                                 color: item.adjustmentType === 'subtract' ? '#ef4444' : '#10b981',
+                                                                 fontWeight: 700 
+                                                             }}>
+                                                                 {item.adjustmentType === 'subtract' ? '-' : '+'}{item.adjustmentValue}%
+                                                             </span>
+                                                         )}
+                                                     </button>
 
-                                        {/* RIGHT: Qty controls + line total + delete */}
-                                        <div className="cart-item-actions-compact">
-                                            <div className="qty-controls-compact">
-                                                <button className="qty-btn-mini" onClick={() => updateCartQty(item.id, -1)} title="Disminuir">
-                                                    <Minus size={12} />
-                                                </button>
-                                                <span className="qty-value-mini">{item.qty}</span>
-                                                <button className="qty-btn-mini" onClick={() => updateCartQty(item.id, 1)} title="Aumentar">
-                                                    <Plus size={12} />
-                                                </button>
-                                            </div>
-                                            <span className="cart-item-total-compact">
-                                                ${((item.price || 0) * item.qty).toLocaleString()}
-                                            </span>
-                                            <button
-                                                className="btn-delete-mini"
-                                                onClick={() => removeFromCart(item.id)}
-                                                title="Quitar del carrito"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                                </div>
+                                                     {activeItemAdjMenuId === item.id && (
+                                                         <>
+                                                             <div 
+                                                                 className="cart-item-adj-backdrop" 
+                                                                 onClick={(e) => {
+                                                                     e.stopPropagation();
+                                                                     setActiveItemAdjMenuId(null);
+                                                                 }}
+                                                                 style={{
+                                                                     position: 'fixed',
+                                                                     inset: 0,
+                                                                     zIndex: 999,
+                                                                     background: 'transparent'
+                                                                 }}
+                                                             />
+                                                             <div 
+                                                                 className="cart-item-adj-popover animate-scale-in"
+                                                                 style={{
+                                                                     position: 'absolute',
+                                                                     top: '100%',
+                                                                     left: 0,
+                                                                     zIndex: 1000,
+                                                                     background: '#fff',
+                                                                     border: '1px solid #e2e8f0',
+                                                                     borderRadius: '10px',
+                                                                     padding: '0.6rem',
+                                                                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                                                     width: '180px',
+                                                                     marginTop: '4px',
+                                                                     display: 'flex',
+                                                                     flexDirection: 'column',
+                                                                     gap: '0.45rem'
+                                                                 }}
+                                                             >
+                                                                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e293b' }}>Ajuste de item</div>
+                                                                 
+                                                                 <div className="flex gap-1" style={{ width: '100%' }}>
+                                                                     <button 
+                                                                         className={`flex-1 text-center py-1 rounded ${tempAdjType === 'add' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
+                                                                         onClick={(e) => { e.stopPropagation(); setTempAdjType('add'); }}
+                                                                         style={{ fontSize: '0.65rem', border: 'none', cursor: 'pointer', padding: '0.25rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}
+                                                                     >
+                                                                         Recargo (+)
+                                                                     </button>
+                                                                     <button 
+                                                                         className={`flex-1 text-center py-1 rounded ${tempAdjType === 'subtract' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
+                                                                         onClick={(e) => { e.stopPropagation(); setTempAdjType('subtract'); }}
+                                                                         style={{ fontSize: '0.65rem', border: 'none', cursor: 'pointer', padding: '0.25rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}
+                                                                     >
+                                                                         Dcto (-)
+                                                                     </button>
+                                                                 </div>
+
+                                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+                                                                     {[0, 10, 20, 30, 40, 50].map(val => (
+                                                                         <button
+                                                                             key={val}
+                                                                             onClick={(e) => {
+                                                                                 e.stopPropagation();
+                                                                                 updateCartAdjustment(item.id, val === 0 ? 'none' : tempAdjType, val);
+                                                                                 setActiveItemAdjMenuId(null);
+                                                                             }}
+                                                                             style={{
+                                                                                 fontSize: '0.65rem',
+                                                                                 padding: '0.25rem',
+                                                                                 border: '1px solid #e2e8f0',
+                                                                                 background: '#f8fafc',
+                                                                                 borderRadius: '6px',
+                                                                                 cursor: 'pointer',
+                                                                                 fontWeight: 500
+                                                                             }}
+                                                                         >
+                                                                             {val === 0 ? '0%' : `${val === 40 ? '40% M.O.' : `${val}%`}`}
+                                                                         </button>
+                                                                     ))}
+                                                                 </div>
+
+                                                                 <div className="flex gap-1" style={{ width: '100%', alignItems: 'center' }}>
+                                                                     <input 
+                                                                         type="number"
+                                                                         value={tempAdjVal || ''}
+                                                                         onChange={e => setTempAdjVal(Number(e.target.value))}
+                                                                         placeholder="%"
+                                                                         style={{ width: '100%', fontSize: '0.75rem', padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '6px', height: '28px' }}
+                                                                         onClick={e => e.stopPropagation()}
+                                                                     />
+                                                                     <button
+                                                                         onClick={(e) => {
+                                                                             e.stopPropagation();
+                                                                             updateCartAdjustment(item.id, tempAdjVal === 0 ? 'none' : tempAdjType, tempAdjVal);
+                                                                             setActiveItemAdjMenuId(null);
+                                                                         }}
+                                                                         style={{
+                                                                             fontSize: '0.7rem',
+                                                                             padding: '0.25rem 0.5rem',
+                                                                             background: 'var(--primary-color, #10b981)',
+                                                                             color: 'white',
+                                                                             border: 'none',
+                                                                             borderRadius: '6px',
+                                                                             cursor: 'pointer',
+                                                                             fontWeight: 600,
+                                                                             height: '28px'
+                                                                         }}
+                                                                     >
+                                                                         OK
+                                                                     </button>
+                                                                 </div>
+                                                             </div>
+                                                         </>
+                                                     )}
+                                                 </div>
+                                             </div>
+                                         </div>
+
+                                         {/* RIGHT: Qty controls + line total + delete */}
+                                         <div className="cart-item-actions-compact">
+                                             <div className="qty-controls-compact">
+                                                 <button className="qty-btn-mini" onClick={() => updateCartQty(item.id, -1)} title="Disminuir">
+                                                     <Minus size={12} />
+                                                 </button>
+                                                 <span className="qty-value-mini">{item.qty}</span>
+                                                 <button className="qty-btn-mini" onClick={() => updateCartQty(item.id, 1)} title="Aumentar">
+                                                     <Plus size={12} />
+                                                 </button>
+                                             </div>
+                                             
+                                             <div className="flex flex-col items-end" style={{ minWidth: '70px' }}>
+                                                 {item.adjustmentValue > 0 && item.adjustmentType !== 'none' && (
+                                                     <span style={{ fontSize: '0.7rem', color: '#94a3b8', textDecoration: 'line-through', opacity: 0.7 }}>
+                                                         ${((item.price || 0) * item.qty).toLocaleString()}
+                                                     </span>
+                                                 )}
+                                                 <span className="cart-item-total-compact" style={{ fontWeight: 700 }}>
+                                                     ${(getAdjustedItemPrice(item) * item.qty).toLocaleString()}
+                                                 </span>
+                                             </div>
+
+                                             <button
+                                                 className="btn-delete-mini"
+                                                 onClick={() => removeFromCart(item.id)}
+                                                 title="Quitar del carrito"
+                                             >
+                                                 <Trash2 size={14} />
+                                             </button>
+                                         </div>
+                                     </div>
+                                 ))}
+                                 </div>
                             )}
                         </div>
 
                         {checkoutMode === 'order' && (
                             /* PEDIR PARA DESPUÉS - Formulario Premium sin Acordeón */
-                            <div className="order-form-spacious">
                                 {/* Step 1: Customer */}
                                 <div className="order-card-section">
                                     <div className="section-header-premium">
@@ -1739,23 +1952,44 @@ export const POSDesktop = () => {
                                 {/* Order Summary and Payment Settings */}
                                 <div className="order-card-section mt-4 highlight-section">
                                     <div className="section-content-spacious p-4">
-                                        <div className="flex justify-between items-end mb-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-h4 text-muted">Total del Pedido</span>
-                                                {adjValue > 0 && (
-                                                    <div className="flex gap-2 items-center">
-                                                        <span className="text-micro text-muted line-through">${(total || 0).toLocaleString()}</span>
-                                                        <span className={`text-micro ${adjMode === 'subtract' ? 'text-green-600' : 'text-red-600'}`}>
-                                                            {adjMode === 'subtract' ? '-' : '+'}{adjValue}%
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                {renderUnifiedAdjustment()}
-                                                <span className="text-h2 font-bold text-primary">${(finalTotalSale || 0).toLocaleString()}</span>
-                                            </div>
-                                        </div>
+                                         {/* Totals Breakdown */}
+                                         {(totalSurcharges > 0 || totalDiscounts > 0) && (
+                                             <div className="order-totals-breakdown mb-3" style={{
+                                                 display: 'flex',
+                                                 flexDirection: 'column',
+                                                 gap: '0.2rem',
+                                                 fontSize: '0.85rem',
+                                                 color: '#475569',
+                                                 borderBottom: '1px dashed #e2e8f0',
+                                                 paddingBottom: '0.5rem'
+                                             }}>
+                                                 <div className="flex justify-between">
+                                                     <span>Subtotal base</span>
+                                                     <span>${(total || 0).toLocaleString()}</span>
+                                                 </div>
+                                                 {totalSurcharges > 0 && (
+                                                     <div className="flex justify-between" style={{ color: '#10b981' }}>
+                                                         <span>Mano de obra / Recargos</span>
+                                                         <span>+${(totalSurcharges || 0).toLocaleString()}</span>
+                                                     </div>
+                                                 )}
+                                                 {totalDiscounts > 0 && (
+                                                     <div className="flex justify-between" style={{ color: '#ef4444' }}>
+                                                         <span>Descuentos</span>
+                                                         <span>-${(totalDiscounts || 0).toLocaleString()}</span>
+                                                     </div>
+                                                 )}
+                                             </div>
+                                         )}
+                                         <div className="flex justify-between items-end mb-4">
+                                             <div className="flex flex-col">
+                                                 <span className="text-h4 text-muted">Total del Pedido</span>
+                                             </div>
+                                             <div className="flex items-center gap-4">
+                                                 {renderUnifiedAdjustment()}
+                                                 <span className="text-h2 font-bold text-primary">${(finalTotalSale || 0).toLocaleString()}</span>
+                                             </div>
+                                         </div>
                                         
                                         <div className="advance-payment-lg">
                                             <div className="flex items-center gap-3 mb-3">
@@ -1836,21 +2070,44 @@ export const POSDesktop = () => {
                                         />
                                     </div>
                                 </div>
-                                <div className="cart-totals-compact">
-                                    <div className="flex flex-col">
-                                        {adjValue > 0 && (
-                                            <div className="flex gap-2 items-center">
-                                                <span className="text-micro text-muted line-through">${(total || 0).toLocaleString()}</span>
-                                                <span className={`text-micro ${adjMode === 'subtract' ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {adjMode === 'subtract' ? '-' : '+'}{adjValue}%
-                                                </span>
+                                <div className="cart-totals-compact" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                                    {(totalSurcharges > 0 || totalDiscounts > 0) && (
+                                        <div className="order-totals-breakdown" style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.2rem',
+                                            fontSize: '0.85rem',
+                                            color: '#475569',
+                                            borderBottom: '1px dashed #e2e8f0',
+                                            paddingBottom: '0.5rem',
+                                            width: '100%'
+                                        }}>
+                                            <div className="flex justify-between w-full">
+                                                <span>Subtotal base</span>
+                                                <span>${(total || 0).toLocaleString()}</span>
                                             </div>
-                                        )}
-                                        <span className="total-label">Total a Pagar</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        {renderUnifiedAdjustment()}
-                                        <span className="total-amount">${(finalTotalSale || 0).toLocaleString()}</span>
+                                            {totalSurcharges > 0 && (
+                                                <div className="flex justify-between w-full" style={{ color: '#10b981' }}>
+                                                    <span>Mano de obra / Recargos</span>
+                                                    <span>+${(totalSurcharges || 0).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                            {totalDiscounts > 0 && (
+                                                <div className="flex justify-between w-full" style={{ color: '#ef4444' }}>
+                                                    <span>Descuentos</span>
+                                                    <span>-${(totalDiscounts || 0).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center w-full" style={{ width: '100%' }}>
+                                        <div className="flex flex-col">
+                                            <span className="total-label">Total a Pagar</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            {renderUnifiedAdjustment()}
+                                            <span className="total-amount">${(finalTotalSale || 0).toLocaleString()}</span>
+                                        </div>
                                     </div>
                                 </div>
 

@@ -23,6 +23,8 @@ export const POSMobile = () => {
     const addToCart = useStore((state) => state.addToCart);
     const removeFromCart = useStore((state) => state.removeFromCart);
     const clearCart = useStore((state) => state.clearCart);
+    const updateCartAdjustment = useStore((state) => state.updateCartAdjustment);
+    const bulkUpdateCartAdjustments = useStore((state) => state.bulkUpdateCartAdjustments);
     const processSale = useStore((state) => state.processSale);
     const isAutoSyncEnabled = useStore((state) => state.isAutoSyncEnabled);
     const setIsAutoSyncEnabled = useStore((state) => state.setIsAutoSyncEnabled);
@@ -55,6 +57,9 @@ export const POSMobile = () => {
     const [activeAdjustmentDrawer, setActiveAdjustmentDrawer] = useState<boolean>(false);
     const [showPresetsConfig, setShowPresetsConfig] = useState(false);
     const [tempPresets, setTempPresets] = useState<number[]>([...adjPresets]);
+    const [activeItemAdjMenuId, setActiveItemAdjMenuId] = useState<string | null>(null);
+    const [tempAdjType, setTempAdjType] = useState<'add' | 'subtract'>('add');
+    const [tempAdjVal, setTempAdjVal] = useState<number>(0);
 
     const { showAlert } = useModal();
     const navigate = useNavigate();
@@ -80,11 +85,34 @@ export const POSMobile = () => {
     } = posOrderForm;
 
     // --- Derived Data ---
+    const getAdjustedItemPrice = (item: any) => {
+        const price = item.price || 0;
+        const adjVal = item.adjustmentValue || 0;
+        const adjTypeNormalized = item.adjustmentType || 'none';
+        const adjAmount = price * (adjVal / 100);
+        return adjTypeNormalized === 'subtract' 
+            ? Math.max(0, price - adjAmount) 
+            : (adjTypeNormalized === 'add' ? price + adjAmount : price);
+    };
+
     const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
-    const adjAmount = total * (adjValue / 100);
-    const finalTotal = adjMode === 'subtract' ? Math.max(0, total - adjAmount) : total + adjAmount;
+    const totalSurcharges = cart.reduce((sum, item) => {
+        if (item.adjustmentType === 'add' && item.adjustmentValue > 0) {
+            return sum + (item.price * item.qty) * (item.adjustmentValue / 100);
+        }
+        return sum;
+    }, 0);
+
+    const totalDiscounts = cart.reduce((sum, item) => {
+        if (item.adjustmentType === 'subtract' && item.adjustmentValue > 0) {
+            return sum + (item.price * item.qty) * (item.adjustmentValue / 100);
+        }
+        return sum;
+    }, 0);
+
+    const finalTotal = Math.max(0, total + totalSurcharges - totalDiscounts);
 
     // Set default payment method
     useEffect(() => {
@@ -122,21 +150,51 @@ export const POSMobile = () => {
 
     // --- Barcode Scanner ---
     const renderUnifiedAdjustment = () => (
-        <div className="pos-mobile-adjustment-unified">
-            <div className="adj-bar-mobile">
-                <button 
-                    className={`adj-mode-btn ${adjMode}`}
-                    onClick={() => setAdjMode(adjMode === 'subtract' ? 'add' : 'subtract')}
-                >
-                    {adjMode === 'subtract' ? '-' : '+'}
-                </button>
-                <div className="adj-input-container" onClick={() => setActiveAdjustmentDrawer(true)}>
-                    <span className="adj-value-display">{adjValue}%</span>
-                    <span className="adj-label">{adjMode === 'subtract' ? 'Descuento' : 'Recargo'}</span>
+        <div className="pos-mobile-adjustment-unified" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+                <div className="adj-bar-mobile" style={{ flex: 1 }}>
+                    <button 
+                        className={`adj-mode-btn ${adjMode}`}
+                        onClick={() => setAdjMode(adjMode === 'subtract' ? 'add' : 'subtract')}
+                    >
+                        {adjMode === 'subtract' ? '-' : '+'}
+                    </button>
+                    <div className="adj-input-container" onClick={() => setActiveAdjustmentDrawer(true)}>
+                        <span className="adj-value-display">{adjValue}%</span>
+                        <span className="adj-label">{adjMode === 'subtract' ? 'Descuento' : 'Recargo'}</span>
+                    </div>
+                    <button className="adj-config-btn" onClick={() => setShowPresetsConfig(true)}>
+                        <span className="material-symbols-rounded">settings</span>
+                    </button>
                 </div>
-                <button className="adj-config-btn" onClick={() => setShowPresetsConfig(true)}>
-                    <span className="material-symbols-rounded">settings</span>
-                </button>
+                {cart.length > 0 && (
+                    <button 
+                        className="btn-apply-all-adj-mobile"
+                        onClick={() => {
+                            bulkUpdateCartAdjustments(
+                                adjValue === 0 ? 'none' : (adjMode === 'subtract' ? 'subtract' : 'add'),
+                                adjValue
+                            );
+                        }}
+                        style={{
+                            fontSize: '0.75rem',
+                            padding: '0.6rem 0.6rem',
+                            background: 'var(--primary-light, #ecfdf5)',
+                            color: 'var(--primary-color, #10b981)',
+                            border: '1px solid var(--primary-color, #10b981)',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            height: '46px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        Aplicar a todos
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -542,15 +600,168 @@ export const POSMobile = () => {
                             {/* Cart Items */}
                             <div className="pos-cart-items-list">
                                 {cart.map(item => (
-                                    <div key={item.id} className="pos-cart-item">
+                                    <div key={item.id} className="pos-cart-item" style={{ position: 'relative' }}>
                                         <div className="cart-item-icon">
                                             <span className="material-symbols-rounded">{getCategoryIcon(item.category)}</span>
                                         </div>
-                                        <div className="cart-item-details">
-                                            <div className="cart-item-name">{item.name}</div>
-                                            <div className="cart-item-price-calc">${item.price.toLocaleString('es-AR')} × {item.qty}</div>
+                                        <div className="cart-item-details" style={{ flex: 1, minWidth: 0 }}>
+                                            <div className="cart-item-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginTop: '2px' }}>
+                                                <span className="cart-item-price-calc" style={{ fontSize: '0.75rem', color: '#64748b' }}>${item.price.toLocaleString('es-AR')} c/u</span>
+                                                
+                                                <div className="cart-item-adj-wrapper" style={{ position: 'relative' }}>
+                                                    <button 
+                                                        className={`cart-item-adj-badge ${item.adjustmentType || 'none'}`}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (activeItemAdjMenuId === item.id) {
+                                                                setActiveItemAdjMenuId(null);
+                                                            } else {
+                                                                setActiveItemAdjMenuId(item.id);
+                                                                setTempAdjType(item.adjustmentType === 'none' ? 'add' : item.adjustmentType);
+                                                                setTempAdjVal(item.adjustmentValue || 0);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            fontSize: '0.65rem',
+                                                            padding: '0.1rem 0.3rem',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid #e2e8f0',
+                                                            background: '#f8fafc',
+                                                            color: '#64748b',
+                                                            cursor: 'pointer',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            fontWeight: 600,
+                                                            transition: 'all 0.15s'
+                                                        }}
+                                                    >
+                                                        {(!item.adjustmentType || item.adjustmentType === 'none' || !item.adjustmentValue) ? (
+                                                            <span>+ Ajuste</span>
+                                                        ) : (
+                                                            <span style={{ 
+                                                                color: item.adjustmentType === 'subtract' ? '#ef4444' : '#10b981',
+                                                                fontWeight: 700 
+                                                            }}>
+                                                                {item.adjustmentType === 'subtract' ? '-' : '+'}{item.adjustmentValue}%
+                                                            </span>
+                                                        )}
+                                                    </button>
+
+                                                    {activeItemAdjMenuId === item.id && (
+                                                        <>
+                                                            <div 
+                                                                className="cart-item-adj-backdrop" 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setActiveItemAdjMenuId(null);
+                                                                }}
+                                                                style={{
+                                                                    position: 'fixed',
+                                                                    inset: 0,
+                                                                    zIndex: 999,
+                                                                    background: 'transparent'
+                                                                }}
+                                                            />
+                                                            <div 
+                                                                className="cart-item-adj-popover animate-scale-in"
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: '100%',
+                                                                    left: 0,
+                                                                    zIndex: 1000,
+                                                                    background: '#fff',
+                                                                    border: '1px solid #e2e8f0',
+                                                                    borderRadius: '10px',
+                                                                    padding: '0.6rem',
+                                                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                                                    width: '170px',
+                                                                    marginTop: '4px',
+                                                                    display: 'flex',
+                                                                    flexDirection: 'column',
+                                                                    gap: '0.45rem'
+                                                                }}
+                                                            >
+                                                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e293b' }}>Ajuste de item</div>
+                                                                
+                                                                <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
+                                                                    <button 
+                                                                        className={`flex-1 text-center py-1 rounded ${tempAdjType === 'add' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
+                                                                        onClick={(e) => { e.stopPropagation(); setTempAdjType('add'); }}
+                                                                        style={{ flex: 1, fontSize: '0.65rem', border: 'none', cursor: 'pointer', padding: '0.25rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}
+                                                                    >
+                                                                        Recargo (+)
+                                                                    </button>
+                                                                    <button 
+                                                                        className={`flex-1 text-center py-1 rounded ${tempAdjType === 'subtract' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
+                                                                        onClick={(e) => { e.stopPropagation(); setTempAdjType('subtract'); }}
+                                                                        style={{ flex: 1, fontSize: '0.65rem', border: 'none', cursor: 'pointer', padding: '0.25rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}
+                                                                    >
+                                                                        Dcto (-)
+                                                                    </button>
+                                                                </div>
+
+                                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+                                                                    {[0, 10, 20, 30, 40, 50].map(val => (
+                                                                        <button
+                                                                            key={val}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                updateCartAdjustment(item.id, val === 0 ? 'none' : tempAdjType, val);
+                                                                                setActiveItemAdjMenuId(null);
+                                                                            }}
+                                                                            style={{
+                                                                                fontSize: '0.65rem',
+                                                                                padding: '0.25rem',
+                                                                                border: '1px solid #e2e8f0',
+                                                                                background: '#f8fafc',
+                                                                                borderRadius: '6px',
+                                                                                cursor: 'pointer',
+                                                                                fontWeight: 500
+                                                                            }}
+                                                                        >
+                                                                            {val === 0 ? '0%' : `${val === 40 ? '40% M.O.' : `${val}%`}`}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+
+                                                                <div style={{ display: 'flex', gap: '4px', width: '100%', alignItems: 'center' }}>
+                                                                    <input 
+                                                                        type="number"
+                                                                        value={tempAdjVal || ''}
+                                                                        onChange={e => setTempAdjVal(Number(e.target.value))}
+                                                                        placeholder="%"
+                                                                        style={{ width: '100%', fontSize: '0.75rem', padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '6px', height: '28px' }}
+                                                                        onClick={e => e.stopPropagation()}
+                                                                    />
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            updateCartAdjustment(item.id, tempAdjVal === 0 ? 'none' : tempAdjType, tempAdjVal);
+                                                                            setActiveItemAdjMenuId(null);
+                                                                        }}
+                                                                        style={{
+                                                                            fontSize: '0.7rem',
+                                                                            padding: '0.25rem 0.5rem',
+                                                                            background: 'var(--primary-color, #10b981)',
+                                                                            color: 'white',
+                                                                            border: 'none',
+                                                                            borderRadius: '6px',
+                                                                            cursor: 'pointer',
+                                                                            fontWeight: 600,
+                                                                            height: '28px'
+                                                                        }}
+                                                                    >
+                                                                        OK
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="cart-item-controls">
+                                        <div className="cart-item-controls" style={{ marginLeft: '0.5rem', marginRight: '0.5rem' }}>
                                             <button className="cart-qty-btn" onClick={() => removeFromCart(item.id)}>
                                                 <span className="material-symbols-rounded">{item.qty > 1 ? 'remove' : 'delete_outline'}</span>
                                             </button>
@@ -559,7 +770,16 @@ export const POSMobile = () => {
                                                 <span className="material-symbols-rounded">add</span>
                                             </button>
                                         </div>
-                                        <div className="cart-item-total">${(item.price * item.qty).toLocaleString('es-AR')}</div>
+                                        <div className="cart-item-total" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '70px' }}>
+                                            {item.adjustmentValue > 0 && item.adjustmentType !== 'none' && (
+                                                <span style={{ fontSize: '0.7rem', color: '#94a3b8', textDecoration: 'line-through', opacity: 0.7 }}>
+                                                    ${((item.price || 0) * item.qty).toLocaleString('es-AR')}
+                                                </span>
+                                            )}
+                                            <span style={{ fontWeight: 700 }}>
+                                                ${(getAdjustedItemPrice(item) * item.qty).toLocaleString('es-AR')}
+                                            </span>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -579,14 +799,44 @@ export const POSMobile = () => {
                         {renderUnifiedAdjustment()}
 
                         <div className="pos-cart-footer">
-                            <div className="cart-totals">
+                            <div className="cart-totals" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '100%' }}>
+                                {(totalSurcharges > 0 || totalDiscounts > 0) && (
+                                    <div className="order-totals-breakdown-mobile" style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '0.2rem',
+                                        fontSize: '0.8rem',
+                                        color: '#475569',
+                                        borderBottom: '1px dashed #e2e8f0',
+                                        paddingBottom: '0.4rem',
+                                        marginBottom: '0.4rem',
+                                        width: '100%'
+                                    }}>
+                                        <div className="flex justify-between w-full" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Subtotal base</span>
+                                            <span>${(total || 0).toLocaleString('es-AR')}</span>
+                                        </div>
+                                        {totalSurcharges > 0 && (
+                                            <div className="flex justify-between w-full" style={{ display: 'flex', justifyContent: 'space-between', color: '#10b981' }}>
+                                                <span>Mano de obra / Recargos</span>
+                                                <span>+${(totalSurcharges || 0).toLocaleString('es-AR')}</span>
+                                            </div>
+                                        )}
+                                        {totalDiscounts > 0 && (
+                                            <div className="flex justify-between w-full" style={{ display: 'flex', justifyContent: 'space-between', color: '#ef4444' }}>
+                                                <span>Descuentos</span>
+                                                <span>-${(totalDiscounts || 0).toLocaleString('es-AR')}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 {checkoutMode === 'order' && advancePayment > 0 && (
-                                    <div className="cart-total-row">
+                                    <div className="cart-total-row" style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Seña</span>
                                         <span style={{ color: '#5E9B7E' }}>-${advancePayment.toLocaleString('es-AR')}</span>
                                     </div>
                                 )}
-                                <div className="cart-total-row highlight">
+                                <div className="cart-total-row highlight" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
                                     <span>{checkoutMode === 'order' && advancePayment > 0 ? 'Saldo' : 'Total'}</span>
                                     <span>${(checkoutMode === 'order' && advancePayment > 0 ? finalTotal - advancePayment : finalTotal).toLocaleString('es-AR')}</span>
                                 </div>
@@ -605,13 +855,33 @@ export const POSMobile = () => {
                     /* ── PAYMENT STEP ── */
                     <>
                         <div className="pos-cart-body">
-                            <div className="payment-step-total">
-                                <span className="payment-step-label">Total a cobrar</span>
-                                <div className="payment-step-total-box">
-                                    {finalTotal !== total && (
-                                        <span className="payment-step-subtotal">${total.toLocaleString('es-AR')}</span>
+                            <div className="payment-step-total" style={{ padding: '1rem', background: '#f8fafc', borderRadius: '12px', margin: '1rem 0' }}>
+                                <span className="payment-step-label" style={{ fontSize: '0.8rem', color: '#64748b' }}>Total a cobrar</span>
+                                <div className="payment-step-total-box" style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.5rem' }}>
+                                    {(totalSurcharges > 0 || totalDiscounts > 0) && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.8rem', color: '#475569', borderBottom: '1px dashed #e2e8f0', paddingBottom: '0.4rem', marginBottom: '0.4rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>Subtotal base</span>
+                                                <span>${total.toLocaleString('es-AR')}</span>
+                                            </div>
+                                            {totalSurcharges > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10b981' }}>
+                                                    <span>Recargos (M.O.)</span>
+                                                    <span>+${totalSurcharges.toLocaleString('es-AR')}</span>
+                                                </div>
+                                            )}
+                                            {totalDiscounts > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ef4444' }}>
+                                                    <span>Descuentos</span>
+                                                    <span>-${totalDiscounts.toLocaleString('es-AR')}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
-                                    <span className="payment-step-amount">${finalTotal.toLocaleString('es-AR')}</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 700, fontSize: '1.2rem', color: '#1e293b' }}>Total</span>
+                                        <span className="payment-step-amount" style={{ fontWeight: 800, fontSize: '1.4rem', color: 'var(--primary-color)' }}>${finalTotal.toLocaleString('es-AR')}</span>
+                                    </div>
                                 </div>
                             </div>
 

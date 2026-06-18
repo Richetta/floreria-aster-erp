@@ -33,6 +33,8 @@ export interface PosSlice {
     addToCart: (product: any) => void;
     removeFromCart: (id: string) => void;
     updateCartQty: (id: string, delta: number) => void;
+    updateCartAdjustment: (id: string, type: 'add' | 'subtract' | 'none', value: number) => void;
+    bulkUpdateCartAdjustments: (type: 'add' | 'subtract' | 'none', value: number) => void;
     clearCart: () => void;
     updatePosOrderForm: (updates: any) => void;
     clearPosOrderForm: () => void;
@@ -83,7 +85,7 @@ export const createPosSlice: StateCreator<AppState, [], [], PosSlice> = (set, ge
             const qtyToAdd = (product as any).qty || 1;
             const newCart = existing
                 ? state.cart.map(item => item.id === product.id ? { ...item, qty: item.qty + qtyToAdd } : item)
-                : [...state.cart, { ...product, qty: qtyToAdd }];
+                : [...state.cart, { ...product, qty: qtyToAdd, adjustmentType: product.adjustmentType || 'none', adjustmentValue: product.adjustmentValue || 0 }];
             return { cart: newCart, cartLastUpdated: Date.now() };
         });
         if (get().isAutoSyncEnabled) {
@@ -109,6 +111,35 @@ export const createPosSlice: StateCreator<AppState, [], [], PosSlice> = (set, ge
                 }
                 return item;
             });
+            return { cart: newCart, cartLastUpdated: Date.now() };
+        });
+        if (get().isAutoSyncEnabled) {
+            get().pushCartToServer();
+        }
+    },
+
+    updateCartAdjustment: (id, type, value) => {
+        set(state => {
+            const newCart = state.cart.map(item => {
+                if (item.id === id) {
+                    return { ...item, adjustmentType: type, adjustmentValue: value };
+                }
+                return item;
+            });
+            return { cart: newCart, cartLastUpdated: Date.now() };
+        });
+        if (get().isAutoSyncEnabled) {
+            get().pushCartToServer();
+        }
+    },
+
+    bulkUpdateCartAdjustments: (type, value) => {
+        set(state => {
+            const newCart = state.cart.map(item => ({
+                ...item,
+                adjustmentType: type,
+                adjustmentValue: value
+            }));
             return { cart: newCart, cartLastUpdated: Date.now() };
         });
         if (get().isAutoSyncEnabled) {
@@ -179,13 +210,22 @@ export const createPosSlice: StateCreator<AppState, [], [], PosSlice> = (set, ge
                 total: sale.total,
                 payment_method: sale.method,
                 customer_id: sale.customerId,
-                items: sale.items.map(i => ({
-                    product_id: i.isPackage ? undefined : i.id,
-                    package_id: i.isPackage ? i.id : undefined,
-                    product_name: i.name || 'Producto',
-                    quantity: parseInt(String(i.qty), 10) || 1,
-                    unit_price: parseFloat(String(i.price || 0))
-                })),
+                items: sale.items.map(i => {
+                    const price = i.price || 0;
+                    const adjVal = i.adjustmentValue || 0;
+                    const adjType = i.adjustmentType || 'none';
+                    const adjAmount = price * (adjVal / 100);
+                    const finalUnitPrice = adjType === 'subtract' 
+                        ? Math.max(0, price - adjAmount) 
+                        : (adjType === 'add' ? price + adjAmount : price);
+                    return {
+                        product_id: i.isPackage ? undefined : i.id,
+                        package_id: i.isPackage ? i.id : undefined,
+                        product_name: i.name || 'Producto',
+                        quantity: parseInt(String(i.qty), 10) || 1,
+                        unit_price: parseFloat(String(finalUnitPrice))
+                    };
+                }),
                 notes: sale.notes
             });
 

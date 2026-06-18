@@ -2905,4 +2905,17 @@ select.form-input-lg {
 .text-green-600 { color: #059669; }
 .text-red-600 { color: #E11D48; }
 
+/* Custom POS Surcharge/Discount styles */
+.cart-item-adj-badge:hover {
+    filter: brightness(0.95);
+    transform: scale(1.02);
+}
+.btn-apply-all-adj:hover {
+    filter: brightness(0.95);
+    transform: scale(1.02);
+}
+.btn-apply-all-adj-mobile:active {
+    filter: brightness(0.9);
+}
+
 

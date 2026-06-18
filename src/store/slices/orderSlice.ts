@@ -64,14 +64,20 @@ export const createOrderSlice: StateCreator<AppState, [], [], OrderSlice> = (set
                 notes: orderData.notes,
                 items: orderData.items.map((item: any) => {
                     const quantity = parseInt(String(item.qty), 10);
-                    const unitPrice = parseFloat(String(item.price || 0));
+                    const price = item.price || 0;
+                    const adjVal = item.adjustmentValue || 0;
+                    const adjType = item.adjustmentType || 'none';
+                    const adjAmount = price * (adjVal / 100);
+                    const finalUnitPrice = adjType === 'subtract' 
+                        ? Math.max(0, price - adjAmount) 
+                        : (adjType === 'add' ? price + adjAmount : price);
                     
                     return {
                         product_id: item.isPackage ? undefined : (item.id || undefined),
                         package_id: item.isPackage ? (item.id || undefined) : undefined,
                         product_name: item.name || 'Producto',
                         quantity: isNaN(quantity) || quantity < 1 ? 1 : quantity,
-                        unit_price: isNaN(unitPrice) ? 0 : unitPrice
+                        unit_price: parseFloat(String(finalUnitPrice))
                     };
                 }),
                 advance_payment: parseFloat(String(orderData.advancePayment || 0)) || 0
