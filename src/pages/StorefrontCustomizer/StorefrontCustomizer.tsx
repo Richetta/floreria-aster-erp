@@ -144,6 +144,8 @@ export const StorefrontCustomizer = () => {
         seasonal_theme: 'none' as 'none' | 'mother_day' | 'valentines' | 'spring' | 'christmas',
         font_family: 'Inter',
         banner_alignment: 'center' as 'left' | 'center' | 'right',
+        hero_text_color: 'light' as 'light' | 'dark',
+        logo_shape: 'free' as 'free' | 'circle',
         marquee_text: '',
         web_categories: [] as string[],
         // Publicaciones (array stored as JSON)
@@ -190,6 +192,8 @@ export const StorefrontCustomizer = () => {
                     seasonal_theme: sf.seasonal_theme || 'none',
                     font_family: sf.font_family || 'Inter',
                     banner_alignment: sf.banner_alignment || 'center',
+                    hero_text_color: sf.hero_text_color || 'light',
+                    logo_shape: sf.logo_shape || 'free',
                     marquee_text: sf.marquee_text || '',
                     web_categories: sf.web_categories || [],
                     storefront_posts: sf.storefront_posts || [],
@@ -536,6 +540,21 @@ export const StorefrontCustomizer = () => {
                                                 <img src={form.logo_url} alt="Logo preview" onError={e => (e.currentTarget.style.display = 'none')} />
                                             </div>
                                         )}
+                                        <div className="sc-form-group" style={{ marginTop: '0.5rem' }}>
+                                            <label className="sc-label">Forma del Logo en la Tienda</label>
+                                            <div className="sc-btn-group">
+                                                {[{ v: 'free', label: 'Libre (PNG transparente)' }, { v: 'circle', label: 'Círculo (con marco)' }].map(opt => (
+                                                    <button
+                                                        key={opt.v}
+                                                        type="button"
+                                                        className={`sc-btn-option ${(form.logo_shape || 'free') === opt.v ? 'active' : ''}`}
+                                                        onClick={() => setField('logo_shape', opt.v as 'free' | 'circle')}
+                                                    >
+                                                        {opt.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="sc-form-group">
                                         <label className="sc-label">Foto de Perfil de la Tienda (URL)</label>
@@ -563,6 +582,24 @@ export const StorefrontCustomizer = () => {
                                     <div className="sc-form-group">
                                         <label className="sc-label">Eslogan / Subtítulo</label>
                                         <input type="text" className="sc-input" value={form.banner_subtitle} onChange={e => setField('banner_subtitle', e.target.value)} placeholder="Ej: Flores con alma, desde 1998" />
+                                    </div>
+                                </div>
+
+                                <div className="sc-form-row">
+                                    <div className="sc-form-group">
+                                        <label className="sc-label">Color de texto en el Hero</label>
+                                        <div className="sc-btn-group">
+                                            {[{ v: 'light', label: '☁️ Texto blanco (sobre imagen oscura)' }, { v: 'dark', label: '☀️ Texto oscuro (sobre imagen clara)' }].map(opt => (
+                                                <button
+                                                    key={opt.v}
+                                                    type="button"
+                                                    className={`sc-btn-option ${(form.hero_text_color || 'light') === opt.v ? 'active' : ''}`}
+                                                    onClick={() => setField('hero_text_color', opt.v as 'light' | 'dark')}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
 

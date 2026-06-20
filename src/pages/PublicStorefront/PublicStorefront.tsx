@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { 
-    ShoppingBag, Search, Plus, Minus, X, Check, Eye, 
+    ShoppingBag, Search, Plus, Minus, X, Check,
     MessageCircle, MapPin, Calendar, Clock,
     ShoppingCart, Sparkles, Send, Store,
-    Star, ChevronLeft, ChevronRight, Instagram, Facebook
+    Star, ChevronLeft, ChevronRight, Instagram, Facebook,
+    Truck, Lock, Phone, Leaf, ChevronDown
 } from 'lucide-react';
 import './PublicStorefront.css';
 
@@ -80,6 +81,9 @@ export const PublicStorefront = () => {
     
     // Hero slider state
     const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+
+    // Search modal state
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
 
     
     // Load Outfit Font dynamically
@@ -604,148 +608,139 @@ export const PublicStorefront = () => {
             {/* Promo alerts ribbon at top */}
             {storeConfig.settings?.banner_badge && (
                 <div className="storefront-promo-strip">
-                    <Sparkles size={12} className="inline mr-1 text-yellow-300 animate-pulse" />
+                    <Sparkles size={12} />
                     <span>{storeConfig.settings.banner_badge}</span>
                 </div>
             )}
-            
-            {/* Header banner */}
-            <header className={`store-header ${storeConfig.settings?.hero_slides?.length > 0 ? 'has-hero' : ''}`}>
-                <div className="store-header-content">
-                    <div className="store-logo-wrapper">
-                        {storeConfig.settings?.logo_url || storeConfig.business?.logo_url ? (
-                            <img src={storeConfig.settings?.logo_url || storeConfig.business?.logo_url} alt={storeConfig.business?.name} className="store-logo" />
-                        ) : (
-                            <div className="store-logo-fallback">
-                                {storeConfig.business?.name?.charAt(0).toUpperCase() || 'F'}
-                            </div>
-                        )}
-                    </div>
-                    <h1 className="store-title">{storeConfig.settings?.banner_title || storeConfig.business?.name}</h1>
-                    <p className="store-subtitle">{storeConfig.settings?.banner_subtitle || 'Bienvenidos a nuestra tienda online'}</p>
-                    
-                    <div className="store-quick-links">
-                        {storeConfig.settings?.whatsapp_number && (
-                            <a 
-                                href={`https://wa.me/${storeConfig.settings.whatsapp_number.replace(/[^0-9]/g, '')}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="quick-link-pill"
-                            >
-                                <MessageCircle size={14} />
-                                <span>WhatsApp</span>
-                            </a>
-                        )}
-                        {storeConfig.settings?.social_instagram && (
-                            <a 
-                                href={`https://instagram.com/${storeConfig.settings.social_instagram}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="quick-link-pill"
-                            >
-                                <Instagram size={14} />
-                                <span>@{storeConfig.settings.social_instagram}</span>
-                            </a>
-                        )}
-                        {storeConfig.settings?.social_facebook && (
-                            <a 
-                                href={`https://facebook.com/${storeConfig.settings.social_facebook}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="quick-link-pill"
-                            >
-                                <Facebook size={14} />
-                                <span>fb.com/{storeConfig.settings.social_facebook}</span>
-                            </a>
-                        )}
-                        {storeConfig.business?.address && (
-                            <div className="quick-link-pill">
-                                <MapPin size={14} />
-                                <span>{storeConfig.business.address.split(',')[0]}</span>
-                            </div>
-                        )}
-                        <div 
-                            className="shop-rating-pill" 
-                            onClick={() => setIsGeneralReviewsOpen(true)}
-                        >
-                            <Star size={14} className="star-filled" />
-                            <span>
-                                {generalReviews.length > 0
-                                    ? `${(generalReviews.reduce((sum, r) => sum + r.rating, 0) / generalReviews.length).toFixed(1)} (${generalReviews.length} opin.)`
-                                    : 'Calificar Tienda'}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </header>
 
-            {/* ── HERO SLIDER ─────────────────────────────────────── */}
-            {storeConfig.settings?.hero_slides?.length > 0 && (
-                <section className="hero-slider-section">
-                    <div
-                        className="hero-slider-track"
-                        style={{ transform: `translateX(-${heroSlideIndex * 100}%)` }}
-                    >
-                        {storeConfig.settings.hero_slides.map((slide: any, idx: number) => (
-                            <div key={slide.id || idx} className="hero-slide">
-                                <img src={slide.image_url} alt={slide.title || 'Banner'} className="hero-slide-img" />
-                                <div className="hero-slide-overlay" />
-                                {(slide.title || slide.subtitle || slide.cta_text) && (
-                                    <div className="hero-slide-content" style={{ textAlign: storeConfig?.settings?.banner_alignment || 'center' }}>
-                                        {slide.title && <h2 className="hero-slide-title">{slide.title}</h2>}
-                                        {slide.subtitle && <p className="hero-slide-subtitle">{slide.subtitle}</p>}
-                                        {slide.cta_text && (
-                                            <button
-                                                className="hero-slide-cta"
-                                                style={{ backgroundColor: 'var(--storefront-primary)' }}
-                                                onClick={() => document.querySelector('.store-catalog-container')?.scrollIntoView({ behavior: 'smooth' })}
-                                            >
-                                                {slide.cta_text}
-                                            </button>
-                                        )}
-                                    </div>
+            {/* ── HERO INMERSIVO ─────────────────────────────────── */}
+            {(() => {
+                const hasSlides = storeConfig.settings?.hero_slides?.length > 0;
+                const currentSlide = hasSlides ? storeConfig.settings.hero_slides[heroSlideIndex] : null;
+                const logoUrl = storeConfig.settings?.logo_url || storeConfig.business?.logo_url;
+                const heroTextColor = storeConfig.settings?.hero_text_color === 'dark' ? '#0f172a' : '#ffffff';
+                const logoShape = storeConfig.settings?.logo_shape || 'free';
+                const textAlign = storeConfig.settings?.banner_alignment || 'center';
+
+                return (
+                    <section className={`hero-section ${hasSlides ? 'hero-has-image' : 'hero-no-image'}`}>
+                        {/* Background image slider */}
+                        {hasSlides && (
+                            <>
+                                <div className="hero-slides-bg">
+                                    {storeConfig.settings.hero_slides.map((slide: any, idx: number) => (
+                                        <div
+                                            key={slide.id || idx}
+                                            className={`hero-slide-bg ${heroSlideIndex === idx ? 'active' : ''}`}
+                                        >
+                                            <img src={slide.image_url} alt={slide.title || 'Banner'} />
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="hero-overlay" />
+                            </>
+                        )}
+
+                        {/* Content */}
+                        <div className="hero-content" style={{ color: heroTextColor, textAlign: textAlign as any }}>
+                            {/* Logo */}
+                            {logoUrl ? (
+                                <img
+                                    src={logoUrl}
+                                    alt={storeConfig.business?.name}
+                                    className={`hero-logo ${logoShape === 'circle' ? 'hero-logo-circle' : 'hero-logo-free'}`}
+                                />
+                            ) : (
+                                <div className="hero-logo-fallback" style={{ background: 'var(--storefront-primary)' }}>
+                                    {storeConfig.business?.name?.charAt(0).toUpperCase() || 'F'}
+                                </div>
+                            )}
+
+                            <h1 className="hero-store-title">{storeConfig.settings?.banner_title || storeConfig.business?.name}</h1>
+                            <p className="hero-store-subtitle" style={{ opacity: hasSlides ? 0.9 : 0.7 }}>
+                                {storeConfig.settings?.banner_subtitle || 'Bienvenidos a nuestra tienda online'}
+                            </p>
+
+                            {/* Social pills */}
+                            <div className="hero-quick-links" style={{ justifyContent: textAlign === 'left' ? 'flex-start' : textAlign === 'right' ? 'flex-end' : 'center' }}>
+                                {storeConfig.settings?.whatsapp_number && (
+                                    <a href={`https://wa.me/${storeConfig.settings.whatsapp_number.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hero-pill">
+                                        <MessageCircle size={13} /><span>WhatsApp</span>
+                                    </a>
                                 )}
+                                {storeConfig.settings?.social_instagram && (
+                                    <a href={`https://instagram.com/${storeConfig.settings.social_instagram}`} target="_blank" rel="noopener noreferrer" className="hero-pill">
+                                        <Instagram size={13} /><span>@{storeConfig.settings.social_instagram}</span>
+                                    </a>
+                                )}
+                                {storeConfig.settings?.social_facebook && (
+                                    <a href={`https://facebook.com/${storeConfig.settings.social_facebook}`} target="_blank" rel="noopener noreferrer" className="hero-pill">
+                                        <Facebook size={13} /><span>{storeConfig.settings.social_facebook}</span>
+                                    </a>
+                                )}
+                                <div className="hero-pill" onClick={() => setIsGeneralReviewsOpen(true)} style={{ cursor: 'pointer' }}>
+                                    <Star size={13} className="star-filled" />
+                                    <span>{generalReviews.length > 0 ? `${(generalReviews.reduce((s, r) => s + r.rating, 0) / generalReviews.length).toFixed(1)} (${generalReviews.length})` : 'Calificar'}</span>
+                                </div>
                             </div>
-                        ))}
-                    </div>
-                    {storeConfig.settings.hero_slides.length > 1 && (
-                        <>
-                            <button className="hero-nav prev" onClick={() => setHeroSlideIndex(i => (i - 1 + storeConfig.settings.hero_slides.length) % storeConfig.settings.hero_slides.length)}>
-                                <ChevronLeft size={22} />
-                            </button>
-                            <button className="hero-nav next" onClick={() => setHeroSlideIndex(i => (i + 1) % storeConfig.settings.hero_slides.length)}>
-                                <ChevronRight size={22} />
-                            </button>
-                            <div className="hero-dots">
-                                {storeConfig.settings.hero_slides.map((_: any, idx: number) => (
-                                    <button
-                                        key={idx}
-                                        className={`hero-dot ${heroSlideIndex === idx ? 'active' : ''}`}
-                                        onClick={() => setHeroSlideIndex(idx)}
-                                    />
-                                ))}
-                            </div>
-                        </>
-                    )}
-                </section>
-            )}
 
-            {/* ── TRUST BAR ────────────────────────────────────────── */}
+                            {/* CTA slide text overlay */}
+                            {currentSlide?.cta_text && (
+                                <button
+                                    className="hero-cta-btn"
+                                    style={{ background: 'var(--storefront-primary)' }}
+                                    onClick={() => document.querySelector('.store-catalog-container')?.scrollIntoView({ behavior: 'smooth' })}
+                                >
+                                    {currentSlide.cta_text}
+                                </button>
+                            )}
+
+                            {/* Scroll hint */}
+                            <button
+                                className="hero-scroll-hint"
+                                onClick={() => document.querySelector('.trust-bar')?.scrollIntoView({ behavior: 'smooth' })}
+                                style={{ color: heroTextColor }}
+                            >
+                                <ChevronDown size={22} />
+                            </button>
+                        </div>
+
+                        {/* Slide dots */}
+                        {hasSlides && storeConfig.settings.hero_slides.length > 1 && (
+                            <>
+                                <button className="hero-nav prev" onClick={() => setHeroSlideIndex(i => (i - 1 + storeConfig.settings.hero_slides.length) % storeConfig.settings.hero_slides.length)}>
+                                    <ChevronLeft size={20} />
+                                </button>
+                                <button className="hero-nav next" onClick={() => setHeroSlideIndex(i => (i + 1) % storeConfig.settings.hero_slides.length)}>
+                                    <ChevronRight size={20} />
+                                </button>
+                                <div className="hero-dots">
+                                    {storeConfig.settings.hero_slides.map((_: any, idx: number) => (
+                                        <button key={idx} className={`hero-dot ${heroSlideIndex === idx ? 'active' : ''}`} onClick={() => setHeroSlideIndex(idx)} />
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </section>
+                );
+            })()}
+
+            {/* ── TRUST BAR ─────────────────────────────────────────── */}
             <div className="trust-bar">
                 <div className="trust-item">
-                    <span className="trust-icon">🌸</span>
+                    <Leaf size={15} className="trust-icon-svg" />
                     <span>Flores frescas garantizadas</span>
                 </div>
                 <div className="trust-item">
-                    <span className="trust-icon">🚚</span>
+                    <Truck size={15} className="trust-icon-svg" />
                     <span>{storeConfig.settings?.delivery_zones ? `Envío a ${storeConfig.settings.delivery_zones.split(',')[0]}` : 'Envío a domicilio'}</span>
                 </div>
                 <div className="trust-item">
-                    <span className="trust-icon">💬</span>
+                    <Phone size={15} className="trust-icon-svg" />
                     <span>Atención por WhatsApp</span>
                 </div>
                 <div className="trust-item">
-                    <span className="trust-icon">🔒</span>
+                    <Lock size={15} className="trust-icon-svg" />
                     <span>Pago 100% seguro</span>
                 </div>
             </div>
@@ -919,58 +914,64 @@ export const PublicStorefront = () => {
                             {filteredItems.map(product => {
                                 const outOfStock = Number(product.stock_quantity) <= 0;
                                 const isLowStock = !outOfStock && Number(product.stock_quantity) <= 4;
-                                
+
                                 return (
-                                    <div 
-                                        key={product.id} 
+                                    <div
+                                        key={product.id}
                                         className={`public-product-card ${outOfStock ? 'out-of-stock' : ''}`}
                                         onClick={() => setSelectedDetailItem(product)}
-                                        style={{ cursor: 'pointer' }}
                                     >
+                                        {/* Image area */}
                                         <div className="p-img-box">
-                                            {/* Custom Promotional badge from settings */}
-                                            {storeConfig.settings?.promotions?.[product.id]?.badge && (
-                                                <div className="public-promo-badge">
-                                                    {storeConfig.settings.promotions[product.id].badge}
-                                                </div>
-                                            )}
-                                            {product.isCombo && !storeConfig.settings?.promotions?.[product.id]?.badge && (
-                                                <div className="badge-combo-card">Combo Especial</div>
-                                            )}
                                             {product.images && product.images.length > 0 ? (
-                                                <img src={product.images[0]} alt={product.name} className="product-card-img" />
+                                                <img src={product.images[0]} alt={product.name} className="product-card-img" loading="lazy" />
                                             ) : (
                                                 <div className="product-card-img-placeholder">
-                                                    <Sparkles size={32} />
+                                                    <Sparkles size={28} />
                                                 </div>
                                             )}
-                                            
-                                            {outOfStock ? (
-                                                <div className="badge-oos">Agotado</div>
-                                            ) : isLowStock ? (
-                                                <div className="badge-low">Últimas unidades</div>
-                                            ) : null}
-                                        </div>
-                                        <div className="p-details">
-                                            <h3 className="p-name">{product.name}</h3>
-                                            <p className="p-desc">{product.description || (product.isCombo ? 'Combo especial de productos seleccionados.' : 'Flores y frescura garantizada.')}</p>
-                                            <div className="p-price-action">
-                                                <span className="p-price">{formatCurrency(product.price)}</span>
-                                                <div className="p-action-buttons">
-                                                    <button 
-                                                        className="btn btn-secondary btn-view-detail"
-                                                        onClick={(e) => { e.stopPropagation(); setSelectedDetailItem(product); }}
+
+                                            {/* Badges */}
+                                            {storeConfig.settings?.promotions?.[product.id]?.badge && (
+                                                <div className="public-promo-badge">{storeConfig.settings.promotions[product.id].badge}</div>
+                                            )}
+                                            {product.isCombo && !storeConfig.settings?.promotions?.[product.id]?.badge && (
+                                                <div className="badge-combo-card">Combo</div>
+                                            )}
+                                            {outOfStock && <div className="badge-oos">Agotado</div>}
+                                            {isLowStock && <div className="badge-low">Últimas</div>}
+
+                                            {/* Quick-add overlay button */}
+                                            {!outOfStock && (
+                                                <div className="p-quick-add-overlay">
+                                                    <button
+                                                        className="p-quick-add-btn"
+                                                        style={{ background: 'var(--storefront-primary)' }}
+                                                        onClick={e => { e.stopPropagation(); addToCart(product); }}
                                                     >
-                                                        <Eye size={16} /> Ver más
-                                                    </button>
-                                                    <button 
-                                                        className={`btn btn-primary add-to-cart-btn ${outOfStock ? 'disabled' : ''}`}
-                                                        onClick={(e) => { e.stopPropagation(); addToCart(product); }}
-                                                        disabled={outOfStock}
-                                                    >
-                                                        <Plus size={16} /> Agregar
+                                                        <ShoppingCart size={15} />
+                                                        <span>Agregar</span>
                                                     </button>
                                                 </div>
+                                            )}
+                                        </div>
+
+                                        {/* Info */}
+                                        <div className="p-details">
+                                            <h3 className="p-name">{product.name}</h3>
+                                            <div className="p-bottom-row">
+                                                <span className="p-price">{formatCurrency(product.price)}</span>
+                                                {outOfStock ? (
+                                                    <span className="p-oos-text">Sin stock</span>
+                                                ) : (
+                                                    <button
+                                                        className="p-add-btn"
+                                                        style={{ background: 'var(--storefront-primary)' }}
+                                                        onClick={e => { e.stopPropagation(); addToCart(product); }}
+                                                    >
+                                                        <Plus size={14} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -1078,16 +1079,85 @@ export const PublicStorefront = () => {
                 </div>
             </footer>
 
+            {/* ── MOBILE BOTTOM NAV ──────────────────────────────── */}
+            <nav className="mobile-bottom-nav">
+                <button className="mbn-item" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                    <Store size={21} />
+                    <span>Inicio</span>
+                </button>
+                <button className="mbn-item" onClick={() => setIsSearchOpen(true)}>
+                    <Search size={21} />
+                    <span>Buscar</span>
+                </button>
+                <button
+                    className="mbn-item mbn-cart"
+                    style={{ color: 'var(--storefront-primary)' }}
+                    onClick={() => { setCheckoutStep('cart'); setIsCartOpen(true); }}
+                >
+                    <div className="mbn-cart-icon">
+                        <ShoppingCart size={22} />
+                        {totalCartItems > 0 && (
+                            <span className="mbn-badge" style={{ background: 'var(--storefront-primary)' }}>{totalCartItems}</span>
+                        )}
+                    </div>
+                    <span>Carrito {totalCartItems > 0 ? `(${totalCartItems})` : ''}</span>
+                </button>
+                {storeConfig.settings?.whatsapp_number && (
+                    <a
+                        className="mbn-item"
+                        href={`https://wa.me/${storeConfig.settings.whatsapp_number.replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <MessageCircle size={21} />
+                        <span>WhatsApp</span>
+                    </a>
+                )}
+            </nav>
 
-            {/* Permanent Floating Cart Button */}
+            {/* ── SEARCH MODAL ───────────────────────────────────── */}
+            {isSearchOpen && (
+                <div className="search-modal-overlay" onClick={() => setIsSearchOpen(false)}>
+                    <div className="search-modal" onClick={e => e.stopPropagation()}>
+                        <div className="search-modal-bar">
+                            <Search size={20} className="sm-icon" />
+                            <input
+                                type="text"
+                                autoFocus
+                                placeholder="Buscar flores, ramos o plantas..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                className="sm-input"
+                            />
+                            <button className="sm-close" onClick={() => setIsSearchOpen(false)}><X size={20} /></button>
+                        </div>
+                        {searchQuery && (
+                            <div className="sm-results">
+                                {filteredItems.slice(0, 6).map(p => (
+                                    <button key={p.id} className="sm-result-item" onClick={() => { setSelectedDetailItem(p); setIsSearchOpen(false); }}>
+                                        {p.images?.[0] ? <img src={p.images[0]} alt={p.name} className="sm-result-img" /> : <div className="sm-result-img-ph"><Sparkles size={16} /></div>}
+                                        <div className="sm-result-info">
+                                            <span className="sm-result-name">{p.name}</span>
+                                            <span className="sm-result-price">{formatCurrency(p.price)}</span>
+                                        </div>
+                                    </button>
+                                ))}
+                                {filteredItems.length === 0 && (
+                                    <p className="sm-no-results">Sin resultados para "{searchQuery}"</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Floating Cart Button (desktop only) */}
             {totalCartItems > 0 && !isCartOpen && (
-                <div className="floating-cart-wrapper" onClick={() => {
+                <div className="floating-cart-wrapper desktop-only" onClick={() => {
                     setCheckoutStep('cart');
                     setIsCartOpen(true);
                 }}>
-                    <div className="floating-cart-btn" style={{
-                        backgroundColor: 'var(--storefront-primary)'
-                    }}>
+                    <div className="floating-cart-btn" style={{ backgroundColor: 'var(--storefront-primary)' }}>
                         <div className="fc-qty-icon">
                             <ShoppingCart size={20} />
                             <span className="fc-qty-count">{totalCartItems}</span>
