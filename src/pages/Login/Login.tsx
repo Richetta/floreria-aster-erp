@@ -136,7 +136,7 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
         setLocalError('Error al iniciar sesión con Google');
     };
 
-    // Hook de Google con auth-code flow y scopes de Calendar
+    // Hook de Google con auth-code flow para login rápido (sin consentimiento forzado ni offline access)
     const initiateGoogleLogin = useGoogleLogin({
         flow: 'auth-code',
         scope: [
@@ -144,8 +144,6 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
             'email',
             'profile',
         ].join(' '),
-        access_type: 'offline',   // ← indispensable para recibir refresh_token
-        prompt: 'consent',        // ← fuerza la pantalla de consentimiento siempre
         onSuccess: handleGoogleSuccess,
         onError: handleGoogleError,
     } as any);
