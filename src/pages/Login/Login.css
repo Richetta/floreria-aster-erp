@@ -274,31 +274,12 @@ html {
 .lp-hero {
     min-height: 100vh;
     padding: 7rem 2rem 4rem;
-    background-color: var(--color-background);
+    background-color: var(--color-primary); /* Deep Forest Green */
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-}
-
-.lp-hero__bg {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-}
-
-.lp-particle {
-    position: absolute;
-    font-size: 1.8rem;
-    opacity: 0.15;
-    animation: lp-float 7s ease-in-out infinite;
-}
-
-@keyframes lp-float {
-    0%, 100% { transform: translateY(0) rotate(-5deg); }
-    50% { transform: translateY(-22px) rotate(8deg); }
 }
 
 .lp-hero__inner {
@@ -315,7 +296,7 @@ html {
 
 /* Hero Copy */
 .lp-hero__copy {
-    color: var(--color-text-main);
+    color: #FFFEFC;
 }
 
 .lp-hero__eyebrow {
@@ -325,9 +306,10 @@ html {
     font-size: 0.8rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #618c6d;
-    background: rgba(79, 122, 90, 0.15);
+    letter-spacing: 0.15em;
+    color: #FFFEFC;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 100px;
     padding: 0.35rem 1rem;
     margin-bottom: 1.5rem;
@@ -338,17 +320,17 @@ html {
     font-size: clamp(2.5rem, 6vw, 4rem);
     font-weight: 800;
     line-height: 1.1;
-    color: var(--color-text-main);
+    color: #FFFEFC;
     margin-bottom: 1.5rem;
 }
 
 .lp-hero__highlight {
-    color: var(--color-primary);
+    color: #E6C97A; /* Soft Amber/Gold */
 }
 
 .lp-hero__subline {
     font-size: 1.1rem;
-    color: var(--color-text-muted);
+    color: rgba(255, 255, 255, 0.75);
     line-height: 1.75;
     margin-bottom: 2.5rem;
     max-width: 480px;
@@ -361,16 +343,38 @@ html {
     margin-bottom: 2rem;
 }
 
+/* Style buttons inside hero */
+.lp-hero .lp-btn--primary {
+    background-color: #FFFEFC !important;
+    color: var(--color-primary) !important;
+}
+
+.lp-hero .lp-btn--primary:hover {
+    background-color: var(--color-primary-light) !important;
+    transform: translateY(-2px);
+}
+
+.lp-hero .lp-btn--ghost {
+    border-color: rgba(255, 255, 255, 0.4) !important;
+    color: #FFFEFC !important;
+}
+
+.lp-hero .lp-btn--ghost:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: #FFFEFC !important;
+    color: #FFFEFC !important;
+}
+
 .lp-hero__trust {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.65);
 }
 
 .lp-hero__trust-icon {
-    color: #4F7A5A;
+    color: #E6C97A;
     flex-shrink: 0;
 }
 
@@ -385,7 +389,7 @@ html {
     bottom: 2rem;
     left: 50%;
     transform: translateX(-50%);
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
     animation: lp-bounce 2s ease-in-out infinite;
     z-index: 1;
@@ -743,7 +747,7 @@ html {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #b87cf8;
+    color: #E6C97A; /* Soft Amber/Gold */
     margin-bottom: 1rem;
 }
 
@@ -759,6 +763,59 @@ html {
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.55);
     line-height: 1.6;
+}
+
+/* ────────────────────────────────────────────
+   BENEFITS SECTION
+   ──────────────────────────────────────────── */
+
+.lp-benefits__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+.lp-benefit-card {
+    background: var(--color-surface);
+    border-radius: 18px;
+    padding: 2.25rem 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(79, 122, 90, 0.05);
+    border: 1px solid rgba(79, 122, 90, 0.1);
+    transition: all 0.3s var(--transition);
+}
+
+.lp-benefit-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(79, 122, 90, 0.12);
+    border-color: var(--color-primary);
+}
+
+.lp-benefit-card__icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(79, 122, 90, 0.08);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+    margin: 0 auto 1.25rem;
+}
+
+.lp-benefit-card__metric {
+    font-family: var(--font-sans);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.lp-benefit-card__label {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
 }
 
 /* ────────────────────────────────────────────

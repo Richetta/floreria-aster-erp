@@ -7,7 +7,7 @@ import {
     Package, ShoppingCart, TrendingUp, Truck,
     BarChart3, ChevronDown, CheckCircle2, Zap, Clock,
     ClipboardList, AlertTriangle, BarChart2, ArrowRight,
-    Star, Play, User
+    Star, Play, User, Download
 } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { api } from '../../services/api';
@@ -173,7 +173,7 @@ const LoginForm = ({ compact = false }: { compact?: boolean }) => {
             {deferredPrompt && (
                 <div className="install-pwa-container mb-6">
                     <button type="button" className="install-pwa-button" onClick={handleInstallClick}>
-                        <span>⬇️</span> Descargar e Instalar Mi Jardín ERP
+                        <Download size={18} /> Descargar e Instalar Mi Jardín ERP
                     </button>
                 </div>
             )}
@@ -411,15 +411,7 @@ export const Login = () => {
 
             {/* ── HERO ── */}
             <section className="lp-hero" id="hero">
-                {/* Background particles */}
-                <div className="lp-hero__bg">
-                    <div className="lp-particle" style={{ top: '12%', left: '8%', animationDelay: '0s' }}>🌸</div>
-                    <div className="lp-particle" style={{ top: '25%', right: '12%', animationDelay: '1.5s' }}>🌷</div>
-                    <div className="lp-particle" style={{ bottom: '20%', left: '15%', animationDelay: '3s' }}>🌺</div>
-                    <div className="lp-particle" style={{ bottom: '35%', right: '8%', animationDelay: '0.8s' }}>🌹</div>
-                    <div className="lp-particle" style={{ top: '55%', left: '4%', animationDelay: '2.2s' }}>💐</div>
-                    <div className="lp-particle" style={{ top: '70%', right: '22%', animationDelay: '1s' }}>🌼</div>
-                </div>
+                {/* Background is styled green and clean in CSS */}
 
                 <div className="lp-hero__inner" ref={heroRef}>
                     {/* Left: Copy */}
