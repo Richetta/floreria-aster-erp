@@ -863,9 +863,9 @@ html {
 
 .lp-demo__screen {
     background: #1B2A1E;
-    min-height: 360px;
+    min-height: 380px;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
 }
 
@@ -873,6 +873,150 @@ html {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    align-self: center;
+}
+
+.lp-demo__live {
+    display: flex;
+    width: 100%;
+    align-self: stretch;
+}
+
+.lp-demo__sidebar {
+    width: 150px;
+    background: #12291d; /* Dark botanical sidebar */
+    padding: 1.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.lp-demo__sidebar-logo {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.lp-demo__sidebar-item {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.45);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    cursor: default;
+    transition: all 0.2s var(--transition);
+}
+
+.lp-demo__sidebar-item.active,
+.lp-demo__sidebar-item:hover {
+    background: rgba(79, 122, 90, 0.25);
+    color: white;
+}
+
+.lp-demo__content {
+    flex: 1;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    background: #1B2A1E;
+    text-align: left;
+}
+
+.lp-demo__stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.875rem;
+}
+
+.lp-demo__stat-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.lp-demo__stat-label {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.lp-demo__stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+}
+
+.lp-demo__stat-change {
+    font-size: 0.65rem;
+    color: #edf2ef;
+    background: rgba(79, 122, 90, 0.3);
+    border-radius: 4px;
+    padding: 0.1rem 0.35rem;
+    width: fit-content;
+}
+
+.lp-demo__chart-placeholder {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.lp-demo__chart-bars {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    min-height: 90px;
+}
+
+.lp-demo__bar-item {
+    flex: 1;
+    background: linear-gradient(to top, var(--color-primary), var(--color-secondary));
+    border-radius: 4px 4px 0 0;
+    min-height: 8px;
+    animation: barGrow 0.8s ease-out backwards;
+}
+
+@keyframes barGrow {
+    from { height: 0 !important; opacity: 0; }
+}
+
+.lp-demo__chart-label {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.35);
+    text-align: center;
+}
+
+.lp-demo__play-btn {
+    width: 64px;
+    height: 64px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: all 0.25s var(--transition);
+    box-shadow: 0 8px 24px rgba(26, 60, 42, 0.4);
+}
+
+.lp-demo__play-btn:hover {
+    transform: scale(1.1);
+    background: var(--color-secondary);
 }
 
 /* ────────────────────────────────────────────
